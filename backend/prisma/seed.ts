@@ -91,12 +91,12 @@ async function main() {
   });
 
   const produtos = [
-    { sku: "300002137", ean: "7897180513306", nome: "Fogão 4 Bocas Atlas Atenas Glass", ncm: "73211100", cest: "2100100", exTipi: "01", cfop: "6107", origem: 0, unidade: "UNID", preco: 846 },
-    { sku: "SKU-92381", nome: "Camiseta básica algodão M", ncm: "61091000", cest: "2804600", cfop: "5102", origem: 0, unidade: "UN", preco: 39.9 },
-    { sku: "SKU-92382", nome: "Tênis esportivo masc 42", ncm: "64041100", cest: "2804900", cfop: "5102", origem: 0, unidade: "PR", preco: 249.9 },
-    { sku: "SKU-92383", nome: "Smartphone 128GB", ncm: "85171231", cest: "2106500", cfop: "5102", origem: 2, unidade: "UN", preco: 1899 },
-    { sku: "SKU-92384", nome: "Cabo HDMI 2m", ncm: "85444900", cest: "2108200", cfop: "5102", origem: 1, unidade: "UN", preco: 24.9 },
-    { sku: "SKU-92385", nome: "Mouse sem fio", ncm: "84716054", cest: "2106600", cfop: "5102", origem: 1, unidade: "UN", preco: 89.9 },
+    { sku: "300002137", ean: "7897180513306", nome: "Fogão 4 Bocas Atlas Atenas Glass", ncm: "73211100", cest: "2100100", exTipi: "01", cfop: "6107", origem: 0, unidade: "UNID", preco: 846, precoCusto: 520 },
+    { sku: "SKU-92381", nome: "Camiseta básica algodão M", ncm: "61091000", cest: "2804600", cfop: "5102", origem: 0, unidade: "UN", preco: 39.9, precoCusto: 18 },
+    { sku: "SKU-92382", nome: "Tênis esportivo masc 42", ncm: "64041100", cest: "2804900", cfop: "5102", origem: 0, unidade: "PR", preco: 249.9, precoCusto: 120 },
+    { sku: "SKU-92383", nome: "Smartphone 128GB", ncm: "85171231", cest: "2106500", cfop: "5102", origem: 2, unidade: "UN", preco: 1899, precoCusto: 1400 },
+    { sku: "SKU-92384", nome: "Cabo HDMI 2m", ncm: "85444900", cest: "2108200", cfop: "5102", origem: 1, unidade: "UN", preco: 24.9, precoCusto: 9 },
+    { sku: "SKU-92385", nome: "Mouse sem fio", ncm: "84716054", cest: "2106600", cfop: "5102", origem: 1, unidade: "UN", preco: 89.9, precoCusto: 42 },
   ];
   await prisma.product.createMany({
     data: produtos.map((p) => ({ ...p, tenantId: TENANT_1 })),

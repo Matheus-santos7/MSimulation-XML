@@ -5,13 +5,16 @@ import { ProdutoCard } from "@/components/produto-card";
 import { ProdutoPlanilhaToolbar } from "@/components/produto-planilha-toolbar";
 import { Button } from "@/components/ui/button";
 import { resolveActiveTenantId } from "@/lib/active-tenant";
-import { listProducts } from "@/lib/fiscal-api";
+import { listProducts, listTaxRuleCatalog } from "@/lib/fiscal-api";
 
 export const metadata: Metadata = { title: "Produtos" };
 
 export default async function ProdutosPage() {
   const tenantId = await resolveActiveTenantId();
-  const produtos = await listProducts(tenantId);
+  const [produtos, taxRuleCatalog] = await Promise.all([
+    listProducts(tenantId),
+    listTaxRuleCatalog(tenantId),
+  ]);
 
   return (
     <div className="p-6 space-y-4">
@@ -40,7 +43,7 @@ export default async function ProdutosPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {produtos.map((p) => (
-            <ProdutoCard key={p.id} product={p} />
+            <ProdutoCard key={p.id} product={p} taxRuleCatalog={taxRuleCatalog} />
           ))}
         </div>
       )}

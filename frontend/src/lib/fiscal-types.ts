@@ -276,7 +276,16 @@ export type ProductDto = {
   origem: number;
   unidade: string;
   preco: number;
+  precoCusto: number;
   estoque: number;
+  taxRuleBaseId?: string;
+};
+
+export type TaxRuleCatalogEntry = {
+  baseId: string;
+  nome: string;
+  origin: string;
+  label: string;
 };
 
 export type ProductInput = {
@@ -290,7 +299,9 @@ export type ProductInput = {
   origem: number;
   unidade: string;
   preco: number;
+  precoCusto: number;
   estoque?: number;
+  taxRuleBaseId?: string;
 };
 
 export type TaxRuleDto = {

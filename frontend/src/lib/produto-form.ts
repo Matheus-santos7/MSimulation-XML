@@ -11,7 +11,9 @@ export type ProdutoFormValues = {
   origem: string;
   unidade: string;
   preco: string;
+  precoCusto: string;
   estoque: string;
+  taxRuleBaseId: string;
 };
 
 export type ProdutoFormState = {
@@ -33,7 +35,9 @@ export function inputToFormValues(input: ProductInput): ProdutoFormValues {
     origem: String(input.origem),
     unidade: input.unidade,
     preco: String(input.preco),
+    precoCusto: String(input.precoCusto ?? ""),
     estoque: String(input.estoque ?? 0),
+    taxRuleBaseId: input.taxRuleBaseId ?? "",
   };
 }
 
@@ -48,7 +52,9 @@ export function productToFormValues(p: {
   origem: number;
   unidade: string;
   preco: number;
+  precoCusto: number;
   estoque: number;
+  taxRuleBaseId?: string | null;
 }): ProdutoFormValues {
   return inputToFormValues({
     sku: p.sku,
@@ -61,7 +67,9 @@ export function productToFormValues(p: {
     origem: p.origem,
     unidade: p.unidade,
     preco: p.preco,
+    precoCusto: p.precoCusto,
     estoque: p.estoque,
+    taxRuleBaseId: p.taxRuleBaseId ?? "",
   });
 }
 
@@ -88,6 +96,8 @@ export function parseProductForm(formData: FormData): ProductInput {
     origem: Number(formData.get("origem") ?? 0),
     unidade: String(formData.get("unidade") ?? "UN").trim(),
     preco: Number(String(formData.get("preco") ?? "0").replace(",", ".")),
+    precoCusto: Number(String(formData.get("precoCusto") ?? "0").replace(",", ".")),
     estoque: Number(String(formData.get("estoque") ?? "0").replace(",", ".")) || 0,
+    taxRuleBaseId: String(formData.get("taxRuleBaseId") ?? "").trim(),
   };
 }

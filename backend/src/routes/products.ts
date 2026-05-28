@@ -8,6 +8,7 @@ import {
   productTenantQuery,
   productUpdateBody,
 } from "../schemas/product.js";
+import { TaxRuleCatalogError } from "../services/tax-rule-catalog-service.js";
 import { ProductConflictError, ProductService } from "../services/product-service.js";
 import { RemessaError } from "../services/remessa-service.js";
 
@@ -64,10 +65,14 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.delete("/products/:id", async (req, reply) => {
-    const { id } = productIdParam.parse(req.params);
-    const removed = await service.remove(id);
-    if (!removed) return reply.status(404).send({ error: "Produto não encontrado" });
-    return reply.status(204).send();
+    try {
+      const { id } = productIdParam.parse(req.params);
+      const removed = await service.remove(id);
+      if (!removed) return reply.status(404).send({ error: "Produto não encontrado" });
+      return reply.status(204).send();
+    } catch (e) {
+      return handleProductError(e, reply);
+    }
   });
 };
 
@@ -84,6 +89,9 @@ function handleProductError(e: unknown, reply: { status: (code: number) => { sen
     return reply.status(409).send({ error: e.message });
   }
   if (e instanceof RemessaError) {
+    return reply.status(400).send({ error: e.message });
+  }
+  if (e instanceof TaxRuleCatalogError) {
     return reply.status(400).send({ error: e.message });
   }
   throw e;

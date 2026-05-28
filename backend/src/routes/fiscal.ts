@@ -3,6 +3,7 @@ import { z } from "zod";
 import { mapCte, mapNfe, mapTimeline, resolveTenantId } from "../lib/fiscal-mappers.js";
 import { mapEmitente } from "../lib/tenant-mapper.js";
 import { FiscalService, fiscalNotDeleted } from "../services/fiscal-service.js";
+import { listTaxRuleCatalog } from "../services/tax-rule-catalog-service.js";
 import { listTimelineChains } from "../services/timeline-service.js";
 
 const tenantQuery = z.object({
@@ -39,7 +40,7 @@ export const fiscalRoutes: FastifyPluginAsync = async (app) => {
     const rows = await app.prisma.nFe.findMany({
       where: { tenantId: tid, ...fiscalNotDeleted },
       include: { nfeReferencia: { select: { chave: true } } },
-      orderBy: { emitidaEm: "desc" },
+      orderBy: [{ emitidaEm: "desc" }, { serie: "desc" }, { numero: "desc" }],
     });
     return rows.map((r) => mapNfe(r, r.nfeReferencia?.chave));
   });
@@ -161,6 +162,12 @@ export const fiscalRoutes: FastifyPluginAsync = async (app) => {
       orderBy: { sortOrder: "asc" },
     });
     return rows.map(mapTimeline);
+  });
+
+  app.get("/tax-rules/catalog", async (req) => {
+    const { tenantId } = tenantQuery.parse(req.query);
+    const tid = await resolveTenantId(app.prisma, tenantId);
+    return listTaxRuleCatalog(app.prisma, tid);
   });
 
   app.get("/tax-rules", async (req) => {

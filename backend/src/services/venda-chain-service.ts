@@ -1,4 +1,4 @@
-import { FiscalStatus, NFeTipo, type PrismaClient, type Tenant } from "../generated/prisma/client.js";
+import { FiscalStatus, NFeTipo, Prisma, type PrismaClient, type Tenant } from "../generated/prisma/client.js";
 import { mapNfe } from "../lib/fiscal-mappers.js";
 import { buildChaveNFe, gerarPedidoMl } from "../lib/nfe-chave.js";
 import { proximoNumeroNfe } from "../lib/nfe-sequencia.js";
@@ -7,8 +7,10 @@ import {
   RETORNO_SIMBOLICO_CFOP,
   RETORNO_SIMBOLICO_NAT_OP,
 } from "../lib/retorno-simbolico-dest.js";
+import { enrichTaxSnapshot, loadEmitterSettings } from "../lib/fiscal-emitter-runtime.js";
+import { taxSnapshotFromRule } from "../lib/tax-snapshot.js";
 import { consumirSaldoRemessaFifo } from "./remessa-fifo.js";
-import { resolveTaxRule, type CustomerType } from "./tax-rule-service.js";
+import { resolveTaxRule, type CustomerType, type ResolvedTaxRule } from "./tax-rule-service.js";
 
 function inferAliqIcms(emitUf: string, destUf: string): number {
   return emitUf.toUpperCase() === destUf.toUpperCase() ? 18 : 12;
@@ -16,6 +18,16 @@ function inferAliqIcms(emitUf: string, destUf: string): number {
 
 function resolveCustomerType(destIndIeDest: number): CustomerType {
   return destIndIeDest === 9 ? "non_taxpayer" : "taxpayer";
+}
+
+function requireTaxRule(
+  rule: ResolvedTaxRule | null,
+  ctx: { label: string; ruleBaseId: string; originUf: string; destinationUf: string },
+): ResolvedTaxRule {
+  if (rule) return rule;
+  throw new VendaChainError(
+    `Regra fiscal "${ctx.ruleBaseId}" sem linha de ${ctx.label} para origem ${ctx.originUf} → destino ${ctx.destinationUf}. Confira a planilha importada.`,
+  );
 }
 
 export type PedidoForEmit = {
@@ -36,7 +48,14 @@ export type PedidoForEmit = {
   destNomePais: string;
   destTelefone: string | null;
   destIndIeDest: number;
-  product: { id: string; cfop: string; ncm: string; preco: { toString(): string } };
+  product: {
+    id: string;
+    cfop: string;
+    ncm: string;
+    preco: { toString(): string };
+    taxRuleBaseId: string | null;
+    nome?: string;
+  };
   tenant: Tenant;
 };
 
@@ -47,96 +66,58 @@ export class VendaChainError extends Error {
   }
 }
 
-function taxSnapshotFromRule(
-  rule: {
-    ruleId: string;
-    payload?: Record<string, unknown>;
-    aliquotaIcmsInterna?: number;
-    icms?: Record<string, unknown>;
-  } | null,
-  fallbackAliqIcms: number,
-) {
-  const taxes = ((rule?.payload?.taxes as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>;
-  const ipi = (taxes.ipi as Record<string, unknown> | undefined) ?? {};
-  const pis = (taxes.pis as Record<string, unknown> | undefined) ?? {};
-  const cofins = (taxes.cofins as Record<string, unknown> | undefined) ?? {};
-  const ibsCbs = (taxes.ibsCbs as Record<string, unknown> | undefined) ?? {};
-
-  const toText = (v: unknown, fallback = ""): string => (typeof v === "string" ? v : fallback);
-  const toNum = (v: unknown, fallback = 0): number => {
-    if (typeof v === "number" && Number.isFinite(v)) return v;
-    const n = Number(v);
-    return Number.isFinite(n) ? n : fallback;
-  };
-
-  return {
-    ruleId: rule?.ruleId,
-    icms: {
-      cst: typeof rule?.icms?.cst === "string" ? rule.icms.cst : "00",
-      aliquota: rule?.aliquotaIcmsInterna ?? fallbackAliqIcms,
-      pDif: toNum(rule?.icms?.pDif, 0),
-      pIcmsInterstate: toNum(rule?.icms?.pIcmsInterstate, 12),
-      pRedBc: toNum(rule?.icms?.pRedBc, 0),
-      pRedBcSt: toNum(rule?.icms?.pRedBcSt, 0),
-      pMva: toNum(rule?.icms?.pMva, 0),
-      pIcmsStRet: toNum(rule?.icms?.pIcmsStRet, 0),
-      pFcpStRet: toNum(rule?.icms?.pFcpStRet, 0),
-      pIcmsFcp: toNum(rule?.icms?.pIcmsFcp, 0),
-      pIcmsEfet: toNum(rule?.icms?.pIcmsEfet, 0),
-      pRedBcEfet: toNum(rule?.icms?.pRedBcEfet, 0),
-      pRedBcDifal: toNum(rule?.icms?.pRedBcDifal, 0),
-      motDesIcms: toNum(rule?.icms?.motDesIcms, 0),
-      codBenef: toText(rule?.icms?.codBenef),
-      codBenefRbc: toText(rule?.icms?.codBenefRbc),
-      codBenefPres: toText(rule?.icms?.codBenefPres),
-      pCodBenefPres: toNum(rule?.icms?.pCodBenefPres, 0),
-      redAliqIbs: toNum(rule?.icms?.redAliqIbs, 0),
-    },
-    ipi: {
-      st: toText(ipi.st, "50 - Saída Tributada"),
-      aliquota: toNum(ipi.aliquota, 0),
-      codEnq: toText(ipi.codEnq, "999"),
-    },
-    pis: {
-      st: toText(pis.st, "01 - Operação Tributável com Alíquota Básica"),
-      aliquota: toNum(pis.aliquota, 1.65),
-    },
-    cofins: {
-      st: toText(cofins.st, "01 - Operação Tributável com Alíquota Básica"),
-      aliquota: toNum(cofins.aliquota, 7.6),
-    },
-    ibsCbs: {
-      st: toText(ibsCbs.st),
-      cClassTrib: toText(ibsCbs.cClassTrib),
-      reducao: toNum(ibsCbs.reducao, 0),
-    },
-  };
-}
-
 /** Emite retorno simbólico (FIFO remessa) + NF-e de venda referenciada. */
 export async function emitirCadeiaVenda(prisma: PrismaClient, pedido: PedidoForEmit) {
-  const serie = 1;
+  const tenant = pedido.tenant;
+  const serie = tenant.serieRemessa;
   const pedidoMl = gerarPedidoMl();
   const emitidaEm = new Date();
-  const tenant = pedido.tenant;
 
   const valorUnit = Number(pedido.product.preco);
   const valorTotal = Math.round(valorUnit * pedido.quantidade * 100) / 100;
 
-  return prisma.$transaction(async (tx) => {
-    const saleTaxRule = await resolveTaxRule(tx as unknown as PrismaClient, tenant.id, {
-      originUf: tenant.uf,
-      destinationUf: pedido.destUf,
-      transactionType: "sale",
-      customerType: resolveCustomerType(pedido.destIndIeDest),
-    });
+  const ruleBaseId = pedido.product.taxRuleBaseId?.trim();
+  if (!ruleBaseId) {
+    throw new VendaChainError(
+      "Produto sem regra fiscal associada. Edite o cadastro do produto e selecione a regra da planilha.",
+    );
+  }
 
-    const inboundTaxRule = await resolveTaxRule(tx as unknown as PrismaClient, tenant.id, {
-      originUf: tenant.uf,
-      destinationUf: tenant.uf,
-      transactionType: "inbound",
-      customerType: "taxpayer",
-    });
+  return prisma.$transaction(async (tx) => {
+    const emitterSettings = await loadEmitterSettings(tx, tenant.id);
+    const customerType = resolveCustomerType(pedido.destIndIeDest);
+
+    const saleTaxRule = requireTaxRule(
+      await resolveTaxRule(tx as unknown as PrismaClient, tenant.id, {
+        originUf: tenant.uf,
+        destinationUf: pedido.destUf,
+        transactionType: "sale",
+        customerType,
+        ruleBaseId,
+      }),
+      {
+        label: "venda",
+        ruleBaseId,
+        originUf: tenant.uf,
+        destinationUf: pedido.destUf,
+      },
+    );
+
+    const inboundTaxRule = requireTaxRule(
+      await resolveTaxRule(tx as unknown as PrismaClient, tenant.id, {
+        originUf: tenant.uf,
+        destinationUf: tenant.uf,
+        transactionType: "inbound",
+        customerType: "taxpayer",
+        ruleBaseId,
+      }),
+      {
+        label: "retorno simbólico",
+        ruleBaseId,
+        originUf: tenant.uf,
+        destinationUf: tenant.uf,
+      },
+    );
 
     const numeroRetorno = await proximoNumeroNfe(tx as unknown as PrismaClient, tenant.id, serie);
     const chaveRetorno = buildChaveNFe({
@@ -183,7 +164,15 @@ export async function emitirCadeiaVenda(prisma: PrismaClient, pedido: PedidoForE
         quantidade: pedido.quantidade,
         tipo: NFeTipo.RETORNO_SIMBOLICO,
         saldoDisponivel: null,
-        fiscalPayload: taxSnapshotFromRule(inboundTaxRule, aliqRetornoFallback),
+        fiscalPayload: enrichTaxSnapshot(taxSnapshotFromRule(inboundTaxRule, aliqRetornoFallback), {
+          settings: emitterSettings,
+          tipo: NFeTipo.RETORNO_SIMBOLICO,
+          valor: valorTotal,
+          valorIcms: valorIcmsRetorno,
+          emitUf: tenant.uf,
+          destUf: tenant.uf,
+          indFinal: 0,
+        }) as Prisma.InputJsonValue,
       },
     });
 
@@ -247,7 +236,15 @@ export async function emitirCadeiaVenda(prisma: PrismaClient, pedido: PedidoForE
         quantidade: pedido.quantidade,
         tipo: NFeTipo.VENDA,
         nfeReferenciaId: retornoRow.id,
-        fiscalPayload: taxSnapshotFromRule(saleTaxRule, aliqVendaFallback),
+        fiscalPayload: enrichTaxSnapshot(taxSnapshotFromRule(saleTaxRule, aliqVendaFallback), {
+          settings: emitterSettings,
+          tipo: NFeTipo.VENDA,
+          valor: valorTotal,
+          valorIcms: valorIcmsVenda,
+          emitUf: tenant.uf,
+          destUf: pedido.destUf,
+          indFinal: 1,
+        }) as Prisma.InputJsonValue,
       },
     });
 

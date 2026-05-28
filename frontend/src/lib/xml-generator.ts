@@ -5,7 +5,10 @@
  * marker — never use this output against real SEFAZ.
  */
 
+import type { FiscalEmitterSettingsData } from "./fiscal-emitter-settings-types";
+import { resolveEmitterFromPayload } from "./fiscal-emitter-runtime";
 import type { EmitenteDto, NFeDto, ProductDto } from "./fiscal-types";
+import { productUnitPriceForNfe } from "./product-pricing";
 import { ufToCodigo } from "./nfe-uf";
 import {
   REMESSA_INF_CPL,
@@ -50,8 +53,10 @@ function buildIcmsXmlFromSnapshot(
   const pRedBcEfet = asNum(icms.pRedBcEfet, 0);
   const motDesIcms = Math.trunc(asNum(icms.motDesIcms, 0));
 
-  const vBc = Math.max(0, args.valor * (1 - pRedBc / 100));
-  const vIcms = args.valorIcms || Math.round(vBc * (pIcms / 100) * 100) / 100;
+  const vBcFromSnapshot = icms.vBc != null ? asNum(icms.vBc, args.valor) : null;
+  const vBc = vBcFromSnapshot ?? Math.max(0, args.valor * (1 - pRedBc / 100));
+  const vIcms =
+    asNum(icms.valorIcms, 0) || args.valorIcms || Math.round(vBc * (pIcms / 100) * 100) / 100;
   const vBcSt = Math.max(0, vBc * (1 + pMva / 100) * (1 - pRedBcSt / 100));
   const vIcmsSt = Math.max(0, Math.round(vBcSt * (pIcmsStRet / 100) * 100) / 100);
   const vBcEfet = Math.max(0, args.valor * (1 - pRedBcEfet / 100));
@@ -115,14 +120,47 @@ function signatureBlock(id: string, chave: string): string {
     </Signature>`;
 }
 
-export function buildNFeXML(nfe: NFeDto, emit: EmitenteDto, product?: ProductDto): string {
-  if (nfe.tipo === "REMESSA") {
-    return buildRemessaNFeXML(nfe, emit, product);
+function infCplXml(emitter: ReturnType<typeof resolveEmitterFromPayload>, extra?: string): string {
+  const parts = [emitter.mensagemInfCpl, extra].filter((s) => s && s.trim());
+  if (emitter.difal.aplica && emitter.difal.vDifal > 0) {
+    parts.push(`DIFAL (${emitter.difal.mode}): R$ ${emitter.difal.vDifal.toFixed(2)}`);
   }
-  return buildVendaNFeXML(nfe, emit, product);
+  if (parts.length === 0) return "";
+  return `\n      <infAdic>\n        <infCpl>${xmlEscape(parts.join(" | "))}</infCpl>\n      </infAdic>`;
 }
 
-function buildRemessaNFeXML(nfe: NFeDto, emit: EmitenteDto, product?: ProductDto): string {
+function transpXml(modFrete: string, vFrete: number): string {
+  return `      <transp>
+        <modFrete>${modFrete}</modFrete>
+        <vol>
+          <qVol>1</qVol>
+          <pesoL>3.800</pesoL>
+          <pesoB>4.380</pesoB>
+        </vol>
+      </transp>`;
+}
+
+export function buildNFeXML(
+  nfe: NFeDto,
+  emit: EmitenteDto,
+  product?: ProductDto,
+  emitterSettings?: FiscalEmitterSettingsData | null,
+): string {
+  if (nfe.tipo === "REMESSA") {
+    return buildRemessaNFeXML(nfe, emit, product, emitterSettings);
+  }
+  if (nfe.tipo === "DEVOLUCAO") {
+    return buildDevolucaoNFeXML(nfe, emit, product, emitterSettings);
+  }
+  return buildVendaNFeXML(nfe, emit, product, emitterSettings);
+}
+
+function buildRemessaNFeXML(
+  nfe: NFeDto,
+  emit: EmitenteDto,
+  product?: ProductDto,
+  emitterSettings?: FiscalEmitterSettingsData | null,
+): string {
   const id = "NFe" + nfe.chave;
   const dhEmi = nfe.emitidaEm;
   const e = emit.endereco;
@@ -137,7 +175,7 @@ function buildRemessaNFeXML(nfe: NFeDto, emit: EmitenteDto, product?: ProductDto
   const ncm = product?.ncm ?? nfe.ncm;
   const cfop = nfe.cfop;
   const uCom = product?.unidade ?? "UNID";
-  const vUnCom = product?.preco ?? nfe.valor / qCom;
+  const vUnCom = productUnitPriceForNfe(product, nfe);
   const vProd = nfe.valor;
   const orig = product?.origem ?? 1;
   const cestXml = product?.cest ? `\n          <CEST>${product.cest}</CEST>` : "";
@@ -149,6 +187,14 @@ function buildRemessaNFeXML(nfe: NFeDto, emit: EmitenteDto, product?: ProductDto
   const destIeXml = d.indIEDest === 1 ? `\n        <IE>${REMESSA_ML_DEST_IE}</IE>` : "";
   const cUF = ufToCodigo(e.uf);
   const infAdProd = nfe.pedidoML ? `\n        <infAdProd>xPed:${xmlEscape(nfe.pedidoML)}</infAdProd>` : "";
+  const fiscal = (nfe.fiscalPayload ?? {}) as Record<string, unknown>;
+  const icms = (fiscal.icms as Record<string, unknown> | undefined) ?? { cst: "00", aliquota: nfe.aliqICMS };
+  const emitter = resolveEmitterFromPayload(fiscal, emitterSettings ?? null, nfe.tipo, nfe.valor, nfe.valorICMS);
+  const vBcIcms = asNum(icms.vBc, emitter.bases.vBcIcms);
+  const valorIcms = asNum(icms.valorIcms, nfe.valorICMS);
+  const icmsXml = buildIcmsXmlFromSnapshot(icms, { orig, valor: vBcIcms, valorIcms });
+  const vFrete = emitter.freteNoCalculo ? emitter.bases.vFrete : 0;
+  const infAdic = infCplXml(emitter, REMESSA_INF_CPL);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
@@ -229,16 +275,7 @@ function buildRemessaNFeXML(nfe: NFeDto, emit: EmitenteDto, product?: ProductDto
         </prod>
         <imposto>
           <vTotTrib>0.00</vTotTrib>
-          <ICMS>
-            <ICMS00>
-              <orig>${orig}</orig>
-              <CST>00</CST>
-              <modBC>3</modBC>
-              <vBC>${vProd.toFixed(2)}</vBC>
-              <pICMS>${nfe.aliqICMS.toFixed(4)}</pICMS>
-              <vICMS>${nfe.valorICMS.toFixed(2)}</vICMS>
-            </ICMS00>
-          </ICMS>
+          ${icmsXml}
           <IPI>
             <cEnq>103</cEnq>
             <IPINT><CST>55</CST></IPINT>
@@ -249,8 +286,8 @@ function buildRemessaNFeXML(nfe: NFeDto, emit: EmitenteDto, product?: ProductDto
       </det>
       <total>
         <ICMSTot>
-          <vBC>${vProd.toFixed(2)}</vBC>
-          <vICMS>${nfe.valorICMS.toFixed(2)}</vICMS>
+          <vBC>${vBcIcms.toFixed(2)}</vBC>
+          <vICMS>${valorIcms.toFixed(2)}</vICMS>
           <vICMSDeson>0.00</vICMSDeson>
           <vFCP>0.00</vFCP>
           <vBCST>0.00</vBCST>
@@ -258,7 +295,7 @@ function buildRemessaNFeXML(nfe: NFeDto, emit: EmitenteDto, product?: ProductDto
           <vFCPST>0.00</vFCPST>
           <vFCPSTRet>0.00</vFCPSTRet>
           <vProd>${vProd.toFixed(2)}</vProd>
-          <vFrete>0.00</vFrete>
+          <vFrete>${vFrete.toFixed(2)}</vFrete>
           <vSeg>0.00</vSeg>
           <vDesc>0.00</vDesc>
           <vII>0.00</vII>
@@ -271,14 +308,7 @@ function buildRemessaNFeXML(nfe: NFeDto, emit: EmitenteDto, product?: ProductDto
           <vTotTrib>0.00</vTotTrib>
         </ICMSTot>
       </total>
-      <transp>
-        <modFrete>0</modFrete>
-        <vol>
-          <qVol>1</qVol>
-          <pesoL>3.800</pesoL>
-          <pesoB>4.380</pesoB>
-        </vol>
-      </transp>
+${transpXml(emitter.modFrete, vFrete)}
       <pag>
         <detPag>
           <indPag>0</indPag>
@@ -289,10 +319,7 @@ function buildRemessaNFeXML(nfe: NFeDto, emit: EmitenteDto, product?: ProductDto
       <infIntermed>
         <CNPJ>${REMESSA_ML_INTERMED_CNPJ}</CNPJ>
         <idCadIntTran>${REMESSA_ML_INTERMED_ID}</idCadIntTran>
-      </infIntermed>
-      <infAdic>
-        <infCpl>${xmlEscape(REMESSA_INF_CPL)}</infCpl>
-      </infAdic>
+      </infIntermed>${infAdic}
     </infNFe>
 ${signatureBlock(id, nfe.chave)}
   </NFe>
@@ -300,7 +327,12 @@ ${protNFeBlock(nfe, dhEmi)}
 </nfeProc>`;
 }
 
-function buildVendaNFeXML(nfe: NFeDto, emit: EmitenteDto, product?: ProductDto): string {
+function buildVendaNFeXML(
+  nfe: NFeDto,
+  emit: EmitenteDto,
+  product?: ProductDto,
+  emitterSettings?: FiscalEmitterSettingsData | null,
+): string {
   const id = "NFe" + nfe.chave;
   const dhEmi = nfe.emitidaEm;
   const e = emit.endereco;
@@ -315,8 +347,8 @@ function buildVendaNFeXML(nfe: NFeDto, emit: EmitenteDto, product?: ProductDto):
   const ncm = product?.ncm ?? nfe.ncm;
   const cfop = product?.cfop ?? nfe.cfop;
   const uCom = product?.unidade ?? "UN";
-  const vUnCom = product?.preco ?? nfe.valor;
-  const vProd = product ? product.preco * qCom : nfe.valor;
+  const vUnCom = productUnitPriceForNfe(product, nfe);
+  const vProd = nfe.valor;
   const orig = product?.origem ?? 0;
   const cestXml = product?.cest ? `\n          <CEST>${product.cest}</CEST>` : "";
   const exTipiXml = product?.exTipi ? `\n          <EXTIPI>${product.exTipi}</EXTIPI>` : "";
@@ -335,24 +367,33 @@ function buildVendaNFeXML(nfe: NFeDto, emit: EmitenteDto, product?: ProductDto):
   const pis = (fiscal.pis as Record<string, unknown> | undefined) ?? {};
   const cofins = (fiscal.cofins as Record<string, unknown> | undefined) ?? {};
   const ibsCbs = (fiscal.ibsCbs as Record<string, unknown> | undefined) ?? {};
+  const emitter = resolveEmitterFromPayload(fiscal, emitterSettings ?? null, nfe.tipo, nfe.valor, nfe.valorICMS);
+
+  const vBcIcms = asNum(icms.vBc, emitter.bases.vBcIcms);
+  const vBcPis = asNum(pis.vBc, emitter.bases.vBcPisCofins);
+  const vBcIpi = asNum(ipi.vBc, emitter.bases.vBcIpi);
+  const valorIcms = asNum(icms.valorIcms, nfe.valorICMS);
 
   const pIpi = asNum(ipi.aliquota, 0);
-  const vIpi = Math.round((nfe.valor * (pIpi / 100)) * 100) / 100;
+  const vIpi = Math.round((vBcIpi * (pIpi / 100)) * 100) / 100;
   const pPis = asNum(pis.aliquota, 1.65);
-  const vPis = Math.round((nfe.valor * (pPis / 100)) * 100) / 100;
+  const vPis = Math.round((vBcPis * (pPis / 100)) * 100) / 100;
   const pCofins = asNum(cofins.aliquota, 7.6);
-  const vCofins = Math.round((nfe.valor * (pCofins / 100)) * 100) / 100;
+  const vCofins = Math.round((vBcPis * (pCofins / 100)) * 100) / 100;
   const cstPis = typeof pis.st === "string" ? pis.st.slice(0, 2) : "01";
   const cstCofins = typeof cofins.st === "string" ? cofins.st.slice(0, 2) : "01";
   const cstIpi = typeof ipi.st === "string" ? ipi.st.slice(0, 2) : "50";
   const cenq = typeof ipi.codEnq === "string" ? ipi.codEnq : "999";
 
-  const icmsXml = buildIcmsXmlFromSnapshot(icms, { orig, valor: nfe.valor, valorIcms: nfe.valorICMS });
+  const icmsXml = buildIcmsXmlFromSnapshot(icms, { orig, valor: vBcIcms, valorIcms });
+  const vFrete = emitter.freteNoCalculo ? emitter.bases.vFrete : 0;
+  const vNF = Math.round((nfe.valor + vFrete + vIpi) * 100) / 100;
+  const finNFe = 1;
 
   const ipiXml =
     startsWithTaxCode(ipi.st, "55") || startsWithTaxCode(ipi.st, "54") || startsWithTaxCode(ipi.st, "53")
       ? `<IPI><cEnq>${cenq}</cEnq><IPINT><CST>${cstIpi}</CST></IPINT></IPI>`
-      : `<IPI><cEnq>${cenq}</cEnq><IPITrib><CST>${cstIpi}</CST><vBC>${nfe.valor.toFixed(2)}</vBC><pIPI>${pIpi.toFixed(2)}</pIPI><vIPI>${vIpi.toFixed(2)}</vIPI></IPITrib></IPI>`;
+      : `<IPI><cEnq>${cenq}</cEnq><IPITrib><CST>${cstIpi}</CST><vBC>${vBcIpi.toFixed(2)}</vBC><pIPI>${pIpi.toFixed(2)}</pIPI><vIPI>${vIpi.toFixed(2)}</vIPI></IPITrib></IPI>`;
 
   const ibsCbsXml =
     ibsCbs.st || ibsCbs.cClassTrib
@@ -378,8 +419,8 @@ function buildVendaNFeXML(nfe: NFeDto, emit: EmitenteDto, product?: ProductDto):
         <tpEmis>1</tpEmis>
         <cDV>${nfe.chave.slice(-1)}</cDV>
         <tpAmb>2</tpAmb>
-        <finNFe>1</finNFe>
-        <indFinal>1</indFinal>
+        <finNFe>${finNFe}</finNFe>
+        <indFinal>${nfe.tipo === "RETORNO_SIMBOLICO" ? 0 : 1}</indFinal>
         <indPres>2</indPres>
         <procEmi>0</procEmi>
         <verProc>fiscal-engine-3.2-SIMULATION</verProc>
@@ -438,24 +479,45 @@ function buildVendaNFeXML(nfe: NFeDto, emit: EmitenteDto, product?: ProductDto):
         <imposto>
           ${icmsXml}
           ${ipiXml}
-          <PIS><PISAliq><CST>${cstPis}</CST><vBC>${nfe.valor.toFixed(2)}</vBC><pPIS>${pPis.toFixed(2)}</pPIS><vPIS>${vPis.toFixed(2)}</vPIS></PISAliq></PIS>
-          <COFINS><COFINSAliq><CST>${cstCofins}</CST><vBC>${nfe.valor.toFixed(2)}</vBC><pCOFINS>${pCofins.toFixed(2)}</pCOFINS><vCOFINS>${vCofins.toFixed(2)}</vCOFINS></COFINSAliq></COFINS>
+          <PIS><PISAliq><CST>${cstPis}</CST><vBC>${vBcPis.toFixed(2)}</vBC><pPIS>${pPis.toFixed(2)}</pPIS><vPIS>${vPis.toFixed(2)}</vPIS></PISAliq></PIS>
+          <COFINS><COFINSAliq><CST>${cstCofins}</CST><vBC>${vBcPis.toFixed(2)}</vBC><pCOFINS>${pCofins.toFixed(2)}</pCOFINS><vCOFINS>${vCofins.toFixed(2)}</vCOFINS></COFINSAliq></COFINS>
           ${ibsCbsXml}
         </imposto>
       </det>
       <total>
         <ICMSTot>
-          <vBC>${nfe.valor.toFixed(2)}</vBC>
-          <vICMS>${nfe.valorICMS.toFixed(2)}</vICMS>
+          <vBC>${vBcIcms.toFixed(2)}</vBC>
+          <vICMS>${valorIcms.toFixed(2)}</vICMS>
           <vProd>${nfe.valor.toFixed(2)}</vProd>
-          <vNF>${nfe.valor.toFixed(2)}</vNF>
+          <vFrete>${vFrete.toFixed(2)}</vFrete>
+          <vIPI>${vIpi.toFixed(2)}</vIPI>
+          <vPIS>${vPis.toFixed(2)}</vPIS>
+          <vCOFINS>${vCofins.toFixed(2)}</vCOFINS>
+          <vNF>${vNF.toFixed(2)}</vNF>
         </ICMSTot>
       </total>
+${transpXml(emitter.modFrete, vFrete)}${infCplXml(emitter)}
     </infNFe>
 ${signatureBlock(id, nfe.chave)}
   </NFe>
 ${protNFeBlock(nfe, dhEmi)}
 </nfeProc>`;
+}
+
+function buildDevolucaoNFeXML(
+  nfe: NFeDto,
+  emit: EmitenteDto,
+  product?: ProductDto,
+  emitterSettings?: FiscalEmitterSettingsData | null,
+): string {
+  const base = buildVendaNFeXML(nfe, emit, product, emitterSettings);
+  return base
+    .replace("<tpNF>1</tpNF>", "<tpNF>0</tpNF>")
+    .replace("<finNFe>1</finNFe>", "<finNFe>4</finNFe>")
+    .replace(
+      /<natOp>[^<]*<\/natOp>/,
+      `<natOp>${xmlEscape(nfe.natOp || "Devolução de mercadoria")}</natOp>`,
+    );
 }
 
 /** Lightweight XML pretty token highlighter (tag, attr, value). */

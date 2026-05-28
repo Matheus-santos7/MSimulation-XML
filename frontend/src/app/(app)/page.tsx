@@ -4,7 +4,7 @@ import { KPI, SectionHeader, StatusBadge } from "@/components/fiscal-ui";
 import { XMLViewer } from "@/components/xml-viewer";
 import { resolveActiveTenantId } from "@/lib/active-tenant";
 import { TimelineChains } from "@/components/timeline-chains";
-import { getEmitente, listNfes, listProducts, listTimeline } from "@/lib/fiscal-api";
+import { getEmitente, getFiscalEmitterSettings, listNfes, listProducts, listTimeline } from "@/lib/fiscal-api";
 import { brl, formatChave } from "@/lib/format";
 import { buildNFeXML } from "@/lib/xml-generator";
 
@@ -28,6 +28,7 @@ export default async function DashboardPage() {
           featured,
           await getEmitente(featured.tenantId),
           featuredProduct,
+          (await getFiscalEmitterSettings(featured.tenantId))?.settings ?? null,
         )
       : "";
 

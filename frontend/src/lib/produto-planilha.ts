@@ -12,7 +12,9 @@ export const PRODUTO_PLANILHA_COLUMNS = [
   "origem",
   "unidade",
   "preco",
+  "preco_custo",
   "estoque",
+  "tax_rule_base_id",
 ] as const;
 
 export type ProdutoPlanilhaColumn = (typeof PRODUTO_PLANILHA_COLUMNS)[number];
@@ -41,10 +43,21 @@ const HEADER_ALIASES: Record<string, ProdutoPlanilhaColumn> = {
   utrib: "unidade",
   preco: "preco",
   preço: "preco",
+  preco_venda: "preco",
+  precovenda: "preco",
   vuncom: "preco",
+  preco_custo: "preco_custo",
+  precocusto: "preco_custo",
+  custo: "preco_custo",
+  vuncusto: "preco_custo",
   estoque: "estoque",
   stock: "estoque",
   quantidade: "estoque",
+  tax_rule_base_id: "tax_rule_base_id",
+  taxrulebaseid: "tax_rule_base_id",
+  regra_fiscal: "tax_rule_base_id",
+  regrafiscal: "tax_rule_base_id",
+  regra_tributaria: "tax_rule_base_id",
 };
 
 const EXAMPLE_ROW: Record<ProdutoPlanilhaColumn, string> = {
@@ -58,7 +71,9 @@ const EXAMPLE_ROW: Record<ProdutoPlanilhaColumn, string> = {
   origem: "0",
   unidade: "UNID",
   preco: "846,00",
+  preco_custo: "520,00",
   estoque: "0",
+  tax_rule_base_id: "eletrodomesticos",
 };
 
 export type ProdutoPlanilhaParseResult = {
@@ -159,6 +174,7 @@ function rowToProductInput(row: Record<ProdutoPlanilhaColumn, string>): ProductI
   const cfopRaw = cell(row, "cfop").replace(/\D/g, "");
   const cfop = cfopRaw.length === 4 ? cfopRaw : "5102";
   const preco = parsePreco(cell(row, "preco"));
+  const precoCusto = parsePreco(cell(row, "preco_custo"));
   const origemRaw = cell(row, "origem");
   const origem = origemRaw === "" ? 0 : Number(origemRaw);
 
@@ -166,7 +182,9 @@ function rowToProductInput(row: Record<ProdutoPlanilhaColumn, string>): ProductI
   if (!nome) return "Descrição (nome) obrigatória";
   if (ncm.length !== 8) return "NCM deve ter 8 dígitos";
   if (cest.length !== 7) return "CEST deve ter 7 dígitos";
-  if (preco == null) return "Preço inválido";
+  if (preco == null) return "Preço de venda inválido";
+  if (precoCusto == null) return "Preço de custo inválido";
+  if (precoCusto < 0) return "Preço de custo não pode ser negativo";
   if (!Number.isInteger(origem) || origem < 0 || origem > 8) return "Origem deve ser 0–8";
 
   const eanRaw = cell(row, "ean").replace(/\D/g, "");
@@ -183,6 +201,9 @@ function rowToProductInput(row: Record<ProdutoPlanilhaColumn, string>): ProductI
   const estoque = estoqueRaw === "" ? 0 : Number(estoqueRaw.replace(/\D/g, "") || estoqueRaw);
   if (!Number.isInteger(estoque) || estoque < 0) return "Estoque deve ser inteiro ≥ 0";
 
+  const taxRuleBaseId = cell(row, "tax_rule_base_id");
+  if (!taxRuleBaseId) return "Regra fiscal (tax_rule_base_id) obrigatória — use o ID base da planilha de regras";
+
   return {
     sku,
     ean,
@@ -194,7 +215,9 @@ function rowToProductInput(row: Record<ProdutoPlanilhaColumn, string>): ProductI
     origem,
     unidade,
     preco,
+    precoCusto,
     estoque,
+    taxRuleBaseId,
   };
 }
 
@@ -277,6 +300,9 @@ function productToRow(p: ProductDto): string[] {
     String(p.origem),
     p.unidade,
     formatPrecoBr(p.preco),
+    formatPrecoBr(p.precoCusto),
+    String(p.estoque ?? 0),
+    p.taxRuleBaseId ?? "",
   ];
 }
 

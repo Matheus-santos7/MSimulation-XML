@@ -13,7 +13,9 @@ export type ProductDto = {
   origem: number;
   unidade: string;
   preco: number;
+  precoCusto: number;
   estoque: number;
+  taxRuleBaseId?: string;
 };
 
 export function mapProduct(row: Product): ProductDto {
@@ -30,7 +32,9 @@ export function mapProduct(row: Product): ProductDto {
     origem: row.origem,
     unidade: row.unidade,
     preco: Number(row.preco),
+    precoCusto: Number(row.precoCusto),
     estoque: row.estoque,
+    taxRuleBaseId: row.taxRuleBaseId ?? undefined,
   };
 }
 

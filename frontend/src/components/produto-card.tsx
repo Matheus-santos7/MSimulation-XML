@@ -23,10 +23,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ProductFormFields } from "@/components/product-form-fields";
-import type { ProductDto } from "@/lib/fiscal-types";
+import type { ProductDto, TaxRuleCatalogEntry } from "@/lib/fiscal-types";
 import { brl } from "@/lib/format";
 
-export function ProdutoCard({ product }: { product: ProductDto }) {
+export function ProdutoCard({
+  product,
+  taxRuleCatalog = [],
+}: {
+  product: ProductDto;
+  taxRuleCatalog?: TaxRuleCatalogEntry[];
+}) {
+  const ruleLabel =
+    taxRuleCatalog.find((r) => r.baseId === product.taxRuleBaseId)?.label ??
+    product.taxRuleBaseId ??
+    null;
   const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -91,13 +101,24 @@ export function ProdutoCard({ product }: { product: ProductDto }) {
               <span className="text-muted-foreground">EAN:</span> {product.ean}
             </div>
           )}
+          <div className="col-span-2 text-[12px] leading-snug">
+            <span className="text-muted-foreground">Regra:</span>{" "}
+            {ruleLabel ? (
+              <span title={ruleLabel}>{ruleLabel}</span>
+            ) : (
+              <span className="text-amber-500">Não associada — edite o produto</span>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center justify-between pt-2 border-t border-border font-mono text-[13px]">
           <span className="text-muted-foreground">
             {product.unidade} · estoque {product.estoque}
           </span>
-          <span className="font-bold text-accent">{brl(product.preco)}</span>
+          <span className="text-right">
+            <span className="block text-muted-foreground text-[11px]">custo {brl(product.precoCusto)}</span>
+            <span className="font-bold text-accent">venda {brl(product.preco)}</span>
+          </span>
         </div>
       </div>
 
@@ -114,6 +135,7 @@ export function ProdutoCard({ product }: { product: ProductDto }) {
               draft={editState.values}
               fieldErrors={editState.fieldErrors}
               idPrefix={`edit-${product.id}`}
+              taxRuleCatalog={taxRuleCatalog}
             />
             <div className="flex gap-3 pt-2">
               <Button type="submit" disabled={editPending}>

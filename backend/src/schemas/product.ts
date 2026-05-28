@@ -59,8 +59,10 @@ export const productCreateBody = z.object({
   cfop: cfopField.default("5102"),
   origem: z.coerce.number().int().min(0).max(8),
   unidade: z.string().trim().min(1, "Unidade obrigatória").max(6),
-  preco: z.coerce.number().positive("Preço deve ser maior que zero"),
+  preco: z.coerce.number().positive("Preço de venda deve ser maior que zero"),
+  precoCusto: z.coerce.number().min(0, "Preço de custo não pode ser negativo"),
   estoque: z.coerce.number().int().min(0, "Estoque não pode ser negativo").default(0),
+  taxRuleBaseId: z.string().trim().min(1, "Regra fiscal obrigatória").max(120),
 });
 
 export const productUpdateBody = productCreateBody.partial();

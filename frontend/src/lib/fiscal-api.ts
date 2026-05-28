@@ -12,12 +12,17 @@ import type {
   PedidoFaturarResult,
   ProductDto,
   ProductInput,
+  TaxRuleCatalogEntry,
   TaxRuleDto,
   TenantDto,
   TenantInput,
   TimelineChainDto,
   TimelineStepDto,
 } from "./fiscal-types";
+import type {
+  FiscalEmitterSettingsPatch,
+  FiscalEmitterSettingsView,
+} from "./fiscal-emitter-settings-types";
 
 function apiBase(): string {
   return (process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3001").replace(/\/$/, "");
@@ -286,6 +291,10 @@ export async function listTaxRules(tenantId?: string): Promise<TaxRuleDto[]> {
   return getJson<TaxRuleDto[]>(url("/api/tax-rules", { tenantId }));
 }
 
+export async function listTaxRuleCatalog(tenantId?: string): Promise<TaxRuleCatalogEntry[]> {
+  return getJson<TaxRuleCatalogEntry[]>(url("/api/tax-rules/catalog", { tenantId }));
+}
+
 export type TaxRuleImportRow = {
   ruleId: string;
   nome: string;
@@ -312,4 +321,19 @@ export async function bulkUpsertTaxRules(
   return mutateJson<TaxRuleBulkUpsertResult>(url("/api/tax-rules/bulk-upsert", { tenantId }), "POST", {
     rows,
   }) as Promise<TaxRuleBulkUpsertResult>;
+}
+
+export async function getFiscalEmitterSettings(tenantId: string): Promise<FiscalEmitterSettingsView | null> {
+  const href = url("/api/fiscal-settings", { tenantId });
+  const res = await fetch(href, { cache: "no-store" });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(await readApiError(res));
+  return res.json() as Promise<FiscalEmitterSettingsView>;
+}
+
+export async function patchFiscalEmitterSettings(
+  tenantId: string,
+  patch: FiscalEmitterSettingsPatch,
+): Promise<FiscalEmitterSettingsView> {
+  return mutateJson<FiscalEmitterSettingsView>(url("/api/fiscal-settings", { tenantId }), "PATCH", patch) as Promise<FiscalEmitterSettingsView>;
 }

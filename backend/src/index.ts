@@ -4,6 +4,7 @@ import Fastify from "fastify";
 import { prismaPlugin } from "./plugins/prisma.js";
 import { healthRoutes } from "./routes/health.js";
 import { fiscalRoutes } from "./routes/fiscal.js";
+import { fiscalSettingsRoutes } from "./routes/fiscal-settings.js";
 import { lookupRoutes } from "./routes/lookup.js";
 import { tenantRoutes } from "./routes/tenants.js";
 import { productRoutes } from "./routes/products.js";
@@ -19,6 +20,7 @@ await app.register(tenantRoutes, { prefix: "/api" });
 await app.register(productRoutes, { prefix: "/api" });
 await app.register(pedidoRoutes, { prefix: "/api" });
 await app.register(fiscalRoutes, { prefix: "/api" });
+await app.register(fiscalSettingsRoutes, { prefix: "/api" });
 
 const port = Number(process.env.PORT ?? 3001);
 const host = process.env.HOST ?? "0.0.0.0";

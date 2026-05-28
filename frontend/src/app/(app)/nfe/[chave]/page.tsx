@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader, StatusBadge } from "@/components/fiscal-ui";
+import { NfeXmlActions } from "@/components/nfe-xml-actions";
 import { XMLViewer } from "@/components/xml-viewer";
-import { getEmitente, getNfeByChave, listProducts } from "@/lib/fiscal-api";
+import { getEmitente, getFiscalEmitterSettings, getNfeByChave, listProducts } from "@/lib/fiscal-api";
 import { brl, formatChave } from "@/lib/format";
 import { buildNFeXML } from "@/lib/xml-generator";
 
@@ -19,7 +20,10 @@ export default async function NFeDetailPage({ params }: Props) {
   const nfe = await getNfeByChave(chave);
   if (!nfe) notFound();
 
-  const emit = await getEmitente(nfe.tenantId);
+  const [emit, fiscalCfg] = await Promise.all([
+    getEmitente(nfe.tenantId),
+    getFiscalEmitterSettings(nfe.tenantId),
+  ]);
   let product = undefined;
   if (nfe.productId) {
     product = (await listProducts(nfe.tenantId)).find((p) => p.id === nfe.productId);
@@ -28,7 +32,7 @@ export default async function NFeDetailPage({ params }: Props) {
     const produtos = await listProducts(nfe.tenantId);
     product = produtos.find((p) => p.ncm === nfe.ncm) ?? produtos[0];
   }
-  const xml = buildNFeXML(nfe, emit, product);
+  const xml = buildNFeXML(nfe, emit, product, fiscalCfg?.settings ?? null);
 
   return (
     <div className="p-6 space-y-6">
@@ -39,7 +43,16 @@ export default async function NFeDetailPage({ params }: Props) {
         ← Todas as NF-e
       </Link>
 
-      <PageHeader title={`NF-e nº ${nfe.numero} / série ${nfe.serie}`} subtitle={nfe.natOp} actions={<StatusBadge status={nfe.status} />} />
+      <PageHeader
+        title={`NF-e nº ${nfe.numero} / série ${nfe.serie}`}
+        subtitle={nfe.natOp}
+        actions={
+          <div className="flex flex-wrap items-center gap-3">
+            <NfeXmlActions chave={nfe.chave} variant="toolbar" />
+            <StatusBadge status={nfe.status} />
+          </div>
+        }
+      />
 
       <div className="grid grid-cols-12 gap-6">
         <div className="col-span-5 space-y-4">

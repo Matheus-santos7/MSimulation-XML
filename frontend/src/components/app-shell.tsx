@@ -13,6 +13,7 @@ import {
   Bell,
   Sparkles,
   ShieldCheck,
+  Settings2,
 } from "lucide-react";
 import { setActiveTenantAction } from "@/app/(app)/tenant-actions";
 import type { TenantDto } from "@/lib/fiscal-types";
@@ -26,6 +27,7 @@ const NAV_OPERACIONAL = [
 ] as const;
 
 const NAV_CONFIG = [
+  { href: "/configuracoes-fiscais", label: "Config. fiscais", icon: Settings2 },
   { href: "/regras", label: "Regras Tributárias", icon: Scale },
   { href: "/auditoria", label: "Auditoria", icon: ShieldCheck },
   { href: "/eventos", label: "Eventos", icon: Bell },

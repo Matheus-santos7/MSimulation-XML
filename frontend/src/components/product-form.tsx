@@ -5,16 +5,23 @@ import Link from "next/link";
 import type { ProdutoFormState } from "@/lib/produto-form";
 import { Button } from "@/components/ui/button";
 import { ProductFormFields } from "@/components/product-form-fields";
-import type { ProductDto } from "@/lib/fiscal-types";
+import type { ProductDto, TaxRuleCatalogEntry } from "@/lib/fiscal-types";
 
 type Props = {
   product?: ProductDto;
+  taxRuleCatalog?: TaxRuleCatalogEntry[];
   action: (prev: ProdutoFormState, formData: FormData) => Promise<ProdutoFormState>;
   submitLabel: string;
   cancelHref?: string;
 };
 
-export function ProductForm({ product, action, submitLabel, cancelHref = "/produtos" }: Props) {
+export function ProductForm({
+  product,
+  taxRuleCatalog,
+  action,
+  submitLabel,
+  cancelHref = "/produtos",
+}: Props) {
   const [state, formAction, pending] = useActionState(action, {});
 
   return (
@@ -25,7 +32,13 @@ export function ProductForm({ product, action, submitLabel, cancelHref = "/produ
         </div>
       )}
 
-      <ProductFormFields product={product} draft={state.values} fieldErrors={state.fieldErrors} idPrefix="novo-prod" />
+      <ProductFormFields
+        product={product}
+        draft={state.values}
+        fieldErrors={state.fieldErrors}
+        idPrefix="novo-prod"
+        taxRuleCatalog={taxRuleCatalog}
+      />
 
       <div className="flex gap-3 pt-2">
         <Button type="submit" disabled={pending}>

@@ -1,0 +1,250 @@
+export type SettingsMode = "DEFAULT" | "CUSTOM";
+
+export type BaseCalcAction =
+  | "INCLUIR_NA_BASE"
+  | "SUBTRAIR_DA_BASE"
+  | "NAO_SUBTRAIR"
+  | "NAO_INCLUIR";
+
+export type DifalCalculo = "PADRAO" | "BASE_DUPLA_COM_ICMS" | "SEM_DIFAL";
+
+export type CstDevolucaoMap = { venda: string; devolucao: string };
+
+export type ComposicaoLinha = { venda: BaseCalcAction; remessa: BaseCalcAction };
+
+export type ComposicaoTributo = {
+  frete: ComposicaoLinha;
+  desconto: ComposicaoLinha;
+  icms?: ComposicaoLinha;
+  difal?: ComposicaoLinha;
+  fcpIcms?: ComposicaoLinha;
+  fcpDifal?: ComposicaoLinha;
+  ipi?: ComposicaoLinha;
+  acrescimoPreco: ComposicaoLinha;
+};
+
+export type FiscalEmitterSettingsData = {
+  basic: {
+    formaFaturamento: "EMISSOR_PROPRIO" | "EMISSOR_ML";
+    dadosFiscaisAnunciosOk: boolean;
+    dadosFiscaisAnunciosNota?: string;
+  };
+  taxes: {
+    cstDevolucao: {
+      mode: SettingsMode;
+      icms: CstDevolucaoMap[];
+      pisCofins: CstDevolucaoMap[];
+    };
+    composicaoBaseCalculo: {
+      mode: SettingsMode;
+      pisCofins: ComposicaoTributo;
+      icms: ComposicaoTributo;
+      ipi: ComposicaoTributo;
+    };
+    calculoDifal: {
+      mode: SettingsMode;
+      bulk: DifalCalculo;
+      porUf: Record<string, DifalCalculo>;
+    };
+    modalidadeFrete: {
+      mode: SettingsMode;
+      fullfilmentVendas: string;
+      fullfilmentEntrada: string;
+      coleta: string;
+      flex: string;
+      turbo: string;
+    };
+    emissaoGnre: {
+      mode: SettingsMode;
+      estadosIeCount: number;
+      estadosComIe: string[];
+    };
+  };
+  nfe: {
+    mensagemNfeOk: boolean;
+    mensagemPadrao?: string;
+    acrescimoPrecoProduto: boolean;
+    freteNoCalculo: boolean;
+    prazoCancelamento: { horas: number; naoInformar: boolean };
+    acessoExternoContatos: number;
+    contatos: { nome: string; email: string }[];
+  };
+};
+
+const BR_UFS = [
+  "AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS", "MT",
+  "PA", "PB", "PE", "PI", "PR", "RJ", "RN", "RO", "RR", "RS", "SC", "SE", "SP", "TO",
+];
+
+const linha = (
+  venda: BaseCalcAction,
+  remessa: BaseCalcAction,
+): ComposicaoLinha => ({ venda, remessa });
+
+const composicaoPisCofins = (): ComposicaoTributo => ({
+  frete: linha("INCLUIR_NA_BASE", "INCLUIR_NA_BASE"),
+  desconto: linha("SUBTRAIR_DA_BASE", "SUBTRAIR_DA_BASE"),
+  icms: linha("SUBTRAIR_DA_BASE", "SUBTRAIR_DA_BASE"),
+  difal: linha("SUBTRAIR_DA_BASE", "SUBTRAIR_DA_BASE"),
+  fcpIcms: linha("NAO_SUBTRAIR", "NAO_SUBTRAIR"),
+  fcpDifal: linha("NAO_SUBTRAIR", "NAO_SUBTRAIR"),
+  ipi: linha("NAO_INCLUIR", "NAO_INCLUIR"),
+  acrescimoPreco: linha("NAO_INCLUIR", "NAO_INCLUIR"),
+});
+
+const composicaoIcms = (): ComposicaoTributo => ({
+  frete: linha("INCLUIR_NA_BASE", "INCLUIR_NA_BASE"),
+  desconto: linha("SUBTRAIR_DA_BASE", "SUBTRAIR_DA_BASE"),
+  ipi: linha("INCLUIR_NA_BASE", "INCLUIR_NA_BASE"),
+  acrescimoPreco: linha("NAO_INCLUIR", "NAO_INCLUIR"),
+});
+
+const composicaoIpi = (): ComposicaoTributo => ({
+  frete: linha("INCLUIR_NA_BASE", "INCLUIR_NA_BASE"),
+  desconto: linha("SUBTRAIR_DA_BASE", "SUBTRAIR_DA_BASE"),
+  acrescimoPreco: linha("NAO_INCLUIR", "NAO_INCLUIR"),
+});
+
+export const DEFAULT_CST_DEVOLUCAO_ICMS: CstDevolucaoMap[] = [
+  { venda: "102", devolucao: "41" },
+  { venda: "103", devolucao: "41" },
+  { venda: "300", devolucao: "41" },
+  { venda: "400", devolucao: "41" },
+  { venda: "500", devolucao: "60" },
+];
+
+export const DEFAULT_CST_DEVOLUCAO_PIS_COFINS: CstDevolucaoMap[] = [
+  { venda: "01", devolucao: "50" },
+  { venda: "02", devolucao: "50" },
+  { venda: "03", devolucao: "50" },
+  { venda: "04", devolucao: "50" },
+  { venda: "05", devolucao: "50" },
+  { venda: "06", devolucao: "50" },
+  { venda: "07", devolucao: "50" },
+  { venda: "08", devolucao: "50" },
+  { venda: "09", devolucao: "50" },
+  { venda: "49", devolucao: "98" },
+  { venda: "99", devolucao: "98" },
+];
+
+function defaultDifalPorUf(): Record<string, DifalCalculo> {
+  return Object.fromEntries(BR_UFS.map((uf) => [uf, uf === "PB" ? "BASE_DUPLA_COM_ICMS" : "PADRAO"]));
+}
+
+export const DEFAULT_FISCAL_EMITTER_SETTINGS: FiscalEmitterSettingsData = {
+  basic: {
+    formaFaturamento: "EMISSOR_PROPRIO",
+    dadosFiscaisAnunciosOk: false,
+    dadosFiscaisAnunciosNota: "",
+  },
+  taxes: {
+    cstDevolucao: {
+      mode: "CUSTOM",
+      icms: DEFAULT_CST_DEVOLUCAO_ICMS,
+      pisCofins: DEFAULT_CST_DEVOLUCAO_PIS_COFINS,
+    },
+    composicaoBaseCalculo: {
+      mode: "CUSTOM",
+      pisCofins: composicaoPisCofins(),
+      icms: composicaoIcms(),
+      ipi: composicaoIpi(),
+    },
+    calculoDifal: {
+      mode: "CUSTOM",
+      bulk: "PADRAO",
+      porUf: defaultDifalPorUf(),
+    },
+    modalidadeFrete: {
+      mode: "CUSTOM",
+      fullfilmentVendas: "0",
+      fullfilmentEntrada: "0",
+      coleta: "0",
+      flex: "0",
+      turbo: "0",
+    },
+    emissaoGnre: {
+      mode: "DEFAULT",
+      estadosIeCount: 0,
+      estadosComIe: [],
+    },
+  },
+  nfe: {
+    mensagemNfeOk: false,
+    mensagemPadrao: "",
+    acrescimoPrecoProduto: false,
+    freteNoCalculo: true,
+    prazoCancelamento: { horas: 24, naoInformar: false },
+    acessoExternoContatos: 0,
+    contatos: [],
+  },
+};
+
+function mergeComposicaoTributo(
+  base: ComposicaoTributo,
+  patch?: Partial<ComposicaoTributo>,
+): ComposicaoTributo {
+  if (!patch) return base;
+  const keys = Object.keys(patch) as (keyof ComposicaoTributo)[];
+  const out = { ...base };
+  for (const k of keys) {
+    const p = patch[k];
+    if (p) out[k] = { ...base[k], ...p };
+  }
+  return out;
+}
+
+export function mergeFiscalEmitterSettings(partial: unknown): FiscalEmitterSettingsData {
+  const base = structuredClone(DEFAULT_FISCAL_EMITTER_SETTINGS);
+  if (!partial || typeof partial !== "object") return base;
+  const p = partial as Partial<FiscalEmitterSettingsData>;
+
+  return {
+    basic: { ...base.basic, ...p.basic },
+    taxes: {
+      ...base.taxes,
+      ...p.taxes,
+      cstDevolucao: {
+        ...base.taxes.cstDevolucao,
+        ...p.taxes?.cstDevolucao,
+        icms: p.taxes?.cstDevolucao?.icms ?? base.taxes.cstDevolucao.icms,
+        pisCofins: p.taxes?.cstDevolucao?.pisCofins ?? base.taxes.cstDevolucao.pisCofins,
+      },
+      composicaoBaseCalculo: {
+        ...base.taxes.composicaoBaseCalculo,
+        ...p.taxes?.composicaoBaseCalculo,
+        pisCofins: mergeComposicaoTributo(
+          base.taxes.composicaoBaseCalculo.pisCofins,
+          p.taxes?.composicaoBaseCalculo?.pisCofins,
+        ),
+        icms: mergeComposicaoTributo(
+          base.taxes.composicaoBaseCalculo.icms,
+          p.taxes?.composicaoBaseCalculo?.icms,
+        ),
+        ipi: mergeComposicaoTributo(
+          base.taxes.composicaoBaseCalculo.ipi,
+          p.taxes?.composicaoBaseCalculo?.ipi,
+        ),
+      },
+      calculoDifal: {
+        ...base.taxes.calculoDifal,
+        ...p.taxes?.calculoDifal,
+        porUf: { ...base.taxes.calculoDifal.porUf, ...p.taxes?.calculoDifal?.porUf },
+      },
+      modalidadeFrete: { ...base.taxes.modalidadeFrete, ...p.taxes?.modalidadeFrete },
+      emissaoGnre: {
+        ...base.taxes.emissaoGnre,
+        ...p.taxes?.emissaoGnre,
+        estadosComIe: p.taxes?.emissaoGnre?.estadosComIe ?? base.taxes.emissaoGnre.estadosComIe,
+      },
+    },
+    nfe: {
+      ...base.nfe,
+      ...p.nfe,
+      prazoCancelamento: {
+        ...base.nfe.prazoCancelamento,
+        ...p.nfe?.prazoCancelamento,
+      },
+      contatos: p.nfe?.contatos ?? base.nfe.contatos,
+    },
+  };
+}

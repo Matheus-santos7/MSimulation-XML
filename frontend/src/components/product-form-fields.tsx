@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { ProdutoFormValues } from "@/lib/produto-form";
-import type { ProductDto } from "@/lib/fiscal-types";
+import type { ProductDto, TaxRuleCatalogEntry } from "@/lib/fiscal-types";
 
 const ORIGEM_OPTIONS = [
   { value: "0", label: "0 — Nacional" },
@@ -25,6 +25,7 @@ type Props = {
   draft?: ProdutoFormValues;
   fieldErrors?: Record<string, string[]>;
   idPrefix?: string;
+  taxRuleCatalog?: TaxRuleCatalogEntry[];
 };
 
 function toFormState(product?: ProductDto, draft?: ProdutoFormValues): ProdutoFormValues {
@@ -40,11 +41,19 @@ function toFormState(product?: ProductDto, draft?: ProdutoFormValues): ProdutoFo
     origem: String(product?.origem ?? 0),
     unidade: product?.unidade ?? "UN",
     preco: product != null ? String(product.preco) : "",
+    precoCusto: product != null ? String(product.precoCusto) : "",
     estoque: product != null ? String(product.estoque) : "1",
+    taxRuleBaseId: product?.taxRuleBaseId ?? "",
   };
 }
 
-export function ProductFormFields({ product, draft, fieldErrors, idPrefix = "prod" }: Props) {
+export function ProductFormFields({
+  product,
+  draft,
+  fieldErrors,
+  idPrefix = "prod",
+  taxRuleCatalog = [],
+}: Props) {
   const [form, setForm] = useState<ProdutoFormValues>(() => toFormState(product, draft));
 
   useEffect(() => {
@@ -76,6 +85,21 @@ export function ProductFormFields({ product, draft, fieldErrors, idPrefix = "pro
       </Section>
 
       <Section title="Classificação fiscal">
+        <SelectField
+          id={`${idPrefix}-taxRuleBaseId`}
+          label="Regra tributária (planilha)"
+          name="taxRuleBaseId"
+          value={form.taxRuleBaseId}
+          onChange={set}
+          required
+          options={
+            taxRuleCatalog.length > 0
+              ? taxRuleCatalog.map((r) => ({ value: r.baseId, label: r.label }))
+              : [{ value: "", label: "Importe regras em Regras tributárias" }]
+          }
+          error={err("taxRuleBaseId")}
+          hint="No faturamento, cruzamos origem da empresa × UF do destinatário nesta regra."
+        />
         <div className="grid grid-cols-2 gap-3">
           <Field id={`${idPrefix}-ncm`} label="NCM" name="ncm" value={form.ncm} onChange={set} required mono error={err("ncm")} />
           <Field id={`${idPrefix}-cest`} label="CEST" name="cest" value={form.cest} onChange={set} required mono error={err("cest")} />
@@ -99,7 +123,7 @@ export function ProductFormFields({ product, draft, fieldErrors, idPrefix = "pro
         <div className="grid grid-cols-2 gap-3">
           <SelectField
             id={`${idPrefix}-unidade`}
-            label="Unidade (uCom / uTrib)"
+            label="Unidade"
             name="unidade"
             value={form.unidade}
             onChange={set}
@@ -107,8 +131,24 @@ export function ProductFormFields({ product, draft, fieldErrors, idPrefix = "pro
             error={err("unidade")}
           />
           <Field
+            id={`${idPrefix}-precoCusto`}
+            label="Preço de custo"
+            name="precoCusto"
+            value={form.precoCusto}
+            onChange={set}
+            required
+            mono
+            type="number"
+            step="0.00000001"
+            min="0"
+            error={err("precoCusto")}
+            hint="Usado na NF-e de remessa (vUnCom)."
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Field
             id={`${idPrefix}-preco`}
-            label="Preço unitário (vUnCom)"
+            label="Preço de venda"
             name="preco"
             value={form.preco}
             onChange={set}
@@ -118,26 +158,27 @@ export function ProductFormFields({ product, draft, fieldErrors, idPrefix = "pro
             step="0.00000001"
             min="0"
             error={err("preco")}
+            hint="Usado na NF-e de venda ao cliente."
+          />
+          <Field
+            id={`${idPrefix}-estoque`}
+            label="Quantidade"
+            name="estoque"
+            value={form.estoque}
+            onChange={set}
+            required
+            mono
+            type="number"
+            step="1"
+            min="0"
+            error={err("estoque")}
+            hint={
+              product
+                ? "Aumentar gera remessa pela diferença."
+                : "Inicial no depósito ML — gera remessa ao salvar."
+            }
           />
         </div>
-        <Field
-          id={`${idPrefix}-estoque`}
-          label="Estoque (unidades no depósito)"
-          name="estoque"
-          value={form.estoque}
-          onChange={set}
-          required
-          mono
-          type="number"
-          step="1"
-          min="0"
-          error={err("estoque")}
-          hint={
-            product
-              ? "Aumentar o estoque gera NF-e de remessa (CFOP 6949) pela diferença."
-              : "Quantidade inicial enviada ao depósito ML — gera NF-e de remessa ao salvar."
-          }
-        />
       </Section>
     </div>
   );
@@ -209,6 +250,8 @@ function SelectField({
   onChange,
   options,
   error,
+  hint,
+  required,
 }: {
   id: string;
   label: string;
@@ -217,6 +260,8 @@ function SelectField({
   onChange: (key: keyof ProdutoFormValues, value: string) => void;
   options: readonly { value: string; label: string }[];
   error?: string;
+  hint?: string;
+  required?: boolean;
 }) {
   return (
     <div className="space-y-2">
@@ -225,15 +270,22 @@ function SelectField({
         id={id}
         name={name}
         value={value}
+        required={required}
         onChange={(e) => onChange(name, e.target.value)}
         className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       >
+        {!value ? (
+          <option value="" disabled className="bg-background">
+            Selecione a regra…
+          </option>
+        ) : null}
         {options.map((o) => (
-          <option key={o.value} value={o.value} className="bg-background">
+          <option key={o.value || "__empty"} value={o.value} className="bg-background">
             {o.label}
           </option>
         ))}
       </select>
+      {hint && !error ? <p className="text-[12px] text-muted-foreground">{hint}</p> : null}
       {error && <p className="text-[12px] text-destructive">{error}</p>}
     </div>
   );

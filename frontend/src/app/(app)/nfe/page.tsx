@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FiscalDocumentDeleteButton } from "@/components/fiscal-document-delete-button";
+import { NfeXmlActions } from "@/components/nfe-xml-actions";
 import { PageHeader, StatusBadge } from "@/components/fiscal-ui";
 import { resolveActiveTenantId } from "@/lib/active-tenant";
 import { listNfes } from "@/lib/fiscal-api";
@@ -8,9 +9,18 @@ import { brl, formatChave } from "@/lib/format";
 
 export const metadata: Metadata = { title: "NF-e Emitidas" };
 
+function sortNfesForList<T extends { emitidaEm: string; serie: number; numero: number }>(rows: T[]): T[] {
+  return [...rows].sort((a, b) => {
+    const byDate = new Date(b.emitidaEm).getTime() - new Date(a.emitidaEm).getTime();
+    if (byDate !== 0) return byDate;
+    if (b.serie !== a.serie) return b.serie - a.serie;
+    return b.numero - a.numero;
+  });
+}
+
 export default async function NFeListPage() {
   const tenantId = await resolveActiveTenantId();
-  const nfes = await listNfes(tenantId);
+  const nfes = sortNfesForList(await listNfes(tenantId));
 
   return (
     <div className="p-6">
@@ -35,6 +45,7 @@ export default async function NFeListPage() {
             <thead>
               <tr className="text-[12px] text-muted-foreground uppercase tracking-tighter border-b border-border">
                 <th className="px-4 py-3 font-medium">Nº / Série</th>
+                <th className="px-4 py-3 font-medium">Emitida em</th>
                 <th className="px-4 py-3 font-medium">Chave de Acesso</th>
                 <th className="px-4 py-3 font-medium">Tipo</th>
                 <th className="px-4 py-3 font-medium">CFOP</th>
@@ -43,7 +54,8 @@ export default async function NFeListPage() {
                 <th className="px-4 py-3 font-medium">Valor</th>
                 <th className="px-4 py-3 font-medium">ICMS</th>
                 <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium w-12" aria-label="Ações" />
+                <th className="px-4 py-3 font-medium text-right">XML</th>
+                <th className="px-4 py-3 font-medium w-12" aria-label="Excluir" />
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -53,6 +65,12 @@ export default async function NFeListPage() {
                     <Link href={`/nfe/${nfe.chave}`} className="text-accent hover:underline">
                       {nfe.numero}/{nfe.serie}
                     </Link>
+                  </td>
+                  <td className="px-4 py-3 text-[13px] text-muted-foreground whitespace-nowrap">
+                    {new Date(nfe.emitidaEm).toLocaleString("pt-BR", {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    })}
                   </td>
                   <td className="px-4 py-3 font-mono text-[13px] text-muted-foreground">{formatChave(nfe.chave)}</td>
                   <td className="px-4 py-3">
@@ -91,6 +109,9 @@ export default async function NFeListPage() {
                   </td>
                   <td className="px-4 py-3">
                     <StatusBadge status={nfe.status} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <NfeXmlActions chave={nfe.chave} />
                   </td>
                   <td className="px-4 py-3 text-right">
                     <FiscalDocumentDeleteButton

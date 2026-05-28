@@ -1,9 +1,13 @@
 import type { PrismaClient } from "../generated/prisma/client.js";
+import {
+  buildTaxRuleRowId,
+  type CustomerType,
+  type TransactionType,
+} from "../lib/tax-rule-ids.js";
 
 type Tx = Omit<PrismaClient, "$connect" | "$disconnect" | "$on" | "$transaction" | "$extends">;
 
-export type CustomerType = "taxpayer" | "non_taxpayer";
-export type TransactionType = "sale" | "inbound";
+export type { CustomerType, TransactionType };
 
 export type ResolvedTaxRule = {
   ruleId: string;
@@ -41,7 +45,9 @@ function toNum(value: unknown): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
-/** Resolve regra fiscal importada da planilha para uma operação específica. */
+/**
+ * Resolve linha da planilha: origem (UF emitente) × destino (UF destinatário) × tipo de operação × regra do produto.
+ */
 export async function resolveTaxRule(
   prisma: Tx,
   tenantId: string,
@@ -50,22 +56,35 @@ export async function resolveTaxRule(
     destinationUf: string;
     transactionType: TransactionType;
     customerType: CustomerType;
+    ruleBaseId?: string;
   },
 ): Promise<ResolvedTaxRule | null> {
   const originUf = params.originUf.toUpperCase().trim();
   const destinationUf = params.destinationUf.toUpperCase().trim();
 
-  const rule = await prisma.taxRule.findFirst({
-    where: {
-      tenantId,
-      source: "xlsx",
-      origin: originUf,
-      transactionType: params.transactionType,
-      customerType: params.customerType,
-    },
-    orderBy: { updatedAt: "desc" },
-  });
+  const ruleId = params.ruleBaseId?.trim()
+    ? buildTaxRuleRowId(params.ruleBaseId.trim(), params.customerType, params.transactionType)
+    : undefined;
+
+  const rule = ruleId
+    ? await prisma.taxRule.findUnique({
+        where: { tenantId_ruleId: { tenantId, ruleId } },
+      })
+    : await prisma.taxRule.findFirst({
+        where: {
+          tenantId,
+          source: "xlsx",
+          origin: originUf,
+          transactionType: params.transactionType,
+          customerType: params.customerType,
+        },
+        orderBy: { updatedAt: "desc" },
+      });
+
   if (!rule) return null;
+
+  const ruleOrigin = (rule.origin ?? rule.uf).toUpperCase().slice(0, 2);
+  if (ruleOrigin !== originUf) return null;
 
   const payload = (rule.payload ?? {}) as Record<string, unknown>;
   const icmsByUf = (payload.icmsByUf ?? {}) as Record<string, unknown>;
@@ -92,7 +111,10 @@ export async function resolveTaxRule(
       pMva: toNum(icmsByUf[`ICMS_${destinationUf}_MVA`]),
       pIcmsStRet: toNum(icmsByUf[`ICMS_${destinationUf}_PICMSST_RET`]),
       pFcpStRet: toNum(icmsByUf[`ICMS_${destinationUf}_PFCPST_RET`]),
-      codBenef: typeof icmsByUf[`ICMS_${destinationUf}_COD_BENEF`] === "string" ? String(icmsByUf[`ICMS_${destinationUf}_COD_BENEF`]) : undefined,
+      codBenef:
+        typeof icmsByUf[`ICMS_${destinationUf}_COD_BENEF`] === "string"
+          ? String(icmsByUf[`ICMS_${destinationUf}_COD_BENEF`])
+          : undefined,
       codBenefRbc:
         typeof icmsByUf[`ICMS_${destinationUf}_COD_BENEF_RBC`] === "string"
           ? String(icmsByUf[`ICMS_${destinationUf}_COD_BENEF_RBC`])

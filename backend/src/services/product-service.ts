@@ -1,6 +1,7 @@
 import type { Prisma, PrismaClient } from "../generated/prisma/client.js";
 import { mapProduct } from "../lib/product-mapper.js";
 import type { productCreateBody, productUpdateBody } from "../schemas/product.js";
+import { assertProductTaxRuleBaseId, TaxRuleCatalogError } from "./tax-rule-catalog-service.js";
 import { emitirNFeRemessa, RemessaError } from "./remessa-service.js";
 import type { z } from "zod";
 
@@ -26,6 +27,7 @@ export class ProductService {
   async create(tenantId: string, data: CreateInput) {
     const tenant = await this.prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } });
     const estoque = data.estoque ?? 0;
+    await assertProductTaxRuleBaseId(this.prisma, tenantId, data.taxRuleBaseId, tenant.uf);
 
     try {
       const row = await this.prisma.product.create({
@@ -41,7 +43,9 @@ export class ProductService {
           origem: data.origem,
           unidade: data.unidade,
           preco: data.preco,
+          precoCusto: data.precoCusto,
           estoque,
+          taxRuleBaseId: data.taxRuleBaseId.trim(),
         },
       });
 
@@ -62,6 +66,11 @@ export class ProductService {
   async update(id: string, data: UpdateInput) {
     const existing = await this.prisma.product.findUnique({ where: { id } });
     if (!existing) return null;
+
+    if (data.taxRuleBaseId) {
+      const tenant = await this.prisma.tenant.findUniqueOrThrow({ where: { id: existing.tenantId } });
+      await assertProductTaxRuleBaseId(this.prisma, existing.tenantId, data.taxRuleBaseId, tenant.uf);
+    }
 
     const newEstoque = data.estoque ?? existing.estoque;
     const deltaRemessa = newEstoque - existing.estoque;
@@ -90,8 +99,35 @@ export class ProductService {
   async remove(id: string) {
     const existing = await this.prisma.product.findUnique({ where: { id } });
     if (!existing) return false;
-    await this.prisma.product.delete({ where: { id } });
-    return true;
+
+    const pedidos = await this.prisma.pedido.groupBy({
+      by: ["status"],
+      where: { productId: id },
+      _count: { _all: true },
+    });
+    const faturados =
+      pedidos.find((p) => p.status === "FATURADO")?._count._all ?? 0;
+    if (faturados > 0) {
+      const suffix = faturados === 1 ? "pedido faturado" : "pedidos faturados";
+      throw new ProductConflictError(
+        `Não é possível excluir: ${faturados} ${suffix} vinculado(s) a este produto. O histórico de NF-e deve ser preservado.`,
+      );
+    }
+
+    try {
+      await this.prisma.$transaction([
+        this.prisma.pedido.deleteMany({ where: { productId: id, status: "RASCUNHO" } }),
+        this.prisma.product.delete({ where: { id } }),
+      ]);
+      return true;
+    } catch (e) {
+      if (isPrismaFkError(e)) {
+        throw new ProductConflictError(
+          "Não é possível excluir: existem registros vinculados a este produto (pedidos ou movimentações fiscais).",
+        );
+      }
+      throw e;
+    }
   }
 
   async bulkUpsert(tenantId: string, rows: CreateInput[]) {
@@ -127,7 +163,9 @@ export class ProductService {
               origem: row.origem,
               unidade: row.unidade,
               preco: row.preco,
+              precoCusto: row.precoCusto,
               estoque,
+              ...(row.taxRuleBaseId ? { taxRuleBaseId: row.taxRuleBaseId.trim() } : {}),
             },
           });
           if (delta > 0) {
@@ -137,6 +175,7 @@ export class ProductService {
           bySku.set(row.sku, { id: prev.id, estoque });
           updated++;
         } else {
+          await assertProductTaxRuleBaseId(this.prisma, tenantId, row.taxRuleBaseId, tenant.uf);
           const createdRow = await this.prisma.product.create({
             data: {
               tenantId,
@@ -150,7 +189,9 @@ export class ProductService {
               origem: row.origem,
               unidade: row.unidade,
               preco: row.preco,
+              precoCusto: row.precoCusto,
               estoque,
+              taxRuleBaseId: row.taxRuleBaseId.trim(),
             },
           });
           if (estoque > 0) {
@@ -181,4 +222,8 @@ export class ProductConflictError extends Error {
 
 function isPrismaUniqueError(e: unknown): boolean {
   return typeof e === "object" && e !== null && "code" in e && (e as { code: string }).code === "P2002";
+}
+
+function isPrismaFkError(e: unknown): boolean {
+  return typeof e === "object" && e !== null && "code" in e && (e as { code: string }).code === "P2003";
 }

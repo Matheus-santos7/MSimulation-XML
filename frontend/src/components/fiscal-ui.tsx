@@ -2,17 +2,25 @@ import type { FiscalStatus } from "@/lib/fiscal-types";
 
 export function StatusBadge({ status }: { status: FiscalStatus }) {
   const styles: Record<FiscalStatus, string> = {
-    AUTORIZADA: "bg-success/10 text-success",
-    PENDENTE: "bg-accent/10 text-accent",
-    REJEITADA: "bg-destructive/10 text-destructive",
-    CANCELADA: "bg-muted text-muted-foreground",
-    DENEGADA: "bg-destructive/10 text-destructive",
+    AUTORIZADA: "bg-success/10 text-success ring-success/25",
+    PENDENTE: "bg-accent/10 text-accent ring-accent/25",
+    REJEITADA: "bg-destructive/10 text-destructive ring-destructive/25",
+    CANCELADA: "bg-red-500/15 text-red-400 ring-red-500/35",
+    DENEGADA: "bg-destructive/10 text-destructive ring-destructive/25",
   };
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[12px] font-bold tracking-wider ${styles[status]}`}
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ring-1 ring-inset ${styles[status]}`}
     >
       {status}
+    </span>
+  );
+}
+
+export function InutilizadaStatusBadge() {
+  return (
+    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ring-1 ring-inset bg-blue-500/15 text-blue-400 ring-blue-500/35">
+      INUTILIZADA
     </span>
   );
 }

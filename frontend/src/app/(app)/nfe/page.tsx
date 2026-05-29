@@ -1,40 +1,47 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FiscalDocumentDeleteButton } from "@/components/fiscal-document-delete-button";
+import { NfeCancelarButton } from "@/components/nfe-cancelar-button";
 import { NfeDevolucaoButton } from "@/components/nfe-devolucao-button";
+import { NfeInutXmlActions } from "@/components/nfe-inut-xml-actions";
+import { NfeTipoBadge } from "@/components/nfe-tipo-badge";
 import { NfeXmlActions } from "@/components/nfe-xml-actions";
-import { PageHeader, StatusBadge } from "@/components/fiscal-ui";
+import { InutilizadaStatusBadge, PageHeader, StatusBadge } from "@/components/fiscal-ui";
 import { resolveActiveTenantId } from "@/lib/active-tenant";
-import { listNfes } from "@/lib/fiscal-api";
-import { brl, formatChave } from "@/lib/format";
+import { listFiscalEvents, listNfes } from "@/lib/fiscal-api";
+import type { FiscalEventDto } from "@/lib/fiscal-types";
+import { brl } from "@/lib/format";
+import { buildNfeTableRows, formatNumeroSerie } from "@/lib/nfe-table-rows";
 
 export const metadata: Metadata = { title: "NF-e Emitidas" };
 
-function sortNfesForList<T extends { emitidaEm: string; serie: number; numero: number }>(rows: T[]): T[] {
-  return [...rows].sort((a, b) => {
-    const byDate = new Date(b.emitidaEm).getTime() - new Date(a.emitidaEm).getTime();
-    if (byDate !== 0) return byDate;
-    if (b.serie !== a.serie) return b.serie - a.serie;
-    return b.numero - a.numero;
-  });
-}
-
 export default async function NFeListPage() {
   const tenantId = await resolveActiveTenantId();
-  const nfes = sortNfesForList(await listNfes(tenantId));
+  const [nfesRaw, eventos] = await Promise.all([listNfes(tenantId), listFiscalEvents(tenantId)]);
+  const rows = buildNfeTableRows(nfesRaw, eventos);
 
-  // Vendas que já possuem devolução (a devolução referencia a chave da venda).
+  const cancelamentoPorChave = new Map<string, FiscalEventDto>();
+  for (const e of eventos) {
+    if (e.tipo === "110111" && e.chaveRef) {
+      cancelamentoPorChave.set(e.chaveRef, e);
+    }
+  }
+
   const vendasDevolvidas = new Set(
-    nfes
+    nfesRaw
       .filter((n) => n.tipo === "DEVOLUCAO" && n.nfeReferenciaChave)
       .map((n) => n.nfeReferenciaChave as string),
+  );
+
+  const vendasCanceladas = new Set(
+    nfesRaw.filter((n) => n.tipo === "VENDA" && n.status === "CANCELADA").map((n) => n.chave),
   );
 
   return (
     <div className="p-6">
       <PageHeader
         title="NF-e Emitidas"
-        subtitle="Notas fiscais eletrônicas modelo 55 — dados via API"
+        subtitle="Sequência fiscal por série e número — inclui faixas inutilizadas"
         actions={
           <Link
             href="/nfe/nova"
@@ -45,104 +52,151 @@ export default async function NFeListPage() {
         }
       />
 
-      <div className="border border-border rounded-lg bg-card overflow-hidden">
-        {nfes.length === 0 ? (
-          <div className="p-6 text-muted-foreground">Nenhuma NF-e encontrada para o tenant selecionado.</div>
+      <div className="border border-border rounded-lg bg-card overflow-x-auto">
+        {rows.length === 0 ? (
+          <div className="p-6 text-muted-foreground">Nenhuma NF-e ou inutilização para este tenant.</div>
         ) : (
-          <table className="w-full text-left border-collapse">
+          <table className="w-full min-w-[1100px] text-left border-collapse">
             <thead>
-              <tr className="text-[12px] text-muted-foreground uppercase tracking-tighter border-b border-border">
-                <th className="px-4 py-3 font-medium">Nº / Série</th>
-                <th className="px-4 py-3 font-medium">Emitida em</th>
-                <th className="px-4 py-3 font-medium">Chave de Acesso</th>
+              <tr className="text-[12px] text-muted-foreground uppercase tracking-tighter border-b border-border bg-muted/30">
+                <th className="px-4 py-3 font-medium whitespace-nowrap">Nº / Série</th>
+                <th className="px-4 py-3 font-medium whitespace-nowrap">Emitida em</th>
+                <th className="px-4 py-3 font-medium min-w-[280px]">Chave de acesso</th>
                 <th className="px-4 py-3 font-medium">Tipo</th>
                 <th className="px-4 py-3 font-medium">CFOP</th>
                 <th className="px-4 py-3 font-medium">Qtd</th>
                 <th className="px-4 py-3 font-medium">Destinatário</th>
                 <th className="px-4 py-3 font-medium">Valor</th>
-                <th className="px-4 py-3 font-medium">ICMS</th>
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium text-right">XML</th>
-                <th className="px-4 py-3 font-medium w-20 text-right">Ações</th>
+                <th className="px-4 py-3 font-medium text-right w-28">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {nfes.map((nfe) => (
-                <tr key={nfe.chave} className="hover:bg-white/2 transition-colors">
-                  <td className="px-4 py-3 font-mono text-[13px]">
-                    <Link href={`/nfe/${nfe.chave}`} className="text-accent hover:underline">
-                      {nfe.numero}/{nfe.serie}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-[13px] text-muted-foreground whitespace-nowrap">
-                    {new Date(nfe.emitidaEm).toLocaleString("pt-BR", {
-                      dateStyle: "short",
-                      timeStyle: "short",
-                    })}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-[13px] text-muted-foreground">{formatChave(nfe.chave)}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={
-                        nfe.tipo === "REMESSA"
-                          ? "text-[11px] font-bold uppercase tracking-wider text-amber-500"
-                          : nfe.tipo === "REMESSA_SIMBOLICA"
-                            ? "text-[11px] font-bold uppercase tracking-wider text-orange-400"
-                            : "text-[11px] font-bold uppercase tracking-wider text-muted-foreground"
-                      }
-                    >
-                      {nfe.tipo === "REMESSA"
-                        ? "Remessa"
-                        : nfe.tipo === "REMESSA_SIMBOLICA"
-                          ? "Remessa simb."
-                          : nfe.tipo === "RETORNO_SIMBOLICO"
-                            ? "Retorno"
-                            : nfe.tipo === "DEVOLUCAO"
-                              ? "Devolução"
-                              : "Venda"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 font-mono">{nfe.cfop}</td>
-                  <td className="px-4 py-3 font-mono text-muted-foreground">
-                    {nfe.quantidade}
-                    {nfe.tipo === "REMESSA" && nfe.saldoDisponivel != null && (
-                      <span className="block text-[11px] text-amber-500/90">saldo {nfe.saldoDisponivel}</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="font-medium">{nfe.destinatario.nome}</div>
-                    <div className="text-[12px] text-muted-foreground font-mono">
-                      {nfe.destinatario.doc} • {nfe.destinatario.uf}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 font-mono">{brl(nfe.valor)}</td>
-                  <td className="px-4 py-3 font-mono text-muted-foreground">
-                    {brl(nfe.valorICMS)} <span className="text-[12px]">({nfe.aliqICMS}%)</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={nfe.status} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <NfeXmlActions chave={nfe.chave} />
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      {nfe.tipo === "VENDA" && (
-                        <NfeDevolucaoButton
+              {rows.map((row) => {
+                if (row.kind === "inut") {
+                  const { inut } = row;
+                  const nFim = inut.numeroFim ?? inut.numeroIni!;
+                  return (
+                    <tr key={`inut-${inut.id}`} className="hover:bg-white/2 transition-colors">
+                      <td className="px-4 py-3 font-mono text-[13px]">
+                        {formatNumeroSerie(inut.serie!, inut.numeroIni!, nFim)}
+                      </td>
+                      <td className="px-4 py-3 text-[13px] text-muted-foreground whitespace-nowrap">
+                        {new Date(inut.ocorridoEm).toLocaleString("pt-BR", {
+                          dateStyle: "short",
+                          timeStyle: "short",
+                        })}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-[11px] text-muted-foreground/50">—</td>
+                      <td className="px-4 py-3">
+                        <NfeTipoBadge tipo="INUTILIZACAO" />
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground/50">—</td>
+                      <td className="px-4 py-3 text-muted-foreground/50">—</td>
+                      <td className="px-4 py-3 text-muted-foreground/50">—</td>
+                      <td className="px-4 py-3 text-muted-foreground/50">—</td>
+                      <td className="px-4 py-3">
+                        <InutilizadaStatusBadge />
+                      </td>
+                      <td className="px-4 py-3">
+                        <NfeInutXmlActions inutId={inut.id} />
+                      </td>
+                      <td className="px-4 py-3" />
+                    </tr>
+                  );
+                }
+
+                const nfe = row.nfe;
+
+                return (
+                  <tr key={nfe.chave} className="hover:bg-white/2 transition-colors">
+                    <td className="px-4 py-3 font-mono text-[13px]">
+                      <Link href={`/nfe/${nfe.chave}`} className="text-accent hover:underline">
+                        {nfe.numero}/{nfe.serie}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-[13px] text-muted-foreground whitespace-nowrap">
+                      {new Date(nfe.emitidaEm).toLocaleString("pt-BR", {
+                        dateStyle: "short",
+                        timeStyle: "short",
+                      })}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-[11px] text-muted-foreground leading-relaxed break-all select-all">
+                      {nfe.chave}
+                    </td>
+                    <td className="px-4 py-3">
+                      <NfeTipoBadge tipo={nfe.tipo} />
+                    </td>
+                    <td className="px-4 py-3 font-mono">{nfe.cfop}</td>
+                    <td className="px-4 py-3 font-mono text-muted-foreground">
+                      {nfe.quantidade}
+                      {nfe.tipo === "REMESSA" && nfe.saldoDisponivel != null && (
+                        <span className="block text-[11px] font-semibold text-green-500 mt-0.5">
+                          saldo {nfe.saldoDisponivel}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="font-medium max-w-[200px] truncate" title={nfe.destinatario.nome}>
+                        {nfe.destinatario.nome}
+                      </div>
+                      <div className="text-[12px] text-muted-foreground font-mono">
+                        {nfe.destinatario.doc} • {nfe.destinatario.uf}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 font-mono">{brl(nfe.valor)}</td>
+                    <td className="px-4 py-3">
+                      <StatusBadge status={nfe.status} />
+                    </td>
+                    <td className="px-4 py-3">
+                      <NfeXmlActions
+                        chave={nfe.chave}
+                        status={nfe.status}
+                        cancelamentoEvent={cancelamentoPorChave.get(nfe.chave)}
+                      />
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {nfe.tipo === "VENDA" && (
+                          <>
+                            <NfeCancelarButton
+                              chave={nfe.chave}
+                              label={`${nfe.numero}/${nfe.serie}`}
+                              desabilitado={
+                                nfe.status === "CANCELADA" ||
+                                vendasDevolvidas.has(nfe.chave) ||
+                                nfe.status !== "AUTORIZADA"
+                              }
+                              motivoDesabilitado={
+                                nfe.status === "CANCELADA"
+                                  ? "Venda já cancelada"
+                                  : vendasDevolvidas.has(nfe.chave)
+                                    ? "Venda com devolução emitida"
+                                    : nfe.status !== "AUTORIZADA"
+                                      ? "Só NF-e autorizadas podem ser canceladas"
+                                      : undefined
+                              }
+                            />
+                            <NfeDevolucaoButton
+                              chave={nfe.chave}
+                              label={`${nfe.numero}/${nfe.serie}`}
+                              jaDevolvida={
+                                vendasDevolvidas.has(nfe.chave) || vendasCanceladas.has(nfe.chave)
+                              }
+                            />
+                          </>
+                        )}
+                        <FiscalDocumentDeleteButton
+                          tipo="nfe"
                           chave={nfe.chave}
                           label={`${nfe.numero}/${nfe.serie}`}
-                          jaDevolvida={vendasDevolvidas.has(nfe.chave)}
                         />
-                      )}
-                      <FiscalDocumentDeleteButton
-                        tipo="nfe"
-                        chave={nfe.chave}
-                        label={`${nfe.numero}/${nfe.serie}`}
-                      />
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}

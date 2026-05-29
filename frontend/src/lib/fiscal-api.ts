@@ -190,6 +190,40 @@ export async function emitirDevolucao(chave: string): Promise<DevolucaoResult> {
   ) as Promise<DevolucaoResult>;
 }
 
+export type CancelamentoResult = {
+  venda: NFeDto;
+  retorno?: NFeDto;
+  saldoEstornado: { remessaNfeId: string; quantidade: number }[];
+};
+
+export async function cancelarVenda(chave: string, xJust?: string): Promise<CancelamentoResult> {
+  return mutateJson<CancelamentoResult>(url(`/api/nfes/${chave}/cancelamento`), "POST", {
+    xJust,
+  }) as Promise<CancelamentoResult>;
+}
+
+export type InutilizacaoResult = {
+  id: string;
+  tipo: string;
+  descricao: string;
+  serie: number;
+  numeroIni: number;
+  numeroFim: number;
+  xJust: string;
+  protocolo: string;
+  ocorridoEm: string;
+};
+
+export async function inutilizarNumeracao(input: {
+  serie: number;
+  numeroIni: number;
+  numeroFim: number;
+  xJust?: string;
+  tenantId?: string;
+}): Promise<InutilizacaoResult> {
+  return mutateJson<InutilizacaoResult>(url("/api/nfes/inutilizar"), "POST", input) as Promise<InutilizacaoResult>;
+}
+
 export async function lookupCnpj(cnpj: string): Promise<CnpjLookupDto> {
   const digits = cnpj.replace(/\D/g, "");
   return getJson<CnpjLookupDto>(url(`/api/lookup/cnpj/${digits}`));

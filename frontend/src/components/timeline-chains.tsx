@@ -101,11 +101,11 @@ function ScenarioRow({ cenario, index }: { cenario: TimelineChainDto; index: num
               <span className={`text-[10px] font-bold uppercase leading-tight ${TIPO_STYLE[step.tipo] ?? ""}`}>
                 {step.tipoLabel}
               </span>
-              <span className="font-mono text-[10px] text-muted-foreground group-hover:text-accent">
+              <span className="font-mono text-[10px] text-foreground group-hover:text-accent">
                 {step.numero}/{step.serie}
-                {step.tipo === "REMESSA" && step.saldoDisponivel != null && (
+                {/* {step.tipo === "REMESSA" && step.saldoDisponivel != null && (
                   <span className="text-amber-500"> · saldo {step.saldoDisponivel}</span>
-                )}
+                )} */}
               </span>
             </Link>
             {i < cenario.steps.length - 1 && <span className="text-muted-foreground text-xs">→</span>}

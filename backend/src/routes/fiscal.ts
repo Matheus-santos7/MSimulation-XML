@@ -5,7 +5,9 @@ import { mapEmitente } from "../lib/tenant-mapper.js";
 import { FiscalService, fiscalNotDeleted } from "../services/fiscal-service.js";
 import { listTaxRuleCatalog } from "../services/tax-rule-catalog-service.js";
 import { listTimelineChains } from "../services/timeline-service.js";
+import { CancelamentoError, cancelarVenda } from "../services/cancelamento-service.js";
 import { DevolucaoError, emitirDevolucaoVenda } from "../services/devolucao-service.js";
+import { InutilizacaoError, inutilizarNumeracao } from "../services/inutilizacao-service.js";
 
 const tenantQuery = z.object({
   tenantId: z.string().uuid().optional(),
@@ -93,6 +95,52 @@ export const fiscalRoutes: FastifyPluginAsync = async (app) => {
     }
   });
 
+  const cancelBody = z.object({
+    xJust: z.string().min(15).max(255).optional(),
+  });
+
+  app.post("/nfes/:chave/cancelamento", async (req, reply) => {
+    try {
+      const { chave } = chaveParam.parse(req.params);
+      const body = cancelBody.parse(req.body ?? {});
+      const result = await cancelarVenda(app.prisma, chave, body.xJust);
+      return reply.status(200).send(result);
+    } catch (e) {
+      if (e instanceof CancelamentoError) {
+        return reply.status(e.status).send({ error: e.message });
+      }
+      throw e;
+    }
+  });
+
+  const inutilizarBody = z.object({
+    tenantId: z.string().uuid().optional(),
+    serie: z.number().int().positive(),
+    numeroIni: z.number().int().positive(),
+    numeroFim: z.number().int().positive(),
+    xJust: z.string().min(15).max(255).optional(),
+  });
+
+  app.post("/nfes/inutilizar", async (req, reply) => {
+    try {
+      const body = inutilizarBody.parse(req.body ?? {});
+      const tid = await resolveTenantId(app.prisma, body.tenantId);
+      const result = await inutilizarNumeracao(app.prisma, {
+        tenantId: tid,
+        serie: body.serie,
+        numeroIni: body.numeroIni,
+        numeroFim: body.numeroFim,
+        xJust: body.xJust,
+      });
+      return reply.status(201).send(result);
+    } catch (e) {
+      if (e instanceof InutilizacaoError) {
+        return reply.status(e.status).send({ error: e.message });
+      }
+      throw e;
+    }
+  });
+
   app.get("/emitente", async (req) => {
     const { tenantId } = tenantQuery.parse(req.query);
     const tid = await resolveTenantId(app.prisma, tenantId);
@@ -131,19 +179,43 @@ export const fiscalRoutes: FastifyPluginAsync = async (app) => {
   app.get("/fiscal-events", async (req) => {
     const { tenantId } = tenantQuery.parse(req.query);
     const tid = await resolveTenantId(app.prisma, tenantId);
-    const rows = await app.prisma.fiscalEvent.findMany({
-      where: { tenantId: tid },
-      include: { nfe: true },
-      orderBy: { ocorridoEm: "desc" },
-    });
-    return rows.map((e) => ({
+    const [rows, inuts] = await Promise.all([
+      app.prisma.fiscalEvent.findMany({
+        where: { tenantId: tid },
+        include: { nfe: true },
+        orderBy: { ocorridoEm: "desc" },
+      }),
+      app.prisma.nfeInutilizacao.findMany({
+        where: { tenantId: tid },
+        orderBy: { ocorridoEm: "desc" },
+      }),
+    ]);
+
+    const eventos = rows.map((e) => ({
       id: e.id,
       tipo: e.tipo,
       descricao: e.descricao,
       chaveRef: e.nfe.chave,
       ocorridoEm: e.ocorridoEm.toISOString(),
       protocolo: e.protocolo,
+      xJust: e.xJust ?? undefined,
     }));
+
+    const inutilizacoes = inuts.map((i) => ({
+      id: i.id,
+      tipo: "INUT",
+      descricao: "Inutilização de numeração",
+      serie: i.serie,
+      numeroIni: i.numeroIni,
+      numeroFim: i.numeroFim,
+      ocorridoEm: i.ocorridoEm.toISOString(),
+      protocolo: i.protocolo,
+      xJust: i.xJust,
+    }));
+
+    return [...eventos, ...inutilizacoes].sort(
+      (a, b) => new Date(b.ocorridoEm).getTime() - new Date(a.ocorridoEm).getTime(),
+    );
   });
 
   app.get("/audit-logs", async (req) => {

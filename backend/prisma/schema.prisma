@@ -74,7 +74,8 @@ model Tenant {
   pedidos         Pedido[]
   nfes            NFe[]
   ctes            CTe[]
-  fiscalEvents    FiscalEvent[]
+  fiscalEvents        FiscalEvent[]
+  nfeInutilizacoes    NfeInutilizacao[]
   auditLogs       AuditLog[]
   timelineSteps   TimelineStep[]
   taxRules              TaxRule[]
@@ -272,11 +273,30 @@ model FiscalEvent {
   descricao  String   @map("descricao")
   ocorridoEm DateTime @map("ocorrido_em")
   protocolo  String   @map("protocolo")
+  xJust      String?  @map("x_just")
   createdAt  DateTime @default(now()) @map("created_at")
 
   @@index([tenantId], map: "idx_fiscal_event_tenant")
   @@index([nfeId], map: "idx_fiscal_event_nfe")
   @@map("fiscal_events")
+}
+
+/// Faixa de numeração inutilizada na SEFAZ (procInutNFe)
+model NfeInutilizacao {
+  id         String   @id @default(uuid())
+  tenantId   String   @map("tenant_id")
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  serie      Int
+  numeroIni  Int      @map("numero_ini")
+  numeroFim  Int      @map("numero_fim")
+  xJust      String   @map("x_just")
+  protocolo  String
+  ocorridoEm DateTime @map("ocorrido_em")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId], map: "idx_nfe_inutilizacao_tenant")
+  @@index([tenantId, serie], map: "idx_nfe_inutilizacao_tenant_serie")
+  @@map("nfe_inutilizacoes")
 }
 
 model AuditLog {

@@ -7,7 +7,7 @@
 
 import type { FiscalEmitterSettingsData } from "./fiscal-emitter-settings-types";
 import { resolveEmitterFromPayload } from "./fiscal-emitter-runtime";
-import type { EmitenteDto, NFeDto, ProductDto } from "./fiscal-types";
+import type { EmitenteDto, FiscalEventDto, NFeDto, ProductDto } from "./fiscal-types";
 import { xTextoFromNfe } from "./nfe-xtexto";
 import { productUnitPriceForNfe } from "./product-pricing";
 import { ufToCodigo } from "./nfe-uf";
@@ -788,6 +788,24 @@ function buildDevolucaoNFeXML(
       /<natOp>[^<]*<\/natOp>/,
       `<natOp>${xmlEscape(nfe.natOp || "Devolução de mercadoria")}</natOp>`,
     );
+}
+
+/** procEventoNFe — cancelamento (tpEvento 110111), alinhado aos XMLs ML. */
+export function buildProcEventoCancelamentoXML(
+  nfe: NFeDto,
+  emit: EmitenteDto,
+  evento: Pick<FiscalEventDto, "protocolo" | "ocorridoEm" | "xJust">,
+): string {
+  const cOrgao = String(ufToCodigo(emit.uf) ?? 41).padStart(2, "0");
+  const cnpj = emit.cnpj.replace(/\D/g, "");
+  const dhEvento = evento.ocorridoEm;
+  const dhReg = evento.ocorridoEm;
+  const nProtNfe = `141260055765${String(nfe.numero).padStart(3, "0")}`.slice(0, 15);
+  const xJust = xmlEscape(evento.xJust?.trim() || "Cancelamento solicitado pelo emissor");
+  const infEventoId = `ID110111${nfe.chave}01`;
+  const sig = signatureBlock(infEventoId, nfe.chave);
+
+  return `<?xml version="1.0" encoding="UTF-8"?><procEventoNFe versao="1.00" xmlns="http://www.portalfiscal.inf.br/nfe"><evento xmlns="http://www.portalfiscal.inf.br/nfe" versao="1.00"><infEvento Id="${infEventoId}"><cOrgao>${cOrgao}</cOrgao><tpAmb>1</tpAmb><CNPJ>${cnpj}</CNPJ><chNFe>${nfe.chave}</chNFe><dhEvento>${dhEvento}</dhEvento><tpEvento>110111</tpEvento><nSeqEvento>1</nSeqEvento><verEvento>1.00</verEvento><detEvento versao="1.00"><descEvento>Cancelamento</descEvento><nProt>${nProtNfe}</nProt><xJust>${xJust}</xJust></detEvento></infEvento>${sig}</evento><retEvento versao="1.00"><infEvento><tpAmb>1</tpAmb><verAplic>PR-v4_9_62</verAplic><cOrgao>${cOrgao}</cOrgao><cStat>135</cStat><xMotivo>Evento registrado e vinculado a NF-e</xMotivo><chNFe>${nfe.chave}</chNFe><tpEvento>110111</tpEvento><xEvento>Cancelamento</xEvento><nSeqEvento>1</nSeqEvento><dhRegEvento>${dhReg}</dhRegEvento><nProt>${evento.protocolo}</nProt></infEvento></retEvento></procEventoNFe>`;
 }
 
 /** Lightweight XML pretty token highlighter (tag, attr, value). */

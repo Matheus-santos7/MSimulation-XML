@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { KPI, SectionHeader, StatusBadge } from "@/components/fiscal-ui";
-import { XMLViewer } from "@/components/xml-viewer";
 import { resolveActiveTenantId } from "@/lib/active-tenant";
 import { TimelineChains } from "@/components/timeline-chains";
-import { getEmitente, getFiscalEmitterSettings, listNfes, listProducts, listTimeline } from "@/lib/fiscal-api";
+import { listNfes, listTimeline } from "@/lib/fiscal-api";
 import { brl, formatChave } from "@/lib/format";
-import { buildNFeXML } from "@/lib/xml-generator";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -15,30 +13,14 @@ export const metadata: Metadata = {
 
 export default async function DashboardPage() {
   const tenantId = await resolveActiveTenantId();
-  const [nfes, timeline, produtos] = await Promise.all([
-    listNfes(tenantId),
-    listTimeline(tenantId),
-    listProducts(tenantId),
-  ]);
-  const featured = nfes[0];
-  const featuredProduct = featured ? produtos.find((p) => p.ncm === featured.ncm) ?? produtos[0] : undefined;
-  const xml =
-    featured && tenantId
-      ? buildNFeXML(
-          featured,
-          await getEmitente(featured.tenantId),
-          featuredProduct,
-          (await getFiscalEmitterSettings(featured.tenantId))?.settings ?? null,
-        )
-      : "";
+  const [nfes, timeline] = await Promise.all([listNfes(tenantId), listTimeline(tenantId)]);
 
   return (
     <div className="p-6 space-y-6">
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <KPI label="NF-e (tenant)" value={String(nfes.length)} hint="Notas retornadas pela API" hintTone="success" />
-        <KPI label="ICMS (amostra)" value={featured ? brl(featured.valorICMS) : brl(0)} hint="Primeira NF-e da lista" hintTone="muted" />
         <KPI
-          label="Cadeias fiscais"
+          label="Cenários fiscais"
           value={String(timeline.reduce((acc, g) => acc + g.cenarios.length, 0))}
           hint={`${timeline.filter((g) => g.remessaChave).length} remessa(s) · cenários`}
           hintTone="accent"
@@ -111,12 +93,6 @@ export default async function DashboardPage() {
             <SectionHeader title="Timeline — Cadeias de NF-e" />
             <TimelineChains groups={timeline} />
           </div>
-
-          {featured && xml ? (
-            <div className="h-[400px]">
-              <XMLViewer xml={xml} filename={`nfe_${featured.numero}_v4.00.xml`} />
-            </div>
-          ) : null}
         </div>
       </div>
     </div>

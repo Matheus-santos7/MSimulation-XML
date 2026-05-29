@@ -1,12 +1,20 @@
-import { resolveNfeXml } from "@/lib/resolve-nfe-xml";
+import { resolveNfeCancelamentoEventoXml, resolveNfeXml } from "@/lib/resolve-nfe-xml";
 
 type Props = { params: Promise<{ chave: string }> };
 
 export async function GET(req: Request, { params }: Props) {
   const { chave } = await params;
-  const resolved = await resolveNfeXml(chave);
+  const doc = new URL(req.url).searchParams.get("doc");
+  const resolved =
+    doc === "evento" || doc === "cancelamento"
+      ? await resolveNfeCancelamentoEventoXml(chave)
+      : await resolveNfeXml(chave);
   if (!resolved) {
-    return new Response("NF-e não encontrada", { status: 404 });
+    const msg =
+      doc === "evento" || doc === "cancelamento"
+        ? "Evento de cancelamento não encontrado para esta NF-e"
+        : "NF-e não encontrada";
+    return new Response(msg, { status: 404 });
   }
 
   const download = new URL(req.url).searchParams.get("download") === "1";

@@ -1,9 +1,9 @@
 "use client";
 
-import { Undo2 } from "lucide-react";
+import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { devolverVendaAction } from "@/app/(app)/nfe/actions";
+import { cancelarVendaAction } from "@/app/(app)/nfe/actions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,14 +19,17 @@ import { Button } from "@/components/ui/button";
 type Props = {
   chave: string;
   label: string;
-  jaDevolvida?: boolean;
+  desabilitado?: boolean;
+  motivoDesabilitado?: string;
 };
 
-export function NfeDevolucaoButton({ chave, label, jaDevolvida }: Props) {
+export function NfeCancelarButton({ chave, label, desabilitado, motivoDesabilitado }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  const title = motivoDesabilitado ?? "Cancelar NF-e de venda (e retorno da cadeia)";
 
   return (
     <>
@@ -34,45 +37,46 @@ export function NfeDevolucaoButton({ chave, label, jaDevolvida }: Props) {
         type="button"
         variant="ghost"
         size="icon"
-        className="size-8 text-blue-500 bg-blue-500/10 hover:bg-blue-500/20 hover:text-blue-400 ring-1 ring-blue-500/30 disabled:opacity-30 disabled:bg-transparent disabled:ring-0"
-        aria-label={`Emitir devolução da venda ${label}`}
-        title={jaDevolvida ? "Venda já devolvida" : "Emitir devolução desta venda"}
-        disabled={jaDevolvida}
+        className="size-8 text-red-500 bg-red-500/10 hover:bg-red-500/20 hover:text-red-400 ring-1 ring-red-500/30 disabled:opacity-30 disabled:bg-transparent disabled:ring-0"
+        aria-label={`Cancelar venda ${label}`}
+        title={title}
+        disabled={desabilitado}
         onClick={() => {
           setError(null);
           setOpen(true);
         }}
       >
-        <Undo2 className="size-3.5" />
+        <X className="size-3.5" />
       </Button>
 
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Emitir devolução da venda {label}?</AlertDialogTitle>
+            <AlertDialogTitle>Cancelar venda {label}?</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-2 text-sm text-muted-foreground">
                 <p>
-                  Será emitida uma <strong className="text-foreground">NF-e de devolução</strong> referenciando
-                  esta venda, espelhando os impostos originais.
+                  Será registrado o evento SEFAZ <strong className="text-foreground">110111</strong> (cancelamento)
+                  nesta venda.
                 </p>
                 <p>
-                  O saldo consumido retornará às <strong className="text-foreground">remessas</strong> da cadeia
-                  (estorno FIFO): remessa → retorno → venda → devolução.
+                  O <strong className="text-foreground">retorno simbólico</strong> referenciado será cancelado
+                  automaticamente e o saldo consumido das remessas será estornado (FIFO).
                 </p>
+                <p>O CT-e de venda vinculado também será cancelado, se existir.</p>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           {error && <p className="text-[13px] text-destructive px-1">{error}</p>}
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={pending}>Voltar</AlertDialogCancel>
             <AlertDialogAction
               disabled={pending}
-              className="bg-blue-600 text-white hover:bg-blue-600/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={(e) => {
                 e.preventDefault();
                 startTransition(async () => {
-                  const result = await devolverVendaAction(chave);
+                  const result = await cancelarVendaAction(chave);
                   if (result.error) {
                     setError(result.error);
                     return;
@@ -82,7 +86,7 @@ export function NfeDevolucaoButton({ chave, label, jaDevolvida }: Props) {
                 });
               }}
             >
-              {pending ? "Emitindo…" : "Emitir devolução"}
+              {pending ? "Cancelando…" : "Confirmar cancelamento"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

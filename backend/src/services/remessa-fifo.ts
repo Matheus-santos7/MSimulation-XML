@@ -84,3 +84,22 @@ export async function consumirSaldoRemessaFifo(
 
   return alocacoes;
 }
+
+/** Devolve saldo consumido pelo retorno simbólico de volta às remessas (estorno FIFO). */
+export async function estornarConsumosRemessa(
+  tx: Tx,
+  retornoNfeId: string,
+): Promise<{ remessaNfeId: string; quantidade: number }[]> {
+  const consumos = await tx.nfeRemessaConsumo.findMany({
+    where: { retornoNfeId },
+  });
+  const estornos: { remessaNfeId: string; quantidade: number }[] = [];
+  for (const consumo of consumos) {
+    await tx.nFe.update({
+      where: { id: consumo.remessaNfeId },
+      data: { saldoDisponivel: { increment: consumo.quantidade } },
+    });
+    estornos.push({ remessaNfeId: consumo.remessaNfeId, quantidade: consumo.quantidade });
+  }
+  return estornos;
+}

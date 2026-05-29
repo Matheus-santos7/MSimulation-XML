@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { deleteNfe, emitirDevolucao } from "@/lib/fiscal-api";
+import { cancelarVenda, deleteNfe, emitirDevolucao } from "@/lib/fiscal-api";
 
 export async function excluirNfeAction(chave: string): Promise<{ error?: string }> {
   try {
@@ -21,8 +21,21 @@ export async function devolverVendaAction(
     const { devolucao } = await emitirDevolucao(chave);
     revalidatePath("/nfe");
     revalidatePath("/");
+    revalidatePath("/eventos");
     return { numero: devolucao.numero, serie: devolucao.serie };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Erro ao emitir devolução" };
+  }
+}
+
+export async function cancelarVendaAction(chave: string): Promise<{ error?: string }> {
+  try {
+    await cancelarVenda(chave);
+    revalidatePath("/nfe");
+    revalidatePath("/");
+    revalidatePath("/eventos");
+    return {};
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Erro ao cancelar venda" };
   }
 }

@@ -4,9 +4,15 @@ import { notFound } from "next/navigation";
 import { PageHeader, StatusBadge } from "@/components/fiscal-ui";
 import { NfeXmlActions } from "@/components/nfe-xml-actions";
 import { XMLViewer } from "@/components/xml-viewer";
-import { getEmitente, getFiscalEmitterSettings, getNfeByChave, listProducts } from "@/lib/fiscal-api";
+import {
+  getEmitente,
+  getFiscalEmitterSettings,
+  getNfeByChave,
+  listFiscalEvents,
+  listProducts,
+} from "@/lib/fiscal-api";
 import { brl, formatChave } from "@/lib/format";
-import { buildNFeXML } from "@/lib/xml-generator";
+import { buildNFeXML, buildProcEventoCancelamentoXML } from "@/lib/xml-generator";
 
 type Props = { params: Promise<{ chave: string }> };
 
@@ -20,10 +26,12 @@ export default async function NFeDetailPage({ params }: Props) {
   const nfe = await getNfeByChave(chave);
   if (!nfe) notFound();
 
-  const [emit, fiscalCfg] = await Promise.all([
+  const [emit, fiscalCfg, eventos] = await Promise.all([
     getEmitente(nfe.tenantId),
     getFiscalEmitterSettings(nfe.tenantId),
+    listFiscalEvents(nfe.tenantId),
   ]);
+  const cancelamentoEvent = eventos.find((e) => e.tipo === "110111" && e.chaveRef === chave);
   let product = undefined;
   if (nfe.productId) {
     product = (await listProducts(nfe.tenantId)).find((p) => p.id === nfe.productId);
@@ -33,6 +41,14 @@ export default async function NFeDetailPage({ params }: Props) {
     product = produtos.find((p) => p.ncm === nfe.ncm) ?? produtos[0];
   }
   const xml = buildNFeXML(nfe, emit, product, fiscalCfg?.settings ?? null);
+  const xmlCancelamento =
+    nfe.status === "CANCELADA"
+      ? buildProcEventoCancelamentoXML(nfe, emit, cancelamentoEvent ?? {
+          protocolo: `141260056230${String(nfe.numero).padStart(3, "0")}`.slice(0, 15),
+          ocorridoEm: new Date().toISOString(),
+          xJust: "Cancelamento solicitado pelo emissor",
+        })
+      : null;
 
   return (
     <div className="p-6 space-y-6">
@@ -48,7 +64,12 @@ export default async function NFeDetailPage({ params }: Props) {
         subtitle={nfe.natOp}
         actions={
           <div className="flex flex-wrap items-center gap-3">
-            <NfeXmlActions chave={nfe.chave} variant="toolbar" />
+            <NfeXmlActions
+              chave={nfe.chave}
+              status={nfe.status}
+              cancelamentoEvent={cancelamentoEvent}
+              variant="toolbar"
+            />
             <StatusBadge status={nfe.status} />
           </div>
         }
@@ -130,10 +151,18 @@ export default async function NFeDetailPage({ params }: Props) {
           </div>
         </div>
 
-        <div className="col-span-7">
-          <div className="h-[700px]">
-            <XMLViewer xml={xml} filename={`nfe_${nfe.numero}_v4.00.xml`} />
+        <div className="col-span-7 space-y-4">
+          <div className="h-[520px]">
+            <XMLViewer xml={xml} filename={`nfe_${nfe.numero}_serie${nfe.serie}_v4.00.xml`} />
           </div>
+          {xmlCancelamento && (
+            <div className="h-[320px]">
+              <XMLViewer
+                xml={xmlCancelamento}
+                filename={`${nfe.numero}_serie${nfe.serie}-110111-procEventoNFe.xml`}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -225,9 +225,13 @@ export type FiscalEventDto = {
   id: string;
   tipo: string;
   descricao: string;
-  chaveRef: string;
+  chaveRef?: string;
+  serie?: number;
+  numeroIni?: number;
+  numeroFim?: number;
   ocorridoEm: string;
   protocolo: string;
+  xJust?: string;
 };
 
 export type AuditEntryDto = {

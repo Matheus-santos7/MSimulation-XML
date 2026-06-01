@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { NfeInutilizarForm } from "@/components/nfe-inutilizar-form";
 import { PageHeader } from "@/components/fiscal-ui";
-import { resolveActiveTenantId } from "@/lib/active-tenant";
 import { getFiscalEmitterSettings, listFiscalEvents } from "@/lib/fiscal-api";
 import { formatChave } from "@/lib/format";
 
@@ -18,10 +17,9 @@ const EVENT_NAMES: Record<string, string> = {
 };
 
 export default async function EventosPage() {
-  const tenantId = await resolveActiveTenantId();
   const [events, cfg] = await Promise.all([
-    listFiscalEvents(tenantId),
-    tenantId ? getFiscalEmitterSettings(tenantId) : null,
+    listFiscalEvents(),
+    getFiscalEmitterSettings(),
   ]);
 
   return (

@@ -1,14 +1,20 @@
+import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
-import { getActiveTenantId } from "@/lib/active-tenant";
-import { getTenants } from "@/lib/fiscal-api";
+import { getAuthMe } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const tenants = await getTenants();
-  const activeTenantId = await getActiveTenantId(tenants.map((t) => t.id));
+  const me = await getAuthMe();
+  if (!me) {
+    redirect("/login?session=expired");
+  }
+  if (me.needsOnboarding || !me.tenant) {
+    redirect("/onboarding/empresa");
+  }
+
   return (
-    <AppShell tenants={tenants} activeTenantId={activeTenantId}>
+    <AppShell tenant={me.tenant} userEmail={me.email} userName={me.name}>
       {children}
     </AppShell>
   );

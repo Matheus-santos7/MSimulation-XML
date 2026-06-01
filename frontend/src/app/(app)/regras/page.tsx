@@ -263,7 +263,7 @@ export default async function RegrasPage({
   const nomeFilterNorm = nomeFilter.trim().toLowerCase();
 
   const tenantId = await resolveActiveTenantId();
-  const rules = await listTaxRules(tenantId);
+  const rules = await listTaxRules();
   const filteredRules = nomeFilterNorm
     ? rules.filter((rule) => rule.nome.toLowerCase().includes(nomeFilterNorm))
     : rules;

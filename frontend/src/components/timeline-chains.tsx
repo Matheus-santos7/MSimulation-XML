@@ -13,7 +13,7 @@ export function TimelineChains({ groups }: { groups: TimelineRemessaGroupDto[] }
   if (groups.length === 0) {
     return (
       <p className="text-[13px] text-muted-foreground p-4">
-        Nenhuma cadeia fiscal ainda. Emita remessas em Produtos e fature pedidos para formar Remessa → Retorno → Venda.
+        Nenhuma cenário fiscal ainda. Emita remessas e fature pedidos para formar Remessa → Retorno → Venda.
       </p>
     );
   }

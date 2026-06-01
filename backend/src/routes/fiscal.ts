@@ -4,7 +4,7 @@
  * ## Responsabilidade desta camada
  *
  * - Validar query/params/body (Zod).
- * - Resolver `tenantId` (query opcional → tenant padrão do ambiente).
+ * - `tenantId` exclusivamente do JWT (`request.user.tenantId`).
  * - Delegar regras de negócio aos *services* (`*-service.ts`).
  * - Mapear entidades Prisma → DTO (`fiscal-mappers`, `tenant-mapper`).
  *
@@ -35,7 +35,8 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
-import { mapCte, mapNfe, mapTimeline, resolveTenantId } from "../lib/fiscal-mappers.js";
+import { tenantIdFromRequest } from "../lib/auth/request-context.js";
+import { mapCte, mapNfe, mapTimeline } from "../lib/fiscal-mappers.js";
 import { mapEmitente } from "../lib/tenant-mapper.js";
 import { FiscalService, fiscalNotDeleted } from "../services/fiscal-service.js";
 import { listTaxRuleCatalog } from "../services/tax-rule-catalog-service.js";
@@ -48,10 +49,6 @@ import { InutilizacaoError, inutilizarNumeracao } from "../services/inutilizacao
 // Schemas Zod
 // ---------------------------------------------------------------------------
 
-const tenantQuerySchema = z.object({
-  tenantId: z.string().uuid().optional(),
-});
-
 const chaveParamSchema = z.object({
   chave: z.string().length(44),
 });
@@ -61,7 +58,6 @@ const cancelamentoBodySchema = z.object({
 });
 
 const inutilizarBodySchema = z.object({
-  tenantId: z.string().uuid().optional(),
   serie: z.number().int().positive(),
   numeroIni: z.number().int().positive(),
   numeroFim: z.number().int().positive(),
@@ -89,10 +85,6 @@ const taxRulesBulkBodySchema = z.object({
 // Helpers HTTP
 // ---------------------------------------------------------------------------
 
-async function resolveTenant(app: FastifyInstance, tenantId?: string) {
-  return resolveTenantId(app.prisma, tenantId);
-}
-
 /** Converte erros de domínio (*Error com `.status`) em JSON `{ error }` sem vazar stack. */
 function replyDomainError(
   reply: FastifyReply,
@@ -114,8 +106,7 @@ function replyDomainError(
 
 function registerNfeRoutes(app: FastifyInstance, fiscal: FiscalService) {
   app.get("/nfes", async (req) => {
-    const { tenantId } = tenantQuerySchema.parse(req.query);
-    const tid = await resolveTenant(app, tenantId);
+    const tid = tenantIdFromRequest(req);
     const rows = await app.prisma.nFe.findMany({
       where: { tenantId: tid, ...fiscalNotDeleted },
       include: { nfeReferencia: { select: { chave: true } } },
@@ -125,9 +116,10 @@ function registerNfeRoutes(app: FastifyInstance, fiscal: FiscalService) {
   });
 
   app.get("/nfes/:chave", async (req, reply) => {
+    const tid = tenantIdFromRequest(req);
     const { chave } = chaveParamSchema.parse(req.params);
     const row = await app.prisma.nFe.findFirst({
-      where: { chave, ...fiscalNotDeleted },
+      where: { chave, tenantId: tid, ...fiscalNotDeleted },
       include: {
         cteRemessa: { select: { chave: true } },
         cteVenda: { select: { chave: true } },
@@ -153,8 +145,8 @@ function registerNfeRoutes(app: FastifyInstance, fiscal: FiscalService) {
   // Rota estática antes das rotas com `:chave` (evita ambiguidade no roteador).
   app.post("/nfes/inutilizar", async (req, reply) => {
     try {
+      const tid = tenantIdFromRequest(req);
       const body = inutilizarBodySchema.parse(req.body ?? {});
-      const tid = await resolveTenant(app, body.tenantId);
       const result = await inutilizarNumeracao(app.prisma, {
         tenantId: tid,
         serie: body.serie,
@@ -170,16 +162,18 @@ function registerNfeRoutes(app: FastifyInstance, fiscal: FiscalService) {
   });
 
   app.delete("/nfes/:chave", async (req, reply) => {
+    const tid = tenantIdFromRequest(req);
     const { chave } = chaveParamSchema.parse(req.params);
-    const removed = await fiscal.softDeleteNfe(chave);
+    const removed = await fiscal.softDeleteNfe(chave, tid);
     if (!removed) return reply.status(404).send({ error: "NF-e não encontrada" });
     return reply.status(204).send();
   });
 
   app.post("/nfes/:chave/devolucao", async (req, reply) => {
     try {
+      const tid = tenantIdFromRequest(req);
       const { chave } = chaveParamSchema.parse(req.params);
-      const result = await emitirDevolucaoVenda(app.prisma, chave);
+      const result = await emitirDevolucaoVenda(app.prisma, chave, tid);
       return reply.status(201).send(result);
     } catch (e) {
       if (replyDomainError(reply, e, [DevolucaoError])) return;
@@ -189,9 +183,10 @@ function registerNfeRoutes(app: FastifyInstance, fiscal: FiscalService) {
 
   app.post("/nfes/:chave/cancelamento", async (req, reply) => {
     try {
+      const tid = tenantIdFromRequest(req);
       const { chave } = chaveParamSchema.parse(req.params);
       const body = cancelamentoBodySchema.parse(req.body ?? {});
-      const result = await cancelarVenda(app.prisma, chave, body.xJust);
+      const result = await cancelarVenda(app.prisma, chave, tid, body.xJust);
       return reply.status(200).send(result);
     } catch (e) {
       if (replyDomainError(reply, e, [CancelamentoError])) return;
@@ -206,15 +201,13 @@ function registerNfeRoutes(app: FastifyInstance, fiscal: FiscalService) {
 
 function registerCteAndEmitenteRoutes(app: FastifyInstance, fiscal: FiscalService) {
   app.get("/emitente", async (req) => {
-    const { tenantId } = tenantQuerySchema.parse(req.query);
-    const tid = await resolveTenant(app, tenantId);
+    const tid = tenantIdFromRequest(req);
     const t = await app.prisma.tenant.findUniqueOrThrow({ where: { id: tid } });
     return mapEmitente(t);
   });
 
   app.get("/ctes", async (req) => {
-    const { tenantId } = tenantQuerySchema.parse(req.query);
-    const tid = await resolveTenant(app, tenantId);
+    const tid = tenantIdFromRequest(req);
     const rows = await app.prisma.cTe.findMany({
       where: { tenantId: tid, ...fiscalNotDeleted },
       include: { nfeRemessa: { select: { chave: true } } },
@@ -224,9 +217,10 @@ function registerCteAndEmitenteRoutes(app: FastifyInstance, fiscal: FiscalServic
   });
 
   app.get("/ctes/:chave", async (req, reply) => {
+    const tid = tenantIdFromRequest(req);
     const { chave } = chaveParamSchema.parse(req.params);
     const row = await app.prisma.cTe.findFirst({
-      where: { chave, ...fiscalNotDeleted },
+      where: { chave, tenantId: tid, ...fiscalNotDeleted },
       include: { nfeRemessa: { select: { chave: true } } },
     });
     if (!row) return reply.status(404).send({ error: "CT-e não encontrado" });
@@ -234,8 +228,9 @@ function registerCteAndEmitenteRoutes(app: FastifyInstance, fiscal: FiscalServic
   });
 
   app.delete("/ctes/:chave", async (req, reply) => {
+    const tid = tenantIdFromRequest(req);
     const { chave } = chaveParamSchema.parse(req.params);
-    const removed = await fiscal.softDeleteCte(chave);
+    const removed = await fiscal.softDeleteCte(chave, tid);
     if (!removed) return reply.status(404).send({ error: "CT-e não encontrado" });
     return reply.status(204).send();
   });
@@ -283,14 +278,12 @@ async function listFiscalEventsForTenant(app: FastifyInstance, tenantId: string)
 
 function registerObservabilityRoutes(app: FastifyInstance) {
   app.get("/fiscal-events", async (req) => {
-    const { tenantId } = tenantQuerySchema.parse(req.query);
-    const tid = await resolveTenant(app, tenantId);
+    const tid = tenantIdFromRequest(req);
     return listFiscalEventsForTenant(app, tid);
   });
 
   app.get("/audit-logs", async (req) => {
-    const { tenantId } = tenantQuerySchema.parse(req.query);
-    const tid = await resolveTenant(app, tenantId);
+    const tid = tenantIdFromRequest(req);
     const rows = await app.prisma.auditLog.findMany({
       where: { tenantId: tid },
       orderBy: { ocorridoEm: "desc" },
@@ -307,15 +300,13 @@ function registerObservabilityRoutes(app: FastifyInstance) {
 
   /** Cadeias: remessa → retorno → venda → (devolução). */
   app.get("/timeline", async (req) => {
-    const { tenantId } = tenantQuerySchema.parse(req.query);
-    const tid = await resolveTenant(app, tenantId);
+    const tid = tenantIdFromRequest(req);
     return listTimelineChains(app.prisma, tid);
   });
 
   /** Passos estáticos do seed (UI legada). */
   app.get("/timeline/steps", async (req) => {
-    const { tenantId } = tenantQuerySchema.parse(req.query);
-    const tid = await resolveTenant(app, tenantId);
+    const tid = tenantIdFromRequest(req);
     const rows = await app.prisma.timelineStep.findMany({
       where: { tenantId: tid },
       orderBy: { sortOrder: "asc" },
@@ -330,14 +321,12 @@ function registerObservabilityRoutes(app: FastifyInstance) {
 
 function registerTaxRuleRoutes(app: FastifyInstance) {
   app.get("/tax-rules/catalog", async (req) => {
-    const { tenantId } = tenantQuerySchema.parse(req.query);
-    const tid = await resolveTenant(app, tenantId);
+    const tid = tenantIdFromRequest(req);
     return listTaxRuleCatalog(app.prisma, tid);
   });
 
   app.get("/tax-rules", async (req) => {
-    const { tenantId } = tenantQuerySchema.parse(req.query);
-    const tid = await resolveTenant(app, tenantId);
+    const tid = tenantIdFromRequest(req);
     const rows = await app.prisma.taxRule.findMany({
       where: { tenantId: tid },
       orderBy: { ruleId: "asc" },
@@ -358,8 +347,7 @@ function registerTaxRuleRoutes(app: FastifyInstance) {
   });
 
   app.post("/tax-rules/bulk-upsert", async (req, reply) => {
-    const { tenantId } = tenantQuerySchema.parse(req.query);
-    const tid = await resolveTenant(app, tenantId);
+    const tid = tenantIdFromRequest(req);
     const { rows } = taxRulesBulkBodySchema.parse(req.body);
 
     let created = 0;

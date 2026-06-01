@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Acréscimo no preço do produto" };
 
 export default async function AcrescimoPrecoPage() {
   const tenantId = await resolveActiveTenantId();
-  const cfg = tenantId ? await getFiscalEmitterSettings(tenantId) : null;
+  const cfg = await getFiscalEmitterSettings();
 
   return <AcrescimoPrecoEditor initial={cfg?.settings.nfe.acrescimoPrecoProduto ?? false} />;
 }

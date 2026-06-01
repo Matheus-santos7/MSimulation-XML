@@ -52,6 +52,27 @@ export type TenantInput = {
   ambiente: EnvironmentType;
 };
 
+export type UserDto = {
+  id: string;
+  tenantId: string;
+  email: string;
+  name?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type UserInput = {
+  email: string;
+  name?: string;
+  password: string;
+};
+
+export type UserUpdateInput = {
+  email?: string;
+  name?: string;
+  password?: string;
+};
+
 export type CnpjLookupDto = {
   razaoSocial: string;
   nomeFantasia: string;

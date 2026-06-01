@@ -27,17 +27,17 @@ export default async function NFeDetailPage({ params }: Props) {
   if (!nfe) notFound();
 
   const [emit, fiscalCfg, eventos] = await Promise.all([
-    getEmitente(nfe.tenantId),
-    getFiscalEmitterSettings(nfe.tenantId),
-    listFiscalEvents(nfe.tenantId),
+    getEmitente(),
+    getFiscalEmitterSettings(),
+    listFiscalEvents(),
   ]);
   const cancelamentoEvent = eventos.find((e) => e.tipo === "110111" && e.chaveRef === chave);
   let product = undefined;
   if (nfe.productId) {
-    product = (await listProducts(nfe.tenantId)).find((p) => p.id === nfe.productId);
+    product = (await listProducts()).find((p) => p.id === nfe.productId);
   }
   if (!product) {
-    const produtos = await listProducts(nfe.tenantId);
+    const produtos = await listProducts();
     product = produtos.find((p) => p.ncm === nfe.ncm) ?? produtos[0];
   }
   const xml = buildNFeXML(nfe, emit, product, fiscalCfg?.settings ?? null);

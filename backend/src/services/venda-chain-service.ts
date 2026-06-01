@@ -33,11 +33,11 @@ import { FiscalStatus, NFeTipo, Prisma, type PrismaClient, type Tenant } from ".
 import { mapNfe } from "../lib/fiscal-mappers.js";
 import { buildChaveNFe, gerarPedidoMl } from "../lib/nfe-chave.js";
 import { proximoNumeroNfe } from "../lib/nfe-sequencia.js";
-import { REMESSA_ML_DEST } from "../lib/remessa-dest.js";
 import {
   RETORNO_SIMBOLICO_CFOP,
   RETORNO_SIMBOLICO_NAT_OP,
 } from "../lib/retorno-simbolico-dest.js";
+import { lineTotal } from "../lib/product-pricing.js";
 import { enrichTaxSnapshot, loadEmitterSettings } from "../lib/fiscal-emitter-runtime.js";
 import type { FiscalEmitterSettingsData } from "../lib/fiscal-emitter-settings-defaults.js";
 import { taxSnapshotFromRule } from "../lib/tax-snapshot.js";
@@ -45,7 +45,12 @@ import { calcularNotaFiscal } from "../lib/tax-engine.js";
 import { enrichFiscalPayloadWithXTexto } from "../lib/nfe-xtexto.js";
 import { consumirSaldoRemessaFifo } from "./remessa-fifo.js";
 import { resolveTaxRule, type CustomerType, type ResolvedTaxRule } from "./tax-rule-service.js";
-import { montarItemFiscal } from "./tax-calculation-service.js";
+import {
+  calcularNotaInbound,
+  inferAliqIcmsIntraestadual,
+  linhaPedidoFromProduto,
+  montarItemFiscal,
+} from "./tax-calculation-service.js";
 import { emitirCteVenda } from "./cte-venda-service.js";
 
 // ---------------------------------------------------------------------------
@@ -76,6 +81,7 @@ export type PedidoForEmit = {
     cfop: string;
     ncm: string;
     preco: { toString(): string };
+    precoCusto: { toString(): string };
     taxRuleBaseId: string | null;
     nome?: string;
     sku?: string;
@@ -102,8 +108,10 @@ type ContextoEmissao = {
   serie: number;
   pedidoMl: string;
   emitidaEm: Date;
-  valorUnit: number;
-  valorTotal: number;
+  valorUnitVenda: number;
+  valorTotalVenda: number;
+  valorUnitCusto: number;
+  valorTotalCusto: number;
   ruleBaseId: string;
 };
 
@@ -156,14 +164,22 @@ function assertProdutoComRegra(pedido: PedidoForEmit): string {
 }
 
 function buildContextoEmissao(pedido: PedidoForEmit, ruleBaseId: string): ContextoEmissao {
-  const valorUnit = Number(pedido.product.preco);
-  const valorTotal = Math.round(valorUnit * pedido.quantidade * 100) / 100;
+  const valorUnitVenda = Number(pedido.product.preco);
+  const valorUnitCusto = Number(pedido.product.precoCusto);
+  if (valorUnitCusto <= 0) {
+    throw new VendaChainError(
+      "Preço de custo não informado ou zero. Informe o custo no cadastro do produto para emitir retorno simbólico.",
+    );
+  }
+  const q = pedido.quantidade;
   return {
     serie: pedido.tenant.serieRemessa,
     pedidoMl: gerarPedidoMl(),
     emitidaEm: new Date(),
-    valorUnit,
-    valorTotal,
+    valorUnitVenda,
+    valorTotalVenda: lineTotal(valorUnitVenda, q),
+    valorUnitCusto,
+    valorTotalCusto: lineTotal(valorUnitCusto, q),
     ruleBaseId,
   };
 }
@@ -270,10 +286,20 @@ async function emitirNotaRetorno(
   const numero = await proximoNumeroNfe(prisma, tenant.id, ctx.serie);
   const chave = buildChaveNFe({ uf: tenant.uf, cnpj: tenant.cnpj, serie: ctx.serie, numero });
 
-  const aliqFallback = inferAliqIcms(REMESSA_ML_DEST.uf, tenant.uf);
-  const aliqIcms = inboundTaxRule.aliquotaIcmsInterna ?? aliqFallback;
-  const valorIcms = Math.round(ctx.valorTotal * (aliqIcms / 100) * 100) / 100;
+  const aliqFallback = inferAliqIcmsIntraestadual(tenant.uf, tenant.uf);
   const cfop = inboundTaxRule.cfop ?? RETORNO_SIMBOLICO_CFOP;
+  const calc = calcularNotaInbound(
+    linhaPedidoFromProduto(pedido.product, {
+      cfop,
+      quantidade: pedido.quantidade,
+      valorUnitario: ctx.valorUnitCusto,
+    }),
+    inboundTaxRule,
+    tenant.uf,
+    tenant.uf,
+    aliqFallback,
+  );
+  const { valor, valorIcms, aliqIcms } = calc;
 
   const row = await tx.nFe.create({
     data: {
@@ -286,7 +312,7 @@ async function emitirNotaRetorno(
       cfop,
       ncm: pedido.product.ncm,
       ...enderecoDestRetorno(tenant),
-      valor: ctx.valorTotal,
+      valor,
       valorIcms,
       aliqIcms,
       status: FiscalStatus.AUTORIZADA,
@@ -296,15 +322,18 @@ async function emitirNotaRetorno(
       tipo: NFeTipo.RETORNO_SIMBOLICO,
       saldoDisponivel: null,
       fiscalPayload: enrichFiscalPayloadWithXTexto(
-        enrichTaxSnapshot(taxSnapshotFromRule(inboundTaxRule, aliqFallback), {
-          settings: emitterSettings,
-          tipo: NFeTipo.RETORNO_SIMBOLICO,
-          valor: ctx.valorTotal,
-          valorIcms,
-          emitUf: tenant.uf,
-          destUf: tenant.uf,
-          indFinal: 0,
-        }) as Record<string, unknown>,
+        {
+          ...enrichTaxSnapshot(taxSnapshotFromRule(inboundTaxRule, aliqFallback), {
+            settings: emitterSettings,
+            tipo: NFeTipo.RETORNO_SIMBOLICO,
+            valor,
+            valorIcms,
+            emitUf: tenant.uf,
+            destUf: tenant.uf,
+            indFinal: 0,
+          }),
+          engine: calc.nota,
+        } as Record<string, unknown>,
         {
           tipo: NFeTipo.RETORNO_SIMBOLICO,
           cfop,
@@ -370,7 +399,7 @@ async function emitirNotaVenda(
       exTipi: pedido.product.exTipi ?? undefined,
       origem: pedido.product.origem ?? 0,
       quantidade: pedido.quantidade,
-      valorUnitario: ctx.valorUnit,
+      valorUnitario: ctx.valorUnitVenda,
     },
     saleTaxRule,
     { ufOrigem: tenant.uf, ufDestino: pedido.destUf, customerType },
@@ -397,7 +426,7 @@ async function emitirNotaVenda(
       cfop,
       ncm: pedido.product.ncm,
       ...enderecoDestVenda(pedido),
-      valor: ctx.valorTotal,
+      valor: ctx.valorTotalVenda,
       valorIcms,
       aliqIcms,
       status: FiscalStatus.AUTORIZADA,
@@ -411,7 +440,7 @@ async function emitirNotaVenda(
           ...enrichTaxSnapshot(taxSnapshotFromRule(saleTaxRule, aliqFallback), {
             settings: emitterSettings,
             tipo: NFeTipo.VENDA,
-            valor: ctx.valorTotal,
+            valor: ctx.valorTotalVenda,
             valorIcms,
             emitUf: tenant.uf,
             destUf: pedido.destUf,

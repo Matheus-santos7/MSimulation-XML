@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Cálculo DIFAL" };
 
 export default async function CalculoDifalPage() {
   const tenantId = await resolveActiveTenantId();
-  const cfg = tenantId ? await getFiscalEmitterSettings(tenantId) : null;
+  const cfg = await getFiscalEmitterSettings();
 
   return (
     <CalculoDifalEditor

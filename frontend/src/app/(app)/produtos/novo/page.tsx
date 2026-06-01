@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Novo produto" };
 
 export default async function NovoProdutoPage() {
   const tenantId = await resolveActiveTenantId();
-  const taxRuleCatalog = tenantId ? await listTaxRuleCatalog(tenantId) : [];
+  const taxRuleCatalog = await listTaxRuleCatalog();
 
   return (
     <div className="p-6">

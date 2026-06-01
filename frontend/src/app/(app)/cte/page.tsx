@@ -10,14 +10,14 @@ export const metadata: Metadata = { title: "CT-e" };
 
 export default async function CTePage() {
   const tenantId = await resolveActiveTenantId();
-  const ctes = await listCtes(tenantId);
+  const ctes = await listCtes();
 
   return (
     <div className="p-6">
       <PageHeader title="CT-e Transportes" subtitle="Conhecimento de transporte eletrônico — dados via API" />
       <div className="border border-border rounded-lg bg-card overflow-hidden">
         {ctes.length === 0 ? (
-          <div className="p-6 text-muted-foreground">Nenhum CT-e para este tenant.</div>
+          <div className="p-6 text-muted-foreground">Nenhum CT-e para esta empresa.</div>
         ) : (
           <table className="w-full text-left border-collapse">
             <thead>

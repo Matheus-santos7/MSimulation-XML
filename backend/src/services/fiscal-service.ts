@@ -9,8 +9,8 @@ import type { PrismaClient } from "../generated/prisma/client.js";
 export class FiscalService {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async softDeleteNfe(chave: string): Promise<boolean> {
-    const existing = await this.prisma.nFe.findUnique({ where: { chave } });
+  async softDeleteNfe(chave: string, tenantId: string): Promise<boolean> {
+    const existing = await this.prisma.nFe.findFirst({ where: { chave, tenantId } });
     if (!existing || existing.deletedAt) return false;
     await this.prisma.nFe.update({
       where: { chave },
@@ -19,8 +19,8 @@ export class FiscalService {
     return true;
   }
 
-  async softDeleteCte(chave: string): Promise<boolean> {
-    const existing = await this.prisma.cTe.findUnique({ where: { chave } });
+  async softDeleteCte(chave: string, tenantId: string): Promise<boolean> {
+    const existing = await this.prisma.cTe.findFirst({ where: { chave, tenantId } });
     if (!existing || existing.deletedAt) return false;
     await this.prisma.cTe.update({
       where: { chave },

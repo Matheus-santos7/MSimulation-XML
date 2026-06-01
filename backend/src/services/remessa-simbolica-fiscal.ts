@@ -1,0 +1,128 @@
+/**
+ * Cálculo fiscal unificado para NF-e de remessa simbólica (CFOP 5949).
+ */
+import { NFeTipo, type PrismaClient } from "../generated/prisma/client.js";
+import {
+  REMESSA_SIMBOLICA_CFOP,
+  REMESSA_SIMBOLICA_NAT_OP,
+} from "../lib/remessa-simbolica-dest.js";
+import { enrichTaxSnapshot, loadEmitterSettings } from "../lib/fiscal-emitter-runtime.js";
+import { enrichFiscalPayloadWithXTexto } from "../lib/nfe-xtexto.js";
+import { taxSnapshotFromRule } from "../lib/tax-snapshot.js";
+import { productUnitPrice } from "../lib/product-pricing.js";
+import {
+  calcularNotaInbound,
+  inferAliqIcmsRemessa,
+  linhaPedidoFromProduto,
+  type ProdutoLinhaFiscal,
+  type ResultadoNotaInbound,
+} from "./tax-calculation-service.js";
+import { resolveTaxRule } from "./tax-rule-service.js";
+
+type Tx = Omit<PrismaClient, "$connect" | "$disconnect" | "$on" | "$transaction" | "$extends">;
+
+type ProductPrices = {
+  preco: { toString(): string } | number;
+  precoCusto: { toString(): string } | number;
+};
+
+export type ProdutoRemessaSimbolica = ProdutoLinhaFiscal &
+  ProductPrices & {
+    taxRuleBaseId: string | null;
+  };
+
+export type RemessaSimbolicaFiscalPreparada = {
+  calc: ResultadoNotaInbound;
+  cfop: string;
+  natOp: string;
+  fiscalPayload: Record<string, unknown>;
+};
+
+export class RemessaSimbolicaFiscalError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "RemessaSimbolicaFiscalError";
+  }
+}
+
+export async function prepararRemessaSimbolicaFiscal(
+  prisma: Tx | PrismaClient,
+  input: {
+    tenantId: string;
+    emitUf: string;
+    destUf: string;
+    product: ProdutoRemessaSimbolica;
+    quantidade: number;
+    pedidoMl: string;
+  },
+): Promise<RemessaSimbolicaFiscalPreparada> {
+  const unitCusto = productUnitPrice(input.product, "REMESSA");
+  if (unitCusto <= 0) {
+    throw new RemessaSimbolicaFiscalError(
+      "Preço de custo não informado ou zero. Informe o custo no cadastro do produto.",
+    );
+  }
+
+  const ruleBaseId = input.product.taxRuleBaseId?.trim();
+  if (!ruleBaseId) {
+    throw new RemessaSimbolicaFiscalError(
+      "Produto sem regra fiscal associada. Edite o cadastro e selecione a regra da planilha.",
+    );
+  }
+
+  const taxRule = await resolveTaxRule(prisma as PrismaClient, input.tenantId, {
+    originUf: input.emitUf,
+    destinationUf: input.destUf,
+    transactionType: "inbound",
+    customerType: "taxpayer",
+    ruleBaseId,
+  });
+  if (!taxRule) {
+    throw new RemessaSimbolicaFiscalError(
+      `Regra "${ruleBaseId}" sem linha inbound (origem ${input.emitUf} → ${input.destUf}). Importe ou revise a planilha.`,
+    );
+  }
+
+  const aliqFallback = inferAliqIcmsRemessa(input.emitUf, input.destUf);
+  const cfop = REMESSA_SIMBOLICA_CFOP;
+  const calc = calcularNotaInbound(
+    linhaPedidoFromProduto(input.product, {
+      cfop,
+      quantidade: input.quantidade,
+      valorUnitario: unitCusto,
+    }),
+    taxRule,
+    input.emitUf,
+    input.destUf,
+    aliqFallback,
+  );
+
+  const emitterSettings = await loadEmitterSettings(prisma as PrismaClient, input.tenantId);
+  const fiscalPayload = enrichFiscalPayloadWithXTexto(
+    {
+      ...enrichTaxSnapshot(taxSnapshotFromRule(taxRule, aliqFallback), {
+        settings: emitterSettings,
+        tipo: NFeTipo.REMESSA_SIMBOLICA,
+        valor: calc.valor,
+        valorIcms: calc.valorIcms,
+        emitUf: input.emitUf,
+        destUf: input.destUf,
+        indFinal: 0,
+      }),
+      engine: calc.nota,
+    } as Record<string, unknown>,
+    {
+      tipo: NFeTipo.REMESSA_SIMBOLICA,
+      cfop,
+      natOp: REMESSA_SIMBOLICA_NAT_OP,
+      pedidoMl: input.pedidoMl,
+    },
+  );
+
+  return {
+    calc,
+    cfop,
+    natOp: REMESSA_SIMBOLICA_NAT_OP,
+    fiscalPayload,
+  };
+}

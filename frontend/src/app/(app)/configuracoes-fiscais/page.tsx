@@ -16,7 +16,7 @@ export const metadata: Metadata = { title: "Configurações fiscais" };
 
 export default async function ConfiguracoesFiscaisPage() {
   const tenantId = await resolveActiveTenantId();
-  const cfg = tenantId ? await getFiscalEmitterSettings(tenantId) : null;
+  const cfg = await getFiscalEmitterSettings();
 
   const forma =
     cfg?.settings.basic.formaFaturamento === "EMISSOR_ML"

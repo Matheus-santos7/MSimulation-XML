@@ -17,7 +17,7 @@ export const metadata: Metadata = { title: "NF-e Emitidas" };
 
 export default async function NFeListPage() {
   const tenantId = await resolveActiveTenantId();
-  const [nfesRaw, eventos] = await Promise.all([listNfes(tenantId), listFiscalEvents(tenantId)]);
+  const [nfesRaw, eventos] = await Promise.all([listNfes(), listFiscalEvents()]);
   const rows = buildNfeTableRows(nfesRaw, eventos);
 
   const cancelamentoPorChave = new Map<string, FiscalEventDto>();
@@ -42,19 +42,11 @@ export default async function NFeListPage() {
       <PageHeader
         title="NF-e Emitidas"
         subtitle="Sequência fiscal por série e número — inclui faixas inutilizadas"
-        actions={
-          <Link
-            href="/nfe/nova"
-            className="px-4 py-2 bg-accent text-accent-foreground font-bold rounded text-[13px] tracking-wider hover:opacity-90"
-          >
-            EMITIR NF-E
-          </Link>
-        }
       />
 
       <div className="border border-border rounded-lg bg-card overflow-x-auto">
         {rows.length === 0 ? (
-          <div className="p-6 text-muted-foreground">Nenhuma NF-e ou inutilização para este tenant.</div>
+          <div className="p-6 text-muted-foreground">Nenhuma NF-e ou inutilização para esta empresa.</div>
         ) : (
           <table className="w-full min-w-[1100px] text-left border-collapse">
             <thead>

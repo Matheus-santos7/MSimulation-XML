@@ -174,6 +174,6 @@ export async function resolveTenantId(
 ): Promise<string> {
   if (tenantId) return tenantId;
   const first = await prisma.tenant.findFirst({ orderBy: { createdAt: "asc" } });
-  if (!first) throw new Error("Nenhum tenant cadastrado. Rode pnpm --filter @e-invoice-play/backend exec prisma db seed");
+  if (!first) throw new Error("Nenhum tenant cadastrado. Cadastre uma empresa pelo onboarding ou em Empresas.");
   return first.id;
 }

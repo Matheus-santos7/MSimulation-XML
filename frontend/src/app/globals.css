@@ -5,7 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Terminal Fiscal Design System (legado Vite → Next)
+ * MSimulation XML — Terminal Fiscal Design System
  */
 
 @theme inline {
@@ -50,6 +50,9 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
+  --color-brand-xml: var(--brand-xml);
+  --color-brand-glow: var(--brand-glow);
+
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --animate-slide-in: slide-in 0.4s var(--ease-out-expo) both;
 
@@ -84,7 +87,7 @@
   --muted: oklch(0.235 0.005 285);
   --muted-foreground: oklch(0.55 0.012 285);
 
-  --accent: oklch(0.769 0.166 70.5);
+  --accent: oklch(0.78 0.17 68);
   --accent-foreground: oklch(0.145 0.005 285);
 
   --destructive: oklch(0.625 0.215 27);
@@ -93,21 +96,24 @@
   --success: oklch(0.7 0.17 158);
   --success-foreground: oklch(0.145 0.005 285);
 
-  --warning: oklch(0.769 0.166 70.5);
+  --warning: oklch(0.78 0.17 68);
   --warning-foreground: oklch(0.145 0.005 285);
 
   --border: oklch(0.255 0.005 285);
   --input: oklch(0.255 0.005 285);
-  --ring: oklch(0.769 0.166 70.5);
+  --ring: oklch(0.78 0.17 68);
 
   --sidebar: oklch(0.145 0.005 285);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.769 0.166 70.5);
+  --sidebar-primary: oklch(0.78 0.17 68);
   --sidebar-primary-foreground: oklch(0.145 0.005 285);
   --sidebar-accent: oklch(0.235 0.005 285);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.255 0.005 285);
-  --sidebar-ring: oklch(0.769 0.166 70.5);
+  --sidebar-ring: oklch(0.78 0.17 68);
+
+  --brand-glow: oklch(0.78 0.17 68);
+  --brand-xml: oklch(0.76 0.17 162);
 }
 
 .dark {
@@ -123,25 +129,28 @@
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.235 0.005 285);
   --muted-foreground: oklch(0.55 0.012 285);
-  --accent: oklch(0.769 0.166 70.5);
+  --accent: oklch(0.78 0.17 68);
   --accent-foreground: oklch(0.145 0.005 285);
   --destructive: oklch(0.625 0.215 27);
   --destructive-foreground: oklch(0.985 0 0);
   --success: oklch(0.7 0.17 158);
   --success-foreground: oklch(0.145 0.005 285);
-  --warning: oklch(0.769 0.166 70.5);
+  --warning: oklch(0.78 0.17 68);
   --warning-foreground: oklch(0.145 0.005 285);
   --border: oklch(0.255 0.005 285);
   --input: oklch(0.255 0.005 285);
-  --ring: oklch(0.769 0.166 70.5);
+  --ring: oklch(0.78 0.17 68);
   --sidebar: oklch(0.145 0.005 285);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.769 0.166 70.5);
+  --sidebar-primary: oklch(0.78 0.17 68);
   --sidebar-primary-foreground: oklch(0.145 0.005 285);
   --sidebar-accent: oklch(0.235 0.005 285);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.255 0.005 285);
-  --sidebar-ring: oklch(0.769 0.166 70.5);
+  --sidebar-ring: oklch(0.78 0.17 68);
+
+  --brand-glow: oklch(0.78 0.17 68);
+  --brand-xml: oklch(0.76 0.17 162);
 }
 
 @layer base {
@@ -165,5 +174,24 @@
   pre,
   kbd {
     font-family: var(--font-mono);
+  }
+}
+
+@layer utilities {
+  .brand-grid-bg {
+    background-image:
+      linear-gradient(oklch(0.255 0.005 285 / 0.35) 1px, transparent 1px),
+      linear-gradient(90deg, oklch(0.255 0.005 285 / 0.35) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, black 20%, transparent 75%);
+  }
+
+  .brand-glow-orb {
+    background: radial-gradient(
+      circle at center,
+      oklch(0.78 0.17 68 / 0.18) 0%,
+      oklch(0.72 0.15 162 / 0.06) 45%,
+      transparent 70%
+    );
   }
 }

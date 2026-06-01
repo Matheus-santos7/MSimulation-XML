@@ -140,9 +140,9 @@ export class PedidoService {
     return rows.map(mapPedido);
   }
 
-  async getById(id: string) {
-    const row = await this.prisma.pedido.findUnique({
-      where: { id },
+  async getById(id: string, tenantId: string) {
+    const row = await this.prisma.pedido.findFirst({
+      where: { id, tenantId },
       include: pedidoInclude,
     });
     return row ? mapPedido(row) : null;
@@ -166,17 +166,13 @@ export class PedidoService {
   }
 
   /** Atualiza rascunho. Retorna `null` se o id não existir. */
-  async updateDraft(id: string, input: PedidoCheckoutInput) {
-    const existing = await this.prisma.pedido.findUnique({ where: { id } });
+  async updateDraft(id: string, tenantId: string, input: PedidoCheckoutInput) {
+    const existing = await this.prisma.pedido.findFirst({ where: { id, tenantId } });
     if (!existing) return null;
 
     assertPedidoEditavel(existing.status);
 
-    const product = await assertProdutoDoTenant(
-      this.prisma,
-      input.productId,
-      existing.tenantId,
-    );
+    const product = await assertProdutoDoTenant(this.prisma, input.productId, tenantId);
 
     const row = await this.prisma.pedido.update({
       where: { id },
@@ -195,9 +191,9 @@ export class PedidoService {
    *
    * @returns `{ pedido, nfe }` onde `nfe` é a **venda** (DTO); `null` se id inexistente.
    */
-  async faturar(id: string) {
-    const pedido = await this.prisma.pedido.findUnique({
-      where: { id },
+  async faturar(id: string, tenantId: string) {
+    const pedido = await this.prisma.pedido.findFirst({
+      where: { id, tenantId },
       include: { product: true, tenant: true },
     });
     if (!pedido) return null;
@@ -223,8 +219,8 @@ export class PedidoService {
    * Remove o pedido do banco.
    * Faturado: só o pedido some; NF-e/CT-e da cadeia permanecem para auditoria.
    */
-  async remove(id: string) {
-    const existing = await this.prisma.pedido.findUnique({ where: { id } });
+  async remove(id: string, tenantId: string) {
+    const existing = await this.prisma.pedido.findFirst({ where: { id, tenantId } });
     if (!existing) return false;
     await this.prisma.pedido.delete({ where: { id } });
     return true;

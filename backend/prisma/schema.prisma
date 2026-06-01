@@ -93,9 +93,65 @@ model Tenant {
   unidadeLogisticaPadrao   MeliUnidadeLogistica? @relation("TenantUnidadePadrao", fields: [unidadeLogisticaPadraoId], references: [id], onDelete: SetNull)
   meliUnidades             MeliUnidadeLogistica[]
   movimentacoesProduto     MovimentacaoProduto[]
+  users                    User[]
 
   @@unique([cnpj])
   @@map("tenants")
+}
+
+/// Usuário (autenticação JWT). `tenantId` nulo até cadastrar a empresa no onboarding.
+model User {
+  id           String        @id @default(uuid())
+  tenantId     String?       @map("tenant_id")
+  tenant       Tenant?       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email        String
+  name         String?
+  password              String        @map("password")
+  tokenVersion          Int           @default(0) @map("token_version")
+  failedLoginAttempts   Int           @default(0) @map("failed_login_attempts")
+  lockedUntil           DateTime?     @map("locked_until")
+  totpSecretEnc         String?       @map("totp_secret_enc")
+  totpEnabledAt         DateTime?     @map("totp_enabled_at")
+  createdAt             DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  sessions           UserSession[]
+  passwordResetTokens PasswordResetToken[]
+
+  @@unique([email])
+  @@index([tenantId], map: "idx_users_tenant")
+  @@map("users")
+}
+
+/// Sessão com refresh token (hash) — rotação e revogação no logout.
+model UserSession {
+  id               String    @id @default(uuid())
+  userId           String    @map("user_id")
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenHash String    @unique @map("refresh_token_hash")
+  expiresAt        DateTime  @map("expires_at")
+  revokedAt        DateTime? @map("revoked_at")
+  userAgent        String?   @map("user_agent")
+  ipAddress        String?   @map("ip_address")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  @@index([userId], map: "idx_user_sessions_user")
+  @@index([expiresAt], map: "idx_user_sessions_expires")
+  @@map("user_sessions")
+}
+
+/// Token de uso único para redefinição de senha (hash SHA-256 + pepper).
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId], map: "idx_password_reset_user")
+  @@index([expiresAt], map: "idx_password_reset_expires")
+  @@map("password_reset_tokens")
 }
 
 /// CD / unidade logística Mercado Livre Full (importação da planilha Meli).

@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Composição da base de cálculo" };
 
 export default async function ComposicaoBaseCalculoPage() {
   const tenantId = await resolveActiveTenantId();
-  const cfg = tenantId ? await getFiscalEmitterSettings(tenantId) : null;
+  const cfg = await getFiscalEmitterSettings();
 
   return (
     <ComposicaoBaseEditor

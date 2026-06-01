@@ -71,10 +71,6 @@ export const productIdParam = z.object({
   id: z.string().uuid(),
 });
 
-export const productTenantQuery = z.object({
-  tenantId: z.string().uuid().optional(),
-});
-
 export type ProductCreateInput = z.infer<typeof productCreateBody>;
 export type ProductUpdateInput = z.infer<typeof productUpdateBody>;
 

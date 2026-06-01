@@ -1,6 +1,17 @@
-# Frontend (`@e-invoice-play/frontend`)
+<p align="center">
+  <img src="../docs/assets/msimulation-logo.svg" alt="MSimulation XML" width="64" height="64" />
+</p>
 
-Next.js 15 (App Router), Tailwind v4, simulador fiscal (UI migrada do antigo TanStack/Vite).
+<h1 align="center">MSimulation XML — Frontend</h1>
+
+<p align="center"><code>@msedit-xml/frontend</code> · Next.js 15 · Tailwind v4</p>
+
+Next.js 15 (App Router), Tailwind v4, cockpit fiscal **MSimulation XML** (UI migrada do antigo TanStack/Vite).
+
+### Marca na UI
+
+- Logo: `src/components/brand-logo.tsx` (variantes `full`, `compact`, `mark`, `hero`)
+- Tokens: `src/lib/brand.ts` e cores `--brand-glow` / `--brand-xml` em `src/app/globals.css`
 
 Na **raiz do monorepo**:
 

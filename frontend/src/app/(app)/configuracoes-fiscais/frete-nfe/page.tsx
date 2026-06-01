@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Frete de NF-e" };
 
 export default async function FreteNfePage() {
   const tenantId = await resolveActiveTenantId();
-  const cfg = tenantId ? await getFiscalEmitterSettings(tenantId) : null;
+  const cfg = await getFiscalEmitterSettings();
 
   return <FreteNfeEditor initial={cfg?.settings.nfe.freteNoCalculo ?? true} />;
 }

@@ -3,7 +3,7 @@ const OPEN_CNPJ_API = "https://api.opencnpj.org";
 
 const FETCH_HEADERS = {
   Accept: "application/json",
-  "User-Agent": "e-invoice-play/1.0 (fiscal-simulator)",
+  "User-Agent": "msimulation-xml/1.0 (fiscal-simulator)",
 };
 
 export class LookupNotFoundError extends Error {
@@ -179,7 +179,7 @@ async function lookupCnpjBrasilApi(cnpj: string): Promise<CnpjLookupResult | nul
 
   if (res.status === 400) {
     throw new LookupValidationError(
-      "CNPJ inválido ou fictício (ex.: dados do seed). Use um CNPJ real da Receita ou preencha os campos manualmente.",
+      "CNPJ inválido ou fictício. Use um CNPJ real da Receita ou preencha os campos manualmente.",
     );
   }
 

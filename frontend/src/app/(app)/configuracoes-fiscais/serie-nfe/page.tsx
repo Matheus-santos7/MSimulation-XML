@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Série da NF-e" };
 
 export default async function SerieNfePage() {
   const tenantId = await resolveActiveTenantId();
-  const cfg = tenantId ? await getFiscalEmitterSettings(tenantId) : null;
+  const cfg = await getFiscalEmitterSettings();
   return (
     <SerieNfeForm
       serieRemessa={cfg?.serieRemessa ?? 5}

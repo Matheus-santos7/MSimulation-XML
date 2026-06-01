@@ -1,11 +1,10 @@
 import type { FastifyPluginAsync } from "fastify";
 import { ZodError } from "zod";
-import { resolveTenantId } from "../lib/fiscal-mappers.js";
+import { tenantIdFromRequest } from "../lib/auth/request-context.js";
 import {
   productBulkUpsertBody,
   productCreateBody,
   productIdParam,
-  productTenantQuery,
   productUpdateBody,
 } from "../schemas/product.js";
 import { TaxRuleCatalogError } from "../services/tax-rule-catalog-service.js";
@@ -16,22 +15,21 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
   const service = new ProductService(app.prisma);
 
   app.get("/products", async (req) => {
-    const { tenantId } = productTenantQuery.parse(req.query);
-    const tid = await resolveTenantId(app.prisma, tenantId);
+    const tid = tenantIdFromRequest(req);
     return service.list(tid);
   });
 
   app.get("/products/:id", async (req, reply) => {
     const { id } = productIdParam.parse(req.params);
-    const product = await service.getById(id);
+    const tid = tenantIdFromRequest(req);
+    const product = await service.getById(id, tid);
     if (!product) return reply.status(404).send({ error: "Produto não encontrado" });
     return product;
   });
 
   app.post("/products", async (req, reply) => {
     try {
-      const { tenantId } = productTenantQuery.parse(req.query);
-      const tid = await resolveTenantId(app.prisma, tenantId);
+      const tid = tenantIdFromRequest(req);
       const body = productCreateBody.parse(req.body);
       const product = await service.create(tid, body);
       return reply.status(201).send(product);
@@ -42,8 +40,7 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
 
   app.post("/products/bulk-upsert", async (req, reply) => {
     try {
-      const { tenantId } = productTenantQuery.parse(req.query);
-      const tid = await resolveTenantId(app.prisma, tenantId);
+      const tid = tenantIdFromRequest(req);
       const { rows } = productBulkUpsertBody.parse(req.body);
       const result = await service.bulkUpsert(tid, rows);
       return reply.status(200).send(result);
@@ -55,8 +52,9 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
   app.patch("/products/:id", async (req, reply) => {
     try {
       const { id } = productIdParam.parse(req.params);
+      const tid = tenantIdFromRequest(req);
       const body = productUpdateBody.parse(req.body);
-      const product = await service.update(id, body);
+      const product = await service.update(id, tid, body);
       if (!product) return reply.status(404).send({ error: "Produto não encontrado" });
       return product;
     } catch (e) {
@@ -67,7 +65,8 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
   app.delete("/products/:id", async (req, reply) => {
     try {
       const { id } = productIdParam.parse(req.params);
-      const removed = await service.remove(id);
+      const tid = tenantIdFromRequest(req);
+      const removed = await service.remove(id, tid);
       if (!removed) return reply.status(404).send({ error: "Produto não encontrado" });
       return reply.status(204).send();
     } catch (e) {

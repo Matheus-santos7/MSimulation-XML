@@ -4,14 +4,14 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: e-invoice-play-db
+    container_name: msedit-xml-db
     restart: unless-stopped
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-einvoice}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-einvoice}
-      POSTGRES_DB: ${POSTGRES_DB:-e_invoice_play}
+      POSTGRES_USER: ${POSTGRES_USER:-msedit}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-msedit}
+      POSTGRES_DB: ${POSTGRES_DB:-msedit_xml}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -27,4 +27,4 @@ services:
 
 volumes:
   postgres_data:
-    name: e-invoice-play-postgres-data
+    name: msedit-xml-postgres-data

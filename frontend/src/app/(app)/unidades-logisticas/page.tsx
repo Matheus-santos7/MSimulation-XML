@@ -3,7 +3,6 @@ import { PageHeader } from "@/components/fiscal-ui";
 import { AvancoCdForm } from "@/components/avanco-cd-form";
 import { UnidadeLogisticaImportForm } from "@/components/unidade-logistica-import-form";
 import { UnidadesLogisticasTable } from "@/components/unidades-logisticas-table";
-import { resolveActiveTenantId } from "@/lib/active-tenant";
 import { listMovimentacoesProduto, listProducts, listUnidadesLogisticas } from "@/lib/fiscal-api";
 
 export const metadata: Metadata = { title: "Unidades Logísticas" };
@@ -13,22 +12,12 @@ type Props = {
 };
 
 export default async function UnidadesLogisticasPage({ searchParams }: Props) {
-  const tenantId = await resolveActiveTenantId();
   const { q } = await searchParams;
 
-  if (!tenantId) {
-    return (
-      <>
-        <PageHeader title="Unidades Logísticas" subtitle="CDs Mercado Livre Full" />
-        <p className="text-sm text-muted-foreground">Selecione uma empresa no header.</p>
-      </>
-    );
-  }
-
   const [unidades, products, movimentacoes] = await Promise.all([
-    listUnidadesLogisticas(tenantId, { q: q?.trim() || undefined, ativa: true }),
-    listProducts(tenantId),
-    listMovimentacoesProduto(tenantId, { limit: 30 }),
+    listUnidadesLogisticas({ q: q?.trim() || undefined, ativa: true }),
+    listProducts(),
+    listMovimentacoesProduto({ limit: 30 }),
   ]);
 
   return (

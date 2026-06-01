@@ -1,21 +1,21 @@
 {
-  "name": "e-invoice-play",
+  "name": "msedit-xml",
   "private": true,
   "packageManager": "pnpm@9.15.9",
   "scripts": {
     "dev": "concurrently -k -n api,web -c cyan,magenta \"pnpm dev:backend\" \"pnpm dev:frontend\"",
-    "dev:frontend": "pnpm --filter @e-invoice-play/frontend dev",
-    "dev:backend": "pnpm --filter @e-invoice-play/backend dev",
-    "build": "pnpm --filter @e-invoice-play/frontend build && pnpm --filter @e-invoice-play/backend build",
-    "start:frontend": "pnpm --filter @e-invoice-play/frontend start",
-    "start:backend": "pnpm --filter @e-invoice-play/backend start",
-    "lint": "pnpm --filter @e-invoice-play/frontend lint",
+    "dev:frontend": "pnpm --filter @msedit-xml/frontend dev",
+    "dev:backend": "pnpm --filter @msedit-xml/backend dev",
+    "build": "pnpm --filter @msedit-xml/frontend build && pnpm --filter @msedit-xml/backend build",
+    "start:frontend": "pnpm --filter @msedit-xml/frontend start",
+    "start:backend": "pnpm --filter @msedit-xml/backend start",
+    "lint": "pnpm --filter @msedit-xml/frontend lint",
     "format": "prettier --write .",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f postgres",
     "docker:reset": "docker compose down -v",
-    "db:setup": "pnpm docker:up && pnpm --filter @e-invoice-play/backend db:migrate:deploy && pnpm --filter @e-invoice-play/backend db:seed"
+    "db:setup": "pnpm docker:up && pnpm --filter @msedit-xml/backend db:migrate:deploy"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",

@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { resolveActiveTenantId } from "@/lib/active-tenant";
 import {
   ApiValidationError,
   createPedido,
@@ -11,6 +10,7 @@ import {
   updatePedido,
 } from "@/lib/fiscal-api";
 import { parsePedidoForm, type PedidoFormState } from "@/lib/pedido-form";
+import { rethrowNavigationError } from "@/lib/auth/navigation";
 
 function mapError(e: unknown): PedidoFormState {
   if (e instanceof ApiValidationError) {
@@ -24,9 +24,6 @@ export async function salvarPedidoRascunhoAction(
   _prev: PedidoFormState,
   formData: FormData,
 ): Promise<PedidoFormState> {
-  const tenantId = await resolveActiveTenantId();
-  if (!tenantId) return { error: "Selecione uma empresa no header" };
-
   const pedidoId = String(formData.get("pedidoId") ?? "").trim() || null;
 
   try {
@@ -34,7 +31,7 @@ export async function salvarPedidoRascunhoAction(
     if (pedidoId) {
       await updatePedido(pedidoId, input);
     } else {
-      await createPedido(tenantId, input);
+      await createPedido(input);
     }
     revalidatePath("/pedidos");
     return { success: true };
@@ -47,16 +44,13 @@ export async function faturarPedidoAction(
   _prev: PedidoFormState,
   formData: FormData,
 ): Promise<PedidoFormState> {
-  const tenantId = await resolveActiveTenantId();
-  if (!tenantId) return { error: "Selecione uma empresa no header" };
-
   const pedidoId = String(formData.get("pedidoId") ?? "").trim() || null;
 
   try {
     let id = pedidoId;
     if (!id) {
       const input = parsePedidoForm(formData);
-      const created = await createPedido(tenantId, input);
+      const created = await createPedido(input);
       id = created.id;
     } else {
       await updatePedido(id, parsePedidoForm(formData));
@@ -68,7 +62,7 @@ export async function faturarPedidoAction(
     revalidatePath("/");
     redirect(`/nfe/${nfe.chave}`);
   } catch (e) {
-    if (e instanceof Error && e.message === "NEXT_REDIRECT") throw e;
+    rethrowNavigationError(e);
     return mapError(e);
   }
 }

@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Prazo para cancelamento" };
 
 export default async function PrazoCancelamentoPage() {
   const tenantId = await resolveActiveTenantId();
-  const cfg = tenantId ? await getFiscalEmitterSettings(tenantId) : null;
+  const cfg = await getFiscalEmitterSettings();
 
   return (
     <PrazoCancelamentoEditor

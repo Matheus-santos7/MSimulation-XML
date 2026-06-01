@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { BRAND } from "@/lib/brand";
 import "./globals.css";
 
 const inter = Inter({
@@ -16,11 +17,13 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Fiscal Engine (Simulação)",
-    template: "%s — Fiscal Engine",
+    default: BRAND.fullName,
+    template: `%s — ${BRAND.fullName}`,
   },
-  description:
-    "Cockpit fiscal e logístico para simulação de operações Mercado Livre Full.",
+  description: BRAND.description,
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

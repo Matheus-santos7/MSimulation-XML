@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { resolveActiveTenantId } from "@/lib/active-tenant";
 import {
   bulkImportUnidadesLogisticas,
   emitirAvancoCd,
@@ -22,9 +21,6 @@ export async function importarUnidadesLogisticasAction(
   _prev: UnidadeImportState,
   formData: FormData,
 ): Promise<UnidadeImportState> {
-  const tenantId = await resolveActiveTenantId();
-  if (!tenantId) return { error: "Selecione uma empresa no header antes de importar" };
-
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) return { error: "Selecione um arquivo .xlsx" };
   if (!file.name.toLowerCase().endsWith(".xlsx")) return { error: "Formato inválido. Envie um arquivo .xlsx" };
@@ -38,7 +34,7 @@ export async function importarUnidadesLogisticasAction(
   }
 
   try {
-    const result = await bulkImportUnidadesLogisticas(tenantId, parsed.rows);
+    const result = await bulkImportUnidadesLogisticas(parsed.rows);
     revalidatePath("/unidades-logisticas");
     return {
       success: true,
@@ -66,9 +62,6 @@ export async function emitirAvancoCdAction(
   _prev: AvancoCdState,
   formData: FormData,
 ): Promise<AvancoCdState> {
-  const tenantId = await resolveActiveTenantId();
-  if (!tenantId) return { error: "Selecione uma empresa" };
-
   const productId = String(formData.get("productId") ?? "");
   const unidadeOrigemId = String(formData.get("unidadeOrigemId") ?? "");
   const unidadeDestinoId = String(formData.get("unidadeDestinoId") ?? "");
@@ -82,7 +75,7 @@ export async function emitirAvancoCdAction(
   }
 
   try {
-    const result = await emitirAvancoCd(tenantId, {
+    const result = await emitirAvancoCd({
       productId,
       quantidade,
       unidadeOrigemId,
@@ -101,10 +94,8 @@ export async function emitirAvancoCdAction(
 }
 
 export async function definirUnidadePadraoAction(unidadeId: string): Promise<{ error?: string }> {
-  const tenantId = await resolveActiveTenantId();
-  if (!tenantId) return { error: "Selecione uma empresa" };
   try {
-    await setUnidadeLogisticaPadrao(tenantId, unidadeId);
+    await setUnidadeLogisticaPadrao(unidadeId);
     revalidatePath("/unidades-logisticas");
     revalidatePath("/produtos");
     return {};

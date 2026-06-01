@@ -30,7 +30,7 @@ export function XMLViewer({
           <button
             type="button"
             onClick={onCopy}
-            className="text-[12px] text-accent font-bold uppercase tracking-wider hover:underline"
+            className="text-[12px] text-brand-xml font-bold uppercase tracking-wider hover:underline"
           >
             {copied ? "Copiado" : "Copiar"}
           </button>

@@ -1,8 +1,7 @@
 import { cache } from "react";
+import { resolveAccessToken } from "@/lib/auth/session";
 import type {
   AuditEntryDto,
-  CepLookupDto,
-  CnpjLookupDto,
   CTeDto,
   EmitenteDto,
   FiscalEventDto,
@@ -16,6 +15,9 @@ import type {
   TaxRuleDto,
   TenantDto,
   TenantInput,
+  UserDto,
+  UserInput,
+  UserUpdateInput,
   TimelineRemessaGroupDto,
   TimelineStepDto,
 } from "./fiscal-types";
@@ -36,6 +38,12 @@ function url(path: string, query?: Record<string, string | undefined>): string {
     }
   }
   return u.toString();
+}
+
+async function authHeaders(): Promise<HeadersInit> {
+  const token = await resolveAccessToken();
+  if (!token) return {};
+  return { Authorization: `Bearer ${token}` };
 }
 
 async function readApiError(res: Response): Promise<string> {
@@ -79,7 +87,7 @@ export class ApiValidationError extends Error {
 async function getJson<T>(href: string): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(href, { cache: "no-store" });
+    res = await fetch(href, { cache: "no-store", headers: await authHeaders() });
   } catch (err) {
     const base = apiBase();
     const msg =
@@ -102,7 +110,7 @@ export async function listTenants(): Promise<TenantDto[]> {
 
 export async function getTenant(id: string): Promise<TenantDto | null> {
   const href = url(`/api/tenants/${id}`);
-  const res = await fetch(href, { cache: "no-store" });
+  const res = await fetch(href, { cache: "no-store", headers: await authHeaders() });
   if (res.status === 404) return null;
   if (!res.ok) {
     throw new Error(await readApiError(res));
@@ -117,9 +125,13 @@ async function mutateJson<T>(
 ): Promise<T | void> {
   let res: Response;
   try {
+    const baseHeaders = await authHeaders();
     res = await fetch(href, {
       method,
-      headers: body ? { "Content-Type": "application/json" } : undefined,
+      headers: {
+        ...baseHeaders,
+        ...(body ? { "Content-Type": "application/json" } : {}),
+      },
       body: body ? JSON.stringify(body) : undefined,
       cache: "no-store",
     });
@@ -159,13 +171,39 @@ export async function deleteTenant(id: string): Promise<void> {
 /** Uma chamada por request (layout + páginas compartilham o mesmo resultado). */
 export const getTenants = cache(listTenants);
 
-export async function listNfes(tenantId?: string): Promise<NFeDto[]> {
-  return getJson<NFeDto[]>(url("/api/nfes", { tenantId }));
+export async function listUsers(): Promise<UserDto[]> {
+  return getJson<UserDto[]>(url("/api/users"));
+}
+
+export const getUsers = cache(listUsers);
+
+export async function getUser(id: string): Promise<UserDto | null> {
+  const href = url(`/api/users/${id}`);
+  const res = await fetch(href, { cache: "no-store", headers: await authHeaders() });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(await readApiError(res));
+  return res.json() as Promise<UserDto>;
+}
+
+export async function createUser(input: UserInput): Promise<UserDto> {
+  return mutateJson<UserDto>(url("/api/users"), "POST", input) as Promise<UserDto>;
+}
+
+export async function updateUser(id: string, input: UserUpdateInput): Promise<UserDto> {
+  return mutateJson<UserDto>(url(`/api/users/${id}`), "PATCH", input) as Promise<UserDto>;
+}
+
+export async function deleteUser(id: string): Promise<void> {
+  await mutateJson(url(`/api/users/${id}`), "DELETE");
+}
+
+export async function listNfes(): Promise<NFeDto[]> {
+  return getJson<NFeDto[]>(url("/api/nfes"));
 }
 
 export async function getNfeByChave(chave: string): Promise<NFeDto | null> {
   const href = url(`/api/nfes/${chave}`);
-  const res = await fetch(href, { cache: "no-store" });
+  const res = await fetch(href, { cache: "no-store", headers: await authHeaders() });
   if (res.status === 404) return null;
   if (!res.ok) {
     throw new Error(await readApiError(res));
@@ -219,32 +257,21 @@ export async function inutilizarNumeracao(input: {
   numeroIni: number;
   numeroFim: number;
   xJust?: string;
-  tenantId?: string;
 }): Promise<InutilizacaoResult> {
   return mutateJson<InutilizacaoResult>(url("/api/nfes/inutilizar"), "POST", input) as Promise<InutilizacaoResult>;
 }
 
-export async function lookupCnpj(cnpj: string): Promise<CnpjLookupDto> {
-  const digits = cnpj.replace(/\D/g, "");
-  return getJson<CnpjLookupDto>(url(`/api/lookup/cnpj/${digits}`));
+export async function getEmitente(): Promise<EmitenteDto> {
+  return getJson<EmitenteDto>(url("/api/emitente"));
 }
 
-export async function lookupCep(cep: string): Promise<CepLookupDto> {
-  const digits = cep.replace(/\D/g, "");
-  return getJson<CepLookupDto>(url(`/api/lookup/cep/${digits}`));
-}
-
-export async function getEmitente(tenantId?: string): Promise<EmitenteDto> {
-  return getJson<EmitenteDto>(url("/api/emitente", { tenantId }));
-}
-
-export async function listCtes(tenantId?: string): Promise<CTeDto[]> {
-  return getJson<CTeDto[]>(url("/api/ctes", { tenantId }));
+export async function listCtes(): Promise<CTeDto[]> {
+  return getJson<CTeDto[]>(url("/api/ctes"));
 }
 
 export async function getCteByChave(chave: string): Promise<CTeDto | null> {
   const href = url(`/api/ctes/${chave}`);
-  const res = await fetch(href, { cache: "no-store" });
+  const res = await fetch(href, { cache: "no-store", headers: await authHeaders() });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(await readApiError(res));
   return res.json() as Promise<CTeDto>;
@@ -254,44 +281,44 @@ export async function deleteCte(chave: string): Promise<void> {
   await mutateJson(url(`/api/ctes/${chave}`), "DELETE");
 }
 
-export async function listFiscalEvents(tenantId?: string): Promise<FiscalEventDto[]> {
-  return getJson<FiscalEventDto[]>(url("/api/fiscal-events", { tenantId }));
+export async function listFiscalEvents(): Promise<FiscalEventDto[]> {
+  return getJson<FiscalEventDto[]>(url("/api/fiscal-events"));
 }
 
-export async function listAuditLogs(tenantId?: string): Promise<AuditEntryDto[]> {
-  return getJson<AuditEntryDto[]>(url("/api/audit-logs", { tenantId }));
+export async function listAuditLogs(): Promise<AuditEntryDto[]> {
+  return getJson<AuditEntryDto[]>(url("/api/audit-logs"));
 }
 
-export async function listTimeline(tenantId?: string): Promise<TimelineRemessaGroupDto[]> {
-  return getJson<TimelineRemessaGroupDto[]>(url("/api/timeline", { tenantId }));
+export async function listTimeline(): Promise<TimelineRemessaGroupDto[]> {
+  return getJson<TimelineRemessaGroupDto[]>(url("/api/timeline"));
 }
 
-export async function listTimelineSteps(tenantId?: string): Promise<TimelineStepDto[]> {
-  return getJson<TimelineStepDto[]>(url("/api/timeline/steps", { tenantId }));
+export async function listTimelineSteps(): Promise<TimelineStepDto[]> {
+  return getJson<TimelineStepDto[]>(url("/api/timeline/steps"));
 }
 
-export async function listProducts(tenantId?: string): Promise<ProductDto[]> {
-  return getJson<ProductDto[]>(url("/api/products", { tenantId }));
+export async function listProducts(): Promise<ProductDto[]> {
+  return getJson<ProductDto[]>(url("/api/products"));
 }
 
 export async function getProduct(id: string): Promise<ProductDto | null> {
   const href = url(`/api/products/${id}`);
-  const res = await fetch(href, { cache: "no-store" });
+  const res = await fetch(href, { cache: "no-store", headers: await authHeaders() });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(await readApiError(res));
   return res.json() as Promise<ProductDto>;
 }
 
-export async function checkoutPedido(tenantId: string, input: PedidoCheckoutInput): Promise<NFeDto> {
-  return mutateJson<NFeDto>(url("/api/pedidos/checkout", { tenantId }), "POST", input) as Promise<NFeDto>;
+export async function checkoutPedido(input: PedidoCheckoutInput): Promise<NFeDto> {
+  return mutateJson<NFeDto>(url("/api/pedidos/checkout"), "POST", input) as Promise<NFeDto>;
 }
 
-export async function listPedidos(tenantId?: string): Promise<PedidoDto[]> {
-  return getJson<PedidoDto[]>(url("/api/pedidos", { tenantId }));
+export async function listPedidos(): Promise<PedidoDto[]> {
+  return getJson<PedidoDto[]>(url("/api/pedidos"));
 }
 
-export async function createPedido(tenantId: string, input: PedidoCheckoutInput): Promise<PedidoDto> {
-  return mutateJson<PedidoDto>(url("/api/pedidos", { tenantId }), "POST", input) as Promise<PedidoDto>;
+export async function createPedido(input: PedidoCheckoutInput): Promise<PedidoDto> {
+  return mutateJson<PedidoDto>(url("/api/pedidos"), "POST", input) as Promise<PedidoDto>;
 }
 
 export async function updatePedido(id: string, input: PedidoCheckoutInput): Promise<PedidoDto> {
@@ -306,8 +333,8 @@ export async function deletePedido(id: string): Promise<void> {
   await mutateJson(url(`/api/pedidos/${id}`), "DELETE");
 }
 
-export async function createProduct(tenantId: string, input: ProductInput): Promise<ProductDto> {
-  return mutateJson<ProductDto>(url("/api/products", { tenantId }), "POST", input) as Promise<ProductDto>;
+export async function createProduct(input: ProductInput): Promise<ProductDto> {
+  return mutateJson<ProductDto>(url("/api/products"), "POST", input) as Promise<ProductDto>;
 }
 
 export async function updateProduct(id: string, input: Partial<ProductInput>): Promise<ProductDto> {
@@ -325,21 +352,18 @@ export type ProductBulkUpsertResult = {
   total: number;
 };
 
-export async function bulkUpsertProducts(
-  tenantId: string,
-  rows: ProductInput[],
-): Promise<ProductBulkUpsertResult> {
-  return mutateJson<ProductBulkUpsertResult>(url("/api/products/bulk-upsert", { tenantId }), "POST", {
+export async function bulkUpsertProducts(rows: ProductInput[]): Promise<ProductBulkUpsertResult> {
+  return mutateJson<ProductBulkUpsertResult>(url("/api/products/bulk-upsert"), "POST", {
     rows,
   }) as Promise<ProductBulkUpsertResult>;
 }
 
-export async function listTaxRules(tenantId?: string): Promise<TaxRuleDto[]> {
-  return getJson<TaxRuleDto[]>(url("/api/tax-rules", { tenantId }));
+export async function listTaxRules(): Promise<TaxRuleDto[]> {
+  return getJson<TaxRuleDto[]>(url("/api/tax-rules"));
 }
 
-export async function listTaxRuleCatalog(tenantId?: string): Promise<TaxRuleCatalogEntry[]> {
-  return getJson<TaxRuleCatalogEntry[]>(url("/api/tax-rules/catalog", { tenantId }));
+export async function listTaxRuleCatalog(): Promise<TaxRuleCatalogEntry[]> {
+  return getJson<TaxRuleCatalogEntry[]>(url("/api/tax-rules/catalog"));
 }
 
 export type TaxRuleImportRow = {
@@ -361,28 +385,24 @@ export type TaxRuleBulkUpsertResult = {
   total: number;
 };
 
-export async function bulkUpsertTaxRules(
-  tenantId: string,
-  rows: TaxRuleImportRow[],
-): Promise<TaxRuleBulkUpsertResult> {
-  return mutateJson<TaxRuleBulkUpsertResult>(url("/api/tax-rules/bulk-upsert", { tenantId }), "POST", {
+export async function bulkUpsertTaxRules(rows: TaxRuleImportRow[]): Promise<TaxRuleBulkUpsertResult> {
+  return mutateJson<TaxRuleBulkUpsertResult>(url("/api/tax-rules/bulk-upsert"), "POST", {
     rows,
   }) as Promise<TaxRuleBulkUpsertResult>;
 }
 
-export async function getFiscalEmitterSettings(tenantId: string): Promise<FiscalEmitterSettingsView | null> {
-  const href = url("/api/fiscal-settings", { tenantId });
-  const res = await fetch(href, { cache: "no-store" });
+export async function getFiscalEmitterSettings(): Promise<FiscalEmitterSettingsView | null> {
+  const href = url("/api/fiscal-settings");
+  const res = await fetch(href, { cache: "no-store", headers: await authHeaders() });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(await readApiError(res));
   return res.json() as Promise<FiscalEmitterSettingsView>;
 }
 
 export async function patchFiscalEmitterSettings(
-  tenantId: string,
   patch: FiscalEmitterSettingsPatch,
 ): Promise<FiscalEmitterSettingsView> {
-  return mutateJson<FiscalEmitterSettingsView>(url("/api/fiscal-settings", { tenantId }), "PATCH", patch) as Promise<FiscalEmitterSettingsView>;
+  return mutateJson<FiscalEmitterSettingsView>(url("/api/fiscal-settings"), "PATCH", patch) as Promise<FiscalEmitterSettingsView>;
 }
 
 export type UnidadeLogisticaImportRow = {
@@ -451,13 +471,12 @@ export type MovimentacaoProdutoDto = {
   createdAt: string;
 };
 
-export async function listUnidadesLogisticas(
-  tenantId: string,
-  opts?: { q?: string; ativa?: boolean },
-): Promise<UnidadeLogisticaDto[]> {
+export async function listUnidadesLogisticas(opts?: {
+  q?: string;
+  ativa?: boolean;
+}): Promise<UnidadeLogisticaDto[]> {
   return getJson<UnidadeLogisticaDto[]>(
     url("/api/unidades-logisticas", {
-      tenantId,
       q: opts?.q,
       ativa: opts?.ativa === false ? "false" : opts?.ativa === true ? "true" : undefined,
     }),
@@ -465,50 +484,38 @@ export async function listUnidadesLogisticas(
 }
 
 export async function bulkImportUnidadesLogisticas(
-  tenantId: string,
   rows: UnidadeLogisticaImportRow[],
   enrichCep = true,
 ): Promise<UnidadeLogisticaBulkImportResult> {
   return mutateJson<UnidadeLogisticaBulkImportResult>(
-    url("/api/unidades-logisticas/bulk-import", { tenantId }),
+    url("/api/unidades-logisticas/bulk-import"),
     "POST",
-    { tenantId, rows, enrichCep },
+    { rows, enrichCep },
   ) as Promise<UnidadeLogisticaBulkImportResult>;
 }
 
-export async function setUnidadeLogisticaPadrao(
-  tenantId: string,
-  unidadeId: string,
-): Promise<UnidadeLogisticaDto> {
+export async function setUnidadeLogisticaPadrao(unidadeId: string): Promise<UnidadeLogisticaDto> {
   return mutateJson<UnidadeLogisticaDto>(
-    url(`/api/unidades-logisticas/${unidadeId}/padrao`, { tenantId }),
+    url(`/api/unidades-logisticas/${unidadeId}/padrao`),
     "PATCH",
-    { tenantId },
   ) as Promise<UnidadeLogisticaDto>;
 }
 
-export async function emitirAvancoCd(
-  tenantId: string,
-  body: {
-    productId: string;
-    quantidade: number;
-    unidadeOrigemId: string;
-    unidadeDestinoId: string;
-  },
-): Promise<AvancoCdResult> {
-  return mutateJson<AvancoCdResult>(url("/api/movimentacoes/avanco-cd", { tenantId }), "POST", {
-    tenantId,
-    ...body,
-  }) as Promise<AvancoCdResult>;
+export async function emitirAvancoCd(body: {
+  productId: string;
+  quantidade: number;
+  unidadeOrigemId: string;
+  unidadeDestinoId: string;
+}): Promise<AvancoCdResult> {
+  return mutateJson<AvancoCdResult>(url("/api/movimentacoes/avanco-cd"), "POST", body) as Promise<AvancoCdResult>;
 }
 
-export async function listMovimentacoesProduto(
-  tenantId: string,
-  opts?: { productId?: string; limit?: number },
-): Promise<MovimentacaoProdutoDto[]> {
+export async function listMovimentacoesProduto(opts?: {
+  productId?: string;
+  limit?: number;
+}): Promise<MovimentacaoProdutoDto[]> {
   return getJson<MovimentacaoProdutoDto[]>(
     url("/api/movimentacoes-produto", {
-      tenantId,
       productId: opts?.productId,
       limit: opts?.limit != null ? String(opts.limit) : undefined,
     }),

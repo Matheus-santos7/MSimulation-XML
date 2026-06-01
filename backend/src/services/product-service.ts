@@ -19,8 +19,8 @@ export class ProductService {
     return rows.map(mapProduct);
   }
 
-  async getById(id: string) {
-    const row = await this.prisma.product.findUnique({ where: { id } });
+  async getById(id: string, tenantId: string) {
+    const row = await this.prisma.product.findFirst({ where: { id, tenantId } });
     return row ? mapProduct(row) : null;
   }
 
@@ -63,8 +63,8 @@ export class ProductService {
     }
   }
 
-  async update(id: string, data: UpdateInput) {
-    const existing = await this.prisma.product.findUnique({ where: { id } });
+  async update(id: string, tenantId: string, data: UpdateInput) {
+    const existing = await this.prisma.product.findFirst({ where: { id, tenantId } });
     if (!existing) return null;
 
     if (data.taxRuleBaseId) {
@@ -96,8 +96,8 @@ export class ProductService {
     }
   }
 
-  async remove(id: string) {
-    const existing = await this.prisma.product.findUnique({ where: { id } });
+  async remove(id: string, tenantId: string) {
+    const existing = await this.prisma.product.findFirst({ where: { id, tenantId } });
     if (!existing) return false;
 
     const pedidos = await this.prisma.pedido.groupBy({

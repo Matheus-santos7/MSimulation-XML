@@ -4,16 +4,14 @@ import { PageHeader } from "@/components/fiscal-ui";
 import { ProdutoCard } from "@/components/produto-card";
 import { ProdutoPlanilhaToolbar } from "@/components/produto-planilha-toolbar";
 import { Button } from "@/components/ui/button";
-import { resolveActiveTenantId } from "@/lib/active-tenant";
 import { listProducts, listTaxRuleCatalog } from "@/lib/fiscal-api";
 
 export const metadata: Metadata = { title: "Produtos" };
 
 export default async function ProdutosPage() {
-  const tenantId = await resolveActiveTenantId();
   const [produtos, taxRuleCatalog] = await Promise.all([
-    listProducts(tenantId),
-    listTaxRuleCatalog(tenantId),
+    listProducts(),
+    listTaxRuleCatalog(),
   ]);
 
   return (
@@ -28,11 +26,9 @@ export default async function ProdutosPage() {
         }
       />
 
-      <ProdutoPlanilhaToolbar tenantId={tenantId} products={produtos} />
+      <ProdutoPlanilhaToolbar products={produtos} />
 
-      {!tenantId ? (
-        <div className="text-muted-foreground">Cadastre uma empresa e selecione-a no header.</div>
-      ) : produtos.length === 0 ? (
+      {produtos.length === 0 ? (
         <div className="text-muted-foreground">
           Nenhum produto para esta empresa. Importe uma planilha,{" "}
           <Link href="/produtos/novo" className="text-accent hover:underline">

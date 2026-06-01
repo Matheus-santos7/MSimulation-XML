@@ -13,12 +13,10 @@ import {
   Prisma,
   type PrismaClient,
 } from "../generated/prisma/client.js";
-import { mapNfe, num } from "../lib/fiscal-mappers.js";
+import { mapNfe } from "../lib/fiscal-mappers.js";
 import { buildChaveNFe, gerarPedidoMl } from "../lib/nfe-chave.js";
 import { proximoNumeroNfe } from "../lib/nfe-sequencia.js";
 import { unidadeParaDestinoFiscal } from "../lib/meli-unidade.js";
-import { enrichFiscalPayloadWithXTexto } from "../lib/nfe-xtexto.js";
-import { productUnitPrice } from "../lib/product-pricing.js";
 import {
   SaldoRemessaInsuficienteError,
   debitarSaldoRemessaPorCd,
@@ -26,6 +24,10 @@ import {
 import { registrarMovimentacaoProduto } from "./movimentacao-produto-service.js";
 import { UnidadeLogisticaError } from "./unidade-logistica-service.js";
 import { emitirNFeRemessa } from "./remessa-service.js";
+import {
+  prepararRemessaSimbolicaFiscal,
+  RemessaSimbolicaFiscalError,
+} from "./remessa-simbolica-fiscal.js";
 
 export class AvancoCdError extends Error {
   constructor(message: string) {
@@ -95,10 +97,25 @@ export async function emitirAvancoEntreCds(
 
     const numeroSimb = await proximoNumeroNfe(tx as unknown as PrismaClient, tenant.id, serie);
     const chaveSimb = buildChaveNFe({ uf: tenant.uf, cnpj: tenant.cnpj, serie, numero: numeroSimb });
-    const custoUnit = productUnitPrice(product, "REMESSA");
-    const valorSimb = Math.round(custoUnit * input.quantidade * 100) / 100;
-    const aliqSimb = num(remessaPrincipal.aliqIcms) || 0;
-    const icmsSimb = Math.round(valorSimb * (aliqSimb / 100) * 100) / 100;
+
+    let fiscalSimb;
+    try {
+      fiscalSimb = await prepararRemessaSimbolicaFiscal(tx, {
+        tenantId: tenant.id,
+        emitUf: tenant.uf,
+        destUf: destOrigem.uf,
+        product,
+        quantidade: input.quantidade,
+        pedidoMl,
+      });
+    } catch (e) {
+      if (e instanceof RemessaSimbolicaFiscalError) {
+        throw new AvancoCdError(e.message);
+      }
+      throw e;
+    }
+
+    const { calc, cfop, natOp, fiscalPayload } = fiscalSimb;
 
     const remessaSimbRow = await tx.nFe.create({
       data: {
@@ -107,8 +124,8 @@ export async function emitirAvancoEntreCds(
         chave: chaveSimb,
         numero: numeroSimb,
         serie,
-        natOp: "Outras Saidas - Remessa Simbolica para Deposito Temporario",
-        cfop: "5949",
+        natOp,
+        cfop,
         ncm: product.ncm,
         destNome: destOrigem.nome,
         destDoc: destOrigem.cnpj,
@@ -123,9 +140,9 @@ export async function emitirAvancoEntreCds(
         destCodigoPais: destOrigem.codigoPais,
         destNomePais: destOrigem.nomePais,
         destIndIeDest: destOrigem.indIeDest,
-        valor: valorSimb,
-        valorIcms: icmsSimb,
-        aliqIcms: aliqSimb,
+        valor: calc.valor,
+        valorIcms: calc.valorIcms,
+        aliqIcms: calc.aliqIcms,
         status: FiscalStatus.AUTORIZADA,
         emitidaEm: new Date(),
         pedidoMl,
@@ -135,15 +152,7 @@ export async function emitirAvancoEntreCds(
         nfeReferenciaId: remessaPrincipal.id,
         unidadeOrigemId: origem.id,
         unidadeDestinoId: destino.id,
-        fiscalPayload: enrichFiscalPayloadWithXTexto(
-          (remessaPrincipal.fiscalPayload as Record<string, unknown> | null) ?? {},
-          {
-            tipo: NFeTipo.REMESSA_SIMBOLICA,
-            cfop: "5949",
-            natOp: "Outras Saidas - Remessa Simbolica para Deposito Temporario",
-            pedidoMl,
-          },
-        ) as Prisma.InputJsonValue,
+        fiscalPayload: fiscalPayload as Prisma.InputJsonValue,
       },
     });
 

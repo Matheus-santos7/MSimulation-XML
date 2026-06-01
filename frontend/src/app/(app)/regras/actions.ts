@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { resolveActiveTenantId } from "@/lib/active-tenant";
 import { bulkUpsertTaxRules } from "@/lib/fiscal-api";
 import { parseTaxRuleXlsx } from "@/lib/tax-rule-planilha";
 
@@ -18,9 +17,6 @@ export async function importarRegrasTributariasAction(
   _prev: TaxRuleImportState,
   formData: FormData,
 ): Promise<TaxRuleImportState> {
-  const tenantId = await resolveActiveTenantId();
-  if (!tenantId) return { error: "Selecione uma empresa no header antes de importar" };
-
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) return { error: "Selecione um arquivo .xlsx" };
   if (!file.name.toLowerCase().endsWith(".xlsx")) return { error: "Formato inválido. Envie um arquivo .xlsx" };
@@ -31,7 +27,7 @@ export async function importarRegrasTributariasAction(
   }
 
   try {
-    const result = await bulkUpsertTaxRules(tenantId, parsed.rows);
+    const result = await bulkUpsertTaxRules(parsed.rows);
     revalidatePath("/regras");
     return {
       success: true,

@@ -1,7 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { ZodError } from "zod";
-import { resolveTenantId } from "../lib/fiscal-mappers.js";
-import { productTenantQuery } from "../schemas/product.js";
+import { tenantIdFromRequest } from "../lib/auth/request-context.js";
 import { pedidoCheckoutBody } from "../schemas/pedido-checkout.js";
 import { CheckoutError } from "../services/checkout-service.js";
 import {
@@ -17,22 +16,21 @@ export const pedidoRoutes: FastifyPluginAsync = async (app) => {
   const service = new PedidoService(app.prisma);
 
   app.get("/pedidos", async (req) => {
-    const { tenantId } = productTenantQuery.parse(req.query);
-    const tid = await resolveTenantId(app.prisma, tenantId);
+    const tid = tenantIdFromRequest(req);
     return service.list(tid);
   });
 
   app.get("/pedidos/:id", async (req, reply) => {
     const { id } = pedidoIdParam.parse(req.params);
-    const pedido = await service.getById(id);
+    const tid = tenantIdFromRequest(req);
+    const pedido = await service.getById(id, tid);
     if (!pedido) return reply.status(404).send({ error: "Pedido não encontrado" });
     return pedido;
   });
 
   app.post("/pedidos", async (req, reply) => {
     try {
-      const { tenantId } = productTenantQuery.parse(req.query);
-      const tid = await resolveTenantId(app.prisma, tenantId);
+      const tid = tenantIdFromRequest(req);
       const body = pedidoCheckoutBody.parse(req.body);
       const pedido = await service.createDraft(tid, body);
       return reply.status(201).send(pedido);
@@ -44,8 +42,9 @@ export const pedidoRoutes: FastifyPluginAsync = async (app) => {
   app.patch("/pedidos/:id", async (req, reply) => {
     try {
       const { id } = pedidoIdParam.parse(req.params);
+      const tid = tenantIdFromRequest(req);
       const body = pedidoCheckoutBody.parse(req.body);
-      const pedido = await service.updateDraft(id, body);
+      const pedido = await service.updateDraft(id, tid, body);
       if (!pedido) return reply.status(404).send({ error: "Pedido não encontrado" });
       return pedido;
     } catch (e) {
@@ -56,7 +55,8 @@ export const pedidoRoutes: FastifyPluginAsync = async (app) => {
   app.post("/pedidos/:id/faturar", async (req, reply) => {
     try {
       const { id } = pedidoIdParam.parse(req.params);
-      const result = await service.faturar(id);
+      const tid = tenantIdFromRequest(req);
+      const result = await service.faturar(id, tid);
       if (!result) return reply.status(404).send({ error: "Pedido não encontrado" });
       return reply.status(201).send(result);
     } catch (e) {
@@ -67,7 +67,8 @@ export const pedidoRoutes: FastifyPluginAsync = async (app) => {
   app.delete("/pedidos/:id", async (req, reply) => {
     try {
       const { id } = pedidoIdParam.parse(req.params);
-      const removed = await service.remove(id);
+      const tid = tenantIdFromRequest(req);
+      const removed = await service.remove(id, tid);
       if (!removed) return reply.status(404).send({ error: "Pedido não encontrado" });
       return reply.status(204).send();
     } catch (e) {
@@ -77,8 +78,7 @@ export const pedidoRoutes: FastifyPluginAsync = async (app) => {
 
   app.post("/pedidos/checkout", async (req, reply) => {
     try {
-      const { tenantId } = productTenantQuery.parse(req.query);
-      const tid = await resolveTenantId(app.prisma, tenantId);
+      const tid = tenantIdFromRequest(req);
       const body = pedidoCheckoutBody.parse(req.body);
       const { CheckoutService } = await import("../services/checkout-service.js");
       const checkout = new CheckoutService(app.prisma);

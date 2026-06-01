@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { resolveActiveTenantId } from "@/lib/active-tenant";
 import {
   formatFieldErrors,
   inputToFormValues,
@@ -25,13 +24,10 @@ export async function createProdutoAction(
   _prev: ProdutoFormState,
   formData: FormData,
 ): Promise<ProdutoFormState> {
-  const tenantId = await resolveActiveTenantId();
-  if (!tenantId) return { error: "Selecione uma empresa no header antes de cadastrar produtos" };
-
   const parsed = parseProductForm(formData);
   const values = inputToFormValues(parsed);
   try {
-    await createProduct(tenantId, parsed);
+    await createProduct(parsed);
   } catch (e) {
     return failureState(e, values);
   }
@@ -81,11 +77,6 @@ export type ProdutoPlanilhaImportResult = {
 };
 
 export async function importProdutosPlanilhaAction(formData: FormData): Promise<ProdutoPlanilhaImportResult> {
-  const tenantId = await resolveActiveTenantId();
-  if (!tenantId) {
-    return { error: "Selecione uma empresa no header antes de importar a planilha" };
-  }
-
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
     return { error: "Selecione um arquivo CSV (.csv)" };
@@ -102,7 +93,7 @@ export async function importProdutosPlanilhaAction(formData: FormData): Promise<
   }
 
   try {
-    const result = await bulkUpsertProducts(tenantId, rows);
+    const result = await bulkUpsertProducts(rows);
     revalidatePath("/produtos");
     revalidatePath("/nfe");
     revalidatePath("/cte");

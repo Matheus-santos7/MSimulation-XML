@@ -20,13 +20,16 @@ import {
 import { mapNfe, num } from "../lib/fiscal-mappers.js";
 import { buildChaveNFe } from "../lib/nfe-chave.js";
 import { proximoNumeroNfe } from "../lib/nfe-sequencia.js";
-import { productUnitPrice } from "../lib/product-pricing.js";
 import { enrichTaxSnapshot, loadEmitterSettings } from "../lib/fiscal-emitter-runtime.js";
 import { enrichFiscalPayloadWithXTexto } from "../lib/nfe-xtexto.js";
 import { taxSnapshotFromRule } from "../lib/tax-snapshot.js";
 import { calcularNotaFiscal } from "../lib/tax-engine.js";
 import { montarItemFiscal } from "./tax-calculation-service.js";
 import { resolveTaxRule, type CustomerType } from "./tax-rule-service.js";
+import {
+  prepararRemessaSimbolicaFiscal,
+  RemessaSimbolicaFiscalError,
+} from "./remessa-simbolica-fiscal.js";
 
 export class DevolucaoError extends Error {
   constructor(
@@ -62,9 +65,13 @@ function snapshotCst(payload: unknown): { icms?: string; pis?: string; cofins?: 
 }
 
 /** Emite a devolução de uma venda identificada pela chave de acesso. */
-export async function emitirDevolucaoVenda(prisma: PrismaClient, vendaChave: string) {
-  const venda = await prisma.nFe.findUnique({
-    where: { chave: vendaChave },
+export async function emitirDevolucaoVenda(
+  prisma: PrismaClient,
+  vendaChave: string,
+  tenantId: string,
+) {
+  const venda = await prisma.nFe.findFirst({
+    where: { chave: vendaChave, tenantId },
     include: { tenant: true, product: true, nfeReferencia: true },
   });
 
@@ -229,11 +236,24 @@ export async function emitirDevolucaoVenda(prisma: PrismaClient, vendaChave: str
       const numeroSimb = await proximoNumeroNfe(tx as unknown as PrismaClient, tenant.id, serie);
       const chaveSimb = buildChaveNFe({ uf: tenant.uf, cnpj: tenant.cnpj, serie, numero: numeroSimb });
 
-      // Movimentação de estoque usa o preço de custo (igual à remessa), não o de venda.
-      const custoUnit = productUnitPrice(product, "REMESSA");
-      const valorSimb = Math.round(custoUnit * quantidade * 100) / 100;
-      const aliqSimb = num(remessaPrincipal.aliqIcms) || 0;
-      const icmsSimb = Math.round(valorSimb * (aliqSimb / 100) * 100) / 100;
+      let fiscalSimb;
+      try {
+        fiscalSimb = await prepararRemessaSimbolicaFiscal(tx, {
+          tenantId: tenant.id,
+          emitUf: tenant.uf,
+          destUf: remessaPrincipal.destUf,
+          product,
+          quantidade,
+          pedidoMl: venda.pedidoMl,
+        });
+      } catch (e) {
+        if (e instanceof RemessaSimbolicaFiscalError) {
+          throw new DevolucaoError(e.message, 422);
+        }
+        throw e;
+      }
+
+      const { calc, cfop, natOp, fiscalPayload } = fiscalSimb;
 
       const remessaSimbRow = await tx.nFe.create({
         data: {
@@ -242,8 +262,8 @@ export async function emitirDevolucaoVenda(prisma: PrismaClient, vendaChave: str
           chave: chaveSimb,
           numero: numeroSimb,
           serie,
-          natOp: "Outras Saidas - Remessa Simbolica para Deposito Temporario",
-          cfop: "5949",
+          natOp,
+          cfop,
           ncm: product.ncm,
           // Devolvida ao mesmo destinatário (full) da remessa física original.
           destNome: remessaPrincipal.destNome,
@@ -260,9 +280,9 @@ export async function emitirDevolucaoVenda(prisma: PrismaClient, vendaChave: str
           destNomePais: remessaPrincipal.destNomePais,
           destTelefone: remessaPrincipal.destTelefone,
           destIndIeDest: remessaPrincipal.destIndIeDest,
-          valor: valorSimb,
-          valorIcms: icmsSimb,
-          aliqIcms: aliqSimb,
+          valor: calc.valor,
+          valorIcms: calc.valorIcms,
+          aliqIcms: calc.aliqIcms,
           status: FiscalStatus.AUTORIZADA,
           emitidaEm: new Date(),
           pedidoMl: venda.pedidoMl,
@@ -271,15 +291,7 @@ export async function emitirDevolucaoVenda(prisma: PrismaClient, vendaChave: str
           // Saldo já retornou à remessa física no estorno; esta nota é só o registro fiscal.
           saldoDisponivel: null,
           nfeReferenciaId: devolucaoRow.id,
-          fiscalPayload: enrichFiscalPayloadWithXTexto(
-            (remessaPrincipal.fiscalPayload as Record<string, unknown> | null) ?? {},
-            {
-              tipo: NFeTipo.REMESSA_SIMBOLICA,
-              cfop: "5949",
-              natOp: "Outras Saidas - Remessa Simbolica para Deposito Temporario",
-              pedidoMl: venda.pedidoMl,
-            },
-          ) as Prisma.InputJsonValue,
+          fiscalPayload: fiscalPayload as Prisma.InputJsonValue,
         },
       });
       remessaSimbolicaDto = mapNfe(remessaSimbRow, devolucaoRow.chave);

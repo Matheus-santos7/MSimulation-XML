@@ -14,12 +14,11 @@ import { brl } from "@/lib/format";
 import { formValuesToFormData, pedidoToFormValues } from "@/lib/pedido-form";
 
 type Props = {
-  tenantId?: string;
   pedidos: PedidoDto[];
   products: ProductDto[];
 };
 
-export function PedidosView({ tenantId, pedidos, products }: Props) {
+export function PedidosView({ pedidos, products }: Props) {
   const router = useRouter();
   const [wizardOpen, setWizardOpen] = useState(false);
   const [editing, setEditing] = useState<PedidoDto | undefined>();
@@ -52,16 +51,14 @@ export function PedidosView({ tenantId, pedidos, products }: Props) {
         title="Pedidos Mercado Livre"
         subtitle="Rascunhos editáveis · faturamento gera NF-e com numeração sequencial"
         actions={
-          <Button onClick={openNew} disabled={!tenantId || products.length === 0}>
+          <Button onClick={openNew} disabled={products.length === 0}>
             <Plus className="size-4 mr-2" />
             Novo pedido
           </Button>
         }
       />
 
-      {!tenantId ? (
-        <p className="text-muted-foreground">Selecione uma empresa no header.</p>
-      ) : products.length === 0 ? (
+      {products.length === 0 ? (
         <p className="text-muted-foreground">
           Cadastre produtos em <Link href="/produtos" className="text-accent hover:underline">Produtos</Link> primeiro.
         </p>

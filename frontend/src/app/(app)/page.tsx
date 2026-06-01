@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { KPI, SectionHeader, StatusBadge } from "@/components/fiscal-ui";
-import { resolveActiveTenantId } from "@/lib/active-tenant";
 import { TimelineChains } from "@/components/timeline-chains";
 import { listNfes, listTimeline } from "@/lib/fiscal-api";
 import { brl, formatChave } from "@/lib/format";
@@ -12,8 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default async function DashboardPage() {
-  const tenantId = await resolveActiveTenantId();
-  const [nfes, timeline] = await Promise.all([listNfes(tenantId), listTimeline(tenantId)]);
+  const [nfes, timeline] = await Promise.all([listNfes(), listTimeline()]);
 
   return (
     <div className="p-6 space-y-6">
@@ -43,8 +41,7 @@ export default async function DashboardPage() {
           />
           {nfes.length === 0 ? (
             <div className="p-6 text-muted-foreground text-[14px]">
-              Nenhuma NF-e para este tenant. Confirme o seed do backend e a variável{" "}
-              <span className="font-mono">NEXT_PUBLIC_API_URL</span>.
+              Nenhuma NF-e para esta empresa.
             </div>
           ) : (
             <table className="w-full text-left border-collapse">
@@ -90,7 +87,7 @@ export default async function DashboardPage() {
 
         <div className="col-span-4 space-y-6">
           <div className="border border-border rounded-lg bg-card animate-slide-in">
-            <SectionHeader title="Timeline — Cadeias de NF-e" />
+            <SectionHeader title="Timeline — Cenários de NF-e" />
             <TimelineChains groups={timeline} />
           </div>
         </div>

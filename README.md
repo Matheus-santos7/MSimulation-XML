@@ -1,12 +1,21 @@
-# E-Invoice Play
+<p align="center">
+  <img src="docs/assets/msimulation-logo.svg" alt="MSimulation XML" width="96" height="96" />
+</p>
 
-[![Next.js](https://img.shields.io/badge/Next.js-15-000?logo=next.js)](https://nextjs.org/)
-[![Fastify](https://img.shields.io/badge/Fastify-API-000?logo=fastify)](https://fastify.dev/)
-[![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?logo=prisma)](https://www.prisma.io/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql)](https://www.postgresql.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)](https://www.typescriptlang.org/)
+<h1 align="center"><strong>M</strong><code>Simulation</code> <sup>XML</sup></h1>
 
-**E-Invoice Play** é um cockpit fiscal e logístico para simular emissão de **NF-e (modelo 55, v4.00)** e **CT-e (modelo 57)** em operações de **fulfillment** — o mesmo desenho operacional usado por marketplaces com depósito temporário (full), cruzamento **origem × destino (UF)** e cadeias documentais encadeadas por `refNFe`.
+<p align="center"><strong>Cockpit fiscal de fulfillment</strong></p>
+<p align="center"><em>por Matheus Santos — simulação, inspeção e edição de documentos fiscais</em></p>
+
+<p align="center">
+  <a href="https://nextjs.org/"><img src="https://img.shields.io/badge/Next.js-15-000?logo=next.js" alt="Next.js 15" /></a>
+  <a href="https://fastify.dev/"><img src="https://img.shields.io/badge/Fastify-API-000?logo=fastify" alt="Fastify" /></a>
+  <a href="https://www.prisma.io/"><img src="https://img.shields.io/badge/Prisma-ORM-2D3748?logo=prisma" alt="Prisma" /></a>
+  <a href="https://www.postgresql.org/"><img src="https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql" alt="PostgreSQL" /></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript" alt="TypeScript" /></a>
+</p>
+
+**MSimulation XML** é um cockpit fiscal e logístico para simular e inspecionar emissão de **NF-e (modelo 55, v4.00)** e **CT-e (modelo 57)** em operações de **fulfillment** — o mesmo desenho operacional usado por marketplaces com depósito temporário (full), cruzamento **origem × destino (UF)** e cadeias documentais encadeadas por `refNFe`.
 
 > **Aviso legal:** simulador educacional e de arquitetura. XMLs gerados usam homologação (`tpAmb=2`), assinaturas fictícias e **não possuem validade** perante a SEFAZ. Não utilize em produção fiscal real sem certificação, transmissão e assessoria especializada.
 
@@ -22,6 +31,7 @@
 - [Stack e estrutura do monorepo](#stack-e-estrutura-do-monorepo)
 - [API REST (resumo)](#api-rest-resumo)
 - [Interface web](#interface-web)
+- [Identidade visual](#identidade-visual)
 - [Como rodar localmente](#como-rodar-localmente)
 - [Scripts úteis](#scripts-úteis)
 - [Dados de referência (XMLs/)](#dados-de-referência-xmls)
@@ -39,7 +49,7 @@ O sistema cobre o ciclo típico de um seller no full:
 4. **Devolução** referenciada à venda, com **remessa simbólica** de retorno de saldo ao full.
 5. **CT-e** de transporte vinculado à remessa e à venda (referência `infNFe`).
 
-Tudo é **multi-tenant**: cada empresa (`Tenant`) tem séries, configurações fiscais, produtos e documentos isolados.
+Tudo é **multi-tenant**: cada empresa (`Tenant`) tem séries, configurações fiscais, produtos e documentos isolados. O **tenant ativo** vem do JWT do usuário logado (não é mais passado por query string).
 
 ---
 
@@ -208,9 +218,9 @@ Gerado em `nfe-xtexto.ts` e persistido em `fiscalPayload.obsContXTexto`.
 ## Stack e estrutura do monorepo
 
 ```
-e-invoice-play/
+msedit-xml/
 ├── backend/                    # API Fastify + engine fiscal (ver `backend/docs/COMENTARIOS.md`)
-│   ├── prisma/                 # Schema, migrations, seed
+│   ├── prisma/                 # Schema e migrations
 │   └── src/
 │       ├── lib/                # tax-engine, nfe-xtexto, chaves, mappers
 │       ├── routes/             # REST
@@ -249,12 +259,40 @@ e-invoice-play/
 
 Base URL local: `http://localhost:3001` (prefixo conforme proxy do frontend em `/api`).
 
+### Autenticação (JWT)
+
+| Método | Caminho | Auth | Descrição |
+|--------|---------|------|-----------|
+| `POST` | `/api/auth/login` | — | Sessão (access + refresh JWT) |
+| `POST` | `/api/auth/register` | — | Criar conta |
+| `POST` | `/api/auth/forgot-password` | — | Envia e-mail de reset (Resend) |
+| `POST` | `/api/auth/reset-password` | — | Body `{ token, password }` |
+| `GET` | `/api/auth/me` | Bearer | Perfil + tenant do token |
+
+Rotas protegidas exigem `Authorization: Bearer <access_token>`. O payload contém `userId` e `tenantId`.
+
+Configure no `backend/.env` (ver `backend/.env.example`):
+
+```env
+JWT_SECRET="..."
+JWT_ACCESS_EXPIRES_IN="30m"
+PASSWORD_PEPPER="..."
+APP_PUBLIC_URL="http://localhost:3000"
+RESEND_API_KEY="re_..."
+RESEND_FROM_EMAIL="MSimulation XML <noreply@seudominio.com>"
+```
+
+Sem `RESEND_API_KEY` em desenvolvimento, o link de reset é impresso no log do backend.
+
 ---
 
 ## Interface web
 
 | Rota | Função |
 |------|--------|
+| `/login` | Login / criar conta |
+| `/login/esqueci-senha` | Solicitar e-mail de redefinição |
+| `/login/redefinir-senha?token=…` | Nova senha (link do e-mail) |
 | `/` | Dashboard, KPIs, timeline de cadeias, preview XML |
 | `/produtos` | CRUD, importação planilha, remessa em lote |
 | `/unidades-logisticas` | Importação CDs Meli Full, CD padrão de remessa, avanço entre CDs |
@@ -266,6 +304,23 @@ Base URL local: `http://localhost:3001` (prefixo conforme proxy do frontend em `
 | `/empresas` | Multi-tenant |
 | `/auditoria` | Logs append-only |
 | `/eventos` | Eventos fiscais simulados |
+
+---
+
+## Identidade visual
+
+| Elemento | Valor |
+|----------|-------|
+| **Marca** | MSimulation XML |
+| **Tagline** | Cockpit fiscal de fulfillment |
+| **Autor** | Matheus Santos |
+| **Âmbar** (`--brand-glow`) | Destaques fiscais, CTAs, ambiente simulação |
+| **Esmeralda** (`--brand-xml`) | XML, `refNFe`, código e badges técnicos |
+| **Logo** | `docs/assets/msimulation-logo.svg` · favicon em `frontend/public/favicon.svg` |
+| **Componente** | `frontend/src/components/brand-logo.tsx` |
+| **Constantes** | `frontend/src/lib/brand.ts` |
+
+Paleta pensada para um terminal fiscal escuro: fundo grafite, acento âmbar (documentos fiscais) e verde esmeralda (syntax XML).
 
 ---
 
@@ -286,19 +341,24 @@ pnpm install
 # 2. Variáveis de ambiente
 cp .env.example .env
 cp backend/.env.example backend/.env
+# Edite backend/.env e defina JWT_SECRET (mín. 16 caracteres)
 
-# 3. Banco + migrations + seed
+# 3. Banco + migrations
 pnpm db:setup
 
 # 4. Desenvolvimento (API :3001 + Web :3000)
 pnpm dev
 ```
 
+Acesse http://localhost:3000/login e **crie uma conta** (depois cadastre a empresa no onboarding). O middleware redireciona para `/login` sem cookie válido.
+
+> **Migração do nome antigo (`e-invoice-play`):** se você já tinha o Postgres local, rode `pnpm docker:reset` e `pnpm db:setup` para recriar o banco `msedit_xml`, ou ajuste manualmente `DATABASE_URL` / `POSTGRES_*` no `.env`. Renomeie o repositório no GitHub para `msedit-xml` e atualize o remote: `git remote set-url origin https://github.com/<user>/msedit-xml.git`.
+
 | Serviço | URL |
 |---------|-----|
 | Frontend | http://localhost:3000 |
 | API Fastify | http://localhost:3001 |
-| Prisma Studio | `pnpm --filter @e-invoice-play/backend db:studio` |
+| Prisma Studio | `pnpm --filter @msedit-xml/backend db:studio` |
 
 ---
 
@@ -308,11 +368,11 @@ pnpm dev
 |---------|-----------|
 | `pnpm dev` | Frontend + backend em paralelo |
 | `pnpm build` | Build de produção (web + api) |
-| `pnpm db:setup` | Docker Postgres + migrate + seed |
+| `pnpm db:setup` | Docker Postgres + migrate deploy |
 | `pnpm docker:up` / `pnpm docker:down` | Sobe/para o container |
 | `pnpm docker:reset` | Remove volume do banco |
 | `pnpm lint` / `pnpm format` | ESLint e Prettier |
-| `pnpm --filter @e-invoice-play/backend db:migrate` | Nova migration (dev) |
+| `pnpm --filter @msedit-xml/backend db:migrate` | Nova migration (dev) |
 
 ---
 

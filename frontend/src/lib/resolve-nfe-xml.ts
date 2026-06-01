@@ -12,9 +12,9 @@ async function loadNfeXmlContext(chave: string) {
   if (!nfe) return null;
 
   const [emit, fiscalCfg, produtos] = await Promise.all([
-    getEmitente(nfe.tenantId),
-    getFiscalEmitterSettings(nfe.tenantId),
-    listProducts(nfe.tenantId),
+    getEmitente(),
+    getFiscalEmitterSettings(),
+    listProducts(),
   ]);
 
   let product = nfe.productId ? produtos.find((p) => p.id === nfe.productId) : undefined;
@@ -40,7 +40,7 @@ export async function resolveNfeCancelamentoEventoXml(
   const ctx = await loadNfeXmlContext(chave);
   if (!ctx) return null;
 
-  const events = await listFiscalEvents(ctx.nfe.tenantId);
+  const events = await listFiscalEvents();
   const cancelamento = events.find((e) => e.tipo === "110111" && e.chaveRef === chave);
   if (!cancelamento) {
     if (ctx.nfe.status !== "CANCELADA") return null;

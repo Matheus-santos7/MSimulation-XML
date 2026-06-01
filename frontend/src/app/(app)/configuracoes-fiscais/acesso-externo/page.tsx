@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Acesso externo a NF-e" };
 
 export default async function AcessoExternoPage() {
   const tenantId = await resolveActiveTenantId();
-  const cfg = tenantId ? await getFiscalEmitterSettings(tenantId) : null;
+  const cfg = await getFiscalEmitterSettings();
 
   return <AcessoExternoEditor initial={cfg?.settings.nfe.contatos ?? []} />;
 }

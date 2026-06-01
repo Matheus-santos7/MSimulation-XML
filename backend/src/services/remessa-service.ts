@@ -23,16 +23,15 @@ import { enrichTaxSnapshot, loadEmitterSettings } from "../lib/fiscal-emitter-ru
 import { taxSnapshotFromRule } from "../lib/tax-snapshot.js";
 import { enrichFiscalPayloadWithXTexto } from "../lib/nfe-xtexto.js";
 import { emitirCteRemessa } from "./cte-remessa-service.js";
-import { lineTotal, productUnitPrice } from "../lib/product-pricing.js";
+import { productUnitPrice } from "../lib/product-pricing.js";
+import {
+  calcularNotaInbound,
+  inferAliqIcmsRemessa,
+  linhaPedidoFromProduto,
+} from "./tax-calculation-service.js";
 import { resolveTaxRule } from "./tax-rule-service.js";
 import { UnidadeLogisticaService } from "./unidade-logistica-service.js";
 import { registrarMovimentacaoProduto } from "./movimentacao-produto-service.js";
-
-/** Alíquota ICMS remessa interestadual (modelo PR → SC ML: 4%). */
-function inferAliqIcmsRemessa(emitUf: string, destUf: string): number {
-  if (emitUf.toUpperCase() === destUf.toUpperCase()) return 18;
-  return 4;
-}
 
 export type EmitirRemessaOptions = {
   unidadeDestinoId?: string;
@@ -65,7 +64,6 @@ export async function emitirNFeRemessa(
       "Preço de custo não informado ou zero. Informe o custo no cadastro do produto para emitir remessa.",
     );
   }
-  const valor = lineTotal(unitCusto, quantidade);
   const pedidoMl = options?.pedidoMl ?? gerarPedidoMl();
 
   const chave = buildChaveNFe({
@@ -98,24 +96,37 @@ export async function emitirNFeRemessa(
   }
 
   const aliqFallback = inferAliqIcmsRemessa(tenant.uf, destino.uf);
-  const aliqIcms = remessaTaxRule.aliquotaIcmsInterna ?? aliqFallback;
-  const valorIcms = Math.round(valor * (aliqIcms / 100) * 100) / 100;
   const cfopRemessa = remessaTaxRule.cfop?.trim() || REMESSA_CFOP;
+  const calc = calcularNotaInbound(
+    linhaPedidoFromProduto(product, {
+      cfop: cfopRemessa,
+      quantidade,
+      valorUnitario: unitCusto,
+    }),
+    remessaTaxRule,
+    tenant.uf,
+    destino.uf,
+    aliqFallback,
+  );
+  const { valor, valorIcms, aliqIcms } = calc;
 
   const destData = destinoToNfeFields(destino);
 
   const { nfeRow, cteRow } = await prisma.$transaction(async (tx) => {
     const emitterSettings = await loadEmitterSettings(tx, tenant.id);
     const fiscalPayload = enrichFiscalPayloadWithXTexto(
-      enrichTaxSnapshot(taxSnapshotFromRule(remessaTaxRule, aliqFallback), {
-        settings: emitterSettings,
-        tipo: NFeTipo.REMESSA,
-        valor,
-        valorIcms,
-        emitUf: tenant.uf,
-        destUf: destino.uf,
-        indFinal: 0,
-      }) as Record<string, unknown>,
+      {
+        ...enrichTaxSnapshot(taxSnapshotFromRule(remessaTaxRule, aliqFallback), {
+          settings: emitterSettings,
+          tipo: NFeTipo.REMESSA,
+          valor,
+          valorIcms,
+          emitUf: tenant.uf,
+          destUf: destino.uf,
+          indFinal: 0,
+        }),
+        engine: calc.nota,
+      } as Record<string, unknown>,
       {
         tipo: NFeTipo.REMESSA,
         cfop: cfopRemessa,

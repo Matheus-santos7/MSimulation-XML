@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/fiscal-ui";
 import { EmpresaCard } from "@/components/empresa-card";
-import { Button } from "@/components/ui/button";
 import { getTenants } from "@/lib/fiscal-api";
 
 export const metadata: Metadata = { title: "Empresas" };
@@ -12,20 +11,12 @@ export default async function EmpresasPage() {
 
   return (
     <div className="p-6">
-      <PageHeader
-        title="Empresas"
-        subtitle="Emitentes e filiais (multi-tenant)"
-        actions={
-          <Button asChild>
-            <Link href="/empresas/nova">Nova empresa</Link>
-          </Button>
-        }
-      />
+      <PageHeader title="Empresas" subtitle="Emitente vinculado à sua conta" />
       {tenants.length === 0 ? (
         <div className="text-muted-foreground">
-          Nenhuma empresa cadastrada.{" "}
-          <Link href="/empresas/nova" className="text-accent hover:underline">
-            Criar a primeira
+          Nenhuma empresa vinculada.{" "}
+          <Link href="/onboarding/empresa" className="text-accent hover:underline">
+            Cadastrar empresa
           </Link>
         </div>
       ) : (

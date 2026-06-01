@@ -49,6 +49,84 @@ export type ContextoFiscal = {
   customerType: CustomerType;
 };
 
+export type ProdutoLinhaFiscal = {
+  id: string;
+  sku?: string | null;
+  nome?: string | null;
+  ncm: string;
+  cfop: string;
+  cest?: string | null;
+  ean?: string | null;
+  exTipi?: string | null;
+  unidade?: string | null;
+  origem?: number | null;
+};
+
+export type ResultadoNotaInbound = {
+  nota: NotaFiscalResult;
+  valor: number;
+  valorIcms: number;
+  aliqIcms: number;
+  cfop: string;
+};
+
+/** Fallback ICMS remessa física inbound (ex.: PR→SC ≈ 4%). */
+export function inferAliqIcmsRemessa(emitUf: string, destUf: string): number {
+  if (emitUf.toUpperCase() === destUf.toUpperCase()) return 18;
+  return 4;
+}
+
+/** Fallback ICMS intraestadual (retorno simbólico emitente→emitente). */
+export function inferAliqIcmsIntraestadual(emitUf: string, destUf: string): number {
+  if (emitUf.toUpperCase() === destUf.toUpperCase()) return 18;
+  return aliquotaInterestadualPadrao(emitUf, destUf);
+}
+
+export function linhaPedidoFromProduto(
+  product: ProdutoLinhaFiscal,
+  opts: { cfop: string; quantidade: number; valorUnitario: number },
+): LinhaPedido {
+  return {
+    codigo: product.sku ?? product.id,
+    descricao: product.nome ?? "Mercadoria",
+    ncm: product.ncm,
+    cfop: opts.cfop,
+    unidade: product.unidade ?? "UN",
+    cest: product.cest ?? undefined,
+    ean: product.ean ?? undefined,
+    exTipi: product.exTipi ?? undefined,
+    origem: product.origem ?? 0,
+    quantidade: opts.quantidade,
+    valorUnitario: opts.valorUnitario,
+  };
+}
+
+/**
+ * Calcula NF-e inbound (remessa física ou retorno simbólico): B2B contribuinte via engine.
+ */
+export function calcularNotaInbound(
+  linha: LinhaPedido,
+  rule: ResolvedTaxRule,
+  ufOrigem: string,
+  ufDestino: string,
+  fallbackAliqIcms: number,
+): ResultadoNotaInbound {
+  const item = montarItemFiscal(
+    linha,
+    rule,
+    { ufOrigem, ufDestino, customerType: "taxpayer" },
+    fallbackAliqIcms,
+  );
+  const nota = calcularNotaFiscal([item]);
+  return {
+    nota,
+    valor: nota.totais.vNF,
+    valorIcms: nota.totais.vICMS,
+    aliqIcms: item.icms.pICMS || fallbackAliqIcms,
+    cfop: linha.cfop,
+  };
+}
+
 /** Alíquota interestadual padrão por UF de origem (Sul/Sudeste exceto ES = 12; demais = 7). */
 function aliquotaInterestadualPadrao(ufOrigem: string, ufDestino: string): number {
   const o = ufOrigem.toUpperCase();

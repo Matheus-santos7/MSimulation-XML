@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Emissão da GNRE" };
 
 export default async function EmissaoGnrePage() {
   const tenantId = await resolveActiveTenantId();
-  const cfg = tenantId ? await getFiscalEmitterSettings(tenantId) : null;
+  const cfg = await getFiscalEmitterSettings();
 
   return (
     <EmissaoGnreEditor

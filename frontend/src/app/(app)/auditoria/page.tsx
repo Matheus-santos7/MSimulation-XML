@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Auditoria" };
 
 export default async function AuditoriaPage() {
   const tenantId = await resolveActiveTenantId();
-  const audit = await listAuditLogs(tenantId);
+  const audit = await listAuditLogs();
 
   return (
     <div className="p-6">

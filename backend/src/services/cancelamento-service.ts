@@ -82,10 +82,11 @@ function assertPrazoCancelamento(emitidaEm: Date, horas: number, naoInformar: bo
 export async function cancelarVenda(
   prisma: PrismaClient,
   vendaChave: string,
+  tenantId: string,
   xJust = "Cancelamento solicitado pelo emissor",
 ) {
-  const venda = await prisma.nFe.findUnique({
-    where: { chave: vendaChave },
+  const venda = await prisma.nFe.findFirst({
+    where: { chave: vendaChave, tenantId },
     include: {
       tenant: true,
       nfeReferencia: true,

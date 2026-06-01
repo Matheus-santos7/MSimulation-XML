@@ -10,6 +10,3 @@ export const fiscalEmitterSettingsPatchBody = z
   })
   .strict();
 
-export const fiscalSettingsTenantQuery = z.object({
-  tenantId: z.string().uuid(),
-});

@@ -11,9 +11,17 @@ type Props = {
   tenant?: TenantDto;
   action: (prev: EmpresaFormState, formData: FormData) => Promise<EmpresaFormState>;
   submitLabel: string;
+  cancelHref?: string;
+  hideCancel?: boolean;
 };
 
-export function TenantForm({ tenant, action, submitLabel }: Props) {
+export function TenantForm({
+  tenant,
+  action,
+  submitLabel,
+  cancelHref = "/empresas",
+  hideCancel = false,
+}: Props) {
   const [state, formAction, pending] = useActionState(action, {});
 
   return (
@@ -30,9 +38,11 @@ export function TenantForm({ tenant, action, submitLabel }: Props) {
         <Button type="submit" disabled={pending}>
           {pending ? "Salvando…" : submitLabel}
         </Button>
-        <Button type="button" variant="outline" asChild>
-          <Link href="/empresas">Cancelar</Link>
-        </Button>
+        {!hideCancel && cancelHref ? (
+          <Button type="button" variant="outline" asChild>
+            <Link href={cancelHref}>Cancelar</Link>
+          </Button>
+        ) : null}
       </div>
     </form>
   );

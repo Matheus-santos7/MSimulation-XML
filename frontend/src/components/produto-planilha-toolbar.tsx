@@ -13,17 +13,16 @@ import {
 } from "@/lib/produto-planilha";
 
 type Props = {
-  tenantId?: string;
   products: ProductDto[];
 };
 
-export function ProdutoPlanilhaToolbar({ tenantId, products }: Props) {
+export function ProdutoPlanilhaToolbar({ products }: Props) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<ProdutoPlanilhaImportResult | null>(null);
 
-  const disabled = !tenantId || pending;
+  const disabled = pending;
 
   function handleDownloadTemplate() {
     downloadCsvFile("produtos-modelo.csv", buildProdutoPlanilhaTemplateCsv());
@@ -61,7 +60,7 @@ export function ProdutoPlanilhaToolbar({ tenantId, products }: Props) {
           variant="outline"
           size="sm"
           onClick={handleDownloadCatalog}
-          disabled={!tenantId || products.length === 0}
+          disabled={products.length === 0}
           className="gap-2"
         >
           <FileSpreadsheet className="size-3.5" />

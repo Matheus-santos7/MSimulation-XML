@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "CST da NF-e de devolução" };
 
 export default async function CstDevolucaoPage() {
   const tenantId = await resolveActiveTenantId();
-  const cfg = tenantId ? await getFiscalEmitterSettings(tenantId) : null;
+  const cfg = await getFiscalEmitterSettings();
   const initial = cfg?.settings.taxes.cstDevolucao ?? {
     mode: "CUSTOM" as const,
     icms: [],

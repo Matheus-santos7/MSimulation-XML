@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Modalidade de Frete" };
 
 export default async function ModalidadeFretePage() {
   const tenantId = await resolveActiveTenantId();
-  const cfg = tenantId ? await getFiscalEmitterSettings(tenantId) : null;
+  const cfg = await getFiscalEmitterSettings();
 
   return (
     <ModalidadeFreteEditor

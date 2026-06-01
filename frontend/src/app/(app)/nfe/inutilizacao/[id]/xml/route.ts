@@ -1,12 +1,10 @@
-import { resolveActiveTenantId } from "@/lib/active-tenant";
 import { resolveInutilizacaoXml } from "@/lib/resolve-inutilizacao-xml";
 
 type Props = { params: Promise<{ id: string }> };
 
 export async function GET(req: Request, { params }: Props) {
   const { id } = await params;
-  const tenantId = await resolveActiveTenantId();
-  const resolved = await resolveInutilizacaoXml(id, tenantId ?? undefined);
+  const resolved = await resolveInutilizacaoXml(id);
   if (!resolved) {
     return new Response("Inutilização não encontrada", { status: 404 });
   }

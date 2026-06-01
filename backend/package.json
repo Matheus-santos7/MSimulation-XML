@@ -1,5 +1,5 @@
 {
-  "name": "@e-invoice-play/backend",
+  "name": "@msedit-xml/backend",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,17 +9,20 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
-    "db:push": "prisma db push",
-    "db:seed": "prisma db seed"
+    "db:push": "prisma db push"
   },
   "dependencies": {
     "@fastify/cors": "^11.0.0",
+    "@fastify/jwt": "^10.1.0",
+    "@fastify/rate-limit": "^10.3.0",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "dotenv": "^16.6.1",
     "fastify": "^5.2.1",
     "fastify-plugin": "^5.0.1",
+    "otplib": "^13.4.1",
     "pg": "^8.16.3",
+    "resend": "^6.9.2",
     "zod": "^3.25.76"
   },
   "devDependencies": {

@@ -120,18 +120,6 @@ function AppShellInner({
             );
           })}
         </nav>
-
-        <div className="p-4 border-t border-border">
-          <div className="bg-accent/10 border border-accent/20 p-3 rounded">
-            <div className="text-[12px] font-bold text-accent uppercase mb-1.5 tracking-widest">Ambiente</div>
-            <div className="flex items-center gap-2">
-              <span className="size-2 rounded-full bg-accent animate-pulse" />
-              <span className="font-medium text-foreground">
-                {tenant ? ambienteLabel(tenant.ambiente) : "—"}
-              </span>
-            </div>
-          </div>
-        </div>
       </aside>
 
       <main className="flex-1 flex flex-col overflow-hidden min-w-0">
@@ -140,10 +128,6 @@ function AppShellInner({
             <span className="font-medium truncate max-w-[min(100%,360px)]">
               {tenant?.razaoSocial ?? "Empresa"}
             </span>
-            <span className="h-4 w-px bg-border shrink-0" />
-            <div className="bg-accent text-accent-foreground px-2 py-0.5 rounded text-[12px] font-black tracking-tighter shrink-0">
-              SIMULAÇÃO — SEM VALIDADE FISCAL
-            </div>
           </div>
           <AccountMenu tenant={tenant} userEmail={userEmail} userName={userName} />
         </header>

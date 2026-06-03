@@ -1,5 +1,62 @@
-# Logs
-logs
+# =============================================================================
+# Dependências e caches de pacote
+# =============================================================================
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+.pnpm-store/
+.turbo/
+
+# =============================================================================
+# Build e artefatos compilados
+# =============================================================================
+dist/
+dist-ssr/
+build/
+.output/
+.vinxi/
+.tanstack/
+.nitro/
+frontend/.next/
+frontend/out/
+backend/dist/
+backend/src/generated/
+packages/*/dist/
+
+# Artefatos TypeScript emitidos por engano em src/ (use dist/)
+packages/**/src/**/*.js
+packages/**/src/**/*.js.map
+packages/**/src/**/*.d.ts
+
+*.tsbuildinfo
+next-env.d.ts
+
+# =============================================================================
+# Variáveis de ambiente e segredos
+# =============================================================================
+.env
+.env.*
+!.env.example
+!**/.env.example
+*.local
+.dev.vars
+
+# Certificados e chaves (NFe, JWT, etc.)
+*.pem
+*.p12
+*.pfx
+*.key
+!**/public/**/*.key
+
+# =============================================================================
+# Logs e debug
+# =============================================================================
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -7,34 +64,64 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-frontend/.next
-backend/dist
-backend/src/generated
-.env
-backend/.env
-dist-ssr
-.output
-.vinxi
-.tanstack/**
-.nitro
-*.local
+# =============================================================================
+# Testes e cobertura
+# =============================================================================
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
 
-# Cloudflare (legado Vite — manter se voltar a usar Workers)
+# =============================================================================
+# Dados fiscais e arquivos locais (não versionar)
+# =============================================================================
+XMLs/
+*.xlsx
+*.xml
+
+# Scripts temporários de desenvolvimento
+tmp-*
+**/tmp-*
+
+# =============================================================================
+# Cloudflare / Vercel / deploy
+# =============================================================================
 .wrangler/
-.dev.vars
+.vercel/
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# =============================================================================
+# SO e editores
+# =============================================================================
 .DS_Store
+Thumbs.db
+Desktop.ini
+
+.idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+*~
+*.swp
 
-// Paths
-XMLs/*
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+
+# =============================================================================
+# Ferramentas de IA e notas locais (específicas da máquina)
+# =============================================================================
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
+.agents/
+.claude/
+.gemini/
+.notebook/
+
+# Locks de skills instalados localmente
+**/.skill-lock.json
+**/.skill-lock.json.backup

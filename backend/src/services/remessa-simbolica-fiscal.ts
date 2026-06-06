@@ -1,15 +1,15 @@
 /**
  * Cálculo fiscal unificado para NF-e de remessa simbólica (CFOP 5949).
  */
-import { NFeTipo, type PrismaClient } from "../generated/prisma/client.js";
+import { NFeTipo } from "../generated/prisma/client.js";
+import type { PrismaTx } from "../lib/db/prisma-tx.js";
 import {
   REMESSA_SIMBOLICA_CFOP,
   REMESSA_SIMBOLICA_NAT_OP,
 } from "../lib/remessa-simbolica-dest.js";
 import { enrichTaxSnapshot, loadEmitterSettings } from "../lib/fiscal-emitter-runtime.js";
-import { enrichFiscalPayloadWithXTexto } from "../lib/nfe-xtexto.js";
+import { enrichFiscalPayloadWithXTexto, productUnitPrice } from "@msimulation-xml/fiscal-core";
 import { taxSnapshotFromRule } from "../lib/tax-snapshot.js";
-import { productUnitPrice } from "../lib/product-pricing.js";
 import {
   calcularNotaInbound,
   inferAliqIcmsRemessa,
@@ -18,8 +18,6 @@ import {
   type ResultadoNotaInbound,
 } from "./tax-calculation-service.js";
 import { resolveTaxRule } from "./tax-rule-service.js";
-
-type Tx = Omit<PrismaClient, "$connect" | "$disconnect" | "$on" | "$transaction" | "$extends">;
 
 type ProductPrices = {
   preco: { toString(): string } | number;
@@ -46,7 +44,7 @@ export class RemessaSimbolicaFiscalError extends Error {
 }
 
 export async function prepararRemessaSimbolicaFiscal(
-  prisma: Tx | PrismaClient,
+  prisma: PrismaTx,
   input: {
     tenantId: string;
     emitUf: string;
@@ -70,7 +68,7 @@ export async function prepararRemessaSimbolicaFiscal(
     );
   }
 
-  const taxRule = await resolveTaxRule(prisma as PrismaClient, input.tenantId, {
+  const taxRule = await resolveTaxRule(prisma, input.tenantId, {
     originUf: input.emitUf,
     destinationUf: input.destUf,
     transactionType: "inbound",
@@ -97,7 +95,7 @@ export async function prepararRemessaSimbolicaFiscal(
     aliqFallback,
   );
 
-  const emitterSettings = await loadEmitterSettings(prisma as PrismaClient, input.tenantId);
+  const emitterSettings = await loadEmitterSettings(prisma, input.tenantId);
   const fiscalPayload = enrichFiscalPayloadWithXTexto(
     {
       ...enrichTaxSnapshot(taxSnapshotFromRule(taxRule, aliqFallback), {

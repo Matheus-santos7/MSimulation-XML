@@ -17,6 +17,7 @@
  * |--------|---------|------------------|
  * | GET | `/nfes` | Prisma + `mapNfe` |
  * | GET | `/nfes/:chave` | Prisma (detalhe + referenciadas + CT-e) |
+ * | GET | `/nfes/:chave/xml` | `resolveNfeXml` — XML persistido ou regerado |
  * | DELETE | `/nfes/:chave` | `FiscalService.softDeleteNfe` |
  * | POST | `/nfes/:chave/devolucao` | `emitirDevolucaoVenda` |
  * | POST | `/nfes/:chave/cancelamento` | `cancelarVenda` |
@@ -44,6 +45,7 @@ import { listTimelineChains } from "../services/timeline-service.js";
 import { CancelamentoError, cancelarVenda } from "../services/cancelamento-service.js";
 import { DevolucaoError, emitirDevolucaoVenda } from "../services/devolucao-service.js";
 import { InutilizacaoError, inutilizarNumeracao } from "../services/inutilizacao-service.js";
+import { resolveNfeXml } from "../services/nfe-xml-service.js";
 
 // ---------------------------------------------------------------------------
 // Schemas Zod
@@ -113,6 +115,33 @@ function registerNfeRoutes(app: FastifyInstance, fiscal: FiscalService) {
       orderBy: [{ emitidaEm: "desc" }, { serie: "desc" }, { numero: "desc" }],
     });
     return rows.map((r) => mapNfe(r, r.nfeReferencia?.chave));
+  });
+
+  app.get("/nfes/:chave/xml", async (req, reply) => {
+    const tid = tenantIdFromRequest(req);
+    const { chave } = chaveParamSchema.parse(req.params);
+    const result = await resolveNfeXml(app.prisma, tid, chave);
+    if (!result) {
+      const row = await app.prisma.nFe.findFirst({
+        where: { chave, tenantId: tid, ...fiscalNotDeleted },
+        select: { tipo: true },
+      });
+      if (!row) return reply.status(404).send({ error: "NF-e não encontrada" });
+      return reply.status(409).send({
+        error: `XML persistido indisponível para NF-e tipo ${row.tipo}. Migração pendente.`,
+      });
+    }
+
+    const q = req.query as { download?: string };
+    const headers: Record<string, string> = {
+      "Content-Type": "application/xml; charset=utf-8",
+      "Cache-Control": "private, max-age=3600",
+      "X-NFe-Xml-Source": result.source,
+    };
+    if (q.download === "1") {
+      headers["Content-Disposition"] = `attachment; filename="${result.filename}"`;
+    }
+    return reply.headers(headers).send(result.xml);
   });
 
   app.get("/nfes/:chave", async (req, reply) => {

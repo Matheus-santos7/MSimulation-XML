@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import { lookupRateLimitPlugin, lookupRouteRateLimit } from "../lib/lookup-rate-limit.js";
 import {
   LookupNotFoundError,
   LookupValidationError,
@@ -16,7 +17,11 @@ const cepParam = z.object({
 });
 
 export const lookupRoutes: FastifyPluginAsync = async (app) => {
-  app.get("/lookup/cnpj/:cnpj", async (req, reply) => {
+  await app.register(lookupRateLimitPlugin);
+
+  app.get("/lookup/cnpj/:cnpj", {
+    config: { rateLimit: lookupRouteRateLimit },
+  }, async (req, reply) => {
     try {
       const { cnpj } = cnpjParam.parse(req.params);
       return await lookupCnpj(cnpj);
@@ -30,7 +35,9 @@ export const lookupRoutes: FastifyPluginAsync = async (app) => {
     }
   });
 
-  app.get("/lookup/cep/:cep", async (req, reply) => {
+  app.get("/lookup/cep/:cep", {
+    config: { rateLimit: lookupRouteRateLimit },
+  }, async (req, reply) => {
     try {
       const { cep } = cepParam.parse(req.params);
       return await lookupCep(cep);

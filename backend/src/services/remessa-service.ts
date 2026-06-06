@@ -21,9 +21,9 @@ import { REMESSA_CFOP, REMESSA_NAT_OP } from "../lib/remessa-dest.js";
 import type { UnidadeDestinoFiscal } from "../lib/meli-unidade.js";
 import { enrichTaxSnapshot, loadEmitterSettings } from "../lib/fiscal-emitter-runtime.js";
 import { taxSnapshotFromRule } from "../lib/tax-snapshot.js";
-import { enrichFiscalPayloadWithXTexto } from "../lib/nfe-xtexto.js";
+import { enrichFiscalPayloadWithXTexto } from "@msimulation-xml/fiscal-core";
 import { emitirCteRemessa } from "./cte-remessa-service.js";
-import { productUnitPrice } from "../lib/product-pricing.js";
+import { productUnitPrice } from "@msimulation-xml/fiscal-core";
 import {
   calcularNotaInbound,
   inferAliqIcmsRemessa,
@@ -32,6 +32,7 @@ import {
 import { resolveTaxRule } from "./tax-rule-service.js";
 import { UnidadeLogisticaService } from "./unidade-logistica-service.js";
 import { registrarMovimentacaoProduto } from "./movimentacao-produto-service.js";
+import { persistNfeXmlAutorizado } from "./nfe-xml-service.js";
 
 export type EmitirRemessaOptions = {
   unidadeDestinoId?: string;
@@ -160,6 +161,14 @@ export async function emitirNFeRemessa(
       },
     });
 
+    await persistNfeXmlAutorizado(tx, {
+      nfeId: nfeRow.id,
+      tenant,
+      nfeRow: { ...nfeRow, fiscalPayload },
+      product,
+      settings: emitterSettings,
+    });
+
     await registrarMovimentacaoProduto(tx, {
       tenantId: tenant.id,
       productId: product.id,
@@ -175,6 +184,32 @@ export async function emitirNFeRemessa(
   });
 
   return { nfe: mapNfe(nfeRow), cte: cteRow };
+}
+
+/** Remessa física manual (UI de fulfillment), sem alterar estoque do produto. */
+export async function emitirRemessaManual(
+  prisma: PrismaClient,
+  input: {
+    tenantId: string;
+    productId: string;
+    quantidade: number;
+    unidadeDestinoId: string;
+  },
+) {
+  const [tenant, product] = await Promise.all([
+    prisma.tenant.findUniqueOrThrow({ where: { id: input.tenantId } }),
+    prisma.product.findFirst({
+      where: { id: input.productId, tenantId: input.tenantId },
+    }),
+  ]);
+
+  if (!product) {
+    throw new RemessaError("Produto não encontrado");
+  }
+
+  return emitirNFeRemessa(prisma, tenant, product, input.quantidade, {
+    unidadeDestinoId: input.unidadeDestinoId,
+  });
 }
 
 function destinoToNfeFields(destino: UnidadeDestinoFiscal) {

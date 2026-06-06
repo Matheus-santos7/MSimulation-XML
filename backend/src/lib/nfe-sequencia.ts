@@ -1,9 +1,9 @@
-import type { PrismaClient } from "../generated/prisma/client.js";
+import type { PrismaTx } from "./db/prisma-tx.js";
 import { fiscalNotDeleted } from "../services/fiscal-service.js";
 
 /** Próximo número da NF-e para a série informada (por tenant). */
 export async function proximoNumeroNfe(
-  prisma: PrismaClient,
+  prisma: PrismaTx,
   tenantId: string,
   serie: number,
 ): Promise<number> {

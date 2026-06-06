@@ -1,8 +1,8 @@
-import type { PrismaClient } from "../generated/prisma/client.js";
+import type { PrismaTx } from "./db/prisma-tx.js";
 import { fiscalNotDeleted } from "../services/fiscal-service.js";
 
 export async function proximoNumeroCte(
-  prisma: PrismaClient,
+  prisma: PrismaTx,
   tenantId: string,
   serie: number,
 ): Promise<number> {

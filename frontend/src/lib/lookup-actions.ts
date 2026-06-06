@@ -1,6 +1,6 @@
-/**
- * Consultas públicas (CNPJ/CEP) — sem `next/headers`, seguro para Client Components.
- */
+"use server";
+
+import { getAccessToken } from "@/lib/auth/session";
 import type { CepLookupDto, CnpjLookupDto } from "@/lib/fiscal-types";
 
 function apiBase(): string {
@@ -11,10 +11,18 @@ function lookupUrl(path: string): string {
   return new URL(path.startsWith("/") ? path : `/${path}`, `${apiBase()}/`).toString();
 }
 
-async function getPublicJson<T>(href: string): Promise<T> {
+async function getAuthenticatedJson<T>(href: string): Promise<T> {
+  const token = await getAccessToken();
+  if (!token) {
+    throw new Error("Sessão expirada. Entre novamente.");
+  }
+
   let res: Response;
   try {
-    res = await fetch(href, { cache: "no-store" });
+    res = await fetch(href, {
+      cache: "no-store",
+      headers: { Authorization: `Bearer ${token}` },
+    });
   } catch (err) {
     const msg =
       err instanceof Error
@@ -44,10 +52,10 @@ async function getPublicJson<T>(href: string): Promise<T> {
 
 export async function lookupCnpj(cnpj: string): Promise<CnpjLookupDto> {
   const digits = cnpj.replace(/\D/g, "");
-  return getPublicJson<CnpjLookupDto>(lookupUrl(`/api/lookup/cnpj/${digits}`));
+  return getAuthenticatedJson<CnpjLookupDto>(lookupUrl(`/api/lookup/cnpj/${digits}`));
 }
 
 export async function lookupCep(cep: string): Promise<CepLookupDto> {
   const digits = cep.replace(/\D/g, "");
-  return getPublicJson<CepLookupDto>(lookupUrl(`/api/lookup/cep/${digits}`));
+  return getAuthenticatedJson<CepLookupDto>(lookupUrl(`/api/lookup/cep/${digits}`));
 }

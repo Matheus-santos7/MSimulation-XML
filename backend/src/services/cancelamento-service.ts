@@ -8,11 +8,8 @@
  *  - cancela o CT-e de venda vinculado, se existir.
  */
 
-import {
-  FiscalStatus,
-  NFeTipo,
-  type PrismaClient,
-} from "../generated/prisma/client.js";
+import { FiscalStatus, NFeTipo, type PrismaClient } from "../generated/prisma/client.js";
+import type { PrismaTx } from "../lib/db/prisma-tx.js";
 import { mapNfe } from "../lib/fiscal-mappers.js";
 import { loadEmitterSettings } from "../lib/fiscal-emitter-runtime.js";
 import { gerarProtocoloSefaz } from "../lib/sefaz-protocol.js";
@@ -31,10 +28,8 @@ export class CancelamentoError extends Error {
   }
 }
 
-type Tx = Omit<PrismaClient, "$connect" | "$disconnect" | "$on" | "$transaction" | "$extends">;
-
 async function registrarCancelamento(
-  tx: Tx,
+  tx: PrismaTx,
   params: {
     tenantId: string;
     nfeId: string;

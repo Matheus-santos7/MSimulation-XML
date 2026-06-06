@@ -1,11 +1,9 @@
-import type { PrismaClient } from "../generated/prisma/client.js";
+import type { PrismaTx } from "../lib/db/prisma-tx.js";
 import {
   buildTaxRuleRowId,
   type CustomerType,
   type TransactionType,
 } from "../lib/tax-rule-ids.js";
-
-type Tx = Omit<PrismaClient, "$connect" | "$disconnect" | "$on" | "$transaction" | "$extends">;
 
 export type { CustomerType, TransactionType };
 
@@ -49,7 +47,7 @@ function toNum(value: unknown): number | undefined {
  * Resolve linha da planilha: origem (UF emitente) × destino (UF destinatário) × tipo de operação × regra do produto.
  */
 export async function resolveTaxRule(
-  prisma: Tx,
+  prisma: PrismaTx,
   tenantId: string,
   params: {
     originUf: string;

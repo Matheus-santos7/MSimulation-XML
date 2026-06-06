@@ -10,11 +10,11 @@ export default function OnboardingEmpresaPage() {
     <div className="p-6 max-w-3xl mx-auto">
       <PageHeader
         title="Cadastre sua empresa"
-        subtitle="Dados do emitente NF-e vinculados à sua conta. Depois você poderá usar o cockpit fiscal."
+        subtitle="Dados do emitente NF-e vinculados à sua conta."
       />
       <TenantForm
         action={onboardingEmpresaAction}
-        submitLabel="Continuar para o cockpit"
+        submitLabel="Cadastrar empresa"
         cancelHref={undefined}
         hideCancel
       />

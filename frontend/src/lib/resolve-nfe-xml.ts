@@ -1,11 +1,18 @@
+/**
+ * XML de NF-e para preview/download.
+ *
+ * 1. Tenta `GET /api/nfes/:chave/xml` (XML persistido ou regerado no backend).
+ * 2. Se indisponível (404), regera localmente via `@msimulation-xml/nfe-xml` (legado).
+ */
+import { buildNFeXML, buildProcEventoCancelamentoXML, nfeProcXmlFilename } from "@msimulation-xml/nfe-xml";
 import {
   getEmitente,
   getFiscalEmitterSettings,
   getNfeByChave,
+  getNfeXml,
   listFiscalEvents,
   listProducts,
 } from "./fiscal-api";
-import { buildNFeXML, buildProcEventoCancelamentoXML } from "./xml-generator";
 
 async function loadNfeXmlContext(chave: string) {
   const nfe = await getNfeByChave(chave);
@@ -26,11 +33,14 @@ async function loadNfeXmlContext(chave: string) {
 }
 
 export async function resolveNfeXml(chave: string): Promise<{ xml: string; filename: string } | null> {
+  const fromApi = await getNfeXml(chave);
+  if (fromApi) return fromApi;
+
   const ctx = await loadNfeXmlContext(chave);
   if (!ctx) return null;
 
   const xml = buildNFeXML(ctx.nfe, ctx.emit, ctx.product, ctx.settings);
-  const filename = `nfe_${ctx.nfe.numero}_serie${ctx.nfe.serie}_v4.00.xml`;
+  const filename = nfeProcXmlFilename(ctx.nfe.numero, ctx.nfe.serie);
   return { xml, filename };
 }
 
@@ -44,7 +54,6 @@ export async function resolveNfeCancelamentoEventoXml(
   const cancelamento = events.find((e) => e.tipo === "110111" && e.chaveRef === chave);
   if (!cancelamento) {
     if (ctx.nfe.status !== "CANCELADA") return null;
-    // Fallback para notas canceladas antes da persistência do evento
     const fallback = {
       protocolo: `141260056230${String(ctx.nfe.numero).padStart(3, "0")}`.slice(0, 15),
       ocorridoEm: new Date().toISOString(),

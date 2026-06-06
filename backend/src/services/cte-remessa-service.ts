@@ -46,12 +46,11 @@ import {
 import { proximoNumeroCte } from "../lib/cte-sequencia.js";
 import { mapCte } from "../lib/fiscal-mappers.js";
 import { REMESSA_ML_DEST } from "../lib/remessa-dest.js";
+import type { PrismaTx } from "../lib/db/prisma-tx.js";
 
 // ---------------------------------------------------------------------------
 // Tipos
 // ---------------------------------------------------------------------------
-
-type Tx = Omit<PrismaClient, "$connect" | "$disconnect" | "$on" | "$transaction" | "$extends">;
 
 type TotaisCteRemessa = {
   valorCarga: number;
@@ -67,10 +66,6 @@ type RotasCte = {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function prismaTx(tx: Tx): PrismaClient {
-  return tx as unknown as PrismaClient;
-}
 
 /** Rota textual exibida na UI e persistida em `ctes.origem` / `destino`. */
 function rotasRemessa(tenant: Tenant): RotasCte {
@@ -139,9 +134,9 @@ function dadosCreateCteRemessa(params: {
  * @param nfeRemessa — linha `nfes` com `tipo === REMESSA` já persistida.
  * @returns DTO do CT-e com `nfeChaveRef` = chave da remessa.
  */
-export async function emitirCteRemessa(prisma: Tx, tenant: Tenant, nfeRemessa: NFe) {
+export async function emitirCteRemessa(prisma: PrismaTx, tenant: Tenant, nfeRemessa: NFe) {
   const serie = tenant.serieCte;
-  const numero = await proximoNumeroCte(prismaTx(prisma), tenant.id, serie);
+  const numero = await proximoNumeroCte(prisma, tenant.id, serie);
   const emitidoEm = new Date();
 
   const rotas = rotasRemessa(tenant);

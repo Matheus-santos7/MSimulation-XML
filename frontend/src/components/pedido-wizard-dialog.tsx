@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { lookupCep } from "@/lib/lookup-api";
+import { lookupCep } from "@/lib/lookup-actions";
 import type { PedidoDto, ProductDto } from "@/lib/fiscal-types";
 import { brl } from "@/lib/format";
 import {

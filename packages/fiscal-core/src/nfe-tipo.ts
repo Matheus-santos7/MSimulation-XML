@@ -1,0 +1,10 @@
+/** Tipos de NF-e no domínio fulfillment — espelha Prisma `NFeTipo` sem depender do ORM. */
+export const NFeTipo = {
+  VENDA: "VENDA",
+  REMESSA: "REMESSA",
+  RETORNO_SIMBOLICO: "RETORNO_SIMBOLICO",
+  DEVOLUCAO: "DEVOLUCAO",
+  REMESSA_SIMBOLICA: "REMESSA_SIMBOLICA",
+} as const;
+
+export type NFeTipoValue = (typeof NFeTipo)[keyof typeof NFeTipo];

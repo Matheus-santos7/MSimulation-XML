@@ -1,5 +1,5 @@
 {
-  "name": "@msedit-xml/backend",
+  "name": "@msimulation-xml/backend",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,12 +9,16 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
-    "db:push": "prisma db push"
+    "db:push": "prisma db push",
+    "test": "pnpm --filter @msimulation-xml/fiscal-core build && pnpm --filter @msimulation-xml/nfe-xml build && prisma generate && node --import tsx --test src/lib/tax-engine.test.ts src/services/remessa-fifo.test.ts src/services/venda-chain-contract.test.ts"
   },
   "dependencies": {
     "@fastify/cors": "^11.0.0",
+    "@fastify/helmet": "^13.0.0",
     "@fastify/jwt": "^10.1.0",
     "@fastify/rate-limit": "^10.3.0",
+    "@msimulation-xml/fiscal-core": "workspace:*",
+    "@msimulation-xml/nfe-xml": "workspace:*",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "dotenv": "^16.6.1",

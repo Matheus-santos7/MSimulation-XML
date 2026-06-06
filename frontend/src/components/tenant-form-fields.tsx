@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { lookupCep, lookupCnpj } from "@/lib/lookup-api";
+import { lookupCep, lookupCnpj } from "@/lib/lookup-actions";
 import type { EmpresaFormValues } from "@/lib/empresa-form";
 import type { TenantDto } from "@/lib/fiscal-types";
 

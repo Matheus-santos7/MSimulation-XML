@@ -1,28 +1,32 @@
 /**
  * Ponto de entrada da API Fastify (porta padrão 3001).
  *
- * Rotas públicas: `/api/health`, `/api/auth/*` (login, register, forgot/reset password), `/api/lookup/*`
- * Rotas protegidas: demais `/api/*` (JWT obrigatório, tenantId no token)
+ * Rotas públicas: `/api/health`, `/api/auth/*`
+ * Lookup autenticado (sem tenant): `authenticated-lookup` — onboarding.
+ * Demais rotas protegidas: `protected-api` (JWT + tenant).
  */
 import "dotenv/config";
 import cors from "@fastify/cors";
+import helmet from "@fastify/helmet";
 import Fastify from "fastify";
+import { buildCorsOptions } from "./lib/cors-config.js";
+import { buildHelmetOptions } from "./lib/helmet-config.js";
 import { authPlugin } from "./plugins/auth/index.js";
 import { prismaPlugin } from "./plugins/prisma.js";
+import { authenticatedLookupPlugin } from "./plugins/authenticated-lookup.js";
 import { protectedApiPlugin } from "./plugins/protected-api.js";
 import { healthRoutes } from "./routes/health.js";
 import { authRoutes } from "./routes/auth/index.js";
-import { lookupRoutes } from "./routes/lookup.js";
-
 const app = Fastify({ logger: true });
 
-await app.register(cors, { origin: true });
+await app.register(helmet, buildHelmetOptions());
+await app.register(cors, buildCorsOptions());
 await app.register(prismaPlugin);
 await app.register(authPlugin);
 
 await app.register(healthRoutes, { prefix: "/api" });
-await app.register(lookupRoutes, { prefix: "/api" });
 await app.register(authRoutes, { prefix: "/api" });
+await app.register(authenticatedLookupPlugin, { prefix: "/api" });
 await app.register(protectedApiPlugin, { prefix: "/api" });
 
 const port = Number(process.env.PORT ?? 3001);

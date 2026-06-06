@@ -7,6 +7,7 @@ import {
   type UnidadeLogisticaImportRow,
 } from "../services/unidade-logistica-service.js";
 import { emitirAvancoEntreCds, AvancoCdError } from "../services/avanco-cd-service.js";
+import { emitirRemessaManual, RemessaError } from "../services/remessa-service.js";
 import { listarMovimentacoesProduto } from "../services/movimentacao-produto-service.js";
 
 const importRowSchema = z.object({
@@ -34,6 +35,12 @@ const avancoCdBody = z.object({
   productId: z.string().uuid(),
   quantidade: z.number().int().min(1),
   unidadeOrigemId: z.string().uuid(),
+  unidadeDestinoId: z.string().uuid(),
+});
+
+const remessaManualBody = z.object({
+  productId: z.string().uuid(),
+  quantidade: z.number().int().min(1),
   unidadeDestinoId: z.string().uuid(),
 });
 
@@ -87,6 +94,22 @@ export async function unidadesLogisticasRoutes(app: FastifyInstance) {
       return await service.setPadrao(tenantId, id);
     } catch (e) {
       if (e instanceof UnidadeLogisticaError) {
+        return reply.status(400).send({ error: e.message });
+      }
+      throw e;
+    }
+  });
+
+  app.post("/movimentacoes/remessa", async (req, reply) => {
+    const tenantId = tenantIdFromRequest(req);
+    const parsed = remessaManualBody.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: "Payload inválido", details: parsed.error.flatten() });
+    }
+    try {
+      return await emitirRemessaManual(app.prisma, { tenantId, ...parsed.data });
+    } catch (e) {
+      if (e instanceof RemessaError || e instanceof UnidadeLogisticaError) {
         return reply.status(400).send({ error: e.message });
       }
       throw e;

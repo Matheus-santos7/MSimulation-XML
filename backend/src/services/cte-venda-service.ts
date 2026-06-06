@@ -2,9 +2,9 @@ import {
   CteModal,
   FiscalStatus,
   type NFe,
-  type PrismaClient,
   type Tenant,
 } from "../generated/prisma/client.js";
+import type { PrismaTx } from "../lib/db/prisma-tx.js";
 import { buildChaveCTe } from "../lib/cte-chave.js";
 import {
   calcularPesoCarga,
@@ -16,16 +16,14 @@ import {
 import { proximoNumeroCte } from "../lib/cte-sequencia.js";
 import { mapCte } from "../lib/fiscal-mappers.js";
 
-type Tx = Omit<PrismaClient, "$connect" | "$disconnect" | "$on" | "$transaction" | "$extends">;
-
 /** CT-e de transporte da venda (full → consumidor), referenciando a NF-e de venda. */
 export async function emitirCteVenda(
-  prisma: Tx,
+  prisma: PrismaTx,
   tenant: Tenant,
   nfeVenda: NFe,
 ) {
   const serie = tenant.serieCte;
-  const numero = await proximoNumeroCte(prisma as PrismaClient, tenant.id, serie);
+  const numero = await proximoNumeroCte(prisma, tenant.id, serie);
   const valorCarga = Number(nfeVenda.valor);
   const valorFrete = calcularValorFreteRemessa(valorCarga);
   const pesoCarga = calcularPesoCarga(nfeVenda.quantidade);

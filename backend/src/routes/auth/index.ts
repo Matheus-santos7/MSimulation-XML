@@ -29,6 +29,10 @@ import {
   PasswordResetService,
 } from "../../services/auth/password-reset-service.js";
 import { EmailDeliveryError } from "../../services/auth/email-service.js";
+import {
+  DATABASE_UNAVAILABLE_MESSAGE,
+  isDatabaseUnavailableError,
+} from "../../lib/db/errors.js";
 import { userIdFromRequest } from "../../lib/auth/request-context.js";
 
 function authMeta(req: FastifyRequest) {
@@ -310,6 +314,9 @@ function handleAuthError(e: unknown, reply: { status: (code: number) => { send: 
   }
   if (e instanceof EmailDeliveryError) {
     return reply.status(503).send({ error: "Não foi possível enviar o e-mail. Tente novamente em instantes." });
+  }
+  if (isDatabaseUnavailableError(e)) {
+    return reply.status(503).send({ error: DATABASE_UNAVAILABLE_MESSAGE });
   }
   throw e;
 }

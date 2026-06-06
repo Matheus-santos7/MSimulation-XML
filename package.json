@@ -1,21 +1,24 @@
 {
-  "name": "msedit-xml",
+  "name": "msimulation-xml",
   "private": true,
   "packageManager": "pnpm@9.15.9",
   "scripts": {
     "dev": "concurrently -k -n api,web -c cyan,magenta \"pnpm dev:backend\" \"pnpm dev:frontend\"",
-    "dev:frontend": "pnpm --filter @msedit-xml/frontend dev",
-    "dev:backend": "pnpm --filter @msedit-xml/backend dev",
-    "build": "pnpm --filter @msedit-xml/frontend build && pnpm --filter @msedit-xml/backend build",
-    "start:frontend": "pnpm --filter @msedit-xml/frontend start",
-    "start:backend": "pnpm --filter @msedit-xml/backend start",
-    "lint": "pnpm --filter @msedit-xml/frontend lint",
+    "dev:frontend": "pnpm --filter @msimulation-xml/frontend dev",
+    "dev:backend": "pnpm --filter @msimulation-xml/backend dev",
+    "build": "pnpm --filter @msimulation-xml/fiscal-core build && pnpm --filter @msimulation-xml/nfe-xml build && pnpm --filter @msimulation-xml/frontend build && pnpm --filter @msimulation-xml/backend build",
+    "start:frontend": "pnpm --filter @msimulation-xml/frontend start",
+    "start:backend": "pnpm --filter @msimulation-xml/backend start",
+    "lint": "pnpm --filter @msimulation-xml/frontend lint",
     "format": "prettier --write .",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f postgres",
     "docker:reset": "docker compose down -v",
-    "db:setup": "pnpm docker:up && pnpm --filter @msedit-xml/backend db:migrate:deploy"
+    "db:setup": "pnpm docker:up && pnpm --filter @msimulation-xml/backend db:migrate:deploy",
+    "test:backend": "pnpm --filter @msimulation-xml/fiscal-core test && pnpm --filter @msimulation-xml/nfe-xml test && pnpm --filter @msimulation-xml/backend test",
+    "test:fiscal-core": "pnpm --filter @msimulation-xml/fiscal-core test",
+    "test:nfe-xml": "pnpm --filter @msimulation-xml/nfe-xml test"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",

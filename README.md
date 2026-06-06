@@ -218,7 +218,7 @@ Gerado em `nfe-xtexto.ts` e persistido em `fiscalPayload.obsContXTexto`.
 ## Stack e estrutura do monorepo
 
 ```
-msedit-xml/
+msimulation-xml/
 ├── backend/                    # API Fastify + engine fiscal (ver `backend/docs/COMENTARIOS.md`)
 │   ├── prisma/                 # Schema e migrations
 │   └── src/
@@ -255,7 +255,7 @@ msedit-xml/
 | Movimentações | `POST /movimentacoes/avanco-cd`, `GET /movimentacoes-produto` |
 | Configurações | `GET/PUT /fiscal-settings` |
 | Timeline | `GET /timeline` (cadeias por remessa) |
-| Lookup | `GET /lookup/cnpj/:cnpj`, `GET /lookup/cep/:cep` |
+| Lookup | `GET /lookup/cnpj/:cnpj`, `GET /lookup/cep/:cep` (JWT; sem tenant — onboarding) |
 
 Base URL local: `http://localhost:3001` (prefixo conforme proxy do frontend em `/api`).
 
@@ -338,10 +338,11 @@ Paleta pensada para um terminal fiscal escuro: fundo grafite, acento âmbar (doc
 # 1. Dependências
 pnpm install
 
-# 2. Variáveis de ambiente
+# 2. Variáveis de ambiente (ver .env.example, backend/.env.example, frontend/.env.example)
 cp .env.example .env
 cp backend/.env.example backend/.env
-# Edite backend/.env e defina JWT_SECRET (mín. 16 caracteres)
+# Edite backend/.env: JWT_SECRET (mín. 16) e PASSWORD_PEPPER (mín. 16 em produção)
+# Opcional: cp frontend/.env.example frontend/.env.local — só se NEXT_PUBLIC_API_URL ≠ :3001
 
 # 3. Banco + migrations
 pnpm db:setup
@@ -352,13 +353,13 @@ pnpm dev
 
 Acesse http://localhost:3000/login e **crie uma conta** (depois cadastre a empresa no onboarding). O middleware redireciona para `/login` sem cookie válido.
 
-> **Migração do nome antigo (`e-invoice-play`):** se você já tinha o Postgres local, rode `pnpm docker:reset` e `pnpm db:setup` para recriar o banco `msedit_xml`, ou ajuste manualmente `DATABASE_URL` / `POSTGRES_*` no `.env`. Renomeie o repositório no GitHub para `msedit-xml` e atualize o remote: `git remote set-url origin https://github.com/<user>/msedit-xml.git`.
+> **Migração de `msedit-xml` / `e-invoice-play`:** se você já tinha o Postgres local com o banco antigo, rode `pnpm docker:reset` e `pnpm db:setup` para recriar o banco `msimulation_xml`, ou ajuste `DATABASE_URL` / `POSTGRES_*` nos `.env`. Renomeie o repositório no GitHub para `msimulation-xml` e atualize o remote: `git remote set-url origin https://github.com/<user>/msimulation-xml.git`.
 
 | Serviço | URL |
 |---------|-----|
 | Frontend | http://localhost:3000 |
 | API Fastify | http://localhost:3001 |
-| Prisma Studio | `pnpm --filter @msedit-xml/backend db:studio` |
+| Prisma Studio | `pnpm --filter @msimulation-xml/backend db:studio` |
 
 ---
 
@@ -372,7 +373,7 @@ Acesse http://localhost:3000/login e **crie uma conta** (depois cadastre a empre
 | `pnpm docker:up` / `pnpm docker:down` | Sobe/para o container |
 | `pnpm docker:reset` | Remove volume do banco |
 | `pnpm lint` / `pnpm format` | ESLint e Prettier |
-| `pnpm --filter @msedit-xml/backend db:migrate` | Nova migration (dev) |
+| `pnpm --filter @msimulation-xml/backend db:migrate` | Nova migration (dev) |
 
 ---
 

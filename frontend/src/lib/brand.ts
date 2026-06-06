@@ -8,6 +8,8 @@ export const BRAND = {
   name: "MSimulation",
   /** Sufixo técnico — destaca o foco em XML fiscal. */
   suffix: "XML",
+  /** Slug técnico (npm, Docker, repositório). */
+  slug: "msimulation-xml",
   /** Nome completo para metadata e títulos. */
   fullName: "MSimulation XML",
   /** Descrição curta da função do produto. */

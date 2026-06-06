@@ -21,11 +21,12 @@ import { mapNfe, num } from "../lib/fiscal-mappers.js";
 import { buildChaveNFe } from "../lib/nfe-chave.js";
 import { proximoNumeroNfe } from "../lib/nfe-sequencia.js";
 import { enrichTaxSnapshot, loadEmitterSettings } from "../lib/fiscal-emitter-runtime.js";
-import { enrichFiscalPayloadWithXTexto } from "../lib/nfe-xtexto.js";
+import { enrichFiscalPayloadWithXTexto } from "@msimulation-xml/fiscal-core";
 import { taxSnapshotFromRule } from "../lib/tax-snapshot.js";
 import { calcularNotaFiscal } from "../lib/tax-engine.js";
 import { montarItemFiscal } from "./tax-calculation-service.js";
 import { resolveTaxRule, type CustomerType } from "./tax-rule-service.js";
+import { persistNfeXmlFromEmission } from "./nfe-xml-service.js";
 import {
   prepararRemessaSimbolicaFiscal,
   RemessaSimbolicaFiscalError,
@@ -109,7 +110,7 @@ export async function emitirDevolucaoVenda(
     const emitterSettings = await loadEmitterSettings(tx, tenant.id);
 
     // Mesma regra fiscal da venda → devolução espelha as alíquotas/CST originais.
-    const saleTaxRule = await resolveTaxRule(tx as unknown as PrismaClient, tenant.id, {
+    const saleTaxRule = await resolveTaxRule(tx, tenant.id, {
       originUf: tenant.uf,
       destinationUf: venda.destUf,
       transactionType: "sale",
@@ -143,7 +144,7 @@ export async function emitirDevolucaoVenda(
     const aliqDevol = item.icms.pICMS || aliqFallback;
     const valorIcmsDevol = nota.totais.vICMS;
 
-    const numero = await proximoNumeroNfe(tx as unknown as PrismaClient, tenant.id, serie);
+    const numero = await proximoNumeroNfe(tx, tenant.id, serie);
     const chave = buildChaveNFe({ uf: tenant.uf, cnpj: tenant.cnpj, serie, numero });
 
     // CST de devolução vem mapeado a partir do CST da venda referenciada.
@@ -208,6 +209,14 @@ export async function emitirDevolucaoVenda(
       },
     });
 
+    await persistNfeXmlFromEmission(tx, {
+      nfeId: devolucaoRow.id,
+      tenant,
+      productId: product.id,
+      settings: emitterSettings,
+      nfeReferenciaChave: venda.chave,
+    });
+
     // Estorno FIFO: devolve o saldo consumido de volta às remessas da cadeia.
     // A venda referencia o retorno simbólico, que registrou os consumos por remessa.
     const estornos: { remessaNfeId: string; quantidade: number }[] = [];
@@ -233,7 +242,7 @@ export async function emitirDevolucaoVenda(
 
     let remessaSimbolicaDto: ReturnType<typeof mapNfe> | undefined;
     if (remessaPrincipal) {
-      const numeroSimb = await proximoNumeroNfe(tx as unknown as PrismaClient, tenant.id, serie);
+      const numeroSimb = await proximoNumeroNfe(tx, tenant.id, serie);
       const chaveSimb = buildChaveNFe({ uf: tenant.uf, cnpj: tenant.cnpj, serie, numero: numeroSimb });
 
       let fiscalSimb;
@@ -294,6 +303,15 @@ export async function emitirDevolucaoVenda(
           fiscalPayload: fiscalPayload as Prisma.InputJsonValue,
         },
       });
+
+      await persistNfeXmlFromEmission(tx, {
+        nfeId: remessaSimbRow.id,
+        tenant,
+        productId: product.id,
+        settings: emitterSettings,
+        nfeReferenciaChave: devolucaoRow.chave,
+      });
+
       remessaSimbolicaDto = mapNfe(remessaSimbRow, devolucaoRow.chave);
     }
 

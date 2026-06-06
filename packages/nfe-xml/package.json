@@ -1,0 +1,25 @@
+{
+  "name": "@msimulation-xml/nfe-xml",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Geração de XML NF-e (simulação) — fonte única para API e UI",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "pnpm run build && node --import tsx --test src/build-remessa.test.ts"
+  },
+  "dependencies": {
+    "@msimulation-xml/fiscal-core": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}

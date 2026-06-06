@@ -4,7 +4,7 @@
 
 <h1 align="center">MSimulation XML — Frontend</h1>
 
-<p align="center"><code>@msedit-xml/frontend</code> · Next.js 15 · Tailwind v4</p>
+<p align="center"><code>@msimulation-xml/frontend</code> · Next.js 15 · Tailwind v4</p>
 
 Next.js 15 (App Router), Tailwind v4, cockpit fiscal **MSimulation XML** (UI migrada do antigo TanStack/Vite).
 

@@ -1,4 +1,4 @@
-import { lookupCep } from "@/lib/lookup-api";
+import { lookupCep } from "@/lib/lookup-actions";
 import type { TenantInput } from "@/lib/fiscal-types";
 
 export async function enrichEmpresaFromCep(input: TenantInput): Promise<TenantInput> {

@@ -211,6 +211,24 @@ export async function getNfeByChave(chave: string): Promise<NFeDto | null> {
   return res.json() as Promise<NFeDto>;
 }
 
+/** XML persistido na emissão (REMESSA). Retorna null se 404 ou 409 (tipo sem migração). */
+export async function getNfeXml(
+  chave: string,
+  options?: { download?: boolean },
+): Promise<{ xml: string; filename: string } | null> {
+  const href = url(`/api/nfes/${chave}/xml`, options?.download ? { download: "1" } : undefined);
+  const res = await fetch(href, { cache: "no-store", headers: await authHeaders() });
+  if (res.status === 404 || res.status === 409) return null;
+  if (!res.ok) {
+    throw new Error(await readApiError(res));
+  }
+  const xml = await res.text();
+  const disp = res.headers.get("Content-Disposition");
+  const match = disp?.match(/filename="([^"]+)"/);
+  const filename = match?.[1] ?? `nfe_${chave.slice(-6)}_v4.00.xml`;
+  return { xml, filename };
+}
+
 export async function deleteNfe(chave: string): Promise<void> {
   await mutateJson(url(`/api/nfes/${chave}`), "DELETE");
 }
@@ -435,6 +453,7 @@ export type UnidadeLogisticaDto = {
     codigoMunicipio: string;
   };
   ativa: boolean;
+  padrao?: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -508,6 +527,23 @@ export async function emitirAvancoCd(body: {
   unidadeDestinoId: string;
 }): Promise<AvancoCdResult> {
   return mutateJson<AvancoCdResult>(url("/api/movimentacoes/avanco-cd"), "POST", body) as Promise<AvancoCdResult>;
+}
+
+export type RemessaManualResult = {
+  nfe: NFeDto;
+  cte: CTeDto;
+};
+
+export async function emitirRemessaManual(body: {
+  productId: string;
+  quantidade: number;
+  unidadeDestinoId: string;
+}): Promise<RemessaManualResult> {
+  return mutateJson<RemessaManualResult>(
+    url("/api/movimentacoes/remessa"),
+    "POST",
+    body,
+  ) as Promise<RemessaManualResult>;
 }
 
 export async function listMovimentacoesProduto(opts?: {

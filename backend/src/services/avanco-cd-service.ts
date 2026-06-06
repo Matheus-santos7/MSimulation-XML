@@ -22,7 +22,7 @@ import {
   debitarSaldoRemessaPorCd,
 } from "./remessa-fifo.js";
 import { registrarMovimentacaoProduto } from "./movimentacao-produto-service.js";
-import { UnidadeLogisticaError } from "./unidade-logistica-service.js";
+import { getUnidadeAtivaDoTenant, UnidadeLogisticaError } from "./unidade-logistica-service.js";
 import { emitirNFeRemessa } from "./remessa-service.js";
 import {
   prepararRemessaSimbolicaFiscal,
@@ -56,12 +56,8 @@ export async function emitirAvancoEntreCds(
   const [tenant, product, origem, destino] = await Promise.all([
     prisma.tenant.findUniqueOrThrow({ where: { id: input.tenantId } }),
     prisma.product.findFirst({ where: { id: input.productId, tenantId: input.tenantId } }),
-    prisma.meliUnidadeLogistica.findFirst({
-      where: { id: input.unidadeOrigemId, tenantId: input.tenantId, ativa: true },
-    }),
-    prisma.meliUnidadeLogistica.findFirst({
-      where: { id: input.unidadeDestinoId, tenantId: input.tenantId, ativa: true },
-    }),
+    getUnidadeAtivaDoTenant(prisma, input.tenantId, input.unidadeOrigemId),
+    getUnidadeAtivaDoTenant(prisma, input.tenantId, input.unidadeDestinoId),
   ]);
 
   if (!product) throw new AvancoCdError("Produto não encontrado");
@@ -95,7 +91,7 @@ export async function emitirAvancoEntreCds(
       where: { id: alocacoes[0]!.remessaNfeId },
     });
 
-    const numeroSimb = await proximoNumeroNfe(tx as unknown as PrismaClient, tenant.id, serie);
+    const numeroSimb = await proximoNumeroNfe(tx, tenant.id, serie);
     const chaveSimb = buildChaveNFe({ uf: tenant.uf, cnpj: tenant.cnpj, serie, numero: numeroSimb });
 
     let fiscalSimb;

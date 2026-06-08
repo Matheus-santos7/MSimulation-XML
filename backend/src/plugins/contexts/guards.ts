@@ -1,5 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type { UserRole } from "../../generated/prisma/client.js";
+import { requireEmailVerification } from "../../lib/auth/config.js";
 
 export class AdminRequiredError extends Error {
   constructor() {
@@ -33,6 +34,8 @@ export async function requireTenantHook(request: FastifyRequest, reply: FastifyR
 
 /** Exige e-mail verificado para operações de negócio. */
 export async function requireEmailVerifiedHook(request: FastifyRequest, reply: FastifyReply) {
+  if (!requireEmailVerification()) return;
+
   const user = request.user as AuthenticatedUser;
   if (!user.emailVerified) {
     return reply.status(403).send({ error: "Confirme seu e-mail antes de continuar" });

@@ -410,6 +410,7 @@ Recomendadas / produção:
 RESEND_API_KEY=
 RESEND_FROM_EMAIL="MSimulation XML <noreply@seudominio.com>"
 TURNSTILE_SECRET_KEY=          # CAPTCHA no registro (ignorado em dev sem chave)
+REQUIRE_EMAIL_VERIFICATION=false  # Pré-lançamento: false. Go-live: true
 EMAIL_VERIFICATION_EXPIRES_IN=24h
 TRUST_PROXY=false              # true em produção atrás de reverse proxy
 ```
@@ -492,6 +493,7 @@ flowchart LR
 |----------|-----------|
 | `RESEND_API_KEY` | E-mail transacional |
 | `RESEND_FROM_EMAIL` | Remetente verificado no Resend |
+| `REQUIRE_EMAIL_VERIFICATION` | `false` pré-lançamento; `true` no go-live |
 | `TURNSTILE_SECRET_KEY` | CAPTCHA no registro |
 
 `JWT_SECRET` e `PASSWORD_PEPPER` podem ser gerados pelo Render (`generateValue` no blueprint) ou definidos manualmente (≥ 32 e ≥ 16 caracteres).

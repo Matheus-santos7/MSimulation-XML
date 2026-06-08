@@ -3,6 +3,7 @@ import {
   accessTokenTtl,
   AUTH_GENERIC_LOGIN_ERROR,
   refreshTokenTtlMs,
+  requireEmailVerification,
   twoFactorPendingTtl,
 } from "../../lib/auth/config.js";
 import {
@@ -94,15 +95,17 @@ export class AuthService {
         password: await hashPassword(data.password),
         tenantId: undefined,
         role: "MEMBER",
-        emailVerifiedAt: null,
+        emailVerifiedAt: requireEmailVerification() ? null : new Date(),
       },
     });
 
-    try {
-      await this.emailVerification.sendVerificationEmail(user.id);
-    } catch (e) {
-      if (process.env.NODE_ENV !== "production") {
-        console.warn("[dev] Falha ao enviar e-mail de verificação no registro:", e);
+    if (requireEmailVerification()) {
+      try {
+        await this.emailVerification.sendVerificationEmail(user.id);
+      } catch (e) {
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("[dev] Falha ao enviar e-mail de verificação no registro:", e);
+        }
       }
     }
 
@@ -254,7 +257,7 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new AuthStateError("Usuário não encontrado");
     if (user.tenantId) throw new AuthStateError("Empresa já vinculada à conta");
-    if (!user.emailVerifiedAt) {
+    if (requireEmailVerification() && !user.emailVerifiedAt) {
       throw new AuthStateError("Confirme seu e-mail antes de cadastrar a empresa");
     }
 

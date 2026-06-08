@@ -1,3 +1,4 @@
+import { isEmailVerified } from "./config.js";
 import type { mapTenant } from "../tenant-mapper.js";
 
 export type AccessTokenPayload = {
@@ -97,7 +98,7 @@ export function authSessionResponse(
     tenant,
     needsOnboarding: user.tenantId === null,
     twoFactorEnabled: user.totpEnabledAt != null,
-    emailVerified: user.emailVerifiedAt != null,
+    emailVerified: isEmailVerified(user.emailVerifiedAt),
     role: user.role,
   };
 }

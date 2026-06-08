@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
 import rateLimit from "@fastify/rate-limit";
 import { ZodError } from "zod";
-import { twoFactorPendingTtl } from "../../lib/auth/config.js";
+import { isEmailVerified, twoFactorPendingTtl } from "../../lib/auth/config.js";
 import type { AccessTokenPayload, TwoFactorPendingPayload } from "../../lib/auth/jwt-payload.js";
 import {
   disable2faBodySchema,
@@ -276,7 +276,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       tenant: result.tenant,
       needsOnboarding: result.user.tenantId === null,
       twoFactorEnabled: result.user.totpEnabledAt != null,
-      emailVerified: result.user.emailVerifiedAt != null,
+      emailVerified: isEmailVerified(result.user.emailVerifiedAt),
       role: result.user.role,
     };
   });

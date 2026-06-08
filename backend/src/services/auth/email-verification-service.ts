@@ -3,6 +3,7 @@ import {
   appPublicUrl,
   EMAIL_VERIFICATION_GENERIC_MESSAGE,
   emailVerificationTtlMs,
+  requireEmailVerification,
 } from "../../lib/auth/config.js";
 import {
   generateEmailVerificationToken,
@@ -24,6 +25,8 @@ export class EmailVerificationService {
   constructor(private readonly prisma: PrismaClient) {}
 
   async sendVerificationEmail(userId: string): Promise<void> {
+    if (!requireEmailVerification()) return;
+
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user || user.emailVerifiedAt) return;
 
@@ -83,6 +86,10 @@ export class EmailVerificationService {
   }
 
   async resendForUser(userId: string): Promise<{ message: string }> {
+    if (!requireEmailVerification()) {
+      return { message: "Verificação de e-mail não é necessária neste ambiente." };
+    }
+
     try {
       await this.sendVerificationEmail(userId);
     } catch (e) {

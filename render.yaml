@@ -42,6 +42,8 @@ services:
         sync: false
       - key: TURNSTILE_SECRET_KEY
         sync: false
+      - key: REQUIRE_EMAIL_VERIFICATION
+        value: "false"
 
 databases:
   - name: msimulation-xml-db

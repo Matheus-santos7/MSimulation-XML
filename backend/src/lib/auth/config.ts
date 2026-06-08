@@ -83,6 +83,19 @@ export function turnstileSecretKey(): string | undefined {
   return key && key.length > 0 ? key : undefined;
 }
 
+/** Pré-lançamento: `REQUIRE_EMAIL_VERIFICATION=false`. No go-live, use `true`. */
+export function requireEmailVerification(): boolean {
+  const raw = process.env.REQUIRE_EMAIL_VERIFICATION?.trim().toLowerCase();
+  if (raw === "false" || raw === "0" || raw === "no") return false;
+  if (raw === "true" || raw === "1" || raw === "yes") return true;
+  return true;
+}
+
+export function isEmailVerified(emailVerifiedAt: Date | null | undefined): boolean {
+  if (!requireEmailVerification()) return true;
+  return emailVerifiedAt != null;
+}
+
 export function emailVerificationTtlMs(): number {
   const raw = process.env.EMAIL_VERIFICATION_EXPIRES_IN ?? "24h";
   if (raw.endsWith("h")) return Number(raw.slice(0, -1)) * 60 * 60 * 1000;

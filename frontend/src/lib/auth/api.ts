@@ -147,19 +147,10 @@ export async function verifyEmailApi(token: string): Promise<{ message: string }
 }
 
 export async function resendVerificationApi(accessToken: string): Promise<{ message: string }> {
-  const res = await fetch(url("/api/auth/resend-verification"), {
+  return authBearerFetch<{ message: string }>(accessToken, "/api/auth/resend-verification", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    cache: "no-store",
+    json: {},
   });
-  if (!res.ok) {
-    const payload = await readApiErrorPayload(res);
-    throw new AuthApiError(payload.error, payload.details);
-  }
-  return res.json() as Promise<{ message: string }>;
 }
 
 export async function refreshSessionApi(refreshToken: string): Promise<AuthSessionDto> {

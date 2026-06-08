@@ -1,7 +1,7 @@
 "use client";
 
 import Script from "next/script";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 declare global {
   interface Window {
@@ -27,10 +27,11 @@ type Props = {
 export function TurnstileWidget({ onToken }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
+  const [scriptReady, setScriptReady] = useState(false);
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim();
 
   useEffect(() => {
-    if (!siteKey || !containerRef.current || !window.turnstile) return;
+    if (!siteKey || !scriptReady || !containerRef.current || !window.turnstile) return;
 
     widgetIdRef.current = window.turnstile.render(containerRef.current, {
       sitekey: siteKey,
@@ -42,9 +43,10 @@ export function TurnstileWidget({ onToken }: Props) {
     return () => {
       if (widgetIdRef.current && window.turnstile) {
         window.turnstile.remove(widgetIdRef.current);
+        widgetIdRef.current = null;
       }
     };
-  }, [siteKey, onToken]);
+  }, [siteKey, onToken, scriptReady]);
 
   if (!siteKey) {
     if (process.env.NODE_ENV === "production") {
@@ -59,7 +61,11 @@ export function TurnstileWidget({ onToken }: Props) {
 
   return (
     <>
-      <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="lazyOnload" />
+      <Script
+        src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+        strategy="afterInteractive"
+        onLoad={() => setScriptReady(true)}
+      />
       <input type="hidden" name="captchaToken" id="captcha-token-field" />
       <div
         ref={containerRef}

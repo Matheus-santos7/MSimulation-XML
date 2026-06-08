@@ -10,6 +10,7 @@ import {
 import { TaxRuleCatalogError } from "../services/tax-rule-catalog-service.js";
 import { ProductConflictError, ProductService } from "../services/product-service.js";
 import { RemessaError } from "../services/remessa-service.js";
+import { UnidadeLogisticaError } from "../services/unidade-logistica-service.js";
 
 export const productRoutes: FastifyPluginAsync = async (app) => {
   const service = new ProductService(app.prisma);
@@ -87,7 +88,7 @@ function handleProductError(e: unknown, reply: { status: (code: number) => { sen
   if (e instanceof ProductConflictError) {
     return reply.status(409).send({ error: e.message });
   }
-  if (e instanceof RemessaError) {
+  if (e instanceof RemessaError || e instanceof UnidadeLogisticaError) {
     return reply.status(400).send({ error: e.message });
   }
   if (e instanceof TaxRuleCatalogError) {

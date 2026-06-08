@@ -1,55 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import {
-  bulkImportUnidadesLogisticas,
-  emitirAvancoCd,
-  setUnidadeLogisticaPadrao,
-} from "@/lib/fiscal-api";
-import { parseMeliUnidadesXlsx } from "@/lib/meli-unidade-planilha";
-
-export type UnidadeImportState = {
-  error?: string;
-  success?: boolean;
-  created?: number;
-  updated?: number;
-  unicos?: number;
-  parseErrors?: { line: number; message: string }[];
-};
-
-export async function importarUnidadesLogisticasAction(
-  _prev: UnidadeImportState,
-  formData: FormData,
-): Promise<UnidadeImportState> {
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) return { error: "Selecione um arquivo .xlsx" };
-  if (!file.name.toLowerCase().endsWith(".xlsx")) return { error: "Formato inválido. Envie um arquivo .xlsx" };
-
-  const parsed = parseMeliUnidadesXlsx(await file.arrayBuffer());
-  if (parsed.rows.length === 0) {
-    return {
-      error: parsed.errors[0]?.message ?? "Nenhuma unidade válida na planilha",
-      parseErrors: parsed.errors,
-    };
-  }
-
-  try {
-    const result = await bulkImportUnidadesLogisticas(parsed.rows);
-    revalidatePath("/unidades-logisticas");
-    return {
-      success: true,
-      created: result.created,
-      updated: result.updated,
-      unicos: result.unicos,
-      parseErrors:
-        [...parsed.errors, ...result.errors].length > 0
-          ? [...parsed.errors, ...result.errors]
-          : undefined,
-    };
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "Erro ao importar unidades" };
-  }
-}
+import { emitirAvancoCd, setUnidadeLogisticaPadrao } from "@/lib/fiscal-api";
 
 export type AvancoCdState = {
   error?: string;
@@ -93,12 +45,15 @@ export async function emitirAvancoCdAction(
   }
 }
 
-export async function definirUnidadePadraoAction(unidadeId: string): Promise<{ error?: string }> {
+export async function definirUnidadePadraoAction(
+  unidadeId: string,
+): Promise<{ error?: string; codigo?: string }> {
   try {
-    await setUnidadeLogisticaPadrao(unidadeId);
+    const unidade = await setUnidadeLogisticaPadrao(unidadeId);
     revalidatePath("/unidades-logisticas");
+    revalidatePath("/operacoes");
     revalidatePath("/produtos");
-    return {};
+    return { codigo: unidade.codigo };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Erro ao definir padrão" };
   }

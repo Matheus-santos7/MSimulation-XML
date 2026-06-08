@@ -471,6 +471,7 @@ export type UnidadeLogisticaBulkImportResult = {
   updated: number;
   skipped: number;
   errors: { line: number; message: string }[];
+  parseErrors?: { line: number; message: string }[];
 };
 
 export type AvancoCdResult = {
@@ -498,11 +499,13 @@ export type MovimentacaoProdutoDto = {
 
 export async function listUnidadesLogisticas(opts?: {
   q?: string;
+  cnpj?: string;
   ativa?: boolean;
 }): Promise<UnidadeLogisticaDto[]> {
   return getJson<UnidadeLogisticaDto[]>(
     url("/api/unidades-logisticas", {
       q: opts?.q,
+      cnpj: opts?.cnpj,
       ativa: opts?.ativa === false ? "false" : opts?.ativa === true ? "true" : undefined,
     }),
   );

@@ -3,6 +3,7 @@ import { mapProduct } from "../lib/product-mapper.js";
 import type { productCreateBody, productUpdateBody } from "../schemas/product.js";
 import { assertProductTaxRuleBaseId, TaxRuleCatalogError } from "./tax-rule-catalog-service.js";
 import { emitirNFeRemessa, RemessaError } from "./remessa-service.js";
+import { UnidadeLogisticaError } from "./unidade-logistica-service.js";
 import type { z } from "zod";
 
 type CreateInput = z.infer<typeof productCreateBody>;
@@ -61,7 +62,7 @@ export class ProductService {
       if (isPrismaUniqueError(e)) {
         throw new ProductConflictError("SKU já cadastrado nesta empresa");
       }
-      if (e instanceof RemessaError) throw e;
+      if (e instanceof RemessaError || e instanceof UnidadeLogisticaError) throw e;
       throw e;
     }
   }
@@ -95,7 +96,7 @@ export class ProductService {
       if (isPrismaUniqueError(e)) {
         throw new ProductConflictError("SKU já cadastrado nesta empresa");
       }
-      if (e instanceof RemessaError) throw e;
+      if (e instanceof RemessaError || e instanceof UnidadeLogisticaError) throw e;
       throw e;
     }
   }
@@ -135,6 +136,7 @@ export class ProductService {
   }
 
   async bulkUpsert(tenantId: string, rows: CreateInput[]) {
+    const tenant = await this.prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } });
     const deduped = dedupeBulkRowsBySku(rows);
     const existing = await this.prisma.product.findMany({
       where: { tenantId },
@@ -244,7 +246,7 @@ function dedupeBulkRowsBySku(rows: CreateInput[]): { row: CreateInput; line: num
 function bulkRowErrorMessage(e: unknown): string {
   if (e instanceof ProductConflictError) return e.message;
   if (e instanceof TaxRuleCatalogError) return e.message;
-  if (e instanceof RemessaError) return e.message;
+  if (e instanceof RemessaError || e instanceof UnidadeLogisticaError) return e.message;
   if (isPrismaUniqueError(e)) return "SKU já cadastrado nesta empresa";
   if (e instanceof Error) {
     if (/Unique constraint failed/i.test(e.message)) return "SKU já cadastrado nesta empresa";

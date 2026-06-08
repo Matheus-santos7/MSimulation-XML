@@ -19,10 +19,12 @@ export function RemessaManualForm({ products, unidades }: Props) {
     {},
   );
 
+  const padraoId = unidades.find((u) => u.padrao)?.id ?? "";
+
   if (unidades.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        Importe unidades logísticas em{" "}
+        Cadastre unidades em{" "}
         <Link href="/unidades-logisticas" className="text-accent underline">
           Unidades ML
         </Link>{" "}
@@ -75,15 +77,27 @@ export function RemessaManualForm({ products, unidades }: Props) {
         <select
           name="unidadeDestinoId"
           required
+          defaultValue={padraoId}
           className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
         >
-          <option value="">Selecione…</option>
+          <option value="" disabled={Boolean(padraoId)}>
+            Selecione…
+          </option>
           {unidades.map((u) => (
             <option key={u.id} value={u.id}>
-              {u.codigo} — {u.nome} ({u.endereco.uf})
+              {u.codigo} — {u.nome} ({u.endereco.uf}){u.padrao ? " · padrão da empresa" : ""}
             </option>
           ))}
         </select>
+        {!padraoId && (
+          <p className="text-xs text-muted-foreground">
+            Defina o CD padrão em{" "}
+            <Link href="/unidades-logisticas" className="text-accent underline">
+              Unidades ML
+            </Link>
+            .
+          </p>
+        )}
       </label>
 
       <Button type="submit" disabled={pending || products.length === 0}>

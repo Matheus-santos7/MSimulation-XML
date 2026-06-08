@@ -4,7 +4,6 @@ import {
   normalizeCepMeli,
   normalizeCnpjMeli,
   normalizeIeMeli,
-  remessaDestinoLegado,
   unidadeParaDestinoFiscal,
   type UnidadeDestinoFiscal,
 } from "../lib/meli-unidade.js";
@@ -81,57 +80,72 @@ export class UnidadeLogisticaError extends Error {
   }
 }
 
-/** Unidade global habilitada e ativa para o tenant. */
+/** Unidade ativa do catálogo global (visível a todos os tenants). */
 export async function getUnidadeAtivaDoTenant(
   prisma: PrismaClient,
-  tenantId: string,
+  _tenantId: string,
   unidadeId: string,
 ): Promise<MeliUnidadeLogistica | null> {
-  const link = await prisma.tenantUnidadeLogistica.findFirst({
-    where: { tenantId, unidadeId, unidade: { ativa: true } },
-    include: { unidade: true },
+  return prisma.meliUnidadeLogistica.findFirst({
+    where: { id: unidadeId, ativa: true },
   });
-  return link?.unidade ?? null;
 }
 
 function unidadeSearchFilter(q: string): Prisma.MeliUnidadeLogisticaWhereInput {
+  const cnpjDigits = q.replace(/\D/g, "");
   return {
     OR: [
       { codigo: { contains: q, mode: "insensitive" } },
       { nome: { contains: q, mode: "insensitive" } },
       { municipio: { contains: q, mode: "insensitive" } },
       { uf: { equals: q.toUpperCase(), mode: "insensitive" } },
+      ...(cnpjDigits.length >= 4 ? [{ cnpj: { contains: cnpjDigits } }] : []),
     ],
   };
+}
+
+function unidadeCnpjFilter(cnpj: string): Prisma.MeliUnidadeLogisticaWhereInput | undefined {
+  const digits = cnpj.replace(/\D/g, "");
+  if (!digits) return undefined;
+  return digits.length === 14 ? { cnpj: digits } : { cnpj: { contains: digits } };
 }
 
 export class UnidadeLogisticaService {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async list(tenantId: string, opts?: { ativa?: boolean; q?: string }) {
+  async list(tenantId: string, opts?: { ativa?: boolean; q?: string; cnpj?: string }) {
     const q = opts?.q?.trim();
-    const links = await this.prisma.tenantUnidadeLogistica.findMany({
-      where: {
-        tenantId,
-        unidade: {
+    const cnpjFilter = opts?.cnpj?.trim() ? unidadeCnpjFilter(opts.cnpj) : undefined;
+
+    const [unidades, links] = await Promise.all([
+      this.prisma.meliUnidadeLogistica.findMany({
+        where: {
           ...(opts?.ativa !== undefined ? { ativa: opts.ativa } : {}),
           ...(q ? unidadeSearchFilter(q) : {}),
+          ...(cnpjFilter ?? {}),
         },
-      },
-      include: { unidade: true },
-      orderBy: [{ unidade: { uf: "asc" } }, { unidade: { codigo: "asc" } }],
-    });
-    return links.map((link) =>
-      mapUnidadeLogistica(link.unidade, tenantId, { padrao: link.padrao }),
+        orderBy: [{ uf: "asc" }, { codigo: "asc" }],
+      }),
+      this.prisma.tenantUnidadeLogistica.findMany({
+        where: { tenantId },
+        select: { unidadeId: true, padrao: true },
+      }),
+    ]);
+
+    const padraoByUnidadeId = new Map(links.map((l) => [l.unidadeId, l.padrao]));
+    return unidades.map((u) =>
+      mapUnidadeLogistica(u, tenantId, { padrao: padraoByUnidadeId.get(u.id) ?? false }),
     );
   }
 
   async getById(tenantId: string, id: string) {
+    const unidade = await this.prisma.meliUnidadeLogistica.findUnique({ where: { id } });
+    if (!unidade) return null;
     const link = await this.prisma.tenantUnidadeLogistica.findFirst({
       where: { tenantId, unidadeId: id },
-      include: { unidade: true },
+      select: { padrao: true },
     });
-    return link ? mapUnidadeLogistica(link.unidade, tenantId, { padrao: link.padrao }) : null;
+    return mapUnidadeLogistica(unidade, tenantId, { padrao: link?.padrao ?? false });
   }
 
   async resolveDestinoRemessa(
@@ -155,15 +169,23 @@ export class UnidadeLogisticaService {
       };
     }
 
-    return { unidade: null, destino: remessaDestinoLegado() };
+    throw new UnidadeLogisticaError(
+      "Nenhum CD padrão definido para esta empresa. Selecione uma unidade em Unidades ML.",
+    );
   }
 
   async setPadrao(tenantId: string, unidadeId: string) {
-    const link = await this.prisma.tenantUnidadeLogistica.findFirst({
-      where: { tenantId, unidadeId, unidade: { ativa: true } },
+    const unidade = await this.prisma.meliUnidadeLogistica.findFirst({
+      where: { id: unidadeId, ativa: true },
+    });
+    if (!unidade) throw new UnidadeLogisticaError("Unidade não encontrada");
+
+    await this.linkTenantUnidade(tenantId, unidadeId);
+
+    const link = await this.prisma.tenantUnidadeLogistica.findFirstOrThrow({
+      where: { tenantId, unidadeId },
       include: { unidade: true },
     });
-    if (!link) throw new UnidadeLogisticaError("Unidade não encontrada");
 
     await this.prisma.$transaction([
       this.prisma.tenantUnidadeLogistica.updateMany({

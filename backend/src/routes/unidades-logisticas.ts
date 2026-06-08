@@ -1,6 +1,7 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { tenantIdFromRequest } from "../lib/auth/request-context.js";
+import { parseMeliUnidadesXlsx } from "../lib/meli-unidade-planilha.js";
 import {
   UnidadeLogisticaError,
   UnidadeLogisticaService,
@@ -24,6 +25,7 @@ const importRowSchema = z.object({
 const unidadesListQuery = z.object({
   ativa: z.enum(["true", "false"]).optional(),
   q: z.string().optional(),
+  cnpj: z.string().optional(),
 });
 
 const movimentacoesQuery = z.object({
@@ -44,13 +46,84 @@ const remessaManualBody = z.object({
   unidadeDestinoId: z.string().uuid(),
 });
 
+const bulkImportJsonBody = z.object({
+  rows: z.array(importRowSchema).min(1),
+  enrichCep: z.boolean().optional(),
+});
+
+function parseEnrichCepField(value: unknown): boolean {
+  if (value == null || value === "") return true;
+  const s = String(value).trim().toLowerCase();
+  return s !== "false" && s !== "0" && s !== "no";
+}
+
+async function resolveBulkImportPayload(req: FastifyRequest): Promise<
+  | { ok: true; rows: UnidadeLogisticaImportRow[]; enrichCep: boolean; parseErrors: { line: number; message: string }[] }
+  | { ok: false; status: number; error: string; details?: unknown }
+> {
+  const contentType = req.headers["content-type"] ?? "";
+
+  if (contentType.includes("multipart/form-data")) {
+    let enrichCep = true;
+    let fileBuffer: Buffer | null = null;
+    let fileName = "";
+
+    const parts = req.parts();
+    for await (const part of parts) {
+      if (part.type === "file") {
+        if (part.fieldname !== "file") continue;
+        fileName = part.filename ?? "";
+        fileBuffer = await part.toBuffer();
+        continue;
+      }
+      if (part.type === "field" && part.fieldname === "enrichCep") {
+        enrichCep = parseEnrichCepField(part.value);
+      }
+    }
+
+    if (!fileBuffer || fileBuffer.length === 0) {
+      return { ok: false, status: 400, error: "Envie o arquivo Excel no campo file" };
+    }
+
+    const lower = fileName.toLowerCase();
+    if (lower && !lower.endsWith(".xlsx") && !lower.endsWith(".xls")) {
+      return { ok: false, status: 400, error: "Formato inválido. Envie um arquivo .xlsx ou .xls" };
+    }
+
+    const parsed = parseMeliUnidadesXlsx(fileBuffer);
+    if (parsed.rows.length === 0) {
+      return {
+        ok: false,
+        status: 400,
+        error: parsed.errors[0]?.message ?? "Nenhuma unidade válida na planilha",
+        details: parsed.errors.length > 0 ? { parseErrors: parsed.errors } : undefined,
+      };
+    }
+
+    return { ok: true, rows: parsed.rows, enrichCep, parseErrors: parsed.errors };
+  }
+
+  const body = req.body as { rows?: UnidadeLogisticaImportRow[]; enrichCep?: boolean };
+  const parsed = bulkImportJsonBody.safeParse(body);
+  if (!parsed.success) {
+    return { ok: false, status: 400, error: "Payload inválido", details: parsed.error.flatten() };
+  }
+
+  return {
+    ok: true,
+    rows: parsed.data.rows,
+    enrichCep: parsed.data.enrichCep !== false,
+    parseErrors: [],
+  };
+}
+
 export async function unidadesLogisticasRoutes(app: FastifyInstance) {
   app.get("/unidades-logisticas", async (req) => {
     const tenantId = tenantIdFromRequest(req);
     const q = unidadesListQuery.parse(req.query);
     const service = new UnidadeLogisticaService(app.prisma);
     const ativa = q.ativa === "false" ? false : q.ativa === "true" ? true : undefined;
-    return service.list(tenantId, { ativa, q: q.q });
+    return service.list(tenantId, { ativa, q: q.q, cnpj: q.cnpj });
   });
 
   app.get("/unidades-logisticas/:id", async (req, reply) => {
@@ -64,20 +137,21 @@ export async function unidadesLogisticasRoutes(app: FastifyInstance) {
 
   app.post("/unidades-logisticas/bulk-import", async (req, reply) => {
     const tenantId = tenantIdFromRequest(req);
-    const body = req.body as { rows?: UnidadeLogisticaImportRow[]; enrichCep?: boolean };
-    const parsed = z.array(importRowSchema).safeParse(body.rows ?? []);
-    if (!parsed.success) {
-      return reply.status(400).send({ error: "Linhas inválidas", details: parsed.error.flatten() });
+    const payload = await resolveBulkImportPayload(req);
+    if (!payload.ok) {
+      return reply.status(payload.status).send({
+        error: payload.error,
+        ...(payload.details !== undefined ? { details: payload.details } : {}),
+      });
     }
+
     try {
       const service = new UnidadeLogisticaService(app.prisma);
-      const rows: UnidadeLogisticaImportRow[] = parsed.data.map((r) => ({
-        ...r,
-        cnpj: r.cnpj,
-        cep: r.cep,
-        inscricaoEstadual: r.inscricaoEstadual,
-      }));
-      return await service.bulkImport(tenantId, rows, body.enrichCep !== false);
+      const result = await service.bulkImport(tenantId, payload.rows, payload.enrichCep);
+      return {
+        ...result,
+        ...(payload.parseErrors.length > 0 ? { parseErrors: payload.parseErrors } : {}),
+      };
     } catch (e) {
       if (e instanceof UnidadeLogisticaError) {
         return reply.status(400).send({ error: e.message });

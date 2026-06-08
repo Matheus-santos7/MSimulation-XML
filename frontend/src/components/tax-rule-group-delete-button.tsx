@@ -64,7 +64,8 @@ export function TaxRuleGroupDeleteButton({ baseId, origin, nome }: Props) {
             <AlertDialogAction
               disabled={pending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() =>
+              onClick={(e) => {
+                e.preventDefault();
                 startTransition(async () => {
                   const result = await excluirRegraTributariaAction(baseId, origin);
                   if (result.error) {
@@ -73,8 +74,8 @@ export function TaxRuleGroupDeleteButton({ baseId, origin, nome }: Props) {
                   }
                   setOpen(false);
                   router.refresh();
-                })
-              }
+                });
+              }}
             >
               {pending ? "Excluindo…" : "Excluir"}
             </AlertDialogAction>

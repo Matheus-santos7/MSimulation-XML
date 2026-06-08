@@ -68,26 +68,25 @@ export async function assertProductTaxRuleBaseId(
 export async function deleteAllTaxRules(
   prisma: PrismaClient,
   tenantId: string,
-): Promise<{ deleted: number }> {
-  const productsUsing = await prisma.product.count({
-    where: {
-      tenantId,
-      taxRuleBaseId: { not: null },
-      NOT: { taxRuleBaseId: "" },
-    },
-  });
-  if (productsUsing > 0) {
-    throw new TaxRuleCatalogError(
-      `Não é possível excluir: ${productsUsing} produto(s) ainda têm regra fiscal vinculada. Remova ou altere a regra nos produtos antes.`,
-    );
-  }
-
-  const result = await prisma.taxRule.deleteMany({ where: { tenantId } });
-  if (result.count === 0) {
+): Promise<{ deleted: number; unlinkedProducts: number }> {
+  const rulesCount = await prisma.taxRule.count({ where: { tenantId } });
+  if (rulesCount === 0) {
     throw new TaxRuleCatalogError("Nenhuma regra cadastrada para esta empresa");
   }
 
-  return { deleted: result.count };
+  return prisma.$transaction(async (tx) => {
+    const unlinked = await tx.product.updateMany({
+      where: {
+        tenantId,
+        taxRuleBaseId: { not: null },
+        NOT: { taxRuleBaseId: "" },
+      },
+      data: { taxRuleBaseId: null },
+    });
+
+    const result = await tx.taxRule.deleteMany({ where: { tenantId } });
+    return { deleted: result.count, unlinkedProducts: unlinked.count };
+  });
 }
 
 export async function deleteTaxRuleGroup(

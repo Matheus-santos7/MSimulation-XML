@@ -37,10 +37,51 @@ function destinationLabel(transactionType: "sale" | "inbound", customerType: "ta
   return customerType === "taxpayer" ? "Contribuinte" : "Não contribuinte";
 }
 
+const TAX_RULE_SHEET_ALIASES = ["regras tributárias", "regras tributarias"];
+
+type RuleIdentityState = {
+  ruleId: string;
+  ruleName: string;
+  origin: string;
+};
+
+function isNumericRuleId(value: string): boolean {
+  return /^\d+$/.test(value);
+}
+
+/** Planilhas ML mesclam células: RULE_ID/RULE_NAME/ORIGIN repetem só na 1ª linha do grupo. */
+function resolveRuleIdentity(byKey: Record<string, unknown>, state: RuleIdentityState): RuleIdentityState {
+  const rawRuleId = String(byKey.RULE_ID ?? "").trim();
+  const rawRuleName = String(byKey.RULE_NAME ?? "").trim();
+  const rawOrigin = String(byKey.ORIGIN ?? "").trim();
+  const next = { ...state };
+
+  if (rawOrigin) next.origin = rawOrigin;
+
+  if (rawRuleName) {
+    next.ruleName = rawRuleName;
+    if (isNumericRuleId(rawRuleName)) next.ruleId = rawRuleName;
+    else if (rawRuleId) next.ruleId = rawRuleId;
+  } else if (rawRuleId) {
+    next.ruleId = rawRuleId;
+  }
+
+  return next;
+}
+
+function findTaxRuleSheet(wb: XLSX.WorkBook): XLSX.WorkSheet | undefined {
+  const byName = new Map(wb.SheetNames.map((name) => [name.trim().toLowerCase(), wb.Sheets[name]!]));
+  for (const alias of TAX_RULE_SHEET_ALIASES) {
+    const sheet = byName.get(alias);
+    if (sheet) return sheet;
+  }
+  return undefined;
+}
+
 export function parseTaxRuleXlsx(buffer: ArrayBuffer): TaxRulePlanilhaParseResult {
   const wb = XLSX.read(buffer, { type: "array" });
-  const sheet = wb.Sheets["Regras Tributárias"];
-  if (!sheet) return { rows: [], errors: [{ line: 1, message: "Aba 'Regras Tributárias' não encontrada" }] };
+  const sheet = findTaxRuleSheet(wb);
+  if (!sheet) return { rows: [], errors: [{ line: 1, message: "Aba 'Regras tributárias' não encontrada" }] };
 
   const matrix = XLSX.utils.sheet_to_json<(string | number | null)[]>(sheet, {
     header: 1,
@@ -53,9 +94,7 @@ export function parseTaxRuleXlsx(buffer: ArrayBuffer): TaxRulePlanilhaParseResul
   const errors: { line: number; message: string }[] = [];
   const rows: TaxRuleImportRow[] = [];
 
-  let currentRuleId = "";
-  let currentRuleName = "";
-  let currentOrigin = "";
+  let identity: RuleIdentityState = { ruleId: "", ruleName: "", origin: "" };
 
   for (let i = 3; i < matrix.length; i++) {
     const line = i + 1;
@@ -69,18 +108,14 @@ export function parseTaxRuleXlsx(buffer: ArrayBuffer): TaxRulePlanilhaParseResul
       byKey[key] = normalizeValue(row[c]);
     }
 
-    const ruleId = String(byKey.RULE_ID ?? "").trim() || currentRuleId;
-    const nome = String(byKey.RULE_NAME ?? "").trim() || currentRuleName;
-    const origin = String(byKey.ORIGIN ?? "").trim() || currentOrigin;
+    identity = resolveRuleIdentity(byKey, identity);
+    const { ruleId, ruleName: nome, origin } = identity;
     const customerLabel = String(byKey.TRANSACTION_TYPE ?? "").trim();
 
     if (!ruleId || !nome || !origin || !customerLabel) {
       errors.push({ line, message: "Linha sem RULE_ID/RULE_NAME/ORIGIN/TRANSACTION_TYPE" });
       continue;
     }
-    currentRuleId = ruleId;
-    currentRuleName = nome;
-    currentOrigin = origin;
 
     const uf = origin.slice(0, 2).toUpperCase();
     const transactionType = detectTransactionType(customerLabel);

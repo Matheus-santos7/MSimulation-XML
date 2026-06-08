@@ -55,8 +55,8 @@ export function TaxRuleDeleteAllButton({ rulesCount }: Props) {
                   desta empresa serão removidas de uma vez.
                 </p>
                 <p>
-                  Produtos que ainda tenham regra fiscal vinculada impedem a exclusão — altere ou remova a
-                  regra nos produtos antes.
+                  Produtos com regra fiscal vinculada terão o vínculo removido automaticamente. Reimporte ou
+                  reatribua regras nos produtos depois, se necessário.
                 </p>
               </div>
             </AlertDialogDescription>
@@ -67,7 +67,8 @@ export function TaxRuleDeleteAllButton({ rulesCount }: Props) {
             <AlertDialogAction
               disabled={pending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() =>
+              onClick={(e) => {
+                e.preventDefault();
                 startTransition(async () => {
                   const result = await excluirTodasRegrasTributariasAction();
                   if (result.error) {
@@ -76,8 +77,8 @@ export function TaxRuleDeleteAllButton({ rulesCount }: Props) {
                   }
                   setOpen(false);
                   router.refresh();
-                })
-              }
+                });
+              }}
             >
               {pending ? "Excluindo…" : "Excluir todas"}
             </AlertDialogAction>

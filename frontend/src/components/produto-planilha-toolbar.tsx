@@ -87,9 +87,6 @@ export function ProdutoPlanilhaToolbar({ products }: Props) {
           <Upload className="size-3.5" />
           {pending ? "Importando…" : "Importar CSV"}
         </Button>
-        <span className="text-[12px] text-muted-foreground ml-auto hidden sm:inline">
-          CSV com <code className="font-mono">;</code> — cria ou atualiza por SKU
-        </span>
       </div>
 
       {result && <ImportResultBanner result={result} onDismiss={() => setResult(null)} />}

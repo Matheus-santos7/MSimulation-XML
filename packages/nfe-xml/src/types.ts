@@ -84,7 +84,6 @@ export type ProductXmlInput = ProductPricesDto & {
   ncm?: string;
   cest?: string;
   exTipi?: string;
-  cfop?: string;
   origem?: number;
   unidade?: string;
 };

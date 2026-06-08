@@ -18,7 +18,7 @@ export default async function ProdutosPage() {
     <div className="p-6 space-y-4">
       <PageHeader
         title="Catálogo de Produtos"
-        subtitle="Itens NF-e — bloco &lt;prod&gt; (cProd, NCM, CEST, CFOP, preço…)"
+        subtitle="Itens NF-e — bloco &lt;prod&gt; (cProd, NCM, CEST, preço…)"
         actions={
           <Button asChild>
             <Link href="/produtos/novo">Novo produto</Link>

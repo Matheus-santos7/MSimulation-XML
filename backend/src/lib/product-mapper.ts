@@ -9,7 +9,6 @@ export type ProductDto = {
   ncm: string;
   cest: string;
   exTipi?: string;
-  cfop: string;
   origem: number;
   unidade: string;
   preco: number;
@@ -28,7 +27,6 @@ export function mapProduct(row: Product): ProductDto {
     ncm: row.ncm,
     cest: row.cest,
     exTipi: row.exTipi ?? undefined,
-    cfop: row.cfop,
     origem: row.origem,
     unidade: row.unidade,
     preco: Number(row.preco),

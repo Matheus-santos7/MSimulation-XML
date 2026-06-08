@@ -271,7 +271,6 @@ model Product {
   ncm       String   @map("ncm")
   cest      String   @map("cest")
   exTipi    String?  @map("ex_tipi") @db.VarChar(3)
-  cfop      String   @default("5102") @map("cfop") @db.VarChar(4)
   origem    Int      @map("origem")
   unidade   String   @map("unidade")
   preco           Decimal  @map("preco") @db.Decimal(15, 8)

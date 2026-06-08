@@ -29,7 +29,7 @@ export async function emitirNotaVenda(
       codigo: pedido.product.sku ?? pedido.product.id,
       descricao: pedido.product.nome ?? "Mercadoria",
       ncm: pedido.product.ncm,
-      cfop: saleTaxRule.cfop ?? pedido.product.cfop,
+      cfop: saleTaxRule.cfop ?? "",
       unidade: pedido.product.unidade ?? "UN",
       cest: pedido.product.cest,
       ean: pedido.product.ean ?? undefined,
@@ -50,7 +50,7 @@ export async function emitirNotaVenda(
     customerType === "non_taxpayer"
       ? "Venda de mercadoria para consumidor final"
       : "Venda de mercadorias";
-  const cfop = saleTaxRule.cfop ?? pedido.product.cfop;
+  const cfop = saleTaxRule.cfop ?? "";
 
   const vendaRow = await tx.nFe.create({
     data: {

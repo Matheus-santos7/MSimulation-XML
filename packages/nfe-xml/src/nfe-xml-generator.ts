@@ -647,7 +647,7 @@ function buildVendaNFeXML(
   const cEAN = formatEanForXml(product?.ean);
   const xProd = product?.nome ?? nfe.natOp;
   const ncm = product?.ncm ?? nfe.ncm;
-  const cfop = product?.cfop ?? nfe.cfop;
+  const cfop = nfe.cfop;
   const uCom = product?.unidade ?? "UN";
   const vUnCom = productUnitPriceForNfe(product, nfe);
   const vProd = nfe.valor;

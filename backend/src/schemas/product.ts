@@ -22,12 +22,6 @@ const eanField = z.preprocess(
     .transform((v) => (v ? digitsOnly(v) : undefined)),
 );
 
-const cfopField = z
-  .string()
-  .trim()
-  .transform((v) => digitsOnly(v))
-  .refine((v) => v.length === 4, "CFOP deve ter 4 dígitos");
-
 const ncmField = z
   .string()
   .trim()
@@ -63,7 +57,6 @@ export const productCreateBody = z.object({
   ncm: ncmField,
   cest: cestField,
   exTipi: exTipiField,
-  cfop: cfopField.default("5102"),
   origem: z.coerce.number().int().min(0).max(8),
   unidade: z.string().trim().min(1, "Unidade obrigatória").max(6),
   preco: z.coerce.number().positive("Preço de venda deve ser maior que zero"),

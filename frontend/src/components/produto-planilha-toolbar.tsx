@@ -7,9 +7,9 @@ import { importProdutosPlanilhaAction, type ProdutoPlanilhaImportResult } from "
 import { Button } from "@/components/ui/button";
 import type { ProductDto } from "@/lib/fiscal-types";
 import {
-  buildProdutoPlanilhaCsv,
-  buildProdutoPlanilhaTemplateCsv,
-  downloadCsvFile,
+  buildProdutoPlanilhaTemplateXlsx,
+  buildProdutoPlanilhaXlsx,
+  downloadXlsxFile,
 } from "@/lib/produto-planilha";
 
 type Props = {
@@ -25,11 +25,11 @@ export function ProdutoPlanilhaToolbar({ products }: Props) {
   const disabled = pending;
 
   function handleDownloadTemplate() {
-    downloadCsvFile("produtos-modelo.csv", buildProdutoPlanilhaTemplateCsv());
+    downloadXlsxFile("produtos-modelo.xlsx", buildProdutoPlanilhaTemplateXlsx());
   }
 
   function handleDownloadCatalog() {
-    downloadCsvFile("produtos-catalogo.csv", buildProdutoPlanilhaCsv(products));
+    downloadXlsxFile("produtos-catalogo.xlsx", buildProdutoPlanilhaXlsx(products));
   }
 
   function handleImport(file: File) {
@@ -69,7 +69,7 @@ export function ProdutoPlanilhaToolbar({ products }: Props) {
         <input
           ref={inputRef}
           type="file"
-          accept=".csv,text/csv"
+          accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0];
@@ -85,7 +85,7 @@ export function ProdutoPlanilhaToolbar({ products }: Props) {
           onClick={() => inputRef.current?.click()}
         >
           <Upload className="size-3.5" />
-          {pending ? "Importando…" : "Importar CSV"}
+          {pending ? "Importando…" : "Importar planilha"}
         </Button>
       </div>
 

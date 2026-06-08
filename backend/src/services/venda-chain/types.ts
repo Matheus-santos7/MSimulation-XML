@@ -24,7 +24,6 @@ export type PedidoForEmit = {
   destIndIeDest: number;
   product: {
     id: string;
-    cfop: string;
     ncm: string;
     preco: { toString(): string };
     precoCusto: { toString(): string };

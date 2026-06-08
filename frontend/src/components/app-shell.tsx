@@ -26,15 +26,15 @@ import type { TenantDto } from "@/lib/fiscal-types";
 const NAV_OPERACIONAL = [
   { href: "/empresas", label: "Empresas", icon: Building2 },
   { href: "/produtos", label: "Produtos", icon: Package },
+  { href: "/operacoes", label: "Remessas", icon: PackageCheck },
   { href: "/pedidos", label: "Pedidos", icon: ShoppingCart },
-  { href: "/operacoes", label: "Operações", icon: PackageCheck },
   { href: "/nfe", label: "NF-e Emitidas", icon: FileText },
   { href: "/cte", label: "CT-e Transportes", icon: Truck },
-  { href: "/unidades-logisticas", label: "Unidades ML", icon: Warehouse },
 ] as const;
 
 const NAV_CONFIG = [
   { href: "/usuarios", label: "Usuários", icon: Users },
+  { href: "/unidades-logisticas", label: "Unidades ML", icon: Warehouse },
   { href: "/configuracoes-fiscais", label: "Config. fiscais", icon: Settings2 },
   { href: "/regras", label: "Regras Tributárias", icon: Scale },
   { href: "/auditoria", label: "Auditoria", icon: ShieldCheck },

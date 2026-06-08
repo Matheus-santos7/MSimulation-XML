@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { ProdutoFormValues } from "@/lib/produto-form";
+import { EX_TIPI_FIELD_HELP } from "@/lib/produto-planilha";
 import type { ProductDto, TaxRuleCatalogEntry } from "@/lib/fiscal-types";
 
 const ORIGEM_OPTIONS = [
@@ -37,7 +39,6 @@ function toFormState(product?: ProductDto, draft?: ProdutoFormValues): ProdutoFo
     ncm: product?.ncm ?? "",
     cest: product?.cest ?? "",
     exTipi: product?.exTipi ?? "",
-    cfop: product?.cfop ?? "5102",
     origem: String(product?.origem ?? 0),
     unidade: product?.unidade ?? "UN",
     preco: product != null ? String(product.preco) : "",
@@ -104,10 +105,16 @@ export function ProductFormFields({
           <Field id={`${idPrefix}-ncm`} label="NCM" name="ncm" value={form.ncm} onChange={set} required mono error={err("ncm")} />
           <Field id={`${idPrefix}-cest`} label="CEST" name="cest" value={form.cest} onChange={set} required mono error={err("cest")} />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <Field id={`${idPrefix}-exTipi`} label="EXTIPI" name="exTipi" value={form.exTipi} onChange={set} mono error={err("exTipi")} />
-          <Field id={`${idPrefix}-cfop`} label="CFOP padrão" name="cfop" value={form.cfop} onChange={set} required mono error={err("cfop")} />
-        </div>
+        <Field
+          id={`${idPrefix}-exTipi`}
+          label="EXTIPI"
+          name="exTipi"
+          value={form.exTipi}
+          onChange={set}
+          mono
+          error={err("exTipi")}
+          labelHelp={EX_TIPI_FIELD_HELP}
+        />
         <SelectField
           id={`${idPrefix}-origem`}
           label="Origem (ICMS)"
@@ -195,6 +202,26 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+function FieldLabelHelp({ text, id }: { text: string; id: string }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold leading-none text-white hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+          aria-label="Ajuda sobre o campo"
+          aria-describedby={id}
+        >
+          ?
+        </button>
+      </PopoverTrigger>
+      <PopoverContent id={id} align="start" className="w-72 text-sm leading-relaxed">
+        {text}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function Field({
   id,
   label,
@@ -205,6 +232,7 @@ function Field({
   mono,
   error,
   hint,
+  labelHelp,
   type = "text",
   step,
   min,
@@ -218,13 +246,17 @@ function Field({
   mono?: boolean;
   error?: string;
   hint?: string;
+  labelHelp?: string;
   type?: string;
   step?: string;
   min?: string;
 }) {
   return (
     <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
+      <div className="flex items-center gap-1.5">
+        <Label htmlFor={id}>{label}</Label>
+        {labelHelp ? <FieldLabelHelp text={labelHelp} id={`${id}-help`} /> : null}
+      </div>
       <Input
         id={id}
         name={name}

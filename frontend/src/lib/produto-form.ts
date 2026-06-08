@@ -7,7 +7,6 @@ export type ProdutoFormValues = {
   ncm: string;
   cest: string;
   exTipi: string;
-  cfop: string;
   origem: string;
   unidade: string;
   preco: string;
@@ -31,7 +30,6 @@ export function inputToFormValues(input: ProductInput): ProdutoFormValues {
     ncm: input.ncm,
     cest: input.cest,
     exTipi: input.exTipi ?? "",
-    cfop: input.cfop,
     origem: String(input.origem),
     unidade: input.unidade,
     preco: String(input.preco),
@@ -48,7 +46,6 @@ export function productToFormValues(p: {
   ncm: string;
   cest: string;
   exTipi?: string;
-  cfop: string;
   origem: number;
   unidade: string;
   preco: number;
@@ -63,7 +60,6 @@ export function productToFormValues(p: {
     ncm: p.ncm,
     cest: p.cest,
     exTipi: p.exTipi,
-    cfop: p.cfop,
     origem: p.origem,
     unidade: p.unidade,
     preco: p.preco,
@@ -92,7 +88,6 @@ export function parseProductForm(formData: FormData): ProductInput {
     ncm: String(formData.get("ncm") ?? "").replace(/\D/g, ""),
     cest: String(formData.get("cest") ?? "").replace(/\D/g, ""),
     exTipi: opt("exTipi"),
-    cfop: String(formData.get("cfop") ?? "5102").replace(/\D/g, ""),
     origem: Number(formData.get("origem") ?? 0),
     unidade: String(formData.get("unidade") ?? "UN").trim(),
     preco: Number(String(formData.get("preco") ?? "0").replace(",", ".")),

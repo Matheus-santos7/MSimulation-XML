@@ -15,4 +15,4 @@ export function isDatabaseUnavailableError(e: unknown): boolean {
 }
 
 export const DATABASE_UNAVAILABLE_MESSAGE =
-  "Banco de dados indisponível. Verifique se o PostgreSQL está em execução (pnpm docker:up).";
+  "Banco de dados indisponível";

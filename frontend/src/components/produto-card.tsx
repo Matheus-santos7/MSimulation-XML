@@ -91,9 +91,6 @@ export function ProdutoCard({
             <span className="text-muted-foreground">CEST:</span> {product.cest}
           </div>
           <div>
-            <span className="text-muted-foreground">CFOP:</span> {product.cfop}
-          </div>
-          <div>
             <span className="text-muted-foreground">Orig.:</span> {product.origem}
           </div>
           {product.ean && (

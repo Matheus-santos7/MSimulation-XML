@@ -1,4 +1,8 @@
+import * as XLSX from "xlsx";
 import type { ProductDto, ProductInput } from "@/lib/fiscal-types";
+
+export const EX_TIPI_FIELD_HELP =
+  "Código de exceção vinculado ao NCM para variação de IPI. Preencha apenas se o seu produto possuir essa regra específica. Caso contrário, deixe em branco.";
 
 /** Colunas da planilha padrão (CSV compatível com Excel BR — separador `;`). */
 export const PRODUTO_PLANILHA_COLUMNS = [
@@ -8,7 +12,6 @@ export const PRODUTO_PLANILHA_COLUMNS = [
   "ncm",
   "cest",
   "ex_tipi",
-  "cfop",
   "origem",
   "unidade",
   "preco",
@@ -35,7 +38,6 @@ const HEADER_ALIASES: Record<string, ProdutoPlanilhaColumn> = {
   cest: "cest",
   ex_tipi: "ex_tipi",
   extipi: "ex_tipi",
-  cfop: "cfop",
   origem: "origem",
   orig: "origem",
   unidade: "unidade",
@@ -66,8 +68,7 @@ const EXAMPLE_ROW: Record<ProdutoPlanilhaColumn, string> = {
   nome: "Fogão 4 Bocas Atlas Atenas Glass",
   ncm: "73211100",
   cest: "2100100",
-  ex_tipi: "01",
-  cfop: "6107",
+  ex_tipi: "",
   origem: "0",
   unidade: "UNID",
   preco: "846,00",
@@ -182,8 +183,6 @@ function rowToProductInput(row: Record<ProdutoPlanilhaColumn, string>): ProductI
   const sku = cell(row, "sku");
   const ncm = cell(row, "ncm").replace(/\D/g, "");
   const cest = cell(row, "cest").replace(/\D/g, "");
-  const cfopRaw = cell(row, "cfop").replace(/\D/g, "");
-  const cfop = cfopRaw.length === 4 ? cfopRaw : "5102";
   const preco = parsePreco(cell(row, "preco"));
   const precoCusto = parsePreco(cell(row, "preco_custo"));
   const origemRaw = cell(row, "origem");
@@ -227,7 +226,6 @@ function rowToProductInput(row: Record<ProdutoPlanilhaColumn, string>): ProductI
     ncm,
     cest,
     exTipi,
-    cfop,
     origem,
     unidade,
     preco,
@@ -237,15 +235,7 @@ function rowToProductInput(row: Record<ProdutoPlanilhaColumn, string>): ProductI
   };
 }
 
-export function parseProdutoPlanilhaCsv(text: string): ProdutoPlanilhaParseResult {
-  const trimmed = text.replace(/^\uFEFF/, "").trim();
-  if (!trimmed) {
-    return { rows: [], errors: [{ line: 1, message: "Arquivo vazio" }] };
-  }
-
-  const firstLine = trimmed.split(/\r?\n/)[0] ?? "";
-  const delimiter = detectDelimiter(firstLine);
-  const matrix = parseCsvLines(trimmed, delimiter);
+function parseProdutoPlanilhaMatrix(matrix: string[][]): ProdutoPlanilhaParseResult {
   if (matrix.length === 0) {
     return { rows: [], errors: [{ line: 1, message: "Nenhuma linha encontrada" }] };
   }
@@ -299,6 +289,34 @@ export function parseProdutoPlanilhaCsv(text: string): ProdutoPlanilhaParseResul
   return { rows: dedupeRowsBySku(rows, rowLines, errors), errors };
 }
 
+export function parseProdutoPlanilhaCsv(text: string): ProdutoPlanilhaParseResult {
+  const trimmed = text.replace(/^\uFEFF/, "").trim();
+  if (!trimmed) {
+    return { rows: [], errors: [{ line: 1, message: "Arquivo vazio" }] };
+  }
+
+  const firstLine = trimmed.split(/\r?\n/)[0] ?? "";
+  const delimiter = detectDelimiter(firstLine);
+  const matrix = parseCsvLines(trimmed, delimiter);
+  return parseProdutoPlanilhaMatrix(matrix);
+}
+
+export function parseProdutoPlanilhaXlsx(buffer: ArrayBuffer): ProdutoPlanilhaParseResult {
+  const wb = XLSX.read(buffer, { type: "array" });
+  const sheetName = wb.SheetNames[0];
+  if (!sheetName) return { rows: [], errors: [{ line: 1, message: "Planilha vazia" }] };
+
+  const matrix = XLSX.utils
+    .sheet_to_json<(string | number | null)[]>(wb.Sheets[sheetName]!, {
+      header: 1,
+      raw: false,
+      defval: "",
+    })
+    .map((row) => row.map((cell) => String(cell ?? "")));
+
+  return parseProdutoPlanilhaMatrix(matrix);
+}
+
 function dedupeRowsBySku(
   rows: ProductInput[],
   rowLines: number[],
@@ -339,7 +357,6 @@ function productToRow(p: ProductDto): string[] {
     p.ncm,
     p.cest,
     p.exTipi ?? "",
-    p.cfop,
     String(p.origem),
     p.unidade,
     formatPrecoBr(p.preco),
@@ -365,8 +382,55 @@ export function buildProdutoPlanilhaTemplateCsv(): string {
   return buildProdutoPlanilhaCsv([], true);
 }
 
+function attachExTipiHeaderComment(ws: XLSX.WorkSheet): void {
+  const exTipiColIndex = PRODUTO_PLANILHA_COLUMNS.indexOf("ex_tipi");
+  if (exTipiColIndex < 0) return;
+
+  const cellRef = XLSX.utils.encode_cell({ r: 0, c: exTipiColIndex });
+  const cell = ws[cellRef];
+  if (!cell) return;
+
+  cell.c = [{ a: "MS Edit", t: EX_TIPI_FIELD_HELP }];
+}
+
+function buildProdutoPlanilhaMatrix(products: ProductDto[], includeExample = false): string[][] {
+  const matrix: string[][] = [PRODUTO_PLANILHA_COLUMNS.slice()];
+  if (includeExample) {
+    matrix.push(PRODUTO_PLANILHA_COLUMNS.map((column) => EXAMPLE_ROW[column]));
+  }
+  for (const product of products) {
+    matrix.push(productToRow(product));
+  }
+  return matrix;
+}
+
+export function buildProdutoPlanilhaXlsx(products: ProductDto[], includeExample = false): ArrayBuffer {
+  const ws = XLSX.utils.aoa_to_sheet(buildProdutoPlanilhaMatrix(products, includeExample));
+  attachExTipiHeaderComment(ws);
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Produtos");
+  return XLSX.write(wb, { type: "array", bookType: "xlsx" });
+}
+
+export function buildProdutoPlanilhaTemplateXlsx(): ArrayBuffer {
+  return buildProdutoPlanilhaXlsx([], true);
+}
+
 export function downloadCsvFile(filename: string, content: string): void {
   const blob = new Blob([content], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export function downloadXlsxFile(filename: string, content: ArrayBuffer): void {
+  const blob = new Blob([content], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

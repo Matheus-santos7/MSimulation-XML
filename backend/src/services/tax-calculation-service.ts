@@ -54,7 +54,6 @@ export type ProdutoLinhaFiscal = {
   sku?: string | null;
   nome?: string | null;
   ncm: string;
-  cfop: string;
   cest?: string | null;
   ean?: string | null;
   exTipi?: string | null;

@@ -9,9 +9,10 @@ import {
   type ProdutoFormState,
 } from "@/lib/produto-form";
 import { ApiValidationError, bulkUpsertProducts, createProduct, deleteProduct, updateProduct } from "@/lib/fiscal-api";
-import { parseProdutoPlanilhaCsv } from "@/lib/produto-planilha";
+import { parseProdutoPlanilhaCsv, parseProdutoPlanilhaXlsx } from "@/lib/produto-planilha";
+import { validateSpreadsheetFile } from "@/lib/spreadsheet-upload";
 
-const MAX_CSV_BYTES = 15 * 1024 * 1024;
+const MAX_PLANILHA_BYTES = 15 * 1024 * 1024;
 
 function failureState(e: unknown, values: ReturnType<typeof inputToFormValues>): ProdutoFormState {
   const fieldErrors = e instanceof ApiValidationError ? e.fieldErrors : undefined;
@@ -81,17 +82,36 @@ export type ProdutoPlanilhaImportResult = {
 export async function importProdutosPlanilhaAction(formData: FormData): Promise<ProdutoPlanilhaImportResult> {
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
-    return { error: "Selecione um arquivo CSV (.csv)" };
+    return { error: "Selecione um arquivo .xlsx ou .csv" };
   }
-  if (file.size > MAX_CSV_BYTES) {
+  if (file.size > MAX_PLANILHA_BYTES) {
     return { error: "Arquivo excede o limite de 15 MB" };
   }
-  if (!file.name.toLowerCase().endsWith(".csv")) {
-    return { error: "Formato inválido. Envie um arquivo .csv" };
+
+  const fileName = file.name.toLowerCase();
+  const isCsv = fileName.endsWith(".csv");
+  const isXlsx = fileName.endsWith(".xlsx");
+  if (!isCsv && !isXlsx) {
+    return { error: "Formato inválido. Envie um arquivo .xlsx ou .csv" };
   }
 
-  const text = await file.text();
-  const { rows, errors: parseErrors } = parseProdutoPlanilhaCsv(text);
+  let rows: Awaited<ReturnType<typeof parseProdutoPlanilhaCsv>>["rows"] = [];
+  let parseErrors: Awaited<ReturnType<typeof parseProdutoPlanilhaCsv>>["errors"] = [];
+
+  if (isXlsx) {
+    const validation = await validateSpreadsheetFile(file, { maxBytes: MAX_PLANILHA_BYTES });
+    if (!validation.ok) {
+      return { error: validation.error };
+    }
+
+    const parsed = parseProdutoPlanilhaXlsx(await file.arrayBuffer());
+    rows = parsed.rows;
+    parseErrors = parsed.errors;
+  } else {
+    const parsed = parseProdutoPlanilhaCsv(await file.text());
+    rows = parsed.rows;
+    parseErrors = parsed.errors;
+  }
 
   if (rows.length === 0) {
     return {

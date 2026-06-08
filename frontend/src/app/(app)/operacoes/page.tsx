@@ -14,8 +14,8 @@ export default async function OperacoesPage() {
   return (
     <div className="p-6 space-y-4">
       <PageHeader
-        title="Operações"
-        subtitle="Remessa física, transferências entre filiais, avanço de CD e remessas simbólicas"
+        title="Remessas"
+        subtitle="Remessas físicas, transferências entre filiais, avanço de CD e remessas simbólicas"
       />
 
       <OperacoesTabs products={products} unidades={unidades} />

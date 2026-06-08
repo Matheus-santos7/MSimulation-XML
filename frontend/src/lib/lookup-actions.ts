@@ -2,6 +2,7 @@
 
 import { getAccessToken } from "@/lib/auth/session";
 import type { CepLookupDto, CnpjLookupDto } from "@/lib/fiscal-types";
+import { toUserFacingError } from "@/lib/user-facing-error";
 
 function apiBase(): string {
   return (process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3001").replace(/\/$/, "");
@@ -36,7 +37,7 @@ async function getAuthenticatedJson<T>(href: string): Promise<T> {
   }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    let error = res.statusText || `Erro ${res.status}`;
+    let error = res.statusText;
     if (text) {
       try {
         const parsed = JSON.parse(text) as { error?: string; message?: string };
@@ -45,7 +46,7 @@ async function getAuthenticatedJson<T>(href: string): Promise<T> {
         error = text;
       }
     }
-    throw new Error(error);
+    throw new Error(toUserFacingError(error, { status: res.status }));
   }
   return res.json() as Promise<T>;
 }

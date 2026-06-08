@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { AuthApiError, disable2faApi, enable2faApi, setup2faApi } from "@/lib/auth/api";
 import { resolveAccessToken } from "@/lib/auth/session";
 import type { SecurityActionState } from "./types";
+import { toUserFacingError } from "@/lib/user-facing-error";
 
 async function requireAccessToken(): Promise<string> {
   const token = await resolveAccessToken();
@@ -60,7 +61,15 @@ export async function disable2faAction(
 
 function formatError(e: unknown): SecurityActionState {
   if (e instanceof AuthApiError) {
-    return { error: e.message };
+    return {
+      error: toUserFacingError(e.message, {
+        fallback: "Não foi possível atualizar a segurança da conta. Tente novamente.",
+      }),
+    };
   }
-  return { error: e instanceof Error ? e.message : "Falha na operação" };
+  return {
+    error: toUserFacingError(e instanceof Error ? e.message : undefined, {
+      fallback: "Não foi possível atualizar a segurança da conta. Tente novamente.",
+    }),
+  };
 }

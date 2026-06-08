@@ -174,8 +174,8 @@ export function ProductFormFields({
             error={err("estoque")}
             hint={
               product
-                ? "Aumentar gera remessa pela diferença."
-                : "Inicial no depósito ML — gera remessa ao salvar."
+                ? "Saldo para emitir NF-e de remessa."
+                : "Saldo inicial para emitir NF-e de remessa."
             }
           />
         </div>

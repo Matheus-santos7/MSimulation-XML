@@ -318,5 +318,7 @@ function handleAuthError(e: unknown, reply: { status: (code: number) => { send: 
   if (isDatabaseUnavailableError(e)) {
     return reply.status(503).send({ error: DATABASE_UNAVAILABLE_MESSAGE });
   }
-  throw e;
+  return reply.status(500).send({
+    error: "Não foi possível completar a operação. Tente novamente em instantes.",
+  });
 }

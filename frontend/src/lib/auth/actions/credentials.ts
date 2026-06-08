@@ -21,6 +21,7 @@ import {
   setTwoFactorPending,
 } from "@/lib/auth/session";
 import { rethrowNavigationError } from "@/lib/auth/navigation";
+import { toUserFacingError } from "@/lib/user-facing-error";
 import type {
   ForgotPasswordState,
   LoginState,
@@ -163,7 +164,16 @@ export async function logoutAction(): Promise<void> {
 function formatAuthError(e: unknown): { error: string; fieldErrors?: Record<string, string[]> } {
   rethrowNavigationError(e);
   if (e instanceof AuthApiError) {
-    return { error: e.message, fieldErrors: e.fieldErrors };
+    return {
+      error: toUserFacingError(e.message, {
+        fallback: "Falha na autenticação. Tente novamente em instantes.",
+      }),
+      fieldErrors: e.fieldErrors,
+    };
   }
-  return { error: e instanceof Error ? e.message : "Falha na autenticação" };
+  return {
+    error: toUserFacingError(e instanceof Error ? e.message : undefined, {
+      fallback: "Falha na autenticação. Tente novamente em instantes.",
+    }),
+  };
 }

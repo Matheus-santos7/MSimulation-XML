@@ -25,6 +25,7 @@ import type {
   FiscalEmitterSettingsPatch,
   FiscalEmitterSettingsView,
 } from "./fiscal-emitter-settings-types";
+import { toUserFacingError } from "./user-facing-error";
 
 function apiBase(): string {
   return (process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3001").replace(/\/$/, "");
@@ -57,7 +58,9 @@ type ApiErrorPayload = {
 
 async function readApiErrorPayload(res: Response): Promise<ApiErrorPayload> {
   const text = await res.text().catch(() => "");
-  if (!text) return { error: res.statusText || `Erro ${res.status}` };
+  if (!text) {
+    return { error: toUserFacingError(res.statusText, { status: res.status }) };
+  }
   try {
     const parsed = JSON.parse(text) as {
       error?: string;
@@ -68,9 +71,12 @@ async function readApiErrorPayload(res: Response): Promise<ApiErrorPayload> {
       (typeof parsed.error === "string" && parsed.error) ||
       (typeof parsed.message === "string" && parsed.message) ||
       text;
-    return { error, details: parsed.details };
+    return {
+      error: toUserFacingError(error, { status: res.status }),
+      details: parsed.details,
+    };
   } catch {
-    return { error: text };
+    return { error: toUserFacingError(text, { status: res.status }) };
   }
 }
 

@@ -16,7 +16,7 @@ export default async function DashboardPage() {
   return (
     <div className="p-6 space-y-6">
       <div className="grid grid-cols-3 gap-4">
-        <KPI label="NF-e (tenant)" value={String(nfes.length)} hint="Notas retornadas pela API" hintTone="success" />
+        <KPI label="Notas emitidas" value={String(nfes.length)} hint="Notas emitidas" hintTone="success" />
         <KPI
           label="Cenários fiscais"
           value={String(timeline.reduce((acc, g) => acc + g.cenarios.length, 0))}

@@ -166,6 +166,18 @@ function cell(row: Record<ProdutoPlanilhaColumn, string>, col: ProdutoPlanilhaCo
   return row[col]?.trim() ?? "";
 }
 
+/** EXTIPI NF-e: vazio ou 2–3 dígitos. Aceita `0`, `1`→`01` e remove formatação do Excel. */
+function normalizeExTipi(raw: string): string | undefined | null {
+  const trimmed = raw.trim();
+  if (!trimmed || /^(-|n\/a|na|null)$/i.test(trimmed)) return undefined;
+
+  const digits = trimmed.replace(/\D/g, "");
+  if (!digits || /^0+$/.test(digits)) return undefined;
+  if (digits.length === 1) return digits.padStart(2, "0");
+  if (digits.length === 2 || digits.length === 3) return digits;
+  return null;
+}
+
 function rowToProductInput(row: Record<ProdutoPlanilhaColumn, string>): ProductInput | string {
   const sku = cell(row, "sku");
   const nome = cell(row, "nome");
@@ -191,9 +203,8 @@ function rowToProductInput(row: Record<ProdutoPlanilhaColumn, string>): ProductI
   const ean = eanRaw.length > 0 ? eanRaw : undefined;
   if (ean && ![8, 12, 13, 14].includes(ean.length)) return "EAN/GTIN inválido";
 
-  const exTipiRaw = cell(row, "ex_tipi");
-  const exTipi = exTipiRaw.length > 0 ? exTipiRaw : undefined;
-  if (exTipi && !/^\d{2,3}$/.test(exTipi)) return "EXTIPI inválido";
+  const exTipi = normalizeExTipi(cell(row, "ex_tipi"));
+  if (exTipi === null) return "EXTIPI inválido (use vazio ou 2–3 dígitos, ex.: 01)";
 
   const unidade = cell(row, "unidade") || "UN";
 

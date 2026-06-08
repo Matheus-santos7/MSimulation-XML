@@ -16,6 +16,6 @@ export const BRAND = {
   tagline: "Fluxo logístico e fiscal fulfullment",
   /** Subtítulo para login e onboarding. */
   description:
-    "Simule, inspecione e analise NF-e, CT-e e cenários de documentais em operações de depósito temporário.",
+    "Simule, NF-e, Eventos fiscais e CT-e e monte cenários para operações fulfullment.",
   author: "Matheus Santos",
 } as const;

@@ -1,4 +1,5 @@
 import type { TenantDto, TenantInput } from "@/lib/fiscal-types";
+import { toUserFacingError } from "@/lib/user-facing-error";
 
 function apiBase(): string {
   return (process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3001").replace(/\/$/, "");
@@ -60,15 +61,30 @@ type ApiErrorPayload = {
 
 async function readApiErrorPayload(res: Response): Promise<ApiErrorPayload> {
   const text = await res.text().catch(() => "");
-  if (!text) return { error: res.statusText || `Erro ${res.status}` };
+  if (!text) {
+    return {
+      error: toUserFacingError(res.statusText, {
+        status: res.status,
+        fallback: "Falha na autenticação. Tente novamente em instantes.",
+      }),
+    };
+  }
   try {
     const parsed = JSON.parse(text) as { error?: string; message?: string; details?: Record<string, string[]> };
     return {
-      error: parsed.error ?? parsed.message ?? text,
+      error: toUserFacingError(parsed.error ?? parsed.message ?? text, {
+        status: res.status,
+        fallback: "Falha na autenticação. Tente novamente em instantes.",
+      }),
       details: parsed.details,
     };
   } catch {
-    return { error: text };
+    return {
+      error: toUserFacingError(text, {
+        status: res.status,
+        fallback: "Falha na autenticação. Tente novamente em instantes.",
+      }),
+    };
   }
 }
 

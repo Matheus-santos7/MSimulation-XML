@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Eye, EyeOff } from "lucide-react";
 import { Suspense, useState, useActionState } from "react";
 import { loginAction, registerAction, type LoginState, type RegisterState } from "@/lib/auth/actions";
 import { SessionExpiredBanner } from "@/components/auth/session-expired-banner";
@@ -93,16 +94,13 @@ export function LoginPanel() {
         </form>
       )}
 
-      <ol className="text-xs text-muted-foreground space-y-1 border-t border-border pt-4">
-        <li>1. Entrar ou criar conta</li>
-        <li>2. Cadastrar empresa (emitente)</li>
-        <li>3. Utilizar o sistema</li>
-      </ol>
+
     </div>
   );
 }
 
 function AuthFields({ mode }: { mode: Mode }) {
+  const [showPassword, setShowPassword] = useState(false);
   const emailId = mode === "login" ? "email" : "reg-email";
   const passwordId = mode === "login" ? "password" : "reg-password";
 
@@ -125,16 +123,26 @@ function AuthFields({ mode }: { mode: Mode }) {
         <label htmlFor={passwordId} className="text-sm font-medium">
           Senha
         </label>
-        <input
-          id={passwordId}
-          name="password"
-          type="password"
-          autoComplete={mode === "login" ? "current-password" : "new-password"}
-          required
-          minLength={mode === "register" ? 8 : 1}
-          maxLength={128}
-          className="w-full rounded-md border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
-        />
+        <div className="relative">
+          <input
+            id={passwordId}
+            name="password"
+            type={showPassword ? "text" : "password"}
+            autoComplete={mode === "login" ? "current-password" : "new-password"}
+            required
+            minLength={mode === "register" ? 8 : 1}
+            maxLength={128}
+            className="w-full rounded-md border border-border bg-background px-3 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((visible) => !visible)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label={showPassword ? "Ocultar senha" : "Exibir senha"}
+          >
+            {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+          </button>
+        </div>
         {mode === "login" ? (
           <p className="text-right">
             <Link

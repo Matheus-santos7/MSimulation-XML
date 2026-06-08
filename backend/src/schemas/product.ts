@@ -46,6 +46,13 @@ const exTipiField = z.preprocess(
     .string()
     .trim()
     .optional()
+    .transform((v) => {
+      if (!v || /^(-|n\/a|na|null)$/i.test(v)) return undefined;
+      const digits = digitsOnly(v);
+      if (!digits || /^0+$/.test(digits)) return undefined;
+      if (digits.length === 1) return digits.padStart(2, "0");
+      return digits;
+    })
     .refine((v) => !v || /^\d{2,3}$/.test(v), "EXTIPI deve ter 2 ou 3 dígitos"),
 );
 

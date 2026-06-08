@@ -1,0 +1,48 @@
+# Blueprint Render — API Fastify + PostgreSQL
+# Docs: https://render.com/docs/blueprint-spec
+#
+# Após o deploy do frontend na Vercel, atualize no dashboard Render:
+#   CORS_ORIGINS=https://seu-app.vercel.app
+#   APP_PUBLIC_URL=https://seu-app.vercel.app
+
+services:
+  - type: web
+    name: msimulation-xml-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3001"
+      - key: HOST
+        value: 0.0.0.0
+      - key: TRUST_PROXY
+        value: "true"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: msimulation-xml-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PASSWORD_PEPPER
+        generateValue: true
+      - key: CORS_ORIGINS
+        sync: false
+      - key: APP_PUBLIC_URL
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        sync: false
+      - key: TURNSTILE_SECRET_KEY
+        sync: false
+
+databases:
+  - name: msimulation-xml-db
+    plan: basic-256mb
+    databaseName: msimulation_xml
+    user: msimulation

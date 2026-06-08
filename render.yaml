@@ -1,13 +1,16 @@
 # Blueprint Render — API Fastify + PostgreSQL
 # Docs: https://render.com/docs/blueprint-spec
 #
-# URLs do frontend em produção (Vercel):
-#   https://msimulation-xml.vercel.app
+# Deploy automático: push na branch `main` dispara build + deploy (autoDeployTrigger).
+# Frontend em produção: https://msimulation-xml.vercel.app
 
 services:
   - type: web
     name: msimulation-xml-api
     runtime: docker
+    repo: https://github.com/Matheus-santos7/MSimulation-XML
+    branch: main
+    autoDeployTrigger: commit
     dockerfilePath: ./Dockerfile
     dockerContext: .
     plan: starter

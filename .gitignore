@@ -125,3 +125,4 @@ Desktop.ini
 # Locks de skills instalados localmente
 **/.skill-lock.json
 **/.skill-lock.json.backup
+.vercel

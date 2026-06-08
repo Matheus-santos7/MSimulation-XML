@@ -15,6 +15,12 @@
   <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript" alt="TypeScript" /></a>
 </p>
 
+<p align="center">
+  <a href="https://msimulation-xml.vercel.app"><strong>App em produção</strong></a>
+  ·
+  <a href="https://msimulation-xml-api.onrender.com/api/health">API health</a>
+</p>
+
 **MSimulation XML** é um cockpit fiscal e logístico para simular e inspecionar emissão de **NF-e (modelo 55, v4.00)** e **CT-e (modelo 57)** em operações de **fulfillment** — o mesmo desenho operacional usado por marketplaces com depósito temporário (full), cruzamento **origem × destino (UF)** e cadeias documentais encadeadas por `refNFe`.
 
 > **Aviso legal:** simulador educacional e de arquitetura. XMLs gerados usam homologação (`tpAmb=2`), assinaturas fictícias e **não possuem validade** perante a SEFAZ. Não utilize em produção fiscal real sem certificação, transmissão e assessoria especializada.
@@ -33,6 +39,7 @@
 - [Interface web](#interface-web)
 - [Identidade visual](#identidade-visual)
 - [Como rodar localmente](#como-rodar-localmente)
+- [Deploy em produção](#deploy-em-produção)
 - [Variáveis de ambiente](#variáveis-de-ambiente)
 - [Segurança](#segurança)
 - [Scripts úteis](#scripts-úteis)
@@ -420,12 +427,88 @@ NEXT_PUBLIC_TURNSTILE_SITE_KEY=   # opcional em dev; obrigatório em prod com re
 
 Preferir `API_URL` (server-only) em vez de `NEXT_PUBLIC_API_URL`. Referência: [`frontend/.env.example`](frontend/.env.example).
 
-### Deploy (Vercel + API separada)
+---
 
-- **Frontend (Vercel):** `API_URL`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
-- **Backend:** `CORS_ORIGINS` com URL HTTPS do frontend, `APP_PUBLIC_URL` HTTPS, `TRUST_PROXY=true`, segredos fortes
+## Deploy em produção
 
-Checklist detalhado: [`docs/SECURITY.md`](docs/SECURITY.md).
+Aplicação publicada em **Vercel** (frontend) + **Render** (API Docker + PostgreSQL). Cada push na branch `main` dispara deploy automático nos dois provedores, após o CI do GitHub Actions.
+
+### URLs
+
+| Ambiente | Serviço | URL |
+|----------|---------|-----|
+| Produção | Frontend (Next.js) | https://msimulation-xml.vercel.app |
+| Produção | API (Fastify) | https://msimulation-xml-api.onrender.com |
+| Produção | Health check | https://msimulation-xml-api.onrender.com/api/health |
+| Repositório | GitHub | https://github.com/Matheus-santos7/MSimulation-XML |
+
+### Fluxo automático
+
+```mermaid
+flowchart LR
+  dev[Push em main] --> gha[GitHub Actions CI]
+  dev --> vercel[Vercel — frontend]
+  dev --> render[Render — API Docker]
+  gha -->|lint build testes| ok[Verde / vermelho]
+  vercel --> web[msimulation-xml.vercel.app]
+  render --> api[msimulation-xml-api.onrender.com]
+  render --> pg[(PostgreSQL Render)]
+  web -->|API_URL| api
+```
+
+1. **CI** (`.github/workflows/ci.yml`): lint, build, testes e audit em todo push/PR.
+2. **Vercel**: projeto `msimulation-xml`, `rootDirectory: frontend`, build do monorepo via `frontend/vercel.json`.
+3. **Render**: Web Service Docker (`Dockerfile` na raiz), migrations no start (`prisma migrate deploy`), Postgres gerenciado.
+
+### Arquivos de infraestrutura
+
+| Arquivo | Função |
+|---------|--------|
+| [`frontend/vercel.json`](frontend/vercel.json) | Install/build do monorepo pnpm na Vercel |
+| [`Dockerfile`](Dockerfile) | Imagem da API (Fastify + pacotes workspace) |
+| [`render.yaml`](render.yaml) | Blueprint Render (API + Postgres, IaC) |
+| [`.dockerignore`](.dockerignore) | Contexto enxuto para build Docker |
+
+### Primeira configuração (uma vez)
+
+**Vercel**
+
+1. Importe o repositório `Matheus-santos7/MSimulation-XML` (ou `vercel git connect`).
+2. Defina **Root Directory** = `frontend` e habilite **Include files outside root** (monorepo).
+3. Variáveis de ambiente em **Production**:
+
+| Variável | Valor |
+|----------|-------|
+| `API_URL` | `https://msimulation-xml-api.onrender.com` |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | chave pública Turnstile (se registro aberto) |
+
+**Render**
+
+1. Crie o Blueprint a partir do `render.yaml` **ou** um Web Service Docker apontando para o mesmo repositório (`branch: main`, auto-deploy ligado).
+2. Vincule o Postgres `msimulation-xml-db` ao serviço (`DATABASE_URL` via **Link Database**).
+3. Preencha no dashboard as variáveis marcadas com `sync: false` no blueprint:
+
+| Variável | Descrição |
+|----------|-----------|
+| `RESEND_API_KEY` | E-mail transacional |
+| `RESEND_FROM_EMAIL` | Remetente verificado no Resend |
+| `TURNSTILE_SECRET_KEY` | CAPTCHA no registro |
+
+`JWT_SECRET` e `PASSWORD_PEPPER` podem ser gerados pelo Render (`generateValue` no blueprint) ou definidos manualmente (≥ 32 e ≥ 16 caracteres).
+
+### Deploy manual (opcional)
+
+```bash
+# Frontend
+cd frontend && npx vercel --prod
+
+# Backend — redeploy do serviço já existente
+render deploys create <SERVICE_ID> --wait
+```
+
+### Checklist de segurança
+
+Detalhes em [`docs/SECURITY.md`](docs/SECURITY.md): `CORS_ORIGINS` e `APP_PUBLIC_URL` com HTTPS do frontend, `TRUST_PROXY=true`, segredos fortes, Postgres sem porta pública, RLS aplicado.
 
 ---
 

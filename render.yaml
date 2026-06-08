@@ -1,9 +1,8 @@
 # Blueprint Render — API Fastify + PostgreSQL
 # Docs: https://render.com/docs/blueprint-spec
 #
-# Após o deploy do frontend na Vercel, atualize no dashboard Render:
-#   CORS_ORIGINS=https://seu-app.vercel.app
-#   APP_PUBLIC_URL=https://seu-app.vercel.app
+# URLs do frontend em produção (Vercel):
+#   https://msimulation-xml.vercel.app
 
 services:
   - type: web
@@ -31,9 +30,9 @@ services:
       - key: PASSWORD_PEPPER
         generateValue: true
       - key: CORS_ORIGINS
-        sync: false
+        value: https://msimulation-xml.vercel.app
       - key: APP_PUBLIC_URL
-        sync: false
+        value: https://msimulation-xml.vercel.app
       - key: RESEND_API_KEY
         sync: false
       - key: RESEND_FROM_EMAIL

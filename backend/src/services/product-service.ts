@@ -27,7 +27,10 @@ export class ProductService {
   async create(tenantId: string, data: CreateInput) {
     const tenant = await this.prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } });
     const estoque = data.estoque ?? 0;
-    await assertProductTaxRuleBaseId(this.prisma, tenantId, data.taxRuleBaseId, tenant.uf);
+    const taxRuleBaseId = data.taxRuleBaseId?.trim();
+    if (taxRuleBaseId) {
+      await assertProductTaxRuleBaseId(this.prisma, tenantId, taxRuleBaseId, tenant.uf);
+    }
 
     try {
       const row = await this.prisma.product.create({
@@ -45,7 +48,7 @@ export class ProductService {
           preco: data.preco,
           precoCusto: data.precoCusto,
           estoque,
-          taxRuleBaseId: data.taxRuleBaseId.trim(),
+          taxRuleBaseId,
         },
       });
 
@@ -175,7 +178,10 @@ export class ProductService {
           bySku.set(row.sku, { id: prev.id, estoque });
           updated++;
         } else {
-          await assertProductTaxRuleBaseId(this.prisma, tenantId, row.taxRuleBaseId, tenant.uf);
+          const taxRuleBaseId = row.taxRuleBaseId?.trim();
+          if (taxRuleBaseId) {
+            await assertProductTaxRuleBaseId(this.prisma, tenantId, taxRuleBaseId, tenant.uf);
+          }
           const createdRow = await this.prisma.product.create({
             data: {
               tenantId,
@@ -191,7 +197,7 @@ export class ProductService {
               preco: row.preco,
               precoCusto: row.precoCusto,
               estoque,
-              taxRuleBaseId: row.taxRuleBaseId.trim(),
+              taxRuleBaseId,
             },
           });
           if (estoque > 0) {

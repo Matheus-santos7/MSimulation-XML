@@ -212,8 +212,8 @@ function rowToProductInput(row: Record<ProdutoPlanilhaColumn, string>): ProductI
   const estoque = estoqueRaw === "" ? 0 : Number(estoqueRaw.replace(/\D/g, "") || estoqueRaw);
   if (!Number.isInteger(estoque) || estoque < 0) return "Estoque deve ser inteiro ≥ 0";
 
-  const taxRuleBaseId = cell(row, "tax_rule_base_id");
-  if (!taxRuleBaseId) return "Regra fiscal (tax_rule_base_id) obrigatória — use o ID base da planilha de regras";
+  const taxRuleBaseIdRaw = cell(row, "tax_rule_base_id");
+  const taxRuleBaseId = taxRuleBaseIdRaw.length > 0 ? taxRuleBaseIdRaw : undefined;
 
   return {
     sku,
@@ -253,7 +253,9 @@ export function parseProdutoPlanilhaCsv(text: string): ProdutoPlanilhaParseResul
     if (col && !colIndex.has(col)) colIndex.set(col, i);
   }
 
-  const missing = PRODUTO_PLANILHA_COLUMNS.filter((c) => c !== "ean" && c !== "ex_tipi" && !colIndex.has(c));
+  const missing = PRODUTO_PLANILHA_COLUMNS.filter(
+    (c) => c !== "ean" && c !== "ex_tipi" && c !== "tax_rule_base_id" && !colIndex.has(c),
+  );
   if (missing.length > 0) {
     return {
       rows: [],

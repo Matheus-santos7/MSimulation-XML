@@ -8,6 +8,9 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    env:
+      # Prisma 7 carrega prisma.config.ts no generate; não conecta ao banco no CI.
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/msimulation_xml_ci?schema=public
     steps:
       - uses: actions/checkout@v4
 

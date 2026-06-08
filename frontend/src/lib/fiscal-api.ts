@@ -415,6 +415,27 @@ export async function bulkUpsertTaxRules(rows: TaxRuleImportRow[]): Promise<TaxR
   }) as Promise<TaxRuleBulkUpsertResult>;
 }
 
+export type TaxRuleDeleteResult = {
+  deleted: number;
+  nome: string;
+};
+
+export async function deleteTaxRuleGroup(
+  baseId: string,
+  origin: string,
+): Promise<TaxRuleDeleteResult> {
+  const href = url(`/api/tax-rules/${encodeURIComponent(baseId)}`, {
+    origin: origin.toUpperCase().slice(0, 2),
+  });
+  return mutateJson<TaxRuleDeleteResult>(href, "DELETE") as Promise<TaxRuleDeleteResult>;
+}
+
+export async function deleteAllTaxRules(): Promise<{ deleted: number }> {
+  return mutateJson<{ deleted: number }>(url("/api/tax-rules"), "DELETE") as Promise<{
+    deleted: number;
+  }>;
+}
+
 export async function getFiscalEmitterSettings(): Promise<FiscalEmitterSettingsView | null> {
   const href = url("/api/fiscal-settings");
   const res = await fetch(href, { cache: "no-store", headers: await authHeaders() });

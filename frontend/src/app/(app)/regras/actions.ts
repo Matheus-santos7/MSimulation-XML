@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { bulkUpsertTaxRules } from "@/lib/fiscal-api";
+import { bulkUpsertTaxRules, deleteAllTaxRules, deleteTaxRuleGroup } from "@/lib/fiscal-api";
 import { parseTaxRuleXlsx } from "@/lib/tax-rule-planilha";
 
 export type TaxRuleImportState = {
@@ -38,5 +38,38 @@ export async function importarRegrasTributariasAction(
     };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Erro ao importar regras" };
+  }
+}
+
+function revalidateTaxRulesPaths() {
+  revalidatePath("/regras");
+  revalidatePath("/produtos");
+  revalidatePath("/produtos/novo");
+  revalidatePath("/configuracoes-fiscais");
+}
+
+export async function excluirTodasRegrasTributariasAction(): Promise<{
+  error?: string;
+  deleted?: number;
+}> {
+  try {
+    const result = await deleteAllTaxRules();
+    revalidateTaxRulesPaths();
+    return { deleted: result.deleted };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Erro ao excluir regras" };
+  }
+}
+
+export async function excluirRegraTributariaAction(
+  baseId: string,
+  origin: string,
+): Promise<{ error?: string; nome?: string; deleted?: number }> {
+  try {
+    const result = await deleteTaxRuleGroup(baseId, origin);
+    revalidateTaxRulesPaths();
+    return { nome: result.nome, deleted: result.deleted };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Erro ao excluir regra" };
   }
 }

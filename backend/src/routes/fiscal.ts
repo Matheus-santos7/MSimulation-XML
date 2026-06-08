@@ -40,7 +40,12 @@ import { tenantIdFromRequest } from "../lib/auth/request-context.js";
 import { mapCte, mapNfe, mapTimeline } from "../lib/fiscal-mappers.js";
 import { mapEmitente } from "../lib/tenant-mapper.js";
 import { FiscalService, fiscalNotDeleted } from "../services/fiscal-service.js";
-import { listTaxRuleCatalog } from "../services/tax-rule-catalog-service.js";
+import {
+  deleteAllTaxRules,
+  deleteTaxRuleGroup,
+  listTaxRuleCatalog,
+  TaxRuleCatalogError,
+} from "../services/tax-rule-catalog-service.js";
 import { listTimelineChains } from "../services/timeline-service.js";
 import { CancelamentoError, cancelarVenda } from "../services/cancelamento-service.js";
 import { DevolucaoError, emitirDevolucaoVenda } from "../services/devolucao-service.js";
@@ -423,6 +428,35 @@ function registerTaxRuleRoutes(app: FastifyInstance) {
     }
 
     return reply.status(200).send({ created, updated, total: rows.length });
+  });
+
+  app.delete("/tax-rules", async (req, reply) => {
+    const tid = tenantIdFromRequest(req);
+    try {
+      return await deleteAllTaxRules(app.prisma, tid);
+    } catch (e) {
+      if (e instanceof TaxRuleCatalogError) {
+        return reply.status(400).send({ error: e.message });
+      }
+      throw e;
+    }
+  });
+
+  app.delete("/tax-rules/:baseId", async (req, reply) => {
+    const tid = tenantIdFromRequest(req);
+    const { baseId } = req.params as { baseId: string };
+    const origin = z
+      .object({ origin: z.string().trim().min(2).max(2) })
+      .parse(req.query).origin.toUpperCase();
+
+    try {
+      return await deleteTaxRuleGroup(app.prisma, tid, decodeURIComponent(baseId), origin);
+    } catch (e) {
+      if (e instanceof TaxRuleCatalogError) {
+        return reply.status(400).send({ error: e.message });
+      }
+      throw e;
+    }
   });
 }
 

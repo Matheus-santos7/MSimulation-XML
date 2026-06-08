@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Fragment } from "react";
 import { PageHeader } from "@/components/fiscal-ui";
+import { TaxRuleGroupDeleteButton } from "@/components/tax-rule-group-delete-button";
 import { TaxRuleImportForm } from "@/components/tax-rule-import-form";
 import { resolveActiveTenantId } from "@/lib/active-tenant";
 import { listTaxRules } from "@/lib/fiscal-api";
@@ -277,7 +278,7 @@ export default async function RegrasPage({
         title="Regras Tributárias"
         subtitle="Visual espelhado da planilha: regra agrupada por tipo de destinatário e colunas por UF"
       />
-      <TaxRuleImportForm />
+      <TaxRuleImportForm rulesCount={rules.length} />
       <form className="flex flex-wrap items-end gap-3 rounded-md border border-border bg-card p-3" method="get">
         <div className="space-y-1">
           <label htmlFor="nome" className="text-xs font-medium text-muted-foreground">
@@ -427,7 +428,14 @@ export default async function RegrasPage({
                             className="px-3 py-2 text-[13px] font-semibold border-r border-border sticky left-0 z-10 bg-card align-middle min-w-[220px] w-[220px] max-w-[220px] group-hover:bg-muted/20"
                             rowSpan={group.rows.length}
                           >
-                            {group.nome}
+                            <span className="flex items-start justify-between gap-2">
+                              <span className="min-w-0">{group.nome}</span>
+                              <TaxRuleGroupDeleteButton
+                                baseId={baseRuleId(group.rows[0]!.id)}
+                                origin={group.origin}
+                                nome={group.nome}
+                              />
+                            </span>
                           </td>
                         )}
                         {isFirst && (

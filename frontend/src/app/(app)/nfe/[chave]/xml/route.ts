@@ -23,8 +23,12 @@ export async function GET(req: Request, { params }: Props) {
     "Cache-Control": "no-store",
   };
   if (download) {
-    headers["Content-Disposition"] = `attachment; filename="${resolved.filename}"`;
+    headers["Content-Disposition"] = `attachment; filename="${sanitizeDownloadFilename(resolved.filename)}"`;
   }
 
   return new Response(resolved.xml, { headers });
+}
+
+function sanitizeDownloadFilename(name: string): string {
+  return name.replace(/[\r\n"]/g, "_");
 }

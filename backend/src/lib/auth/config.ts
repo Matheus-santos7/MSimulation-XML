@@ -44,7 +44,11 @@ export function passwordResetTtlMs(): number {
 /** URL pública do frontend (links no e-mail). */
 export function appPublicUrl(): string {
   const url = process.env.APP_PUBLIC_URL ?? process.env.FRONTEND_URL ?? "http://localhost:3000";
-  return url.replace(/\/$/, "");
+  const normalized = url.replace(/\/$/, "");
+  if (process.env.NODE_ENV === "production" && !normalized.startsWith("https://")) {
+    throw new Error("APP_PUBLIC_URL deve usar HTTPS em produção");
+  }
+  return normalized;
 }
 
 export function resendApiKey(): string | undefined {
@@ -73,5 +77,20 @@ export function loginLockoutMs(): number {
 export function twoFactorPendingTtl(): string {
   return process.env.TWO_FACTOR_PENDING_EXPIRES_IN ?? "5m";
 }
+
+export function turnstileSecretKey(): string | undefined {
+  const key = process.env.TURNSTILE_SECRET_KEY?.trim();
+  return key && key.length > 0 ? key : undefined;
+}
+
+export function emailVerificationTtlMs(): number {
+  const raw = process.env.EMAIL_VERIFICATION_EXPIRES_IN ?? "24h";
+  if (raw.endsWith("h")) return Number(raw.slice(0, -1)) * 60 * 60 * 1000;
+  if (raw.endsWith("m")) return Number(raw.slice(0, -1)) * 60 * 1000;
+  return 24 * 60 * 60 * 1000;
+}
+
+export const EMAIL_VERIFICATION_GENERIC_MESSAGE =
+  "Se o e-mail estiver cadastrado, você receberá um link de verificação em instantes.";
 
 export const TOTP_ISSUER = "MSimulation XML";

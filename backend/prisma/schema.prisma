@@ -54,6 +54,11 @@ enum OperacaoFiscalTipo {
   REMESSA_SIMBOLICA
 }
 
+enum UserRole {
+  ADMIN
+  MEMBER
+}
+
 /// Emitente / filial (multi-tenant) — dados alinhados ao bloco NF-e `<emit>`
 model Tenant {
   id              String          @id @default(uuid())
@@ -110,10 +115,13 @@ model User {
   lockedUntil           DateTime?     @map("locked_until")
   totpSecretEnc         String?       @map("totp_secret_enc")
   totpEnabledAt         DateTime?     @map("totp_enabled_at")
+  role                  UserRole      @default(MEMBER)
+  emailVerifiedAt       DateTime?     @map("email_verified_at")
   createdAt             DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
   sessions           UserSession[]
   passwordResetTokens PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
 
   @@unique([email])
   @@index([tenantId], map: "idx_users_tenant")
@@ -150,6 +158,21 @@ model PasswordResetToken {
   @@index([userId], map: "idx_password_reset_user")
   @@index([expiresAt], map: "idx_password_reset_expires")
   @@map("password_reset_tokens")
+}
+
+/// Token de uso único para verificação de e-mail (hash SHA-256 + pepper).
+model EmailVerificationToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId], map: "idx_email_verification_user")
+  @@index([expiresAt], map: "idx_email_verification_expires")
+  @@map("email_verification_tokens")
 }
 
 /// CD / unidade logística Mercado Livre Full — catálogo global (importação da planilha Meli).

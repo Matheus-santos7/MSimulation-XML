@@ -25,11 +25,8 @@ import type {
   FiscalEmitterSettingsPatch,
   FiscalEmitterSettingsView,
 } from "./fiscal-emitter-settings-types";
+import { apiBase } from "@/lib/api-base";
 import { toUserFacingError } from "./user-facing-error";
-
-function apiBase(): string {
-  return (process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3001").replace(/\/$/, "");
-}
 
 function url(path: string, query?: Record<string, string | undefined>): string {
   const u = new URL(path.startsWith("/") ? path : `/${path}`, `${apiBase()}/`);

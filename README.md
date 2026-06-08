@@ -33,6 +33,8 @@
 - [Interface web](#interface-web)
 - [Identidade visual](#identidade-visual)
 - [Como rodar localmente](#como-rodar-localmente)
+- [Variáveis de ambiente](#variáveis-de-ambiente)
+- [Segurança](#segurança)
 - [Scripts úteis](#scripts-úteis)
 - [Dados de referência (XMLs/)](#dados-de-referência-xmls)
 - [Roadmap e limitações](#roadmap-e-limitações)
@@ -49,7 +51,7 @@ O sistema cobre o ciclo típico de um seller no full:
 4. **Devolução** referenciada à venda, com **remessa simbólica** de retorno de saldo ao full.
 5. **CT-e** de transporte vinculado à remessa e à venda (referência `infNFe`).
 
-Tudo é **multi-tenant**: cada empresa (`Tenant`) tem séries, configurações fiscais, produtos e documentos isolados. O **tenant ativo** vem do JWT do usuário logado (não é mais passado por query string).
+Tudo é **multi-tenant**: cada empresa (`Tenant`) tem séries, configurações fiscais, produtos e documentos isolados. O **tenant ativo** vem do JWT do usuário logado (não é mais passado por query string). Isolamento reforçado por **Row-Level Security (RLS)** no PostgreSQL e papéis **ADMIN** / **MEMBER** por tenant.
 
 ---
 
@@ -231,7 +233,9 @@ msimulation-xml/
 │       ├── app/                # Dashboard, NF-e, CT-e, produtos, regras…
 │       ├── components/
 │       └── lib/                # xml-generator, fiscal-api, tipos
+├── docs/                       # SECURITY.md, assets da marca
 ├── XMLs/                       # XMLs reais de referência (ML) — não versionar em PR público se sensível
+├── .github/workflows/ci.yml    # Lint, build e testes no PR
 ├── docker-compose.yml
 └── package.json                # Scripts raiz (pnpm workspaces)
 ```
@@ -263,26 +267,25 @@ Base URL local: `http://localhost:3001` (prefixo conforme proxy do frontend em `
 
 | Método | Caminho | Auth | Descrição |
 |--------|---------|------|-----------|
-| `POST` | `/api/auth/login` | — | Sessão (access + refresh JWT) |
-| `POST` | `/api/auth/register` | — | Criar conta |
+| `POST` | `/api/auth/register` | — | Criar conta (CAPTCHA Turnstile em produção) |
+| `POST` | `/api/auth/login` | — | Sessão (access + refresh JWT) ou desafio 2FA |
+| `POST` | `/api/auth/login/verify-2fa` | — | Conclui login com TOTP |
 | `POST` | `/api/auth/forgot-password` | — | Envia e-mail de reset (Resend) |
 | `POST` | `/api/auth/reset-password` | — | Body `{ token, password }` |
-| `GET` | `/api/auth/me` | Bearer | Perfil + tenant do token |
+| `POST` | `/api/auth/verify-email` | — | Confirma e-mail via token do link |
+| `POST` | `/api/auth/resend-verification` | Bearer | Reenvia link de verificação |
+| `POST` | `/api/auth/onboarding/tenant` | Bearer | Cadastra empresa (vira **ADMIN**) |
+| `GET` | `/api/auth/me` | Bearer | Perfil, tenant, `role`, `emailVerified` |
+| `POST` | `/api/auth/refresh` | — | Renova access token |
+| `POST` | `/api/auth/logout` | Bearer | Encerra sessão |
+| `GET` | `/api/auth/2fa/status` | Bearer | Status do 2FA |
+| `POST` | `/api/auth/2fa/setup` | Bearer | Inicia configuração TOTP |
+| `POST` | `/api/auth/2fa/enable` | Bearer | Ativa 2FA |
+| `POST` | `/api/auth/2fa/disable` | Bearer | Desativa 2FA |
 
-Rotas protegidas exigem `Authorization: Bearer <access_token>`. O payload contém `userId` e `tenantId`.
+Rotas de negócio exigem **JWT válido**, **e-mail verificado** e **tenant** cadastrado. Operações sensíveis (exclusão em massa de regras, gestão de usuários, importação de CDs) exigem papel **ADMIN**.
 
-Configure no `backend/.env` (ver `backend/.env.example`):
-
-```env
-JWT_SECRET="..."
-JWT_ACCESS_EXPIRES_IN="30m"
-PASSWORD_PEPPER="..."
-APP_PUBLIC_URL="http://localhost:3000"
-RESEND_API_KEY="re_..."
-RESEND_FROM_EMAIL="MSimulation XML <noreply@seudominio.com>"
-```
-
-Sem `RESEND_API_KEY` em desenvolvimento, o link de reset é impresso no log do backend.
+Cookies HttpOnly no frontend; detalhes de deploy em [`docs/SECURITY.md`](docs/SECURITY.md).
 
 ---
 
@@ -291,8 +294,13 @@ Sem `RESEND_API_KEY` em desenvolvimento, o link de reset é impresso no log do b
 | Rota | Função |
 |------|--------|
 | `/login` | Login / criar conta |
+| `/login/verificar-email` | Aguardar ou reenviar confirmação de e-mail |
+| `/login/verificar-2fa` | Segundo fator após login |
 | `/login/esqueci-senha` | Solicitar e-mail de redefinição |
 | `/login/redefinir-senha?token=…` | Nova senha (link do e-mail) |
+| `/onboarding/empresa` | Cadastro da empresa (após e-mail verificado) |
+| `/conta/seguranca` | 2FA TOTP |
+| `/usuarios` | Gestão de usuários do tenant (**ADMIN**) |
 | `/` | Dashboard, KPIs, timeline de cadeias, preview XML |
 | `/produtos` | CRUD, importação planilha, remessa em lote |
 | `/unidades-logisticas` | Importação CDs Meli Full, CD padrão de remessa, avanço entre CDs |
@@ -338,11 +346,13 @@ Paleta pensada para um terminal fiscal escuro: fundo grafite, acento âmbar (doc
 # 1. Dependências
 pnpm install
 
-# 2. Variáveis de ambiente (ver .env.example, backend/.env.example, frontend/.env.example)
+# 2. Variáveis de ambiente (ver seção abaixo e .env.example)
 cp .env.example .env
 cp backend/.env.example backend/.env
-# Edite backend/.env: JWT_SECRET (mín. 16) e PASSWORD_PEPPER (mín. 16 em produção)
-# Opcional: cp frontend/.env.example frontend/.env.local — só se NEXT_PUBLIC_API_URL ≠ :3001
+cp frontend/.env.example frontend/.env.local   # opcional; defaults funcionam em dev
+
+# Gere segredos distintos para JWT e pepper:
+# openssl rand -base64 32
 
 # 3. Banco + migrations
 pnpm db:setup
@@ -351,7 +361,9 @@ pnpm db:setup
 pnpm dev
 ```
 
-Acesse http://localhost:3000/login e **crie uma conta** (depois cadastre a empresa no onboarding). O middleware redireciona para `/login` sem cookie válido.
+Acesse http://localhost:3000/login e **crie uma conta** → confirme o e-mail (link no inbox ou log do backend) → cadastre a empresa no onboarding. O middleware redireciona para `/login` sem cookie válido.
+
+> **Trocou `JWT_SECRET` ou `PASSWORD_PEPPER`?** Sessões antigas expiram; senhas hashadas com pepper anterior deixam de funcionar — use reset de senha ou recrie o usuário em dev.
 
 > **Migração de `msedit-xml` / `e-invoice-play`:** se você já tinha o Postgres local com o banco antigo, rode `pnpm docker:reset` e `pnpm db:setup` para recriar o banco `msimulation_xml`, ou ajuste `DATABASE_URL` / `POSTGRES_*` nos `.env`. Renomeie o repositório no GitHub para `msimulation-xml` e atualize o remote: `git remote set-url origin https://github.com/<user>/msimulation-xml.git`.
 
@@ -360,6 +372,78 @@ Acesse http://localhost:3000/login e **crie uma conta** (depois cadastre a empre
 | Frontend | http://localhost:3000 |
 | API Fastify | http://localhost:3001 |
 | Prisma Studio | `pnpm --filter @msimulation-xml/backend db:studio` |
+
+---
+
+## Variáveis de ambiente
+
+Três arquivos, três papéis:
+
+| Arquivo | Uso |
+|---------|-----|
+| `.env` (raiz) | Docker Postgres (`POSTGRES_*`, referência de `DATABASE_URL`) |
+| `backend/.env` | API Fastify — JWT, pepper, CORS, Resend, Turnstile |
+| `frontend/.env.local` | Next.js — `API_URL` (server-only), Turnstile site key |
+
+### Backend (`backend/.env`)
+
+Obrigatórias para subir a API:
+
+```env
+DATABASE_URL=postgresql://msimulation:msimulation@localhost:5432/msimulation_xml?schema=public
+JWT_SECRET=                    # mín. 16 (dev) / 32 (prod) — valor único
+PASSWORD_PEPPER=               # mín. 16 — distinto do JWT_SECRET
+APP_PUBLIC_URL=http://localhost:3000
+CORS_ORIGINS=http://localhost:3000
+```
+
+Recomendadas / produção:
+
+```env
+RESEND_API_KEY=
+RESEND_FROM_EMAIL="MSimulation XML <noreply@seudominio.com>"
+TURNSTILE_SECRET_KEY=          # CAPTCHA no registro (ignorado em dev sem chave)
+EMAIL_VERIFICATION_EXPIRES_IN=24h
+TRUST_PROXY=false              # true em produção atrás de reverse proxy
+```
+
+Sem `RESEND_API_KEY` em desenvolvimento, links de reset e verificação aparecem no **console da API**.
+
+Referência completa: [`backend/.env.example`](backend/.env.example).
+
+### Frontend (`frontend/.env.local`)
+
+```env
+API_URL=http://127.0.0.1:3001
+NEXT_PUBLIC_TURNSTILE_SITE_KEY=   # opcional em dev; obrigatório em prod com registro aberto
+```
+
+Preferir `API_URL` (server-only) em vez de `NEXT_PUBLIC_API_URL`. Referência: [`frontend/.env.example`](frontend/.env.example).
+
+### Deploy (Vercel + API separada)
+
+- **Frontend (Vercel):** `API_URL`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
+- **Backend:** `CORS_ORIGINS` com URL HTTPS do frontend, `APP_PUBLIC_URL` HTTPS, `TRUST_PROXY=true`, segredos fortes
+
+Checklist detalhado: [`docs/SECURITY.md`](docs/SECURITY.md).
+
+---
+
+## Segurança
+
+Camadas principais já no código:
+
+| Área | Medida |
+|------|--------|
+| Autenticação | JWT + refresh rotativo, lockout de login, 2FA TOTP, verificação de e-mail |
+| Registro aberto | Rate limit, Turnstile, bloqueio de domínios descartáveis |
+| Autorização | RBAC `ADMIN` / `MEMBER`; guards nas rotas sensíveis |
+| Multi-tenant | `tenantId` só do JWT; RLS PostgreSQL nas tabelas de negócio |
+| Upload | Magic bytes XLSX, limite 15 MB, validação no frontend e backend |
+| HTTP | CSP/HSTS no Next.js, Helmet no Fastify, cookies `HttpOnly`/`Secure` |
+| CI | GitHub Actions (lint, build, testes) + Dependabot |
+
+Documentação operacional: [`docs/SECURITY.md`](docs/SECURITY.md).
 
 ---
 
@@ -373,6 +457,7 @@ Acesse http://localhost:3000/login e **crie uma conta** (depois cadastre a empre
 | `pnpm docker:up` / `pnpm docker:down` | Sobe/para o container |
 | `pnpm docker:reset` | Remove volume do banco |
 | `pnpm lint` / `pnpm format` | ESLint e Prettier |
+| `pnpm test:backend` | Testes Vitest do backend |
 | `pnpm --filter @msimulation-xml/backend db:migrate` | Nova migration (dev) |
 
 ---
@@ -400,6 +485,8 @@ A pasta `XMLs/` contém **procNFe** reais de operação fulfillment (Atlas × Me
 - Timeline agrupada por remessa  
 - Importação de regras e produtos via planilha  
 - Unidades logísticas Meli Full (planilha `.xlsx`), destino de remessa por CD e avanço entre CDs com rastreio fiscal  
+- Autenticação completa: verificação de e-mail, 2FA, RBAC, rate limits, RLS  
+- Hardening de upload e headers de segurança (CSP, HSTS)  
 
 **Em evolução / não escopo atual**
 

@@ -1,5 +1,6 @@
 export type LoginState = { error?: string; fieldErrors?: Record<string, string[]> };
 export type RegisterState = { error?: string; fieldErrors?: Record<string, string[]> };
+export type ResendVerificationState = { error?: string; success?: string };
 export type ForgotPasswordState = {
   error?: string;
   success?: string;

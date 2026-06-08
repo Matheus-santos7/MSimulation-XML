@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { Suspense, useState, useActionState } from "react";
 import { loginAction, registerAction, type LoginState, type RegisterState } from "@/lib/auth/actions";
+import { RegisterCaptchaField } from "@/components/auth/register-captcha-field";
 import { SessionExpiredBanner } from "@/components/auth/session-expired-banner";
 import { PASSWORD_POLICY_HINT } from "@/lib/auth/password-policy";
 import { cn } from "@/lib/utils";
@@ -89,6 +90,7 @@ export function LoginPanel() {
             />
           </div>
           <AuthFields mode="register" />
+          <RegisterCaptchaField />
           {error ? <AuthError message={error} /> : null}
           <SubmitButton pending={pending} label={pending ? "Criando…" : "Criar conta e continuar"} />
         </form>

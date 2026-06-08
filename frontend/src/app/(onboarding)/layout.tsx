@@ -9,6 +9,9 @@ export default async function OnboardingLayout({ children }: { children: React.R
   if (!me) {
     redirect("/login?session=expired");
   }
+  if (!me.emailVerified) {
+    redirect("/login/verificar-email");
+  }
   if (!me.needsOnboarding && me.tenant) {
     redirect("/");
   }

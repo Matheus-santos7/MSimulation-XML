@@ -20,13 +20,16 @@ type Props = {
   baseId: string;
   origin: string;
   nome: string;
+  isAdmin?: boolean;
 };
 
-export function TaxRuleGroupDeleteButton({ baseId, origin, nome }: Props) {
+export function TaxRuleGroupDeleteButton({ baseId, origin, nome, isAdmin = false }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  if (!isAdmin) return null;
 
   return (
     <>

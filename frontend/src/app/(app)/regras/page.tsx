@@ -4,6 +4,8 @@ import { PageHeader } from "@/components/fiscal-ui";
 import { TaxRuleGroupDeleteButton } from "@/components/tax-rule-group-delete-button";
 import { TaxRuleImportForm } from "@/components/tax-rule-import-form";
 import { resolveActiveTenantId } from "@/lib/active-tenant";
+import { isAdminRole } from "@/lib/auth/roles";
+import { getAuthMe } from "@/lib/auth/session";
 import { listTaxRules } from "@/lib/fiscal-api";
 import type { TaxRuleDto } from "@/lib/fiscal-types";
 
@@ -263,8 +265,9 @@ export default async function RegrasPage({
   const nomeFilter = Array.isArray(nomeFilterRaw) ? nomeFilterRaw[0] ?? "" : nomeFilterRaw ?? "";
   const nomeFilterNorm = nomeFilter.trim().toLowerCase();
 
-  const tenantId = await resolveActiveTenantId();
-  const rules = await listTaxRules();
+  const tenantId =   await resolveActiveTenantId();
+  const [rules, me] = await Promise.all([listTaxRules(), getAuthMe()]);
+  const isAdmin = isAdminRole(me?.role);
   const filteredRules = nomeFilterNorm
     ? rules.filter((rule) => rule.nome.toLowerCase().includes(nomeFilterNorm))
     : rules;
@@ -278,7 +281,7 @@ export default async function RegrasPage({
         title="Regras Tributárias"
         subtitle="Visual espelhado da planilha: regra agrupada por tipo de destinatário e colunas por UF"
       />
-      <TaxRuleImportForm rulesCount={rules.length} />
+      <TaxRuleImportForm rulesCount={rules.length} isAdmin={isAdmin} />
       <form className="flex flex-wrap items-end gap-3 rounded-md border border-border bg-card p-3" method="get">
         <div className="space-y-1">
           <label htmlFor="nome" className="text-xs font-medium text-muted-foreground">
@@ -434,6 +437,7 @@ export default async function RegrasPage({
                                 baseId={baseRuleId(group.rows[0]!.id)}
                                 origin={group.origin}
                                 nome={group.nome}
+                                isAdmin={isAdmin}
                               />
                             </span>
                           </td>

@@ -37,6 +37,7 @@ import type { FastifyInstance, FastifyReply } from "fastify";
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { tenantIdFromRequest } from "../lib/auth/request-context.js";
+import { requireAdminHook } from "../plugins/contexts/guards.js";
 import { mapCte, mapNfe, mapTimeline } from "../lib/fiscal-mappers.js";
 import { mapEmitente } from "../lib/tenant-mapper.js";
 import { FiscalService, fiscalNotDeleted } from "../services/fiscal-service.js";
@@ -86,6 +87,19 @@ const taxRuleImportRowSchema = z.object({
 
 const taxRulesBulkBodySchema = z.object({
   rows: z.array(taxRuleImportRowSchema).min(1).max(5000),
+});
+
+const taxRuleBaseIdParamSchema = z.object({
+  baseId: z
+    .string()
+    .trim()
+    .min(1, "Identificador da regra inválido")
+    .max(200)
+    .regex(/^[A-Za-z0-9._-]+$/, "Identificador da regra inválido"),
+});
+
+const taxRuleGroupQuerySchema = z.object({
+  origin: z.string().trim().min(2).max(2),
 });
 
 // ---------------------------------------------------------------------------
@@ -430,7 +444,7 @@ function registerTaxRuleRoutes(app: FastifyInstance) {
     return reply.status(200).send({ created, updated, total: rows.length });
   });
 
-  app.delete("/tax-rules", async (req, reply) => {
+  app.delete("/tax-rules", { onRequest: [requireAdminHook] }, async (req, reply) => {
     const tid = tenantIdFromRequest(req);
     try {
       return await deleteAllTaxRules(app.prisma, tid);
@@ -442,15 +456,13 @@ function registerTaxRuleRoutes(app: FastifyInstance) {
     }
   });
 
-  app.delete("/tax-rules/:baseId", async (req, reply) => {
+  app.delete("/tax-rules/:baseId", { onRequest: [requireAdminHook] }, async (req, reply) => {
     const tid = tenantIdFromRequest(req);
-    const { baseId } = req.params as { baseId: string };
-    const origin = z
-      .object({ origin: z.string().trim().min(2).max(2) })
-      .parse(req.query).origin.toUpperCase();
+    const { baseId } = taxRuleBaseIdParamSchema.parse(req.params);
+    const { origin } = taxRuleGroupQuerySchema.parse(req.query);
 
     try {
-      return await deleteTaxRuleGroup(app.prisma, tid, decodeURIComponent(baseId), origin);
+      return await deleteTaxRuleGroup(app.prisma, tid, decodeURIComponent(baseId), origin.toUpperCase());
     } catch (e) {
       if (e instanceof TaxRuleCatalogError) {
         return reply.status(400).send({ error: e.message });

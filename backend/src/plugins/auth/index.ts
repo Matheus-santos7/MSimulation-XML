@@ -3,6 +3,7 @@ import fastifyJwt from "@fastify/jwt";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { accessTokenTtl, requireJwtSecret } from "../../lib/auth/config.js";
 import type { AccessTokenPayload } from "../../lib/auth/jwt-payload.js";
+import type { AuthenticatedUser } from "../contexts/guards.js";
 
 export const authPlugin = fp(async (app) => {
   await app.register(fastifyJwt, {
@@ -26,7 +27,7 @@ export const authPlugin = fp(async (app) => {
 
       const row = await app.prisma.user.findUnique({
         where: { id: payload.userId },
-        select: { tokenVersion: true, tenantId: true },
+        select: { tokenVersion: true, tenantId: true, role: true, emailVerifiedAt: true },
       });
 
       if (!row || row.tokenVersion !== payload.tokenVersion) {
@@ -36,7 +37,9 @@ export const authPlugin = fp(async (app) => {
       request.user = {
         ...payload,
         tenantId: row.tenantId,
-      };
+        role: row.role,
+        emailVerified: row.emailVerifiedAt != null,
+      } satisfies AuthenticatedUser;
     },
   );
 });

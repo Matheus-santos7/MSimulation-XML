@@ -1,12 +1,9 @@
 import type { TenantDto, TenantInput } from "@/lib/fiscal-types";
+import { apiUrl } from "@/lib/api-base";
 import { toUserFacingError } from "@/lib/user-facing-error";
 
-function apiBase(): string {
-  return (process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3001").replace(/\/$/, "");
-}
-
 function url(path: string): string {
-  return new URL(path.startsWith("/") ? path : `/${path}`, `${apiBase()}/`).toString();
+  return apiUrl(path);
 }
 
 export type AuthSessionDto = {
@@ -20,6 +17,8 @@ export type AuthSessionDto = {
   tenant: TenantDto | null;
   needsOnboarding: boolean;
   twoFactorEnabled?: boolean;
+  emailVerified?: boolean;
+  role?: "ADMIN" | "MEMBER";
 };
 
 export type TwoFactorPendingDto = {
@@ -42,6 +41,8 @@ export type AuthMeDto = {
   tenant: TenantDto | null;
   needsOnboarding: boolean;
   twoFactorEnabled?: boolean;
+  emailVerified?: boolean;
+  role?: "ADMIN" | "MEMBER";
 };
 
 export type TwoFactorSetupDto = {
@@ -136,8 +137,29 @@ export async function registerApi(input: {
   email: string;
   password: string;
   name?: string;
+  captchaToken?: string;
 }): Promise<AuthSessionDto> {
   return postAuth("/api/auth/register", input);
+}
+
+export async function verifyEmailApi(token: string): Promise<{ message: string }> {
+  return postAuthJson<{ message: string }>("/api/auth/verify-email", { token });
+}
+
+export async function resendVerificationApi(accessToken: string): Promise<{ message: string }> {
+  const res = await fetch(url("/api/auth/resend-verification"), {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const payload = await readApiErrorPayload(res);
+    throw new AuthApiError(payload.error, payload.details);
+  }
+  return res.json() as Promise<{ message: string }>;
 }
 
 export async function refreshSessionApi(refreshToken: string): Promise<AuthSessionDto> {

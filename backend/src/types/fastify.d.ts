@@ -1,10 +1,12 @@
 import "@fastify/jwt";
-import type { AccessTokenPayload } from "../../lib/auth/jwt-payload.js";
+import type { FastifyReply, FastifyRequest } from "fastify";
+import type { AccessTokenPayload } from "../lib/auth/jwt-payload.js";
+import type { AuthenticatedUser } from "../plugins/contexts/guards.js";
 
 declare module "@fastify/jwt" {
   interface FastifyJWT {
     payload: AccessTokenPayload;
-    user: AccessTokenPayload;
+    user: AuthenticatedUser;
   }
 }
 

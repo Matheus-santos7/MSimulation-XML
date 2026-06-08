@@ -1,15 +1,44 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { AuthApiError, disable2faApi, enable2faApi, setup2faApi } from "@/lib/auth/api";
+import {
+  AuthApiError,
+  disable2faApi,
+  enable2faApi,
+  resendVerificationApi,
+  setup2faApi,
+} from "@/lib/auth/api";
 import { resolveAccessToken } from "@/lib/auth/session";
-import type { SecurityActionState } from "./types";
 import { toUserFacingError } from "@/lib/user-facing-error";
+import type { ResendVerificationState, SecurityActionState } from "./types";
 
 async function requireAccessToken(): Promise<string> {
   const token = await resolveAccessToken();
   if (!token) throw new Error("Sessão expirada. Entre novamente.");
   return token;
+}
+
+export async function resendVerificationAction(
+  _prev: ResendVerificationState | undefined,
+): Promise<ResendVerificationState> {
+  try {
+    const token = await requireAccessToken();
+    const result = await resendVerificationApi(token);
+    return { success: result.message };
+  } catch (e) {
+    if (e instanceof AuthApiError) {
+      return {
+        error: toUserFacingError(e.message, {
+          fallback: "Não foi possível reenviar o e-mail. Tente novamente.",
+        }),
+      };
+    }
+    return {
+      error: toUserFacingError(e instanceof Error ? e.message : undefined, {
+        fallback: "Não foi possível reenviar o e-mail. Tente novamente.",
+      }),
+    };
+  }
 }
 
 export async function start2faSetupAction(): Promise<SecurityActionState> {

@@ -1,6 +1,8 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { tenantIdFromRequest } from "../lib/auth/request-context.js";
+import { requireAdminHook } from "../plugins/contexts/guards.js";
+import { validateSpreadsheetBuffer } from "../lib/spreadsheet-upload.js";
 import { parseMeliUnidadesXlsx } from "../lib/meli-unidade-planilha.js";
 import {
   UnidadeLogisticaError,
@@ -44,6 +46,10 @@ const remessaManualBody = z.object({
   productId: z.string().uuid(),
   quantidade: z.number().int().min(1),
   unidadeDestinoId: z.string().uuid(),
+});
+
+const unidadeIdParam = z.object({
+  id: z.string().uuid("ID de unidade inválido"),
 });
 
 const bulkImportJsonBody = z.object({
@@ -90,6 +96,14 @@ async function resolveBulkImportPayload(req: FastifyRequest): Promise<
       return { ok: false, status: 400, error: "Formato inválido. Envie um arquivo .xlsx ou .xls" };
     }
 
+    const fileValidation = validateSpreadsheetBuffer(fileBuffer, {
+      fileName,
+      mimeType: undefined,
+    });
+    if (!fileValidation.ok) {
+      return { ok: false, status: 400, error: fileValidation.error };
+    }
+
     const parsed = parseMeliUnidadesXlsx(fileBuffer);
     if (parsed.rows.length === 0) {
       return {
@@ -128,14 +142,14 @@ export async function unidadesLogisticasRoutes(app: FastifyInstance) {
 
   app.get("/unidades-logisticas/:id", async (req, reply) => {
     const tenantId = tenantIdFromRequest(req);
-    const { id } = req.params as { id: string };
+    const { id } = unidadeIdParam.parse(req.params);
     const service = new UnidadeLogisticaService(app.prisma);
     const row = await service.getById(tenantId, id);
     if (!row) return reply.status(404).send({ error: "Unidade não encontrada" });
     return row;
   });
 
-  app.post("/unidades-logisticas/bulk-import", async (req, reply) => {
+  app.post("/unidades-logisticas/bulk-import", { onRequest: [requireAdminHook] }, async (req, reply) => {
     const tenantId = tenantIdFromRequest(req);
     const payload = await resolveBulkImportPayload(req);
     if (!payload.ok) {
@@ -162,7 +176,7 @@ export async function unidadesLogisticasRoutes(app: FastifyInstance) {
 
   app.patch("/unidades-logisticas/:id/padrao", async (req, reply) => {
     const tenantId = tenantIdFromRequest(req);
-    const { id } = req.params as { id: string };
+    const { id } = unidadeIdParam.parse(req.params);
     try {
       const service = new UnidadeLogisticaService(app.prisma);
       return await service.setPadrao(tenantId, id);

@@ -18,13 +18,22 @@ export type AuthSessionPayload = {
   refreshToken: string;
   tenantId: string | null;
   needsOnboarding?: boolean;
+  emailVerified?: boolean;
 };
+
+function cookieSecure(): boolean {
+  return (
+    process.env.NODE_ENV === "production" ||
+    process.env.VERCEL === "1" ||
+    process.env.COOKIE_SECURE === "true"
+  );
+}
 
 function cookieOptions(maxAge: number) {
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax" as const,
+    secure: cookieSecure(),
+    sameSite: "strict" as const,
     path: "/",
     maxAge,
   };
@@ -112,6 +121,9 @@ export const getAuthMe = cache(async (): Promise<AuthMeDto | null> => {
 });
 
 export function redirectAfterAuth(session: AuthSessionPayload): never {
+  if (session.emailVerified === false) {
+    redirect("/login/verificar-email");
+  }
   const needsOnboarding =
     session.needsOnboarding === true || session.tenantId === null || session.tenantId === undefined;
   redirect(needsOnboarding ? "/onboarding/empresa" : "/");

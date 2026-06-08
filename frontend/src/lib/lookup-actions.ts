@@ -1,15 +1,12 @@
 "use server";
 
 import { getAccessToken } from "@/lib/auth/session";
+import { apiBase, apiUrl } from "@/lib/api-base";
 import type { CepLookupDto, CnpjLookupDto } from "@/lib/fiscal-types";
 import { toUserFacingError } from "@/lib/user-facing-error";
 
-function apiBase(): string {
-  return (process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3001").replace(/\/$/, "");
-}
-
 function lookupUrl(path: string): string {
-  return new URL(path.startsWith("/") ? path : `/${path}`, `${apiBase()}/`).toString();
+  return apiUrl(path);
 }
 
 async function getAuthenticatedJson<T>(href: string): Promise<T> {

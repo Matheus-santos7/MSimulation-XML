@@ -8,7 +8,11 @@ import {
 import { clearAuthCookiesOn, refreshTokensViaApi, setSessionCookiesOn } from "@/lib/auth/edge-cookies";
 
 const LOGIN_PREFIX = "/login";
-const LOGIN_PUBLIC_SUFFIXES = ["/esqueci-senha", "/redefinir-senha"];
+const LOGIN_PUBLIC_SUFFIXES = ["/esqueci-senha", "/redefinir-senha", "/verificar-email"];
+
+function isRelativeAppPath(path: string): boolean {
+  return path.startsWith("/") && !path.startsWith("//");
+}
 
 function isLoginPublicPath(pathname: string): boolean {
   return LOGIN_PUBLIC_SUFFIXES.some((s) => pathname === `${LOGIN_PREFIX}${s}`);
@@ -18,7 +22,7 @@ function redirectLogin(request: NextRequest, reason?: "expired"): NextResponse {
   const login = new URL(LOGIN_PREFIX, request.url);
   if (reason) login.searchParams.set("session", reason);
   const from = request.nextUrl.pathname;
-  if (from && from !== LOGIN_PREFIX && !from.startsWith(`${LOGIN_PREFIX}/`)) {
+  if (from && isRelativeAppPath(from) && from !== LOGIN_PREFIX && !from.startsWith(`${LOGIN_PREFIX}/`)) {
     login.searchParams.set("from", from);
   }
   const response = NextResponse.redirect(login);
@@ -54,7 +58,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next();
     }
 
-    if (isLoginPublicPath(pathname)) {
+    if (isLoginPublicPath(pathname) || pathname.startsWith("/login/verificar-email")) {
       return NextResponse.next();
     }
 

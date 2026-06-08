@@ -10,6 +10,7 @@ import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import Fastify from "fastify";
 import { buildCorsOptions } from "./lib/cors-config.js";
+import { registerGlobalErrorHandler } from "./lib/error-handler.js";
 import { buildHelmetOptions } from "./lib/helmet-config.js";
 import { authPlugin } from "./plugins/auth/index.js";
 import { prismaPlugin } from "./plugins/prisma.js";
@@ -17,7 +18,10 @@ import { authenticatedLookupPlugin } from "./plugins/authenticated-lookup.js";
 import { protectedApiPlugin } from "./plugins/protected-api.js";
 import { healthRoutes } from "./routes/health.js";
 import { authRoutes } from "./routes/auth/index.js";
-const app = Fastify({ logger: true });
+const trustProxy = process.env.TRUST_PROXY === "true" || process.env.NODE_ENV === "production";
+const app = Fastify({ logger: true, trustProxy });
+
+registerGlobalErrorHandler(app);
 
 await app.register(helmet, buildHelmetOptions());
 await app.register(cors, buildCorsOptions());

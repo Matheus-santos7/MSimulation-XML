@@ -11,6 +11,8 @@ import {
 import { ApiValidationError, bulkUpsertProducts, createProduct, deleteProduct, updateProduct } from "@/lib/fiscal-api";
 import { parseProdutoPlanilhaCsv } from "@/lib/produto-planilha";
 
+const MAX_CSV_BYTES = 15 * 1024 * 1024;
+
 function failureState(e: unknown, values: ReturnType<typeof inputToFormValues>): ProdutoFormState {
   const fieldErrors = e instanceof ApiValidationError ? e.fieldErrors : undefined;
   return {
@@ -80,6 +82,12 @@ export async function importProdutosPlanilhaAction(formData: FormData): Promise<
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
     return { error: "Selecione um arquivo CSV (.csv)" };
+  }
+  if (file.size > MAX_CSV_BYTES) {
+    return { error: "Arquivo excede o limite de 15 MB" };
+  }
+  if (!file.name.toLowerCase().endsWith(".csv")) {
+    return { error: "Formato inválido. Envie um arquivo .csv" };
   }
 
   const text = await file.text();

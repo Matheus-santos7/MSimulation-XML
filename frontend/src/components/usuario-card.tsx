@@ -28,9 +28,10 @@ import type { UserDto } from "@/lib/fiscal-types";
 type Props = {
   user: UserDto;
   currentUserId: string;
+  canManage?: boolean;
 };
 
-export function UsuarioCard({ user, currentUserId }: Props) {
+export function UsuarioCard({ user, currentUserId, canManage = false }: Props) {
   const router = useRouter();
   const isSelf = user.id === currentUserId;
   const [editOpen, setEditOpen] = useState(false);
@@ -52,32 +53,34 @@ export function UsuarioCard({ user, currentUserId }: Props) {
   return (
     <>
       <div className="relative border border-border rounded-lg bg-card p-5 space-y-3">
-        <div className="absolute top-3 right-3 flex items-center gap-0.5">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-8 text-muted-foreground hover:text-foreground"
-            aria-label={`Editar ${user.email}`}
-            onClick={() => setEditOpen(true)}
-          >
-            <Pencil className="size-3.5" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-8 text-muted-foreground hover:text-destructive disabled:opacity-40"
-            aria-label={`Excluir ${user.email}`}
-            disabled={isSelf}
-            title={isSelf ? "Não é possível excluir o usuário logado" : undefined}
-            onClick={() => setDeleteOpen(true)}
-          >
-            <Trash2 className="size-3.5" />
-          </Button>
-        </div>
+        {canManage ? (
+          <div className="absolute top-3 right-3 flex items-center gap-0.5">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-8 text-muted-foreground hover:text-foreground"
+              aria-label={`Editar ${user.email}`}
+              onClick={() => setEditOpen(true)}
+            >
+              <Pencil className="size-3.5" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-8 text-muted-foreground hover:text-destructive disabled:opacity-40"
+              aria-label={`Excluir ${user.email}`}
+              disabled={isSelf}
+              title={isSelf ? "Não é possível excluir o usuário logado" : undefined}
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 className="size-3.5" />
+            </Button>
+          </div>
+        ) : null}
 
-        <div className="pr-16 flex items-start gap-3">
+        <div className={`${canManage ? "pr-16" : ""} flex items-start gap-3`}>
           <div className="size-10 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center shrink-0">
             <UserCircle2 className="size-5 text-accent" />
           </div>

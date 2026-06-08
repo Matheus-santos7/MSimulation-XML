@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { ZodError } from "zod";
 import { tenantIdFromRequest, userIdFromRequest } from "../lib/auth/request-context.js";
+import { requireAdminHook } from "../plugins/contexts/guards.js";
 import { userCreateBody, userIdParam, userUpdateBody } from "../schemas/user.js";
 import {
   UserConflictError,
@@ -24,7 +25,7 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
     return user;
   });
 
-  app.post("/users", async (req, reply) => {
+  app.post("/users", { onRequest: [requireAdminHook] }, async (req, reply) => {
     try {
       const tenantId = tenantIdFromRequest(req);
       const body = userCreateBody.parse(req.body);
@@ -35,7 +36,7 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
     }
   });
 
-  app.patch("/users/:id", async (req, reply) => {
+  app.patch("/users/:id", { onRequest: [requireAdminHook] }, async (req, reply) => {
     try {
       const tenantId = tenantIdFromRequest(req);
       const { id } = userIdParam.parse(req.params);
@@ -48,7 +49,7 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
     }
   });
 
-  app.delete("/users/:id", async (req, reply) => {
+  app.delete("/users/:id", { onRequest: [requireAdminHook] }, async (req, reply) => {
     try {
       const tenantId = tenantIdFromRequest(req);
       const currentUserId = userIdFromRequest(req);

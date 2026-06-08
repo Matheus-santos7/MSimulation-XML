@@ -57,6 +57,7 @@ export type UserDto = {
   tenantId: string;
   email: string;
   name?: string;
+  role?: "ADMIN" | "MEMBER";
   createdAt: string;
   updatedAt: string;
 };

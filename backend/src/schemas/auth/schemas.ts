@@ -25,8 +25,20 @@ export const loginBodySchema = z.object({
   password: z.string().min(1, "Senha obrigatória").max(128),
 });
 
+const DISPOSABLE_EMAIL_DOMAINS = new Set([
+  "mailinator.com",
+  "guerrillamail.com",
+  "tempmail.com",
+  "throwaway.email",
+  "yopmail.com",
+  "10minutemail.com",
+]);
+
 export const registerBodySchema = z.object({
-  email: emailField,
+  email: emailField.refine((email) => {
+    const domain = email.split("@")[1]?.toLowerCase();
+    return domain ? !DISPOSABLE_EMAIL_DOMAINS.has(domain) : true;
+  }, "Use um e-mail permanente — domínios descartáveis não são permitidos"),
   password: passwordField,
   name: z
     .string()
@@ -34,6 +46,11 @@ export const registerBodySchema = z.object({
     .max(120)
     .optional()
     .transform((v) => (v && v.length > 0 ? v : undefined)),
+  captchaToken: z.string().trim().optional(),
+});
+
+export const verifyEmailBodySchema = z.object({
+  token: z.string().min(32, "Link inválido ou expirado"),
 });
 
 export const refreshBodySchema = z.object({

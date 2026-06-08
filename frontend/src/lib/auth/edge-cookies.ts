@@ -1,4 +1,5 @@
 import type { NextResponse } from "next/server";
+import { apiBase } from "@/lib/api-base";
 import {
   ACCESS_COOKIE_MAX_AGE,
   ACCESS_TOKEN_COOKIE,
@@ -8,10 +9,14 @@ import {
 } from "@/lib/auth/cookie";
 
 function cookieBase() {
+  const secure =
+    process.env.NODE_ENV === "production" ||
+    process.env.VERCEL === "1" ||
+    process.env.COOKIE_SECURE === "true";
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax" as const,
+    secure,
+    sameSite: "strict" as const,
     path: "/",
   };
 }
@@ -38,7 +43,7 @@ export function setSessionCookiesOn(
 }
 
 export function apiBaseUrl(): string {
-  return (process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3001").replace(/\/$/, "");
+  return apiBase();
 }
 
 export async function refreshTokensViaApi(

@@ -13,6 +13,7 @@ import {
   registerBodySchema,
   resetPasswordBodySchema,
   verify2faBodySchema,
+  verifyEmailBodySchema,
 } from "../../schemas/auth/schemas.js";
 import { tenantCreateBody } from "../../schemas/tenant.js";
 import {
@@ -34,6 +35,11 @@ import {
   isDatabaseUnavailableError,
 } from "../../lib/db/errors.js";
 import { userIdFromRequest } from "../../lib/auth/request-context.js";
+import { CaptchaVerificationError, verifyTurnstileToken } from "../../lib/auth/turnstile.js";
+import {
+  EmailVerificationInvalidError,
+  EmailVerificationService,
+} from "../../services/auth/email-verification-service.js";
 
 function authMeta(req: FastifyRequest) {
   return {
@@ -69,6 +75,9 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     ),
   );
   const twoFactor = new TwoFactorService(app.prisma, service, sign, sign2fa);
+  const emailVerification = new EmailVerificationService(app.prisma);
+
+  const twoFaRateLimit = { max: 5, timeWindow: "15 minutes" } as const;
 
   app.post(
     "/auth/register",
@@ -80,6 +89,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     async (req, reply) => {
       try {
         const body = registerBodySchema.parse(req.body);
+        await verifyTurnstileToken(body.captchaToken, req.ip);
         const session = await service.register(body, sign, authMeta(req));
         return reply.status(201).send(session);
       } catch (e) {
@@ -169,7 +179,10 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     return twoFactor.getStatus(req.user.userId);
   });
 
-  app.post("/auth/2fa/setup", { onRequest: [app.authenticate] }, async (req, reply) => {
+  app.post(
+    "/auth/2fa/setup",
+    { onRequest: [app.authenticate], config: { rateLimit: twoFaRateLimit } },
+    async (req, reply) => {
     try {
       return await twoFactor.setup(req.user.userId);
     } catch (e) {
@@ -177,7 +190,10 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     }
   });
 
-  app.post("/auth/2fa/enable", { onRequest: [app.authenticate] }, async (req, reply) => {
+  app.post(
+    "/auth/2fa/enable",
+    { onRequest: [app.authenticate], config: { rateLimit: twoFaRateLimit } },
+    async (req, reply) => {
     try {
       const { code } = enable2faBodySchema.parse(req.body);
       return await twoFactor.enable(req.user.userId, code);
@@ -188,7 +204,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/auth/2fa/disable",
-    { onRequest: [app.authenticate] },
+    { onRequest: [app.authenticate], config: { rateLimit: twoFaRateLimit } },
     async (req, reply) => {
       try {
         const { password, code } = disable2faBodySchema.parse(req.body);
@@ -260,8 +276,41 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       tenant: result.tenant,
       needsOnboarding: result.user.tenantId === null,
       twoFactorEnabled: result.user.totpEnabledAt != null,
+      emailVerified: result.user.emailVerifiedAt != null,
+      role: result.user.role,
     };
   });
+
+  app.post(
+    "/auth/verify-email",
+    {
+      config: {
+        rateLimit: { max: 10, timeWindow: "15 minutes" },
+      },
+    },
+    async (req, reply) => {
+      try {
+        const { token } = verifyEmailBodySchema.parse(req.body);
+        const result = await emailVerification.verifyEmail(token);
+        return reply.status(200).send(result);
+      } catch (e) {
+        return handleAuthError(e, reply);
+      }
+    },
+  );
+
+  app.post(
+    "/auth/resend-verification",
+    { onRequest: [app.authenticate], config: { rateLimit: { max: 5, timeWindow: "1 hour" } } },
+    async (req, reply) => {
+      try {
+        const result = await emailVerification.resendForUser(req.user.userId);
+        return reply.status(200).send(result);
+      } catch (e) {
+        return handleAuthError(e, reply);
+      }
+    },
+  );
 
   app.post(
     "/auth/onboarding/tenant",
@@ -314,6 +363,12 @@ function handleAuthError(e: unknown, reply: { status: (code: number) => { send: 
   }
   if (e instanceof EmailDeliveryError) {
     return reply.status(503).send({ error: "Não foi possível enviar o e-mail. Tente novamente em instantes." });
+  }
+  if (e instanceof CaptchaVerificationError) {
+    return reply.status(400).send({ error: e.message });
+  }
+  if (e instanceof EmailVerificationInvalidError) {
+    return reply.status(400).send({ error: e.message });
   }
   if (isDatabaseUnavailableError(e)) {
     return reply.status(503).send({ error: DATABASE_UNAVAILABLE_MESSAGE });

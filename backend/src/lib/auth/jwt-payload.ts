@@ -27,6 +27,8 @@ export type AuthUserResponse = {
   tenant: ReturnType<typeof mapTenant> | null;
   needsOnboarding: boolean;
   twoFactorEnabled: boolean;
+  emailVerified: boolean;
+  role?: "ADMIN" | "MEMBER";
 };
 
 export type AuthSessionResponse = AuthUserResponse & {
@@ -77,6 +79,8 @@ export function authSessionResponse(
     name: string | null;
     tenantId: string | null;
     totpEnabledAt?: Date | null;
+    role?: "ADMIN" | "MEMBER";
+    emailVerifiedAt?: Date | null;
   },
   tenant: ReturnType<typeof mapTenant> | null,
   tokenVersion: number,
@@ -93,6 +97,8 @@ export function authSessionResponse(
     tenant,
     needsOnboarding: user.tenantId === null,
     twoFactorEnabled: user.totpEnabledAt != null,
+    emailVerified: user.emailVerifiedAt != null,
+    role: user.role,
   };
 }
 

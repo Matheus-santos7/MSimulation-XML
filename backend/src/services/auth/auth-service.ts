@@ -30,6 +30,7 @@ import { generateRefreshToken, hashRefreshToken } from "../../lib/auth/refresh-t
 import type { registerBodySchema } from "../../schemas/auth/schemas.js";
 import type { tenantCreateBody } from "../../schemas/tenant.js";
 import { TenantConflictError, TenantService } from "../tenant-service.js";
+import { EmailVerificationService } from "./email-verification-service.js";
 import type { z } from "zod";
 
 type RegisterInput = z.infer<typeof registerBodySchema>;
@@ -67,9 +68,11 @@ export class AuthTooManyRequestsError extends Error {
 
 export class AuthService {
   private readonly tenants: TenantService;
+  private readonly emailVerification: EmailVerificationService;
 
   constructor(private readonly prisma: PrismaClient) {
     this.tenants = new TenantService(prisma);
+    this.emailVerification = new EmailVerificationService(prisma);
   }
 
   async register(
@@ -90,8 +93,18 @@ export class AuthService {
         name: data.name ?? null,
         password: await hashPassword(data.password),
         tenantId: undefined,
+        role: "MEMBER",
+        emailVerifiedAt: null,
       },
     });
+
+    try {
+      await this.emailVerification.sendVerificationEmail(user.id);
+    } catch (e) {
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[dev] Falha ao enviar e-mail de verificação no registro:", e);
+      }
+    }
 
     const refreshToken = await this.createSession(user.id, meta);
     return authSessionResponse(
@@ -241,6 +254,9 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new AuthStateError("Usuário não encontrado");
     if (user.tenantId) throw new AuthStateError("Empresa já vinculada à conta");
+    if (!user.emailVerifiedAt) {
+      throw new AuthStateError("Confirme seu e-mail antes de cadastrar a empresa");
+    }
 
     try {
       const result = await this.prisma.$transaction(async (tx) => {
@@ -249,7 +265,7 @@ export class AuthService {
         });
         const userRow = await tx.user.update({
           where: { id: userId },
-          data: { tenantId: tenantRow.id },
+          data: { tenantId: tenantRow.id, role: "ADMIN" },
           include: { tenant: true },
         });
         return { user: userRow, tenant: mapTenant(tenantRow) };

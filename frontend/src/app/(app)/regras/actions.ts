@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { bulkUpsertTaxRules, deleteAllTaxRules, deleteTaxRuleGroup } from "@/lib/fiscal-api";
 import { parseTaxRuleXlsx } from "@/lib/tax-rule-planilha";
+import { validateSpreadsheetFile } from "@/lib/spreadsheet-upload";
 
 export type TaxRuleImportState = {
   error?: string;
@@ -18,8 +19,9 @@ export async function importarRegrasTributariasAction(
   formData: FormData,
 ): Promise<TaxRuleImportState> {
   const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) return { error: "Selecione um arquivo .xlsx" };
-  if (!file.name.toLowerCase().endsWith(".xlsx")) return { error: "Formato inválido. Envie um arquivo .xlsx" };
+  if (!(file instanceof File)) return { error: "Selecione um arquivo .xlsx" };
+  const validation = await validateSpreadsheetFile(file);
+  if (!validation.ok) return { error: validation.error };
 
   const parsed = parseTaxRuleXlsx(await file.arrayBuffer());
   if (parsed.rows.length === 0) {

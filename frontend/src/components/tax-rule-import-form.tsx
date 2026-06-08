@@ -8,9 +8,10 @@ import { Button } from "@/components/ui/button";
 
 type Props = {
   rulesCount: number;
+  isAdmin?: boolean;
 };
 
-export function TaxRuleImportForm({ rulesCount }: Props) {
+export function TaxRuleImportForm({ rulesCount, isAdmin = false }: Props) {
   const [state, action, pending] = useActionState<TaxRuleImportState, FormData>(importarRegrasTributariasAction, {});
 
   return (
@@ -19,7 +20,7 @@ export function TaxRuleImportForm({ rulesCount }: Props) {
         <div className="text-[12px] uppercase font-bold tracking-widest text-muted-foreground">
           Importar planilha Mercado Livre (.xlsx)
         </div>
-        <TaxRuleDeleteAllButton rulesCount={rulesCount} />
+        {isAdmin ? <TaxRuleDeleteAllButton rulesCount={rulesCount} /> : null}
       </div>
 
       <form action={action} className="space-y-3">

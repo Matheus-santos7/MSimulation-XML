@@ -101,6 +101,7 @@ export async function registerAction(
       email,
       password,
       name: name.length > 0 ? name : undefined,
+      captchaToken: String(formData.get("captchaToken") ?? "").trim() || undefined,
     });
     await setAuthSession(session);
     redirectAfterAuth(session);

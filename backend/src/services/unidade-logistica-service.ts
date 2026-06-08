@@ -271,6 +271,7 @@ export class UnidadeLogisticaService {
         await this.prisma.meliUnidadeLogistica.update({
           where: { id: existing.id },
           data: {
+            codigo: data.codigo,
             nome: data.nome,
             ie: data.ie,
             logradouro: data.logradouro,

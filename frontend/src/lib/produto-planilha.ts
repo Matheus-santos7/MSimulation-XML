@@ -180,7 +180,6 @@ function normalizeExTipi(raw: string): string | undefined | null {
 
 function rowToProductInput(row: Record<ProdutoPlanilhaColumn, string>): ProductInput | string {
   const sku = cell(row, "sku");
-  const nome = cell(row, "nome");
   const ncm = cell(row, "ncm").replace(/\D/g, "");
   const cest = cell(row, "cest").replace(/\D/g, "");
   const cfopRaw = cell(row, "cfop").replace(/\D/g, "");
@@ -191,7 +190,10 @@ function rowToProductInput(row: Record<ProdutoPlanilhaColumn, string>): ProductI
   const origem = origemRaw === "" ? 0 : Number(origemRaw);
 
   if (!sku) return "SKU (sku) obrigatório";
-  if (!nome) return "Descrição (nome) obrigatória";
+  const nomeRaw = cell(row, "nome");
+  if (!nomeRaw) return "Descrição (nome) obrigatória";
+  // NF-e <xProd> aceita no máximo 120 caracteres.
+  const nome = nomeRaw.length > 120 ? nomeRaw.slice(0, 120) : nomeRaw;
   if (ncm.length !== 8) return "NCM deve ter 8 dígitos";
   if (cest.length !== 7) return "CEST deve ter 7 dígitos";
   if (preco == null) return "Preço de venda inválido";
@@ -213,6 +215,9 @@ function rowToProductInput(row: Record<ProdutoPlanilhaColumn, string>): ProductI
   if (!Number.isInteger(estoque) || estoque < 0) return "Estoque deve ser inteiro ≥ 0";
 
   const taxRuleBaseIdRaw = cell(row, "tax_rule_base_id");
+  if (taxRuleBaseIdRaw.length > 120) {
+    return "Regra fiscal (tax_rule_base_id) inválida — use o ID curto da planilha de regras";
+  }
   const taxRuleBaseId = taxRuleBaseIdRaw.length > 0 ? taxRuleBaseIdRaw : undefined;
 
   return {
@@ -264,6 +269,7 @@ export function parseProdutoPlanilhaCsv(text: string): ProdutoPlanilhaParseResul
   }
 
   const rows: ProductInput[] = [];
+  const rowLines: number[] = [];
   const errors: { line: number; message: string }[] = [];
 
   for (let r = 1; r < matrix.length; r++) {
@@ -283,13 +289,37 @@ export function parseProdutoPlanilhaCsv(text: string): ProdutoPlanilhaParseResul
       continue;
     }
     rows.push(parsed);
+    rowLines.push(line);
   }
 
   if (rows.length === 0 && errors.length === 0) {
     errors.push({ line: 2, message: "Nenhum produto válido na planilha" });
   }
 
-  return { rows, errors };
+  return { rows: dedupeRowsBySku(rows, rowLines, errors), errors };
+}
+
+function dedupeRowsBySku(
+  rows: ProductInput[],
+  rowLines: number[],
+  errors: { line: number; message: string }[],
+): ProductInput[] {
+  const lastBySku = new Map<string, { row: ProductInput; line: number }>();
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]!;
+    const line = rowLines[i]!;
+    const prev = lastBySku.get(row.sku);
+    if (prev) {
+      errors.push({
+        line: prev.line,
+        message: `SKU ${row.sku} duplicado na planilha — mantida a linha ${line}`,
+      });
+    }
+    lastBySku.set(row.sku, { row, line });
+  }
+
+  return [...lastBySku.values()].map((entry) => entry.row);
 }
 
 function escapeCsv(value: string): string {

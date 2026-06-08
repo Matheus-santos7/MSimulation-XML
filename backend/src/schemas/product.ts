@@ -59,7 +59,7 @@ const exTipiField = z.preprocess(
 export const productCreateBody = z.object({
   sku: z.string().trim().min(1, "SKU obrigatório").max(60),
   ean: eanField,
-  nome: z.string().trim().min(1, "Descrição obrigatória").max(120),
+  nome: z.string().trim().min(1, "Descrição obrigatória").max(120, "Descrição deve ter no máximo 120 caracteres"),
   ncm: ncmField,
   cest: cestField,
   exTipi: exTipiField,
@@ -69,7 +69,9 @@ export const productCreateBody = z.object({
   preco: z.coerce.number().positive("Preço de venda deve ser maior que zero"),
   precoCusto: z.coerce.number().min(0, "Preço de custo não pode ser negativo"),
   estoque: z.coerce.number().int().min(0, "Estoque não pode ser negativo").default(0),
-  taxRuleBaseId: optionalTrimmed.pipe(z.string().max(120).optional()),
+  taxRuleBaseId: optionalTrimmed.pipe(
+    z.string().max(120, "Regra fiscal deve ter no máximo 120 caracteres").optional(),
+  ),
 });
 
 export const productUpdateBody = productCreateBody.partial();

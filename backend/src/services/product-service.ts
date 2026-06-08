@@ -52,7 +52,7 @@ export class ProductService {
         },
       });
 
-      if (estoque > 0) {
+      if (estoque > 0 && taxRuleBaseId) {
         await emitirNFeRemessa(this.prisma, tenant, row, estoque);
       }
 
@@ -84,7 +84,8 @@ export class ProductService {
         data: { ...data, estoque: newEstoque } as Prisma.ProductUpdateInput,
       });
 
-      if (deltaRemessa > 0) {
+      const ruleId = (row.taxRuleBaseId ?? existing.taxRuleBaseId)?.trim();
+      if (deltaRemessa > 0 && ruleId) {
         const tenant = await this.prisma.tenant.findUniqueOrThrow({ where: { id: existing.tenantId } });
         await emitirNFeRemessa(this.prisma, tenant, row, deltaRemessa);
       }
@@ -134,7 +135,7 @@ export class ProductService {
   }
 
   async bulkUpsert(tenantId: string, rows: CreateInput[]) {
-    const tenant = await this.prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } });
+    const deduped = dedupeBulkRowsBySku(rows);
     const existing = await this.prisma.product.findMany({
       where: { tenantId },
       select: { id: true, sku: true, estoque: true },
@@ -145,15 +146,17 @@ export class ProductService {
     let updated = 0;
     const failed: { line: number; sku: string; error: string }[] = [];
 
-    for (let i = 0; i < rows.length; i++) {
-      const row = rows[i]!;
-      const line = i + 2;
+    for (const { row, line } of deduped) {
       const prev = bySku.get(row.sku);
       const estoque = row.estoque ?? 0;
+      const taxRuleBaseId = row.taxRuleBaseId?.trim();
 
       try {
+        if (taxRuleBaseId) {
+          await assertProductTaxRuleBaseId(this.prisma, tenantId, taxRuleBaseId, tenant.uf);
+        }
+
         if (prev) {
-          const delta = estoque - prev.estoque;
           await this.prisma.product.update({
             where: { id: prev.id },
             data: {
@@ -168,20 +171,12 @@ export class ProductService {
               preco: row.preco,
               precoCusto: row.precoCusto,
               estoque,
-              ...(row.taxRuleBaseId ? { taxRuleBaseId: row.taxRuleBaseId.trim() } : {}),
+              ...(taxRuleBaseId ? { taxRuleBaseId } : {}),
             },
           });
-          if (delta > 0) {
-            const product = await this.prisma.product.findUniqueOrThrow({ where: { id: prev.id } });
-            await emitirNFeRemessa(this.prisma, tenant, product, delta);
-          }
           bySku.set(row.sku, { id: prev.id, estoque });
           updated++;
         } else {
-          const taxRuleBaseId = row.taxRuleBaseId?.trim();
-          if (taxRuleBaseId) {
-            await assertProductTaxRuleBaseId(this.prisma, tenantId, taxRuleBaseId, tenant.uf);
-          }
           const createdRow = await this.prisma.product.create({
             data: {
               tenantId,
@@ -200,9 +195,6 @@ export class ProductService {
               taxRuleBaseId,
             },
           });
-          if (estoque > 0) {
-            await emitirNFeRemessa(this.prisma, tenant, createdRow, estoque);
-          }
           bySku.set(row.sku, { id: createdRow.id, estoque });
           created++;
         }
@@ -210,12 +202,12 @@ export class ProductService {
         failed.push({
           line,
           sku: row.sku,
-          error: e instanceof Error ? e.message : "Erro ao salvar linha",
+          error: bulkRowErrorMessage(e),
         });
       }
     }
 
-    return { created, updated, failed, total: rows.length };
+    return { created, updated, failed, total: deduped.length };
   }
 }
 
@@ -232,4 +224,31 @@ function isPrismaUniqueError(e: unknown): boolean {
 
 function isPrismaFkError(e: unknown): boolean {
   return typeof e === "object" && e !== null && "code" in e && (e as { code: string }).code === "P2003";
+}
+
+/** Mantém a última ocorrência de cada SKU no lote (planilhas costumam repetir linhas). */
+function dedupeBulkRowsBySku(rows: CreateInput[]): { row: CreateInput; line: number }[] {
+  const lastLine = new Map<string, number>();
+  const lastRow = new Map<string, CreateInput>();
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]!;
+    lastLine.set(row.sku, i + 2);
+    lastRow.set(row.sku, row);
+  }
+  return [...lastRow.entries()].map(([sku, row]) => ({
+    row,
+    line: lastLine.get(sku) ?? 2,
+  }));
+}
+
+function bulkRowErrorMessage(e: unknown): string {
+  if (e instanceof ProductConflictError) return e.message;
+  if (e instanceof TaxRuleCatalogError) return e.message;
+  if (e instanceof RemessaError) return e.message;
+  if (isPrismaUniqueError(e)) return "SKU já cadastrado nesta empresa";
+  if (e instanceof Error) {
+    if (/Unique constraint failed/i.test(e.message)) return "SKU já cadastrado nesta empresa";
+    return e.message;
+  }
+  return "Erro ao salvar linha";
 }

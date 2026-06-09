@@ -9,15 +9,6 @@ export const REMESSA_NAT_OP = "Outras Saidas - Remessa para Deposito Temporario"
 export const REMESSA_CFOP_INTERSTATE = "6949";
 /** Intrastadual — 1º dígito 5, alinhado a idDest=1. */
 export const REMESSA_CFOP_INTRASTATE = "5949";
-/** @deprecated Use {@link resolveRemessaCfop} — mantido para compatibilidade. */
-export const REMESSA_CFOP = REMESSA_CFOP_INTERSTATE;
-export const REMESSA_INF_CPL = "Remessa para Deposito Temporario.";
-
-/** Intermediador ML (tag infIntermed no XML) — não é endereço do destinatário. */
-export const REMESSA_ML_INTERMED = {
-  cnpj: "03007331000141",
-  idCadIntTran: "279642028",
-} as const;
 
 /** CFOP da remessa física conforme UF emitente × UF destinatário (SEFAZ rejeição 770/522). */
 export function resolveRemessaCfop(emitUf: string, destUf: string): string {

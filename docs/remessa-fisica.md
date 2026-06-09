@@ -61,7 +61,7 @@ flowchart TD
 
 Sem CD padrão nem unidade selecionada, a emissão falha com orientação para cadastrar em **Unidades ML** e definir padrão ou escolher o destino na remessa.
 
-Intermediador ML no XML (`infIntermed`): `REMESSA_ML_INTERMED` em `backend/src/services/fiscal/remessa/helpers/remessa-dest.ts`.
+Intermediador ML no XML (`infIntermed`): constantes em `packages/nfe-xml/src/constants.ts`.
 
 ---
 

@@ -3,7 +3,7 @@ import {
   buildTaxRuleRowId,
   type CustomerType,
   type TransactionType,
-} from "../../lib/tax-rule-ids.js";
+} from "../../lib/fiscal/tax-rule-ids.js";
 
 export type { CustomerType, TransactionType };
 

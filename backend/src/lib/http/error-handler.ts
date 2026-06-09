@@ -1,8 +1,8 @@
 import type { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { ZodError } from "zod";
-import { Prisma } from "../generated/prisma/client.js";
-import { DATABASE_UNAVAILABLE_MESSAGE, isDatabaseUnavailableError } from "./db/errors.js";
-import { sendZodValidationError } from "./http/domain-errors.js";
+import { Prisma } from "../../generated/prisma/client.js";
+import { DATABASE_UNAVAILABLE_MESSAGE, isDatabaseUnavailableError } from "../db/errors.js";
+import { sendZodValidationError } from "./domain-errors.js";
 
 const GENERIC_INTERNAL_ERROR = "Erro interno do servidor";
 

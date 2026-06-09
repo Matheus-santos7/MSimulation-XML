@@ -6,7 +6,7 @@ import {
   normalizeIeMeli,
   unidadeParaDestinoFiscal,
   type UnidadeDestinoFiscal,
-} from "../../lib/meli-unidade.js";
+} from "../../lib/logistics/meli-unidade.js";
 import type { MeliUnidadeLogistica } from "../../generated/prisma/client.js";
 import { lookupCep } from "../lookup/lookup-service.js";
 

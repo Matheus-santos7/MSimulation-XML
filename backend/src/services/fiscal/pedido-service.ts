@@ -30,7 +30,7 @@
  * @see venda-chain-service.ts — emissão retorno + venda
  */
 import type { Prisma, PrismaClient } from "../../generated/prisma/client.js";
-import { mapPedido } from "../../lib/pedido-mapper.js";
+import { mapPedido } from "../../lib/fiscal/pedido-mapper.js";
 import type { PedidoCheckoutInput } from "../../schemas/orders/pedido.js";
 import { CheckoutError, SaldoRemessaInsuficienteError, VendaChainError } from "./checkout-service.js";
 import { emitirCadeiaVenda, type PedidoForEmit } from "./venda-chain-service.js";

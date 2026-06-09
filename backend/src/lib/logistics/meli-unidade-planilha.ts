@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import type { UnidadeLogisticaImportRow } from "../services/logistics/unidade-logistica-service.js";
+import type { UnidadeLogisticaImportRow } from "../../services/logistics/unidade-logistica-service.js";
 
 export type MeliUnidadePlanilhaParseResult = {
   rows: UnidadeLogisticaImportRow[];

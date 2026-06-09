@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { tenantIdFromRequest } from "../../lib/auth/request-context.js";
-import { mapNfe } from "../../lib/fiscal-mappers.js";
+import { mapNfe } from "../../lib/fiscal/fiscal-mappers.js";
 import { FiscalService, fiscalNotDeleted } from "../../services/fiscal/fiscal-service.js";
 import { CancelamentoError, cancelarVenda } from "../../services/fiscal/cancelamento-service.js";
 import { DevolucaoError, emitirDevolucaoVenda } from "../../services/fiscal/devolucao-service.js";

@@ -1,13 +1,13 @@
 import { enrichFiscalPayloadWithXTexto } from "@msimulation-xml/fiscal-core";
 import { FiscalStatus, NFeTipo, Prisma } from "../../../generated/prisma/client.js";
-import { buildChaveNFe } from "../../../lib/nfe-chave.js";
-import { enrichTaxSnapshot } from "../../../lib/fiscal-emitter-runtime.js";
-import { proximoNumeroNfe } from "../../../lib/nfe-sequencia.js";
+import { buildChaveNFe } from "../../../lib/fiscal/nfe-chave.js";
+import { enrichTaxSnapshot } from "../../../lib/fiscal/fiscal-emitter-runtime.js";
+import { proximoNumeroNfe } from "../../../lib/fiscal/nfe-sequencia.js";
 import {
   RETORNO_SIMBOLICO_CFOP,
   RETORNO_SIMBOLICO_NAT_OP,
-} from "../../../lib/retorno-simbolico-dest.js";
-import { taxSnapshotFromRule } from "../../../lib/tax-snapshot.js";
+} from "../../../lib/fiscal/retorno-simbolico-dest.js";
+import { taxSnapshotFromRule } from "../../../lib/fiscal/tax-snapshot.js";
 import {
   calcularNotaInbound,
   inferAliqIcmsIntraestadual,

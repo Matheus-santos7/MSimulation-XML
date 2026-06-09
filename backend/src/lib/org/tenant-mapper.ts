@@ -1,4 +1,4 @@
-import type { EnvironmentKind, Tenant } from "../generated/prisma/client.js";
+import type { EnvironmentKind, Tenant } from "../../generated/prisma/client.js";
 
 export function mapTenant(row: Tenant) {
   return {

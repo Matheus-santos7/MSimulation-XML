@@ -1,5 +1,5 @@
-import type { CteModal, FiscalStatus, NFeTipo, PrismaClient, Product, TimelineStatus } from "../generated/prisma/client.js";
-import { mapProduct } from "./product-mapper.js";
+import type { CteModal, FiscalStatus, NFeTipo, PrismaClient, Product, TimelineStatus } from "../../generated/prisma/client.js";
+import { mapProduct } from "../catalog/product-mapper.js";
 
 export function num(n: { toString(): string } | number): number {
   return typeof n === "number" ? n : Number(n);

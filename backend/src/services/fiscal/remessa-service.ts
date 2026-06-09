@@ -14,13 +14,13 @@ import {
   type Product,
   type Tenant,
 } from "../../generated/prisma/client.js";
-import { mapNfe } from "../../lib/fiscal-mappers.js";
-import { buildChaveNFe, gerarPedidoMl } from "../../lib/nfe-chave.js";
-import { proximoNumeroNfe } from "../../lib/nfe-sequencia.js";
-import { REMESSA_CFOP, REMESSA_NAT_OP } from "../../lib/remessa-dest.js";
-import type { UnidadeDestinoFiscal } from "../../lib/meli-unidade.js";
-import { enrichTaxSnapshot, loadEmitterSettings } from "../../lib/fiscal-emitter-runtime.js";
-import { taxSnapshotFromRule } from "../../lib/tax-snapshot.js";
+import { mapNfe } from "../../lib/fiscal/fiscal-mappers.js";
+import { buildChaveNFe, gerarPedidoMl } from "../../lib/fiscal/nfe-chave.js";
+import { proximoNumeroNfe } from "../../lib/fiscal/nfe-sequencia.js";
+import { REMESSA_CFOP, REMESSA_NAT_OP } from "../../lib/fiscal/remessa-dest.js";
+import type { UnidadeDestinoFiscal } from "../../lib/logistics/meli-unidade.js";
+import { enrichTaxSnapshot, loadEmitterSettings } from "../../lib/fiscal/fiscal-emitter-runtime.js";
+import { taxSnapshotFromRule } from "../../lib/fiscal/tax-snapshot.js";
 import { enrichFiscalPayloadWithXTexto } from "@msimulation-xml/fiscal-core";
 import { emitirCteRemessa } from "./cte-remessa-service.js";
 import { productUnitPrice } from "@msimulation-xml/fiscal-core";

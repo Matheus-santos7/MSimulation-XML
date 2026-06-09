@@ -1,5 +1,5 @@
 import type { PrismaClient } from "../../generated/prisma/client.js";
-import { mapUser } from "../../lib/user-mapper.js";
+import { mapUser } from "../../lib/org/user-mapper.js";
 import { hashPassword } from "../../lib/auth/password.js";
 import type { userCreateBody, userUpdateBody } from "../../schemas/org/user.js";
 import type { z } from "zod";

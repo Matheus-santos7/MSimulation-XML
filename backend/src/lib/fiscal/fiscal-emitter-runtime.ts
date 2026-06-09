@@ -1,4 +1,4 @@
-import type { NFeTipo } from "../generated/prisma/client.js";
+import type { NFeTipo } from "../../generated/prisma/client.js";
 import {
   enrichTaxSnapshot as enrichTaxSnapshotCore,
   type EnrichTaxContext as EnrichTaxContextCore,

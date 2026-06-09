@@ -1,4 +1,4 @@
-import type { User, UserRole } from "../generated/prisma/client.js";
+import type { User, UserRole } from "../../generated/prisma/client.js";
 
 export type UserDto = {
   id: string;

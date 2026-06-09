@@ -3,7 +3,7 @@
  */
 
 import type { PrismaClient } from "../../generated/prisma/client.js";
-import { gerarProtocoloSefaz } from "../../lib/sefaz-protocol.js";
+import { gerarProtocoloSefaz } from "../../lib/fiscal/sefaz-protocol.js";
 import { fiscalNotDeleted } from "./fiscal-service.js";
 
 export class InutilizacaoError extends Error {

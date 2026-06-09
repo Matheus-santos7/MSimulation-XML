@@ -9,13 +9,9 @@ import {
 } from "../../schemas/catalog/product.js";
 import { TaxRuleCatalogError } from "../../services/fiscal/tax-rule-catalog-service.js";
 import { ProductConflictError, ProductService } from "../../services/catalog/product-service.js";
-import { RemessaError } from "../../services/fiscal/remessa-service.js";
-import { UnidadeLogisticaError } from "../../services/logistics/unidade-logistica-service.js";
 
 const PRODUCT_ERROR_MAPPINGS = [
   { type: ProductConflictError, status: 409 },
-  { type: RemessaError, status: 400 },
-  { type: UnidadeLogisticaError, status: 400 },
   { type: TaxRuleCatalogError, status: 400 },
 ] as const;
 

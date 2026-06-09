@@ -1,4 +1,4 @@
-import type { PedidoStatus, Product } from "../generated/prisma/client.js";
+import type { PedidoStatus, Product } from "../../generated/prisma/client.js";
 import { num } from "./fiscal-mappers.js";
 
 type PedidoRow = {

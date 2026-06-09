@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { ZodError } from "zod";
-import { lookupRateLimitPlugin, lookupRouteRateLimit } from "../../lib/lookup-rate-limit.js";
+import { lookupRateLimitPlugin, lookupRouteRateLimit } from "../../lib/lookup/lookup-rate-limit.js";
 import { cepParamSchema, cnpjParamSchema } from "../../schemas/lookup/lookup.js";
 import {
   LookupNotFoundError,

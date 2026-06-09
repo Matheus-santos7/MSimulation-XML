@@ -1,6 +1,6 @@
 import type { FastifyRequest } from "fastify";
-import { validateSpreadsheetBuffer } from "../../lib/spreadsheet-upload.js";
-import { parseMeliUnidadesXlsx } from "../../lib/meli-unidade-planilha.js";
+import { validateSpreadsheetBuffer } from "../../lib/shared/spreadsheet-upload.js";
+import { parseMeliUnidadesXlsx } from "../../lib/logistics/meli-unidade-planilha.js";
 import { bulkImportJsonBody } from "../../schemas/logistics/unidades-logisticas.js";
 import type { UnidadeLogisticaImportRow } from "../../services/logistics/unidade-logistica-service.js";
 

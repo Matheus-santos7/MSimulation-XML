@@ -1,6 +1,6 @@
 import type { Tenant } from "../../../generated/prisma/client.js";
 import type { PrismaTx } from "../../../lib/db/prisma-tx.js";
-import type { FiscalEmitterSettingsData } from "../../../lib/fiscal-emitter-settings-defaults.js";
+import type { FiscalEmitterSettingsData } from "../../../lib/fiscal/fiscal-emitter-settings-defaults.js";
 import type { CustomerType, ResolvedTaxRule } from "../tax-rule-service.js";
 
 /** Dados mínimos para emitir retorno + venda (checkout ou pedido faturado). */

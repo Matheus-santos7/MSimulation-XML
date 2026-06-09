@@ -1,10 +1,10 @@
 import { enrichFiscalPayloadWithXTexto } from "@msimulation-xml/fiscal-core";
 import { FiscalStatus, NFeTipo, Prisma } from "../../../generated/prisma/client.js";
-import { buildChaveNFe } from "../../../lib/nfe-chave.js";
-import { enrichTaxSnapshot } from "../../../lib/fiscal-emitter-runtime.js";
-import { proximoNumeroNfe } from "../../../lib/nfe-sequencia.js";
-import { taxSnapshotFromRule } from "../../../lib/tax-snapshot.js";
-import { calcularNotaFiscal } from "../../../lib/tax-engine.js";
+import { buildChaveNFe } from "../../../lib/fiscal/nfe-chave.js";
+import { enrichTaxSnapshot } from "../../../lib/fiscal/fiscal-emitter-runtime.js";
+import { proximoNumeroNfe } from "../../../lib/fiscal/nfe-sequencia.js";
+import { taxSnapshotFromRule } from "../../../lib/fiscal/tax-snapshot.js";
+import { calcularNotaFiscal } from "../../../lib/fiscal/tax-engine.js";
 import { montarItemFiscal } from "../tax-calculation-service.js";
 import { persistNfeXmlFromEmission } from "../nfe-xml-service.js";
 import { enderecoDestVenda, inferAliqIcmsVenda } from "./context.js";

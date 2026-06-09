@@ -180,11 +180,16 @@ backend/
 │   │   └── fiscal/            # emissão, FIFO, pedidos, XML, regras
 │   │       └── venda-chain/   # Submódulo: retorno + venda + CT-e
 │   │
-│   ├── lib/                   # Utilitários e engine tributária
-│   │   ├── tax-engine.ts      # ICMS por dentro, totais por item
-│   │   ├── http/              # handleRouteError, erros de domínio HTTP
+│   ├── lib/                   # Utilitários puros, por domínio (espelha services/)
+│   │   ├── auth/              # JWT, senha, TOTP, request-context
 │   │   ├── db/                # Prisma singleton, RLS, transações
-│   │   └── auth/              # JWT config, senha, Turnstile
+│   │   ├── http/              # CORS, helmet, error-handler, domain-errors
+│   │   ├── org/               # tenant-mapper, user-mapper
+│   │   ├── catalog/           # product-mapper
+│   │   ├── lookup/            # rate-limit de CNPJ/CEP
+│   │   ├── logistics/         # CDs Meli, planilha de importação
+│   │   ├── fiscal/            # tax-engine, chaves NF-e/CT-e, mappers fiscais
+│   │   └── shared/            # utilitários transversais (ex.: upload planilha)
 │   │
 │   ├── emails/                # Templates de e-mail (auth)
 │   └── types/                 # Augmentação de tipos Fastify
@@ -194,7 +199,7 @@ backend/
 └── tsconfig.json
 ```
 
-**Convenção:** cada domínio em `routes/` tem pasta homônima em `services/` e (quando há validação reutilizável) em `schemas/`. Arquivos de rota usam sufixo `*.routes.ts`; services usam `*-service.ts`. Cada pasta exporta um `index.ts` agregador.
+**Convenção:** cada domínio em `routes/` tem pasta homônima em `services/`, `schemas/` (quando há validação) e `lib/` (mappers, helpers e engine). Arquivos de rota usam sufixo `*.routes.ts`; services usam `*-service.ts`. Cada pasta exporta um `index.ts` agregador.
 
 ---
 
@@ -223,7 +228,7 @@ Fluxo dentro de `protected-api`:
 4. **`requireEmailVerifiedHook`** — bloqueia se `REQUIRE_EMAIL_VERIFICATION=true`.
 5. Handler da rota → service → resposta JSON.
 
-Erros globais são tratados em [`src/lib/error-handler.ts`](./src/lib/error-handler.ts) (`ZodError` → 400, Prisma P2002 → 409, etc.). Rotas usam [`handleRouteError`](./src/lib/http/domain-errors.ts) para erros de domínio com `.status` HTTP.
+Erros globais são tratados em [`src/lib/http/error-handler.ts`](./src/lib/http/error-handler.ts) (`ZodError` → 400, Prisma P2002 → 409, etc.). Rotas usam [`handleRouteError`](./src/lib/http/domain-errors.ts) para erros de domínio com `.status` HTTP.
 
 ---
 
@@ -359,7 +364,7 @@ Erro comum: `SaldoRemessaInsuficienteError` — falta remessa física ou quantid
 
 ### Engine tributária
 
-[`src/lib/tax-engine.ts`](./src/lib/tax-engine.ts):
+[`src/lib/fiscal/tax-engine.ts`](./src/lib/fiscal/tax-engine.ts):
 
 - ICMS **por dentro** por item.
 - `<ICMSTot>` = soma dos itens (evita rejeição 532/533).
@@ -552,7 +557,7 @@ Nas rotas, use `handleRouteError` de [`src/lib/http/domain-errors.ts`](./src/lib
 
 ### 3. Mappers
 
-Prisma retorna entidades internas; a API expõe DTOs via mappers em `src/lib/*-mapper.ts` e `fiscal-mappers.ts`. Não retorne o model Prisma cru se houver campos sensíveis ou formatos diferentes.
+Prisma retorna entidades internas; a API expõe DTOs via mappers em `src/lib/<domínio>/` (ex.: `org/tenant-mapper.ts`, `fiscal/fiscal-mappers.ts`). Não retorne o model Prisma cru se houver campos sensíveis ou formatos diferentes.
 
 ### 4. Imports ESM
 
@@ -608,7 +613,7 @@ pnpm --filter @msimulation-xml/backend db:generate
 
 ### 6. Teste
 
-- Lógica pura → teste unitário em `src/lib/*.test.ts` ou `src/services/*.test.ts`.
+- Lógica pura → teste unitário em `src/lib/<domínio>/*.test.ts` ou `src/services/<domínio>/*.test.ts`.
 - Rode `pnpm test:backend` na raiz.
 
 ---
@@ -675,7 +680,7 @@ Arquivos de teste atuais:
 
 | Arquivo | Cobertura |
 |---------|-----------|
-| `src/lib/tax-engine.test.ts` | Cálculo ICMS, totais, arredondamento |
+| `src/lib/fiscal/tax-engine.test.ts` | Cálculo ICMS, totais, arredondamento |
 | `src/lib/http/domain-errors.test.ts` | Helper `handleRouteError` e erros HTTP |
 | `src/services/fiscal/remessa-fifo.test.ts` | Consumo e estorno FIFO |
 | `src/services/fiscal/venda-chain-contract.test.ts` | Contrato da cadeia de venda |

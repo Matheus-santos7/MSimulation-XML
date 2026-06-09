@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { tenantIdFromRequest } from "../../lib/auth/request-context.js";
-import { mapCte } from "../../lib/fiscal-mappers.js";
-import { mapEmitente } from "../../lib/tenant-mapper.js";
+import { mapCte } from "../../lib/fiscal/fiscal-mappers.js";
+import { mapEmitente } from "../../lib/org/tenant-mapper.js";
 import { FiscalService, fiscalNotDeleted } from "../../services/fiscal/fiscal-service.js";
 import { chaveParamSchema } from "../../schemas/fiscal/nfe.js";
 

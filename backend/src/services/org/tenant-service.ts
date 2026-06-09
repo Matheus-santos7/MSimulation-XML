@@ -1,5 +1,5 @@
 import type { Prisma, PrismaClient } from "../../generated/prisma/client.js";
-import { mapTenant } from "../../lib/tenant-mapper.js";
+import { mapTenant } from "../../lib/org/tenant-mapper.js";
 import type { tenantCreateBody, tenantUpdateBody } from "../../schemas/org/tenant.js";
 import type { z } from "zod";
 

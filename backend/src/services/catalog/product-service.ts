@@ -1,9 +1,7 @@
 import type { Prisma, PrismaClient } from "../../generated/prisma/client.js";
-import { mapProduct } from "../../lib/product-mapper.js";
+import { mapProduct } from "../../lib/catalog/product-mapper.js";
 import type { productCreateBody, productUpdateBody } from "../../schemas/catalog/product.js";
 import { assertProductTaxRuleBaseId, TaxRuleCatalogError } from "../fiscal/tax-rule-catalog-service.js";
-import { emitirNFeRemessa, RemessaError } from "../fiscal/remessa-service.js";
-import { UnidadeLogisticaError } from "../logistics/unidade-logistica-service.js";
 import type { z } from "zod";
 
 type CreateInput = z.infer<typeof productCreateBody>;
@@ -52,16 +50,11 @@ export class ProductService {
         },
       });
 
-      if (estoque > 0 && taxRuleBaseId) {
-        await emitirNFeRemessa(this.prisma, tenant, row, estoque);
-      }
-
       return mapProduct(row);
     } catch (e) {
       if (isPrismaUniqueError(e)) {
         throw new ProductConflictError("SKU já cadastrado nesta empresa");
       }
-      if (e instanceof RemessaError || e instanceof UnidadeLogisticaError) throw e;
       throw e;
     }
   }
@@ -76,7 +69,6 @@ export class ProductService {
     }
 
     const newEstoque = data.estoque ?? existing.estoque;
-    const deltaRemessa = newEstoque - existing.estoque;
 
     try {
       const row = await this.prisma.product.update({
@@ -84,18 +76,11 @@ export class ProductService {
         data: { ...data, estoque: newEstoque } as Prisma.ProductUpdateInput,
       });
 
-      const ruleId = (row.taxRuleBaseId ?? existing.taxRuleBaseId)?.trim();
-      if (deltaRemessa > 0 && ruleId) {
-        const tenant = await this.prisma.tenant.findUniqueOrThrow({ where: { id: existing.tenantId } });
-        await emitirNFeRemessa(this.prisma, tenant, row, deltaRemessa);
-      }
-
       return mapProduct(row);
     } catch (e) {
       if (isPrismaUniqueError(e)) {
         throw new ProductConflictError("SKU já cadastrado nesta empresa");
       }
-      if (e instanceof RemessaError || e instanceof UnidadeLogisticaError) throw e;
       throw e;
     }
   }
@@ -243,7 +228,6 @@ function dedupeBulkRowsBySku(rows: CreateInput[]): { row: CreateInput; line: num
 function bulkRowErrorMessage(e: unknown): string {
   if (e instanceof ProductConflictError) return e.message;
   if (e instanceof TaxRuleCatalogError) return e.message;
-  if (e instanceof RemessaError || e instanceof UnidadeLogisticaError) return e.message;
   if (isPrismaUniqueError(e)) return "SKU já cadastrado nesta empresa";
   if (e instanceof Error) {
     if (/Unique constraint failed/i.test(e.message)) return "SKU já cadastrado nesta empresa";

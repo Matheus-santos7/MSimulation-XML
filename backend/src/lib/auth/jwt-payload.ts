@@ -1,5 +1,5 @@
 import { isEmailVerified } from "./config.js";
-import type { mapTenant } from "../tenant-mapper.js";
+import type { mapTenant } from "../org/tenant-mapper.js";
 
 export type AccessTokenPayload = {
   userId: string;

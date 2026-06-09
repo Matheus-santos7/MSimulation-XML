@@ -16,13 +16,13 @@
  */
 
 import type { ResolvedTaxRule } from "./tax-rule-service.js";
-import type { CustomerType } from "../../lib/tax-rule-ids.js";
-import { taxSnapshotFromRule } from "../../lib/tax-snapshot.js";
+import type { CustomerType } from "../../lib/fiscal/tax-rule-ids.js";
+import { taxSnapshotFromRule } from "../../lib/fiscal/tax-snapshot.js";
 import {
   calcularNotaFiscal,
   type ItemFiscalInput,
   type NotaFiscalResult,
-} from "../../lib/tax-engine.js";
+} from "../../lib/fiscal/tax-engine.js";
 
 export type LinhaPedido = {
   numeroItem?: number;

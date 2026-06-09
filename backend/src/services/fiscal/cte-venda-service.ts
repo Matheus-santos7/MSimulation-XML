@@ -5,16 +5,16 @@ import {
   type Tenant,
 } from "../../generated/prisma/client.js";
 import type { PrismaTx } from "../../lib/db/prisma-tx.js";
-import { buildChaveCTe } from "../../lib/cte-chave.js";
+import { buildChaveCTe } from "../../lib/fiscal/cte-chave.js";
 import {
   calcularPesoCarga,
   calcularValorFreteRemessa,
   CTE_ML_EMIT,
   CTE_REMESSA_CFOP,
   CTE_REMESSA_NAT_OP,
-} from "../../lib/cte-remessa-template.js";
-import { proximoNumeroCte } from "../../lib/cte-sequencia.js";
-import { mapCte } from "../../lib/fiscal-mappers.js";
+} from "../../lib/fiscal/cte-remessa-template.js";
+import { proximoNumeroCte } from "../../lib/fiscal/cte-sequencia.js";
+import { mapCte } from "../../lib/fiscal/fiscal-mappers.js";
 
 /** CT-e de transporte da venda (full → consumidor), referenciando a NF-e de venda. */
 export async function emitirCteVenda(

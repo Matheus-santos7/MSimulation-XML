@@ -10,10 +10,10 @@ import {
 import type { FiscalEmitterSettingsData } from "@msimulation-xml/fiscal-core";
 import type { NFeTipo, Prisma, PrismaClient, Product } from "../../generated/prisma/client.js";
 import type { PrismaTx } from "../../lib/db/prisma-tx.js";
-import { mapNfe } from "../../lib/fiscal-mappers.js";
-import { mapProduct, type ProductDto } from "../../lib/product-mapper.js";
-import { mapEmitente } from "../../lib/tenant-mapper.js";
-import { loadEmitterSettings } from "../../lib/fiscal-emitter-runtime.js";
+import { mapNfe } from "../../lib/fiscal/fiscal-mappers.js";
+import { mapProduct, type ProductDto } from "../../lib/catalog/product-mapper.js";
+import { mapEmitente } from "../../lib/org/tenant-mapper.js";
+import { loadEmitterSettings } from "../../lib/fiscal/fiscal-emitter-runtime.js";
 import type { Product as ProductModel, Tenant } from "../../generated/prisma/client.js";
 
 export type NfeXmlPersistTx = PrismaTx;

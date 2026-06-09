@@ -10,9 +10,9 @@
 
 import { FiscalStatus, NFeTipo, type PrismaClient } from "../../generated/prisma/client.js";
 import type { PrismaTx } from "../../lib/db/prisma-tx.js";
-import { mapNfe } from "../../lib/fiscal-mappers.js";
-import { loadEmitterSettings } from "../../lib/fiscal-emitter-runtime.js";
-import { gerarProtocoloSefaz } from "../../lib/sefaz-protocol.js";
+import { mapNfe } from "../../lib/fiscal/fiscal-mappers.js";
+import { loadEmitterSettings } from "../../lib/fiscal/fiscal-emitter-runtime.js";
+import { gerarProtocoloSefaz } from "../../lib/fiscal/sefaz-protocol.js";
 import { fiscalNotDeleted } from "./fiscal-service.js";
 import { estornarConsumosRemessa } from "./remessa-fifo.js";
 

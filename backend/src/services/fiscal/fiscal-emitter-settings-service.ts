@@ -3,7 +3,7 @@ import {
   DEFAULT_FISCAL_EMITTER_SETTINGS,
   mergeFiscalEmitterSettings,
   type FiscalEmitterSettingsData,
-} from "../../lib/fiscal-emitter-settings-defaults.js";
+} from "../../lib/fiscal/fiscal-emitter-settings-defaults.js";
 import type { fiscalEmitterSettingsPatchBody } from "../../schemas/fiscal/emitter-settings.js";
 import type { z } from "zod";
 

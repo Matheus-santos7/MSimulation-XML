@@ -1,4 +1,4 @@
-import { loadEmitterSettings } from "../../../lib/fiscal-emitter-runtime.js";
+import { loadEmitterSettings } from "../../../lib/fiscal/fiscal-emitter-runtime.js";
 import { resolveTaxRule } from "../tax-rule-service.js";
 import { requireTaxRule, resolveCustomerType } from "./context.js";
 import type { ContextoEmissao, PedidoForEmit, RegrasCadeiaVenda, VendaChainTx } from "./types.js";

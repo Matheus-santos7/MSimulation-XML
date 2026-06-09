@@ -1,5 +1,5 @@
 import type { PrismaClient } from "../../../generated/prisma/client.js";
-import { mapNfe } from "../../../lib/fiscal-mappers.js";
+import { mapNfe } from "../../../lib/fiscal/fiscal-mappers.js";
 import { emitirCteVenda } from "../cte-venda-service.js";
 import { assertProdutoComRegra, buildContextoEmissao } from "./context.js";
 import { consumirRemessaEVincularRetorno, emitirNotaRetorno } from "./emit-retorno.js";

@@ -6,10 +6,10 @@ import type { PrismaTx } from "../../lib/db/prisma-tx.js";
 import {
   REMESSA_SIMBOLICA_CFOP,
   REMESSA_SIMBOLICA_NAT_OP,
-} from "../../lib/remessa-simbolica-dest.js";
-import { enrichTaxSnapshot, loadEmitterSettings } from "../../lib/fiscal-emitter-runtime.js";
+} from "../../lib/fiscal/remessa-simbolica-dest.js";
+import { enrichTaxSnapshot, loadEmitterSettings } from "../../lib/fiscal/fiscal-emitter-runtime.js";
 import { enrichFiscalPayloadWithXTexto, productUnitPrice } from "@msimulation-xml/fiscal-core";
-import { taxSnapshotFromRule } from "../../lib/tax-snapshot.js";
+import { taxSnapshotFromRule } from "../../lib/fiscal/tax-snapshot.js";
 import {
   calcularNotaInbound,
   inferAliqIcmsRemessa,

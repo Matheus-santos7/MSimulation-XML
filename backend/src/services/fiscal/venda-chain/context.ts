@@ -1,6 +1,6 @@
 import { lineTotal } from "@msimulation-xml/fiscal-core";
 import type { Tenant } from "../../../generated/prisma/client.js";
-import { gerarPedidoMl } from "../../../lib/nfe-chave.js";
+import { gerarPedidoMl } from "../../../lib/fiscal/nfe-chave.js";
 import type { CustomerType, ResolvedTaxRule } from "../tax-rule-service.js";
 import type { ContextoEmissao, PedidoForEmit } from "./types.js";
 import { VendaChainError } from "./types.js";

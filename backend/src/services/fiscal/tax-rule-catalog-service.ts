@@ -1,5 +1,5 @@
 import type { PrismaClient } from "../../generated/prisma/client.js";
-import { normalizeTaxRuleDisplayName, taxRuleBaseIdFromRuleId } from "../../lib/tax-rule-ids.js";
+import { normalizeTaxRuleDisplayName, taxRuleBaseIdFromRuleId } from "../../lib/fiscal/tax-rule-ids.js";
 
 export type TaxRuleCatalogEntry = {
   baseId: string;

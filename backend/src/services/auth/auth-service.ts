@@ -20,7 +20,7 @@ import {
   lockoutMessage,
   nextLockoutState,
 } from "../../lib/auth/login-lockout.js";
-import { mapTenant } from "../../lib/tenant-mapper.js";
+import { mapTenant } from "../../lib/org/tenant-mapper.js";
 import {
   authFailureDelay,
   DUMMY_PASSWORD_HASH,

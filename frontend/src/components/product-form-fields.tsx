@@ -181,8 +181,8 @@ export function ProductFormFields({
             error={err("estoque")}
             hint={
               product
-                ? "Saldo para emitir NF-e de remessa."
-                : "Saldo inicial para emitir NF-e de remessa."
+                ? "Saldo cadastral do produto. A remessa é emitida no módulo de remessas."
+                : "Saldo inicial do produto. A remessa é emitida no módulo de remessas."
             }
           />
         </div>

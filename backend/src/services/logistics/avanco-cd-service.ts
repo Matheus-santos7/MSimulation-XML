@@ -13,10 +13,10 @@ import {
   Prisma,
   type PrismaClient,
 } from "../../generated/prisma/client.js";
-import { mapNfe } from "../../lib/fiscal-mappers.js";
-import { buildChaveNFe, gerarPedidoMl } from "../../lib/nfe-chave.js";
-import { proximoNumeroNfe } from "../../lib/nfe-sequencia.js";
-import { unidadeParaDestinoFiscal } from "../../lib/meli-unidade.js";
+import { mapNfe } from "../../lib/fiscal/fiscal-mappers.js";
+import { buildChaveNFe, gerarPedidoMl } from "../../lib/fiscal/nfe-chave.js";
+import { proximoNumeroNfe } from "../../lib/fiscal/nfe-sequencia.js";
+import { unidadeParaDestinoFiscal } from "../../lib/logistics/meli-unidade.js";
 import {
   SaldoRemessaInsuficienteError,
   debitarSaldoRemessaPorCd,

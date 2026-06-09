@@ -1,4 +1,4 @@
-import type { Product } from "../generated/prisma/client.js";
+import type { Product } from "../../generated/prisma/client.js";
 
 export type ProductDto = {
   id: string;

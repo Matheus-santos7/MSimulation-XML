@@ -103,7 +103,7 @@ export const DEFAULT_FISCAL_EMITTER_SETTINGS: FiscalEmitterSettingsData = {
       mode: "CUSTOM",
       fullfilmentVendas: "0",
       fullfilmentEntrada: "0",
-      coleta: "0",
+      coleta: "2",
       flex: "0",
       turbo: "0",
     },

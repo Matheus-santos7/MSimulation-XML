@@ -16,7 +16,7 @@ export default async function ModalidadeFretePage() {
           mode: "CUSTOM",
           fullfilmentVendas: "0",
           fullfilmentEntrada: "0",
-          coleta: "0",
+          coleta: "2",
           flex: "0",
           turbo: "0",
         }

@@ -6,6 +6,11 @@ import {
 } from "@msimulation-xml/fiscal-core";
 import type { NFeTipoXml } from "./types.js";
 
+function defaultModFreteForTipo(tipo: NFeTipoXml): string {
+  if (tipo === "REMESSA" || tipo === "REMESSA_SIMBOLICA") return "2";
+  return "0";
+}
+
 export function resolveEmitterFromPayload(
   fiscalPayload: Record<string, unknown> | undefined,
   settings: FiscalEmitterSettingsData | null,
@@ -19,7 +24,7 @@ export function resolveEmitterFromPayload(
     return buildEmitterSnapshot(settings, tipo as NFeTipoValue, valor, valorIcms, "", "");
   }
   return {
-    modFrete: "0",
+    modFrete: defaultModFreteForTipo(tipo),
     freteNoCalculo: true,
     acrescimoNoProduto: false,
     mensagemInfCpl: "",

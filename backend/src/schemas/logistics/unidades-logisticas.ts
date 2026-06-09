@@ -4,6 +4,7 @@ export const importRowSchema = z.object({
   unidade: z.string().min(1),
   cnpj: z.union([z.string(), z.number()]),
   inscricaoEstadual: z.union([z.string(), z.number()]).optional(),
+  idCadIntTran: z.union([z.string(), z.number(), z.null()]).optional(),
   logradouro: z.string(),
   numero: z.string(),
   cidade: z.string(),

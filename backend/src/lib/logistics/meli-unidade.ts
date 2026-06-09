@@ -42,6 +42,14 @@ export function normalizeIeMeli(raw: unknown): string | null {
   return t.replace(/\D/g, "").length > 0 ? t.replace(/\s/g, "") : t;
 }
 
+/** ID intermediador ML (`infIntermed/idCadIntTran`) — somente dígitos, até 32 chars. */
+export function normalizeIdCadIntTran(raw: unknown): string | null {
+  if (raw == null || raw === "") return null;
+  const digits = String(raw).replace(/\D/g, "");
+  if (!digits) return null;
+  return digits.slice(0, 32);
+}
+
 export type UnidadeDestinoFiscal = {
   nome: string;
   cnpj: string;

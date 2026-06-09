@@ -451,6 +451,7 @@ export type UnidadeLogisticaImportRow = {
   unidade: string;
   cnpj: string | number;
   inscricaoEstadual?: string | number;
+  idCadIntTran?: string | null;
   logradouro: string;
   numero: string;
   cidade: string;
@@ -466,6 +467,7 @@ export type UnidadeLogisticaDto = {
   destNomeFiscal: string;
   cnpj: string;
   ie?: string;
+  idCadIntTran?: string;
   endereco: {
     logradouro: string;
     numero: string;

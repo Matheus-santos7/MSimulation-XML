@@ -12,10 +12,15 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "pnpm run build && node --import tsx --test src/nfe-datetime.test.ts src/nfe-xtexto.test.ts src/product-pricing.test.ts src/fiscal-emitter-runtime.test.ts src/xml-signature.test.ts src/xml-download.test.ts src/nprot.test.ts"
+    "test": "pnpm run build && node --import tsx --test src/nfe-datetime.test.ts src/nfe-xtexto.test.ts src/remessa-ml-payload.test.ts src/product-pricing.test.ts src/fiscal-emitter-runtime.test.ts src/xml-signature.test.ts src/xml-download.test.ts src/nprot.test.ts"
   },
   "devDependencies": {
+    "@types/xmldom": "^0.1.34",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@xmldom/xmldom": "^0.9.10",
+    "xml-crypto": "^6.1.2"
   }
 }

@@ -4,6 +4,19 @@ import { NFeTipo } from "./nfe-tipo.js";
 import { buildNfeObsContXTexto, xTextoFromNfe } from "./nfe-xtexto.js";
 
 describe("fiscal-core / nfe-xtexto", () => {
+  it("remessa física — padrão WAREHOUSE_TRANSFER ML", () => {
+    const pedidoMl = "40000018781520";
+    assert.equal(
+      buildNfeObsContXTexto({
+        tipo: NFeTipo.REMESSA,
+        cfop: "5949",
+        natOp: "Outras Saidas - Remessa para Deposito Temporario",
+        pedidoMl,
+      }),
+      `WAREHOUSE_TRANSFER_MFL_TO_OLSS-inbound-${pedidoMl}-21-OLS`,
+    );
+  });
+
   it("retorno simbólico — padrão ML", () => {
     const pedidoMl = "123456789";
     assert.equal(

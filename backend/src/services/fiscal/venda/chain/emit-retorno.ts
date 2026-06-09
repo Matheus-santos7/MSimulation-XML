@@ -1,4 +1,7 @@
-import { enrichFiscalPayloadWithXTexto } from "@msimulation-xml/fiscal-core";
+import {
+  enrichFiscalPayloadMlFulfillment,
+  enrichFiscalPayloadWithXTexto,
+} from "@msimulation-xml/fiscal-core";
 import { FiscalStatus, NFeTipo, Prisma } from "../../../../generated/prisma/client.js";
 import { buildChaveNFe } from "../../../../lib/fiscal/nfe-chave.js";
 import { enrichTaxSnapshot } from "../../../../lib/fiscal/fiscal-emitter-runtime.js";
@@ -71,24 +74,30 @@ export async function emitirNotaRetorno(
       quantidade: pedido.quantidade,
       tipo: NFeTipo.RETORNO_SIMBOLICO,
       saldoDisponivel: null,
-      fiscalPayload: enrichFiscalPayloadWithXTexto(
-        {
-          ...enrichTaxSnapshot(taxSnapshotFromRule(inboundTaxRule, aliqFallback), {
-            settings: emitterSettings,
+      fiscalPayload: enrichFiscalPayloadMlFulfillment(
+        enrichFiscalPayloadWithXTexto(
+          {
+            ...enrichTaxSnapshot(taxSnapshotFromRule(inboundTaxRule, aliqFallback), {
+              settings: emitterSettings,
+              tipo: NFeTipo.RETORNO_SIMBOLICO,
+              valor,
+              valorIcms,
+              emitUf: tenant.uf,
+              destUf: tenant.uf,
+              indFinal: 0,
+            }),
+            engine: calc.nota,
+          } as Record<string, unknown>,
+          {
             tipo: NFeTipo.RETORNO_SIMBOLICO,
-            valor,
-            valorIcms,
-            emitUf: tenant.uf,
-            destUf: tenant.uf,
-            indFinal: 0,
-          }),
-          engine: calc.nota,
-        } as Record<string, unknown>,
+            cfop,
+            natOp: RETORNO_SIMBOLICO_NAT_OP,
+            pedidoMl: ctx.pedidoMl,
+          },
+        ),
         {
-          tipo: NFeTipo.RETORNO_SIMBOLICO,
-          cfop,
-          natOp: RETORNO_SIMBOLICO_NAT_OP,
-          pedidoMl: ctx.pedidoMl,
+          quantidadeTotal: pedido.quantidade,
+          withLogistics: false,
         },
       ) as Prisma.InputJsonValue,
     },

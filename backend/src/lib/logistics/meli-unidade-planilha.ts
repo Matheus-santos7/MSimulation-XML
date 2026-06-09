@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx";
+import { normalizeIdCadIntTran } from "./meli-unidade.js";
 import type { UnidadeLogisticaImportRow } from "../../services/logistics/unidade-logistica-service.js";
 
 export type MeliUnidadePlanilhaParseResult = {
@@ -17,6 +18,11 @@ const HEADER_MAP: Record<string, keyof UnidadeLogisticaImportRow | "_skip"> = {
   cidade: "cidade",
   uf: "uf",
   cep: "cep",
+  "id cad int tran": "idCadIntTran",
+  idcadinttran: "idCadIntTran",
+  "id cadastro intermediador": "idCadIntTran",
+  "id intermediador": "idCadIntTran",
+  "id intermediador ml": "idCadIntTran",
 };
 
 function normalizeHeader(h: string): string {
@@ -84,6 +90,9 @@ export function parseMeliUnidadesXlsx(buffer: Buffer | ArrayBuffer): MeliUnidade
       unidade,
       cnpj: typeof cnpj === "number" ? cnpj : String(cnpj),
       inscricaoEstadual: String(cell("inscricaoEstadual") || "").trim() || undefined,
+      ...(colIndex.idCadIntTran !== undefined
+        ? { idCadIntTran: normalizeIdCadIntTran(cell("idCadIntTran")) }
+        : {}),
       logradouro: String(cell("logradouro") || "").trim(),
       numero: String(cell("numero") || "SN").trim() || "SN",
       cidade: String(cell("cidade") || "").trim(),

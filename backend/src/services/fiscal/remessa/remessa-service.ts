@@ -25,7 +25,10 @@ import { REMESSA_NAT_OP, resolveRemessaCfop } from "./helpers/remessa-dest.js";
 import type { UnidadeDestinoFiscal } from "../../../lib/logistics/meli-unidade.js";
 import { enrichTaxSnapshot, loadEmitterSettings } from "../../../lib/fiscal/fiscal-emitter-runtime.js";
 import { taxSnapshotFromRule } from "../../../lib/fiscal/tax-snapshot.js";
-import { enrichFiscalPayloadWithXTexto } from "@msimulation-xml/fiscal-core";
+import {
+  enrichFiscalPayloadMlFulfillment,
+  enrichFiscalPayloadWithXTexto,
+} from "@msimulation-xml/fiscal-core";
 import { emitirCteRemessa } from "./cte-remessa-service.js";
 import { productUnitPrice } from "@msimulation-xml/fiscal-core";
 import {
@@ -160,27 +163,35 @@ async function emitirNFeRemessaComItens(
   const { nfeRow, cteRow, itemRows } = await prisma.$transaction(async (tx) => {
     // Fase 6: configurações do emissor + snapshot para XML/payload.
     const emitterSettings = await loadEmitterSettings(tx, tenant.id);
-    const fiscalPayload = enrichFiscalPayloadWithXTexto(
-      {
-        ...enrichTaxSnapshot(taxSnapshotFromRule(linhasComRegras[0]!.rule, aliqFallback), {
-          settings: emitterSettings,
+    const fiscalPayload = enrichFiscalPayloadMlFulfillment(
+      enrichFiscalPayloadWithXTexto(
+        {
+          ...enrichTaxSnapshot(taxSnapshotFromRule(linhasComRegras[0]!.rule, aliqFallback), {
+            settings: emitterSettings,
+            tipo: NFeTipo.REMESSA,
+            valor,
+            valorIcms,
+            emitUf: tenant.uf,
+            destUf: destino.uf,
+            indFinal: 0,
+          }),
+          engine: nota,
+          ...(destino.indIeDest === 1 && destino.ie
+            ? { destIe: destino.ie.replace(/\D/g, "") }
+            : {}),
+        } as Record<string, unknown>,
+        {
           tipo: NFeTipo.REMESSA,
-          valor,
-          valorIcms,
-          emitUf: tenant.uf,
-          destUf: destino.uf,
-          indFinal: 0,
-        }),
-        engine: nota,
-        ...(destino.indIeDest === 1 && destino.ie
-          ? { destIe: destino.ie.replace(/\D/g, "") }
-          : {}),
-      } as Record<string, unknown>,
+          cfop: cfopHeader,
+          natOp: REMESSA_NAT_OP,
+          pedidoMl,
+        },
+      ),
       {
-        tipo: NFeTipo.REMESSA,
-        cfop: cfopHeader,
-        natOp: REMESSA_NAT_OP,
-        pedidoMl,
+        quantidadeTotal,
+        destIe: destino.ie,
+        idCadIntTran: unidade?.idCadIntTran ?? null,
+        withLogistics: true,
       },
     );
 

@@ -17,7 +17,19 @@ const HEADER_MAP: Record<string, keyof UnidadeLogisticaImportRow | "_skip"> = {
   cidade: "cidade",
   uf: "uf",
   cep: "cep",
+  "id cad int tran": "idCadIntTran",
+  idcadinttran: "idCadIntTran",
+  "id cadastro intermediador": "idCadIntTran",
+  "id intermediador": "idCadIntTran",
+  "id intermediador ml": "idCadIntTran",
 };
+
+function normalizeIdCadIntTran(raw: unknown): string | null {
+  if (raw == null || raw === "") return null;
+  const digits = String(raw).replace(/\D/g, "");
+  if (!digits) return null;
+  return digits.slice(0, 32);
+}
 
 function normalizeHeader(h: string): string {
   return h
@@ -84,6 +96,9 @@ export function parseMeliUnidadesXlsx(buffer: ArrayBuffer): MeliUnidadePlanilhaP
       unidade,
       cnpj: typeof cnpj === "number" ? cnpj : String(cnpj),
       inscricaoEstadual: String(cell("inscricaoEstadual") || "").trim() || undefined,
+      ...(colIndex.idCadIntTran !== undefined
+        ? { idCadIntTran: normalizeIdCadIntTran(cell("idCadIntTran")) }
+        : {}),
       logradouro: String(cell("logradouro") || "").trim(),
       numero: String(cell("numero") || "SN").trim() || "SN",
       cidade: String(cell("cidade") || "").trim(),

@@ -2,53 +2,49 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   buildSimulationXmlSignature,
+  injectSimulationSignature,
   isValidBase64,
-  simulationDigestValue,
+  NFE_SIGNATURE_CONFIG,
   simulationProtDigVal,
-  simulationSignatureValue,
-  simulationX509Certificate,
+  verifySimulationXmlSignature,
 } from "./xml-signature.js";
 
+const infNFe = `    <infNFe Id="NFe35260601490698006689550090000000011520294665" versao="4.00">
+      <ide><cUF>35</cUF><natOp>test</natOp></ide>
+    </infNFe>`;
+
 describe("buildSimulationXmlSignature", () => {
-  it("inclui Transforms e DigestMethod antes de DigestValue", () => {
-    const xml = buildSimulationXmlSignature("NFe35260612345678000199550010000000011000000012", "chave123");
-    const refStart = xml.indexOf("<Reference");
-    const refEnd = xml.indexOf("</Reference>") + "</Reference>".length;
-    const reference = xml.slice(refStart, refEnd);
+  it("gera assinatura XML-DSig verificável", () => {
+    const signature = buildSimulationXmlSignature(
+      "NFe35260601490698006689550090000000011520294665",
+      infNFe,
+      NFE_SIGNATURE_CONFIG,
+      "    ",
+    );
+    assert.match(signature, /<X509Data>/);
+    assert.match(signature, /<X509Certificate>[^<]+<\/X509Certificate>/);
+    assert.doesNotMatch(signature, /<KeyName>/);
 
-    assert.match(reference, /<Transforms>/);
-    assert.match(reference, /enveloped-signature/);
-    assert.match(reference, /<DigestMethod Algorithm="http:\/\/www\.w3\.org\/2000\/09\/xmldsig#sha1"\/>/);
-    assert.ok(reference.indexOf("<DigestMethod") < reference.indexOf("<DigestValue>"));
-    assert.match(xml, /<X509Data>/);
-    assert.match(xml, /<X509Certificate>[^<]+<\/X509Certificate>/);
-    assert.doesNotMatch(xml, /<KeyName>/);
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+  <NFe>
+${infNFe}
+${signature}
+  </NFe>
+</nfeProc>`;
+    assert.equal(verifySimulationXmlSignature(xml), true);
   });
 
-  it("gera DigestValue e SignatureValue em Base64 válido", () => {
-    const xml = buildSimulationXmlSignature("NFe123", "chave456");
-    const digest = xml.match(/<DigestValue>([^<]+)<\/DigestValue>/)?.[1];
-    const signature = xml.match(/<SignatureValue>([^<]+)<\/SignatureValue>/)?.[1];
-
-    assert.ok(digest, "DigestValue ausente");
-    assert.ok(signature, "SignatureValue ausente");
-    assert.ok(isValidBase64(digest));
-    assert.ok(isValidBase64(signature));
-    assert.ok(!digest.includes("-"));
-    assert.ok(!signature.includes("-"));
-  });
-
-  it("valores são determinísticos para o mesmo seed", () => {
-    assert.equal(simulationDigestValue("abc"), simulationDigestValue("abc"));
-    assert.equal(simulationSignatureValue("abc"), simulationSignatureValue("abc"));
-    assert.equal(simulationX509Certificate("abc"), simulationX509Certificate("abc"));
-    assert.notEqual(simulationDigestValue("abc"), simulationDigestValue("xyz"));
-  });
-
-  it("X509Certificate é Base64 válido", () => {
-    const cert = simulationX509Certificate("chave-teste");
-    assert.ok(isValidBase64(cert));
-    assert.ok(cert.length > 500);
+  it("injectSimulationSignature assina nfeProc sem assinatura prévia", () => {
+    const unsigned = `<?xml version="1.0" encoding="UTF-8"?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+  <NFe>
+${infNFe}
+  </NFe>
+</nfeProc>`;
+    const signed = injectSimulationSignature(unsigned, NFE_SIGNATURE_CONFIG);
+    assert.match(signed, /<Signature xmlns="http:\/\/www\.w3\.org\/2000\/09\/xmldsig#">/);
+    assert.equal(verifySimulationXmlSignature(signed), true);
   });
 
   it("simulationProtDigVal gera digVal Base64 de 28 caracteres (SHA-1)", () => {

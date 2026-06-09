@@ -3,6 +3,7 @@ import {
   extractCodigoUnidade,
   normalizeCepMeli,
   normalizeCnpjMeli,
+  normalizeIdCadIntTran,
   normalizeIeMeli,
   unidadeParaDestinoFiscal,
   type UnidadeDestinoFiscal,
@@ -14,6 +15,8 @@ export type UnidadeLogisticaImportRow = {
   unidade: string;
   cnpj: string | number;
   inscricaoEstadual?: string | number;
+  /** Presente quando a coluna existe na planilha; `null` limpa o valor no banco. */
+  idCadIntTran?: string | null;
   logradouro: string;
   numero: string;
   cidade: string;
@@ -40,6 +43,7 @@ export function mapUnidadeLogistica(
     codigoPais: number;
     nomePais: string;
     indIeDest: number;
+    idCadIntTran: string | null;
     ativa: boolean;
     createdAt: Date;
     updatedAt: Date;
@@ -55,6 +59,7 @@ export function mapUnidadeLogistica(
     destNomeFiscal: row.destNomeFiscal,
     cnpj: row.cnpj,
     ie: row.ie ?? undefined,
+    idCadIntTran: row.idCadIntTran ?? undefined,
     endereco: {
       logradouro: row.logradouro,
       numero: row.numero,
@@ -277,11 +282,15 @@ export class UnidadeLogisticaService {
         }
       }
 
+      const idCadIntTran =
+        raw.idCadIntTran !== undefined ? normalizeIdCadIntTran(raw.idCadIntTran) : undefined;
+
       const data: Prisma.MeliUnidadeLogisticaCreateInput = {
         codigo,
         nome,
         cnpj,
         ie: normalizeIeMeli(raw.inscricaoEstadual),
+        ...(idCadIntTran !== undefined ? { idCadIntTran } : {}),
         logradouro: raw.logradouro?.trim() || "—",
         numero: raw.numero?.trim() || "SN",
         municipio: raw.cidade?.trim() || "",
@@ -309,6 +318,7 @@ export class UnidadeLogisticaService {
             bairro: bairro || existing.bairro,
             codigoMunicipio: codigoMunicipio || existing.codigoMunicipio,
             indIeDest: data.indIeDest,
+            ...(idCadIntTran !== undefined ? { idCadIntTran } : {}),
             ativa: true,
           },
         });

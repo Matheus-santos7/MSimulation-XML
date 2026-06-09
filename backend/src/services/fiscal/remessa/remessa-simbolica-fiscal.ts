@@ -8,7 +8,11 @@ import {
   REMESSA_SIMBOLICA_NAT_OP,
 } from "./helpers/remessa-simbolica-dest.js";
 import { enrichTaxSnapshot, loadEmitterSettings } from "../../../lib/fiscal/fiscal-emitter-runtime.js";
-import { enrichFiscalPayloadWithXTexto, productUnitPrice } from "@msimulation-xml/fiscal-core";
+import {
+  enrichFiscalPayloadMlFulfillment,
+  enrichFiscalPayloadWithXTexto,
+  productUnitPrice,
+} from "@msimulation-xml/fiscal-core";
 import { taxSnapshotFromRule } from "../../../lib/fiscal/tax-snapshot.js";
 import {
   calcularNotaInbound,
@@ -96,24 +100,30 @@ export async function prepararRemessaSimbolicaFiscal(
   );
 
   const emitterSettings = await loadEmitterSettings(prisma, input.tenantId);
-  const fiscalPayload = enrichFiscalPayloadWithXTexto(
-    {
-      ...enrichTaxSnapshot(taxSnapshotFromRule(taxRule, aliqFallback), {
-        settings: emitterSettings,
+  const fiscalPayload = enrichFiscalPayloadMlFulfillment(
+    enrichFiscalPayloadWithXTexto(
+      {
+        ...enrichTaxSnapshot(taxSnapshotFromRule(taxRule, aliqFallback), {
+          settings: emitterSettings,
+          tipo: NFeTipo.REMESSA_SIMBOLICA,
+          valor: calc.valor,
+          valorIcms: calc.valorIcms,
+          emitUf: input.emitUf,
+          destUf: input.destUf,
+          indFinal: 0,
+        }),
+        engine: calc.nota,
+      } as Record<string, unknown>,
+      {
         tipo: NFeTipo.REMESSA_SIMBOLICA,
-        valor: calc.valor,
-        valorIcms: calc.valorIcms,
-        emitUf: input.emitUf,
-        destUf: input.destUf,
-        indFinal: 0,
-      }),
-      engine: calc.nota,
-    } as Record<string, unknown>,
+        cfop,
+        natOp: REMESSA_SIMBOLICA_NAT_OP,
+        pedidoMl: input.pedidoMl,
+      },
+    ),
     {
-      tipo: NFeTipo.REMESSA_SIMBOLICA,
-      cfop,
-      natOp: REMESSA_SIMBOLICA_NAT_OP,
-      pedidoMl: input.pedidoMl,
+      quantidadeTotal: input.quantidade,
+      withLogistics: true,
     },
   );
 

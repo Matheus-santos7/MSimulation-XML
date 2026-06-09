@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import {
+  enrichFiscalPayloadMlFulfillment,
+  verifySimulationXmlSignature,
+} from "@msimulation-xml/fiscal-core";
 import { buildNFeXML } from "./nfe-xml-generator.js";
 import type { EmitenteXml, NFeXmlInput } from "./types.js";
 
@@ -112,6 +116,11 @@ describe("buildNFeXML — REMESSA", () => {
     assert.doesNotMatch(digVal, /-/);
   });
 
+  it("assinatura digital XML-DSig é criptograficamente verificável", () => {
+    const xml = buildNFeXML(baseNfe(), emit);
+    assert.equal(verifySimulationXmlSignature(xml), true);
+  });
+
   it("formata dhEmi/dhSaiEnt com offset -03:00 (sem sufixo Z)", () => {
     const nfe = baseNfe();
     nfe.emitidaEm = "2026-06-09T04:55:14.442Z";
@@ -167,5 +176,43 @@ describe("buildNFeXML — REMESSA", () => {
     const xml = buildNFeXML(nfe, emit);
     assert.match(xml, /<PISOutr>\s*<CST>49<\/CST>/);
     assert.match(xml, /<COFINSOutr>\s*<CST>49<\/CST>/);
+  });
+
+  it("alinha estrutura ML: IBSCBS, vItem, transporta, autXML e reforma nos totais", () => {
+    const xml = buildNFeXML(baseNfe(), emit);
+    assert.match(xml, /<IBSCBS>\s*<CST>410<\/CST>\s*<cClassTrib>410999<\/cClassTrib>\s*<\/IBSCBS>/);
+    assert.match(xml, /<vItem>100\.00<\/vItem>/);
+    assert.match(xml, /<IBSCBSTot>\s*<vBCIBSCBS>0\.00<\/vBCIBSCBS>\s*<\/IBSCBSTot>/);
+    assert.match(xml, /<vNFTot>100\.00<\/vNFTot>/);
+    assert.match(xml, /<modFrete>2<\/modFrete>/);
+    assert.match(xml, /<transporta>/);
+    assert.match(xml, /<autXML>\s*<CPF>87659808915<\/CPF>\s*<\/autXML>/);
+    assert.match(xml, /<cEnq>999<\/cEnq>/);
+    assert.match(xml, /<IPINT>\s*<CST>53<\/CST>\s*<\/IPINT>/);
+    assert.match(xml, /Portaria CAT 31\/2019/);
+    assert.match(xml, /<xCpl>Nao consta<\/xCpl>/);
+    assert.doesNotMatch(xml, /<vFCPUFDest>/);
+    assert.doesNotMatch(xml, /<CEST>/);
+  });
+
+  it("obsCont external_id segue padrão WAREHOUSE_TRANSFER ML", () => {
+    const xml = buildNFeXML(baseNfe(), emit);
+    assert.match(
+      xml,
+      /<xTexto>WAREHOUSE_TRANSFER_MFL_TO_OLSS-inbound-ORDER-1-21-OLS<\/xTexto>/,
+    );
+  });
+
+  it("usa idCadIntTran e pesos do fiscalPayload enriquecido (emissão real)", () => {
+    const nfe = baseNfe();
+    nfe.fiscalPayload = enrichFiscalPayloadMlFulfillment(nfe.fiscalPayload ?? {}, {
+      quantidadeTotal: 2,
+      idCadIntTran: "3272442934",
+      destIe: "241174886113",
+    });
+    const xml = buildNFeXML(nfe, emit);
+    assert.match(xml, /<idCadIntTran>3272442934<\/idCadIntTran>/);
+    assert.match(xml, /<pesoL>1\.400<\/pesoL>/);
+    assert.match(xml, /<pesoB>1\.420<\/pesoB>/);
   });
 });

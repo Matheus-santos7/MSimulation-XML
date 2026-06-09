@@ -195,6 +195,8 @@ model MeliUnidadeLogistica {
   codigoPais      Int      @default(1058) @map("codigo_pais")
   nomePais        String   @default("Brasil") @map("nome_pais")
   indIeDest       Int      @default(1) @map("ind_ie_dest")
+  /// ID cadastro intermediador ML (`infIntermed/idCadIntTran` na NF-e de remessa).
+  idCadIntTran    String?  @map("id_cad_int_tran") @db.VarChar(32)
   ativa           Boolean  @default(true)
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")

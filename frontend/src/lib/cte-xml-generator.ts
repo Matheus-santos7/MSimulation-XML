@@ -3,8 +3,9 @@
  */
 
 import {
-  buildSimulationXmlSignature,
+  CTE_SIGNATURE_CONFIG,
   formatNfeDateTime,
+  injectSimulationSignature,
   simulationNProt,
   simulationProtDigVal,
 } from "@msimulation-xml/fiscal-core";
@@ -57,7 +58,7 @@ export function buildCTeXML(cte: CTeDto, remetente: TenantDto): string {
           </infNFe>`
     : "";
 
-  return `<?xml version="1.0" encoding="UTF-8"?>
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <cteProc xmlns="http://www.portalfiscal.inf.br/cte" versao="4.00">
   <CTe>
     <infCte Id="${id}" versao="4.00">
@@ -168,7 +169,6 @@ export function buildCTeXML(cte: CTeDto, remetente: TenantDto): string {
         </infModal>
       </infCTeNorm>
     </infCte>
-${buildSimulationXmlSignature(id, cte.chave, "    ")}
   </CTe>
   <protCTe versao="4.00">
     <infProt>
@@ -183,6 +183,7 @@ ${buildSimulationXmlSignature(id, cte.chave, "    ")}
     </infProt>
   </protCTe>
 </cteProc>`;
+  return injectSimulationSignature(xml, CTE_SIGNATURE_CONFIG);
 }
 
 function parseRota(rota: string): [string, string] {

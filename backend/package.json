@@ -10,7 +10,7 @@
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:push": "prisma db push",
-    "test": "pnpm --filter @msimulation-xml/fiscal-core build && pnpm --filter @msimulation-xml/nfe-xml build && prisma generate && node --import tsx --test src/lib/fiscal/tax-engine.test.ts src/lib/http/domain-errors.test.ts src/services/fiscal/remessa/helpers/remessa-dest.test.ts src/services/fiscal/remessa/remessa-fifo.test.ts src/services/fiscal/venda/venda-chain-contract.test.ts"
+    "test": "pnpm --filter @msimulation-xml/fiscal-core build && pnpm --filter @msimulation-xml/nfe-xml build && prisma generate && node --import tsx --test src/lib/fiscal/tax-engine.test.ts src/lib/http/domain-errors.test.ts src/services/fiscal/remessa/helpers/remessa-dest.test.ts src/services/fiscal/remessa/remessa-fifo.test.ts src/services/fiscal/venda/venda-chain-contract.test.ts src/lib/logistics/meli-unidade-planilha.test.ts"
   },
   "dependencies": {
     "@fastify/cors": "^11.0.0",

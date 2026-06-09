@@ -1,4 +1,4 @@
-import { compactXmlForDownload } from "@msimulation-xml/fiscal-core";
+import { prepareFiscalXmlForDownload } from "@msimulation-xml/fiscal-core";
 import type { FastifyInstance } from "fastify";
 import { tenantIdFromRequest } from "../../lib/auth/request-context.js";
 import { mapNfe } from "../../lib/fiscal/fiscal-mappers.js";
@@ -59,7 +59,7 @@ export function registerNfeRoutes(app: FastifyInstance, fiscal: FiscalService) {
       "Cache-Control": "private, max-age=3600",
       "X-NFe-Xml-Source": result.source,
     };
-    const xml = q.download === "1" ? compactXmlForDownload(result.xml) : result.xml;
+    const xml = q.download === "1" ? prepareFiscalXmlForDownload(result.xml) : result.xml;
     if (q.download === "1") {
       headers["Content-Disposition"] = `attachment; filename="${result.filename}"`;
     }

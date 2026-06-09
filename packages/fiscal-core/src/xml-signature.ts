@@ -1,7 +1,54 @@
+import { SignedXml } from "xml-crypto";
+import { SIMULATION_CERTIFICATE_PEM, SIMULATION_PRIVATE_KEY_PEM } from "./simulation-credentials.js";
+
 const XMLDSIG_NS = "http://www.w3.org/2000/09/xmldsig#";
 const C14N = "http://www.w3.org/TR/2001/REC-xml-c14n-20010315";
 const BASE64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 const BASE64_RE = /^[A-Za-z0-9+/]+={0,2}$/;
+const SIGNATURE_RE = /<Signature xmlns="http:\/\/www\.w3\.org\/2000\/09\/xmldsig#">[\s\S]*?<\/Signature>/;
+
+export type FiscalSignatureDocumentConfig = {
+  signedLocalName: string;
+  parentLocalName: string;
+  rootTag: string;
+  rootAttrs?: string;
+  xmlns: string;
+  parentAttrs?: string;
+};
+
+export const NFE_SIGNATURE_CONFIG: FiscalSignatureDocumentConfig = {
+  signedLocalName: "infNFe",
+  parentLocalName: "NFe",
+  rootTag: "nfeProc",
+  rootAttrs: ' versao="4.00"',
+  xmlns: "http://www.portalfiscal.inf.br/nfe",
+};
+
+export const CTE_SIGNATURE_CONFIG: FiscalSignatureDocumentConfig = {
+  signedLocalName: "infCte",
+  parentLocalName: "CTe",
+  rootTag: "cteProc",
+  rootAttrs: ' versao="4.00"',
+  xmlns: "http://www.portalfiscal.inf.br/cte",
+};
+
+export const INUT_SIGNATURE_CONFIG: FiscalSignatureDocumentConfig = {
+  signedLocalName: "infInut",
+  parentLocalName: "inutNFe",
+  rootTag: "procInutNFe",
+  rootAttrs: ' versao="4.00"',
+  xmlns: "http://www.portalfiscal.inf.br/nfe",
+  parentAttrs: ' xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"',
+};
+
+export const EVENTO_SIGNATURE_CONFIG: FiscalSignatureDocumentConfig = {
+  signedLocalName: "infEvento",
+  parentLocalName: "evento",
+  rootTag: "procEventoNFe",
+  rootAttrs: ' versao="1.00"',
+  xmlns: "http://www.portalfiscal.inf.br/nfe",
+  parentAttrs: ' xmlns="http://www.portalfiscal.inf.br/nfe" versao="1.00"',
+};
 
 function fnv1a(str: string): number {
   let h = 0x811c9dc5;
@@ -50,50 +97,84 @@ export function simulationProtDigVal(chave: string): string {
   return simulationDigestValue(`prot-digval:${chave}`);
 }
 
-/** SignatureValue determinístico em Base64 válido (256 bytes, ~RSA-2048) — apenas simulação. */
-export function simulationSignatureValue(seed: string): string {
-  return bytesToBase64(deterministicBytes(`simulation-signature:${seed}`, 256));
+function buildDocumentForSigning(signedElementXml: string, config: FiscalSignatureDocumentConfig): string {
+  const parentOpen = config.parentAttrs
+    ? `<${config.parentLocalName}${config.parentAttrs}>`
+    : `<${config.parentLocalName}>`;
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<${config.rootTag}${config.rootAttrs ?? ""} xmlns="${config.xmlns}">
+  ${parentOpen}
+${signedElementXml}
+  </${config.parentLocalName}>
+</${config.rootTag}>`;
 }
 
-/** Certificado X509 simulado em Base64 válido (DER fictício) — apenas simulação. */
-export function simulationX509Certificate(seed: string): string {
-  return bytesToBase64(deterministicBytes(`simulation-x509:${seed}`, 768));
+function createSignedXml(): SignedXml {
+  return new SignedXml({
+    privateKey: SIMULATION_PRIVATE_KEY_PEM,
+    publicCert: SIMULATION_CERTIFICATE_PEM,
+    signatureAlgorithm: `${XMLDSIG_NS}rsa-sha1`,
+    canonicalizationAlgorithm: C14N,
+  });
 }
 
 /**
- * Bloco <Signature> estruturalmente válido (XML-DSig) para simulação.
- * DigestValue, SignatureValue e X509Certificate são Base64 válidos.
+ * Assinatura XML-DSig real com certificado de simulação embutido.
+ * O elemento assinado deve ser idêntico ao que aparece no documento final.
  */
-export function buildSimulationXmlSignature(referenceId: string, digestSeed: string, indent = ""): string {
-  const digest = simulationDigestValue(digestSeed);
-  const signature = simulationSignatureValue(digestSeed);
-  const x509 = simulationX509Certificate(digestSeed);
-  const uri = referenceId.startsWith("#") ? referenceId : `#${referenceId}`;
-  const i = indent;
-  const ii = `${indent}  `;
-  const iii = `${indent}    `;
-  const iiii = `${indent}      `;
+export function buildSimulationXmlSignature(
+  referenceId: string,
+  signedElementXml: string,
+  config: FiscalSignatureDocumentConfig,
+  indent = "",
+): string {
+  const documentXml = buildDocumentForSigning(signedElementXml, config);
+  const sig = createSignedXml();
+  sig.addReference({
+    xpath: `//*[local-name()='${config.signedLocalName}' and @Id='${referenceId}']`,
+    transforms: [`${XMLDSIG_NS}enveloped-signature`, C14N],
+    digestAlgorithm: `${XMLDSIG_NS}sha1`,
+    uri: `#${referenceId}`,
+  });
+  sig.computeSignature(documentXml, {
+    location: { reference: `//*[local-name()='${config.parentLocalName}']`, action: "append" },
+  });
+  const signature = sig.getSignedXml().match(SIGNATURE_RE)?.[0];
+  if (!signature) {
+    throw new Error(`Falha ao gerar assinatura para ${referenceId}`);
+  }
+  return indent ? `${indent}${signature}` : signature;
+}
 
-  return `${i}<Signature xmlns="${XMLDSIG_NS}">
-${ii}<SignedInfo>
-${iii}<CanonicalizationMethod Algorithm="${C14N}"/>
-${iii}<SignatureMethod Algorithm="${XMLDSIG_NS}rsa-sha1"/>
-${iii}<Reference URI="${uri}">
-${iiii}<Transforms>
-${iiii}  <Transform Algorithm="${XMLDSIG_NS}enveloped-signature"/>
-${iiii}  <Transform Algorithm="${C14N}"/>
-${iiii}</Transforms>
-${iiii}<DigestMethod Algorithm="${XMLDSIG_NS}sha1"/>
-${iiii}<DigestValue>${digest}</DigestValue>
-${iii}</Reference>
-${ii}</SignedInfo>
-${ii}<SignatureValue>${signature}</SignatureValue>
-${ii}<KeyInfo>
-${iii}<X509Data>
-${iii}  <X509Certificate>${x509}</X509Certificate>
-${iii}</X509Data>
-${ii}</KeyInfo>
-${i}</Signature>`;
+/** Remove assinatura anterior e insere assinatura criptográfica válida. */
+export function injectSimulationSignature(xml: string, config: FiscalSignatureDocumentConfig): string {
+  const signedRe = new RegExp(
+    `(<${config.signedLocalName}\\s+Id="([^"]+)"[^>]*>[\\s\\S]*?</${config.signedLocalName}>)`,
+  );
+  const match = xml.match(signedRe);
+  if (!match) return xml;
+
+  const signedElementXml = match[1]!;
+  const referenceId = match[2]!;
+  const stripped = xml.replace(SIGNATURE_RE, "");
+  const multiline = xml.includes("\n");
+  const signature = buildSimulationXmlSignature(
+    referenceId,
+    signedElementXml,
+    config,
+    multiline ? "    " : "",
+  );
+  const glue = multiline ? `\n${signature}` : signature;
+  return stripped.replace(signedElementXml, `${signedElementXml}${glue}`);
+}
+
+/** Verifica assinatura XML-DSig com o certificado de simulação (uso em testes). */
+export function verifySimulationXmlSignature(xml: string): boolean {
+  const signature = xml.match(SIGNATURE_RE)?.[0];
+  if (!signature) return false;
+  const verifier = new SignedXml({ publicCert: SIMULATION_CERTIFICATE_PEM });
+  verifier.loadSignature(signature);
+  return verifier.checkSignature(xml);
 }
 
 export function isValidBase64(value: string): boolean {

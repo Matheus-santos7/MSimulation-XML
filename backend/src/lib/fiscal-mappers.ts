@@ -1,4 +1,5 @@
-import type { CteModal, FiscalStatus, NFeTipo, PrismaClient, TimelineStatus } from "../generated/prisma/client.js";
+import type { CteModal, FiscalStatus, NFeTipo, PrismaClient, Product, TimelineStatus } from "../generated/prisma/client.js";
+import { mapProduct } from "./product-mapper.js";
 
 export function num(n: { toString(): string } | number): number {
   return typeof n === "number" ? n : Number(n);
@@ -41,8 +42,44 @@ type NfeRow = {
   fiscalPayload?: unknown;
 };
 
-export function mapNfe(row: NfeRow, nfeReferenciaChave?: string) {
+type NfeItemRow = {
+  id: string;
+  productId: string;
+  numeroItem: number;
+  quantidade: number;
+  valor: { toString(): string };
+  valorIcms: { toString(): string };
+  ncm: string;
+  cfop: string;
+  saldoDisponivel?: number | null;
+  product?: Product;
+};
+
+export function mapNfeItem(row: NfeItemRow) {
+  return {
+    id: row.id,
+    productId: row.productId,
+    numeroItem: row.numeroItem,
+    quantidade: row.quantidade,
+    valor: num(row.valor),
+    valorICMS: num(row.valorIcms),
+    ncm: row.ncm,
+    cfop: row.cfop,
+    saldoDisponivel: row.saldoDisponivel ?? undefined,
+    product: row.product ? mapProduct(row.product) : undefined,
+  };
+}
+
+function saldoRemessaFromItens(itens?: NfeItemRow[], headerSaldo?: number | null): number | undefined {
+  if (itens && itens.length > 0) {
+    return itens.reduce((acc, item) => acc + (item.saldoDisponivel ?? 0), 0);
+  }
+  return headerSaldo ?? undefined;
+}
+
+export function mapNfe(row: NfeRow, nfeReferenciaChave?: string, itens?: NfeItemRow[]) {
   const doc = row.destDoc.replace(/\D/g, "");
+  const mappedItens = itens?.map(mapNfeItem);
   return {
     id: row.id,
     tenantId: row.tenantId,
@@ -81,7 +118,9 @@ export function mapNfe(row: NfeRow, nfeReferenciaChave?: string) {
     pedidoML: row.pedidoMl,
     quantidade: row.quantidade,
     tipo: row.tipo,
-    saldoDisponivel: row.tipo === "REMESSA" ? (row.saldoDisponivel ?? undefined) : undefined,
+    saldoDisponivel:
+      row.tipo === "REMESSA" ? saldoRemessaFromItens(itens, row.saldoDisponivel) : undefined,
+    itens: mappedItens,
     nfeReferenciaChave: nfeReferenciaChave ?? undefined,
     fiscalPayload: (row.fiscalPayload as Record<string, unknown> | undefined) ?? undefined,
   };

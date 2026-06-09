@@ -27,6 +27,7 @@ import { calcularNotaFiscal } from "../lib/tax-engine.js";
 import { montarItemFiscal } from "./tax-calculation-service.js";
 import { resolveTaxRule, type CustomerType } from "./tax-rule-service.js";
 import { persistNfeXmlFromEmission } from "./nfe-xml-service.js";
+import { estornarConsumosRemessa } from "./remessa-fifo.js";
 import {
   prepararRemessaSimbolicaFiscal,
   RemessaSimbolicaFiscalError,
@@ -218,20 +219,9 @@ export async function emitirDevolucaoVenda(
     });
 
     // Estorno FIFO: devolve o saldo consumido de volta às remessas da cadeia.
-    // A venda referencia o retorno simbólico, que registrou os consumos por remessa.
-    const estornos: { remessaNfeId: string; quantidade: number }[] = [];
-    if (venda.nfeReferenciaId) {
-      const consumos = await tx.nfeRemessaConsumo.findMany({
-        where: { retornoNfeId: venda.nfeReferenciaId },
-      });
-      for (const consumo of consumos) {
-        await tx.nFe.update({
-          where: { id: consumo.remessaNfeId },
-          data: { saldoDisponivel: { increment: consumo.quantidade } },
-        });
-        estornos.push({ remessaNfeId: consumo.remessaNfeId, quantidade: consumo.quantidade });
-      }
-    }
+    const estornos = venda.nfeReferenciaId
+      ? await estornarConsumosRemessa(tx, venda.nfeReferenciaId)
+      : [];
 
     // Remessa simbólica: registra o retorno do saldo ao full, referenciando a cadeia
     // (refNFe → devolução). O saldo em si já voltou à remessa física no estorno acima;

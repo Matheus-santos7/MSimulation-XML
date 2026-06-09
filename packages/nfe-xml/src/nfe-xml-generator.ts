@@ -275,9 +275,10 @@ export function buildNFeXML(
   emit: EmitenteXml,
   product?: ProductXmlInput,
   emitterSettings?: FiscalEmitterSettingsData | null,
+  products?: ProductXmlInput[],
 ): string {
   if (nfe.tipo === "REMESSA") {
-    return buildRemessaNFeXML(nfe, emit, product, emitterSettings);
+    return buildRemessaNFeXML(nfe, emit, product, emitterSettings, products);
   }
   if (nfe.tipo === "REMESSA_SIMBOLICA") {
     return buildRemessaSimbolicaNFeXML(nfe, emit, product, emitterSettings);
@@ -296,6 +297,7 @@ function buildRemessaNFeXML(
   emit: EmitenteXml,
   product?: ProductXmlInput,
   emitterSettings?: FiscalEmitterSettingsData | null,
+  products?: ProductXmlInput[],
 ): string {
   const id = "NFe" + nfe.chave;
   const dhEmi = nfe.emitidaEm;
@@ -304,25 +306,12 @@ function buildRemessaNFeXML(
   const foneXml = e.fone ? `\n          <fone>${e.fone.replace(/\D/g, "")}</fone>` : "";
   const iestXml = emit.iest ? `\n        <IEST>${emit.iest.replace(/\D/g, "")}</IEST>` : "";
 
-  const qCom = nfe.quantidade;
-  const cProd = product?.sku ?? `SKU-${nfe.numero}`;
-  const cEAN = formatEanForXml(product?.ean);
-  const xProd = product?.nome ?? nfe.natOp;
-  const ncm = product?.ncm ?? nfe.ncm;
-  const cfop = nfe.cfop;
-  const uCom = product?.unidade ?? "UNID";
-  const vUnCom = productUnitPriceForNfe(product, nfe);
-  const vProd = nfe.valor;
-  const orig = product?.origem ?? 1;
-  const cestXml = product?.cest ? `\n          <CEST>${product.cest}</CEST>` : "";
-
   const d = nfe.destinatario;
   const de = d.endereco;
   const docDigits = d.doc.replace(/\D/g, "");
   const destXCpl = de.complemento ? `\n          <xCpl>${xmlEscape(de.complemento)}</xCpl>` : "";
   const destIeXml = d.indIEDest === 1 ? `\n        <IE>${REMESSA_ML_DEST_IE}</IE>` : "";
   const cUF = ufToCodigo(e.uf);
-  const infAdProd = nfe.pedidoML ? `\n        <infAdProd>xPed:${xmlEscape(nfe.pedidoML)}</infAdProd>` : "";
   const fiscal = (nfe.fiscalPayload ?? {}) as Record<string, unknown>;
   const engine = parseEngineFromFiscalPayload(fiscal);
   const icms = (fiscal.icms as Record<string, unknown> | undefined) ?? { cst: "00", aliquota: nfe.aliqICMS };
@@ -330,34 +319,88 @@ function buildRemessaNFeXML(
   const vFrete = emitter.freteNoCalculo ? emitter.bases.vFrete : 0;
   const infAdic = infAdicXml(nfe, emitter, REMESSA_INF_CPL);
 
-  let icmsXml: string;
-  let totBlock: string;
-  let vUnComOut = vUnCom;
-  let vProdOut = vProd;
-  let qComOut = qCom;
+  const itemCount = Math.max(
+    engine?.itens.length ?? 0,
+    nfe.itens?.length ?? 0,
+    products?.length ?? 0,
+    1,
+  );
 
-  if (engine?.itens[0]) {
-    const item = engine.itens[0];
-    icmsXml = buildIcmsXmlFromEngineItem(item.icms);
+  let totBlock: string;
+  if (engine?.itens.length) {
     totBlock = icmsTotBlock(icmsTotFromEngine(engine.totais, vFrete));
-    vUnComOut = item.valorUnitario;
-    vProdOut = item.vProd;
-    qComOut = item.quantidade;
   } else {
     const vBcIcms = asNum(icms.vBc, emitter.bases.vBcIcms);
     const valorIcms = asNum(icms.valorIcms, nfe.valorICMS);
-    icmsXml = buildIcmsXmlFromSnapshot(icms, { orig, valor: vBcIcms, valorIcms });
     totBlock = icmsTotBlock({
       vBC: vBcIcms,
       vICMS: valorIcms,
-      vProd,
+      vProd: nfe.valor,
       vFrete,
       vIPI: 0,
       vPIS: 0,
       vCOFINS: 0,
-      vNF: vProd,
+      vNF: nfe.valor,
     });
   }
+
+  const detBlocks: string[] = [];
+  for (let i = 0; i < itemCount; i++) {
+    const dtoItem = nfe.itens?.[i];
+    const prod = products?.[i] ?? dtoItem?.product ?? (i === 0 ? product : undefined);
+    const engineItem = engine?.itens[i];
+    const qCom = dtoItem?.quantidade ?? engineItem?.quantidade ?? (itemCount === 1 ? nfe.quantidade : 1);
+    const cProd = prod?.sku ?? dtoItem?.product?.sku ?? `SKU-${nfe.numero}-${i + 1}`;
+    const cEAN = formatEanForXml(prod?.ean ?? dtoItem?.product?.ean);
+    const xProd = prod?.nome ?? dtoItem?.product?.nome ?? nfe.natOp;
+    const ncm = dtoItem?.ncm ?? prod?.ncm ?? dtoItem?.product?.ncm ?? nfe.ncm;
+    const cfop = dtoItem?.cfop ?? nfe.cfop;
+    const uCom = prod?.unidade ?? dtoItem?.product?.unidade ?? "UNID";
+    const vUnComOut =
+      engineItem?.valorUnitario ??
+      (dtoItem?.valor != null && qCom ? dtoItem.valor / qCom : productUnitPriceForNfe(prod, nfe));
+    const vProdOut = engineItem?.vProd ?? dtoItem?.valor ?? nfe.valor;
+    const orig = prod?.origem ?? dtoItem?.product?.origem ?? 1;
+    const cestXml = prod?.cest ? `\n          <CEST>${prod.cest}</CEST>` : "";
+    const infAdProd =
+      i === 0 && nfe.pedidoML ? `\n        <infAdProd>xPed:${xmlEscape(nfe.pedidoML)}</infAdProd>` : "";
+
+    let icmsXml: string;
+    if (engineItem) {
+      icmsXml = buildIcmsXmlFromEngineItem(engineItem.icms);
+    } else {
+      const vBcIcms = asNum(icms.vBc, emitter.bases.vBcIcms);
+      const valorIcms = asNum(icms.valorIcms, nfe.valorICMS);
+      icmsXml = buildIcmsXmlFromSnapshot(icms, { orig, valor: vBcIcms, valorIcms });
+    }
+
+    detBlocks.push(`      <det nItem="${i + 1}">
+        <prod>
+          <cProd>${xmlEscape(cProd)}</cProd>
+          <cEAN>${cEAN}</cEAN>
+          <xProd>${xmlEscape(xProd)}</xProd>
+          <NCM>${ncm}</NCM>${cestXml}
+          <CFOP>${cfop}</CFOP>
+          <uCom>${xmlEscape(uCom)}</uCom>
+          <qCom>${qCom.toFixed(4)}</qCom>
+          <vUnCom>${vUnComOut.toFixed(8)}</vUnCom>
+          <vProd>${vProdOut.toFixed(2)}</vProd>
+          <cEANTrib>${cEAN}</cEANTrib>
+          <uTrib>${xmlEscape(uCom)}</uTrib>
+          <qTrib>${qCom.toFixed(4)}</qTrib>
+          <vUnTrib>${vUnComOut.toFixed(8)}</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <vTotTrib>0.00</vTotTrib>
+          ${icmsXml}
+          ${impostoIpiIntXml("55")}
+          ${impostoPisCofinsNtXml()}
+        </imposto>${infAdProd}
+      </det>`);
+  }
+
+  const detXml = detBlocks.join("\n");
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
@@ -419,30 +462,7 @@ function buildRemessaNFeXML(
         </enderDest>
         <indIEDest>${d.indIEDest}</indIEDest>${destIeXml}
       </dest>
-      <det nItem="1">
-        <prod>
-          <cProd>${xmlEscape(cProd)}</cProd>
-          <cEAN>${cEAN}</cEAN>
-          <xProd>${xmlEscape(xProd)}</xProd>
-          <NCM>${ncm}</NCM>${cestXml}
-          <CFOP>${cfop}</CFOP>
-          <uCom>${xmlEscape(uCom)}</uCom>
-          <qCom>${qComOut.toFixed(4)}</qCom>
-          <vUnCom>${vUnComOut.toFixed(8)}</vUnCom>
-          <vProd>${vProdOut.toFixed(2)}</vProd>
-          <cEANTrib>${cEAN}</cEANTrib>
-          <uTrib>${xmlEscape(uCom)}</uTrib>
-          <qTrib>${qComOut.toFixed(4)}</qTrib>
-          <vUnTrib>${vUnComOut.toFixed(8)}</vUnTrib>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <vTotTrib>0.00</vTotTrib>
-          ${icmsXml}
-          ${impostoIpiIntXml("55")}
-          ${impostoPisCofinsNtXml()}
-        </imposto>${infAdProd}
-      </det>
+${detXml}
       <total>
         ${totBlock}
       </total>

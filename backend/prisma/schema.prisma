@@ -87,6 +87,7 @@ model Tenant {
   products        Product[]
   pedidos         Pedido[]
   nfes            NFe[]
+  nfeItens        NfeItem[]
   ctes            CTe[]
   fiscalEvents        FiscalEvent[]
   nfeInutilizacoes    NfeInutilizacao[]
@@ -280,6 +281,7 @@ model Product {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   nfes                  NFe[]
+  nfeItens              NfeItem[]
   pedidos               Pedido[]
   movimentacoesProduto  MovimentacaoProduto[]
 
@@ -379,6 +381,7 @@ model NFe {
   unidadeOrigem      MeliUnidadeLogistica? @relation("NfeUnidadeOrigem", fields: [unidadeOrigemId], references: [id], onDelete: SetNull)
   movimentacoesProduto MovimentacaoProduto[]
   movimentacoesComoSecundaria MovimentacaoProduto[] @relation("MovNfeSecundaria")
+  itens                NfeItem[]
 
   @@index([tenantId], map: "idx_nfe_tenant_id")
   @@index([unidadeDestinoId], map: "idx_nfe_unidade_destino")
@@ -420,6 +423,34 @@ model CTe {
   @@map("ctes")
 }
 
+/// Item de NF-e (linha `<det>`) — saldo FIFO de remessa por produto.
+model NfeItem {
+  id              String   @id @default(uuid())
+  tenantId        String   @map("tenant_id")
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  nfeId           String   @map("nfe_id")
+  nfe             NFe      @relation(fields: [nfeId], references: [id], onDelete: Cascade)
+  productId       String   @map("product_id")
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  numeroItem      Int      @map("numero_item")
+  quantidade      Int
+  valor           Decimal  @db.Decimal(15, 2)
+  valorIcms       Decimal  @map("valor_icms") @db.Decimal(15, 2)
+  ncm             String
+  cfop            String   @db.VarChar(4)
+  saldoDisponivel Int?     @map("saldo_disponivel")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  consumosRemessa NfeRemessaConsumo[]
+
+  @@unique([nfeId, numeroItem], map: "nfe_itens_nfe_numero_item_key")
+  @@index([tenantId], map: "idx_nfe_item_tenant_id")
+  @@index([nfeId], map: "idx_nfe_item_nfe_id")
+  @@index([productId], map: "idx_nfe_item_product_id")
+  @@index([tenantId, productId, saldoDisponivel], map: "idx_nfe_item_remessa_saldo")
+  @@map("nfe_itens")
+}
+
 /// Consumo FIFO de saldo de remessas por um retorno simbólico
 model NfeRemessaConsumo {
   id           String   @id @default(uuid())
@@ -427,12 +458,15 @@ model NfeRemessaConsumo {
   retornoNfe   NFe      @relation("ConsumoRetorno", fields: [retornoNfeId], references: [id], onDelete: Cascade)
   remessaNfeId String   @map("remessa_nfe_id")
   remessaNfe   NFe      @relation("ConsumoRemessa", fields: [remessaNfeId], references: [id], onDelete: Cascade)
+  nfeItemId    String   @map("nfe_item_id")
+  nfeItem      NfeItem  @relation(fields: [nfeItemId], references: [id], onDelete: Cascade)
   quantidade   Int      @map("quantidade")
   createdAt    DateTime @default(now()) @map("created_at")
 
-  @@unique([retornoNfeId, remessaNfeId], map: "nfe_remessa_consumos_retorno_remessa_key")
+  @@unique([retornoNfeId, nfeItemId], map: "nfe_remessa_consumos_retorno_item_key")
   @@index([retornoNfeId], map: "idx_nfe_remessa_consumo_retorno")
   @@index([remessaNfeId], map: "idx_nfe_remessa_consumo_remessa")
+  @@index([nfeItemId], map: "idx_nfe_remessa_consumo_item")
   @@map("nfe_remessa_consumos")
 }
 

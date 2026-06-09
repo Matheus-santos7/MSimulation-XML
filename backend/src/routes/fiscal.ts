@@ -125,15 +125,20 @@ function replyDomainError(
 // NF-e
 // ---------------------------------------------------------------------------
 
+const nfeListInclude = {
+  nfeReferencia: { select: { chave: true } },
+  itens: { include: { product: true }, orderBy: { numeroItem: "asc" as const } },
+};
+
 function registerNfeRoutes(app: FastifyInstance, fiscal: FiscalService) {
   app.get("/nfes", async (req) => {
     const tid = tenantIdFromRequest(req);
     const rows = await app.prisma.nFe.findMany({
       where: { tenantId: tid, ...fiscalNotDeleted },
-      include: { nfeReferencia: { select: { chave: true } } },
+      include: nfeListInclude,
       orderBy: [{ emitidaEm: "desc" }, { serie: "desc" }, { numero: "desc" }],
     });
-    return rows.map((r) => mapNfe(r, r.nfeReferencia?.chave));
+    return rows.map((r) => mapNfe(r, r.nfeReferencia?.chave, r.itens));
   });
 
   app.get("/nfes/:chave/xml", async (req, reply) => {
@@ -173,11 +178,12 @@ function registerNfeRoutes(app: FastifyInstance, fiscal: FiscalService) {
         cteVenda: { select: { chave: true } },
         nfeReferencia: { select: { chave: true, tipo: true, numero: true, serie: true } },
         nfeReferenciadas: { select: { chave: true, tipo: true, numero: true, serie: true } },
+        itens: { include: { product: true }, orderBy: { numeroItem: "asc" } },
       },
     });
     if (!row) return reply.status(404).send({ error: "NF-e não encontrada" });
 
-    const dto = mapNfe(row, row.nfeReferencia?.chave);
+    const dto = mapNfe(row, row.nfeReferencia?.chave, row.itens);
     return {
       ...dto,
       cteChaveRef: row.cteRemessa?.chave ?? row.cteVenda?.chave,

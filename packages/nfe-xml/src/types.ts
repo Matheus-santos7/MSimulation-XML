@@ -30,6 +30,15 @@ export type DestinatarioXml = {
   };
 };
 
+export type NFeItemXmlInput = {
+  numeroItem: number;
+  quantidade: number;
+  valor: number;
+  ncm: string;
+  cfop: string;
+  product?: ProductXmlInput;
+};
+
 export type NFeXmlInput = {
   id?: string;
   chave: string;
@@ -49,6 +58,7 @@ export type NFeXmlInput = {
   tipo: NFeTipoXml;
   nfeReferenciaChave?: string;
   fiscalPayload?: Record<string, unknown>;
+  itens?: NFeItemXmlInput[];
 };
 
 export type EmitenteXml = {

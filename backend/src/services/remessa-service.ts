@@ -2,7 +2,7 @@
  * Emissão de NF-e de remessa física para depósito temporário (full).
  *
  * - Destinatário = unidade logística ML selecionada (planilha) ou fallback legado.
- * - `saldoDisponivel` = quantidade enviada (base do FIFO por CD).
+ * - Saldo FIFO por linha (`nfe_itens.saldo_disponivel`).
  * - Emite CT-e de remessa na mesma transação quando aplicável.
  */
 import {
@@ -25,7 +25,7 @@ import { enrichFiscalPayloadWithXTexto } from "@msimulation-xml/fiscal-core";
 import { emitirCteRemessa } from "./cte-remessa-service.js";
 import { productUnitPrice } from "@msimulation-xml/fiscal-core";
 import {
-  calcularNotaInbound,
+  calcularImpostosNota,
   inferAliqIcmsRemessa,
   linhaPedidoFromProduto,
 } from "./tax-calculation-service.js";
@@ -40,6 +40,11 @@ export type EmitirRemessaOptions = {
   observacaoAvanco?: string;
 };
 
+type RemessaLinhaInput = {
+  product: Product;
+  quantidade: number;
+};
+
 export async function emitirNFeRemessa(
   prisma: PrismaClient,
   tenant: Tenant,
@@ -50,6 +55,18 @@ export async function emitirNFeRemessa(
   if (quantidade < 1) {
     throw new RemessaError("Quantidade para remessa deve ser pelo menos 1");
   }
+  return emitirNFeRemessaComItens(prisma, tenant, [{ product, quantidade }], options);
+}
+
+async function emitirNFeRemessaComItens(
+  prisma: PrismaClient,
+  tenant: Tenant,
+  linhas: RemessaLinhaInput[],
+  options?: EmitirRemessaOptions,
+) {
+  if (linhas.length === 0) {
+    throw new RemessaError("Informe ao menos um produto na remessa");
+  }
 
   const unidadeService = new UnidadeLogisticaService(prisma);
   const { unidade, destino } = await unidadeService.resolveDestinoRemessa(
@@ -57,67 +74,77 @@ export async function emitirNFeRemessa(
     options?.unidadeDestinoId,
   );
 
-  const serie = tenant.serieRemessa;
-  const numero = await proximoNumeroNfe(prisma, tenant.id, serie);
-  const unitCusto = productUnitPrice(product, "REMESSA");
-  if (unitCusto <= 0) {
-    throw new RemessaError(
-      "Preço de custo não informado ou zero. Informe o custo no cadastro do produto para emitir remessa.",
-    );
-  }
+  const aliqFallback = inferAliqIcmsRemessa(tenant.uf, destino.uf);
   const pedidoMl = options?.pedidoMl ?? gerarPedidoMl();
 
-  const chave = buildChaveNFe({
-    uf: tenant.uf,
-    cnpj: tenant.cnpj,
-    serie,
-    numero,
-  });
+  const linhasComRegras: { linha: ReturnType<typeof linhaPedidoFromProduto>; rule: NonNullable<Awaited<ReturnType<typeof resolveTaxRule>>> }[] = [];
 
-  const emitidaEm = new Date();
+  for (const [index, linha] of linhas.entries()) {
+    const unitCusto = productUnitPrice(linha.product, "REMESSA");
+    if (unitCusto <= 0) {
+      throw new RemessaError(
+        `Preço de custo não informado ou zero para "${linha.product.sku}". Informe o custo no cadastro do produto.`,
+      );
+    }
 
-  const ruleBaseId = product.taxRuleBaseId?.trim();
-  if (!ruleBaseId) {
-    throw new RemessaError(
-      "Produto sem regra fiscal associada. Edite o cadastro e selecione a regra da planilha.",
-    );
+    const ruleBaseId = linha.product.taxRuleBaseId?.trim();
+    if (!ruleBaseId) {
+      throw new RemessaError(
+        `Produto "${linha.product.sku}" sem regra fiscal. Edite o cadastro e selecione a regra da planilha.`,
+      );
+    }
+
+    const remessaTaxRule = await resolveTaxRule(prisma, tenant.id, {
+      originUf: tenant.uf,
+      destinationUf: destino.uf,
+      transactionType: "inbound",
+      customerType: "taxpayer",
+      ruleBaseId,
+    });
+    if (!remessaTaxRule) {
+      throw new RemessaError(
+        `Regra "${ruleBaseId}" sem linha de remessa (origem ${tenant.uf} → ${destino.uf}) para "${linha.product.sku}".`,
+      );
+    }
+
+    const cfopRemessa = remessaTaxRule.cfop?.trim() || REMESSA_CFOP;
+    linhasComRegras.push({
+      linha: {
+        ...linhaPedidoFromProduto(linha.product, {
+          cfop: cfopRemessa,
+          quantidade: linha.quantidade,
+          valorUnitario: unitCusto,
+        }),
+        numeroItem: index + 1,
+      },
+      rule: remessaTaxRule,
+    });
   }
 
-  const remessaTaxRule = await resolveTaxRule(prisma, tenant.id, {
-    originUf: tenant.uf,
-    destinationUf: destino.uf,
-    transactionType: "inbound",
-    customerType: "taxpayer",
-    ruleBaseId,
-  });
-  if (!remessaTaxRule) {
-    throw new RemessaError(
-      `Regra "${ruleBaseId}" sem linha de remessa (origem ${tenant.uf} → ${destino.uf}). Importe ou revise a planilha.`,
-    );
-  }
-
-  const aliqFallback = inferAliqIcmsRemessa(tenant.uf, destino.uf);
-  const cfopRemessa = remessaTaxRule.cfop?.trim() || REMESSA_CFOP;
-  const calc = calcularNotaInbound(
-    linhaPedidoFromProduto(product, {
-      cfop: cfopRemessa,
-      quantidade,
-      valorUnitario: unitCusto,
-    }),
-    remessaTaxRule,
-    tenant.uf,
-    destino.uf,
+  const nota = calcularImpostosNota(
+    linhasComRegras,
+    { ufOrigem: tenant.uf, ufDestino: destino.uf, customerType: "taxpayer" },
     aliqFallback,
   );
-  const { valor, valorIcms, aliqIcms } = calc;
 
+  const valor = nota.totais.vNF;
+  const valorIcms = nota.totais.vICMS;
+  const quantidadeTotal = linhas.reduce((acc, l) => acc + l.quantidade, 0);
+  const primeiro = linhas[0]!.product;
+  const cfopHeader = linhasComRegras[0]!.linha.cfop;
+  const aliqIcms = valor > 0 ? Math.round((valorIcms / valor) * 10000) / 100 : aliqFallback;
+
+  const serie = tenant.serieRemessa;
+  const numero = await proximoNumeroNfe(prisma, tenant.id, serie);
+  const chave = buildChaveNFe({ uf: tenant.uf, cnpj: tenant.cnpj, serie, numero });
+  const emitidaEm = new Date();
   const destData = destinoToNfeFields(destino);
 
-  const { nfeRow, cteRow } = await prisma.$transaction(async (tx) => {
+  const { nfeRow, cteRow, itemRows } = await prisma.$transaction(async (tx) => {
     const emitterSettings = await loadEmitterSettings(tx, tenant.id);
     const fiscalPayload = enrichFiscalPayloadWithXTexto(
       {
-        ...enrichTaxSnapshot(taxSnapshotFromRule(remessaTaxRule, aliqFallback), {
+        ...enrichTaxSnapshot(taxSnapshotFromRule(linhasComRegras[0]!.rule, aliqFallback), {
           settings: emitterSettings,
           tipo: NFeTipo.REMESSA,
           valor,
@@ -126,11 +153,11 @@ export async function emitirNFeRemessa(
           destUf: destino.uf,
           indFinal: 0,
         }),
-        engine: calc.nota,
+        engine: nota,
       } as Record<string, unknown>,
       {
         tipo: NFeTipo.REMESSA,
-        cfop: cfopRemessa,
+        cfop: cfopHeader,
         natOp: REMESSA_NAT_OP,
         pedidoMl,
       },
@@ -139,13 +166,13 @@ export async function emitirNFeRemessa(
     const nfeRow = await tx.nFe.create({
       data: {
         tenantId: tenant.id,
-        productId: product.id,
+        productId: linhas.length === 1 ? primeiro.id : null,
         chave,
         numero,
         serie,
         natOp: REMESSA_NAT_OP,
-        cfop: cfopRemessa,
-        ncm: product.ncm,
+        cfop: cfopHeader,
+        ncm: primeiro.ncm,
         ...destData,
         valor,
         valorIcms,
@@ -153,61 +180,107 @@ export async function emitirNFeRemessa(
         status: FiscalStatus.AUTORIZADA,
         emitidaEm,
         pedidoMl,
-        quantidade,
+        quantidade: quantidadeTotal,
         tipo: NFeTipo.REMESSA,
-        saldoDisponivel: quantidade,
+        saldoDisponivel: null,
         unidadeDestinoId: unidade?.id ?? undefined,
         fiscalPayload: fiscalPayload as Prisma.InputJsonValue,
       },
     });
 
+    const itemRows = [];
+    for (const [index, linha] of linhas.entries()) {
+      const engineItem = nota.itens[index];
+      if (!engineItem) {
+        throw new RemessaError(`Falha ao calcular item ${index + 1} da remessa`);
+      }
+      const itemRow = await tx.nfeItem.create({
+        data: {
+          tenantId: tenant.id,
+          nfeId: nfeRow.id,
+          productId: linha.product.id,
+          numeroItem: index + 1,
+          quantidade: linha.quantidade,
+          valor: engineItem.vProd,
+          valorIcms: engineItem.icms.vICMS,
+          ncm: linha.product.ncm,
+          cfop: linhasComRegras[index]!.linha.cfop,
+          saldoDisponivel: linha.quantidade,
+        },
+        include: { product: true },
+      });
+      itemRows.push(itemRow);
+
+      await registrarMovimentacaoProduto(tx, {
+        tenantId: tenant.id,
+        productId: linha.product.id,
+        tipoOperacao: OperacaoFiscalTipo.REMESSA,
+        quantidade: linha.quantidade,
+        unidadeDestinoId: unidade?.id ?? undefined,
+        nfeId: nfeRow.id,
+        observacao:
+          options?.observacaoAvanco ??
+          (unidade ? `Remessa item ${index + 1} para ${unidade.codigo}` : undefined),
+      });
+    }
+
     await persistNfeXmlAutorizado(tx, {
       nfeId: nfeRow.id,
       tenant,
       nfeRow: { ...nfeRow, fiscalPayload },
-      product,
+      products: linhas.map((l) => l.product),
+      itemRows,
       settings: emitterSettings,
     });
 
-    await registrarMovimentacaoProduto(tx, {
-      tenantId: tenant.id,
-      productId: product.id,
-      tipoOperacao: OperacaoFiscalTipo.REMESSA,
-      quantidade,
-      unidadeDestinoId: unidade?.id ?? undefined,
-      nfeId: nfeRow.id,
-      observacao: options?.observacaoAvanco ?? (unidade ? `Remessa para ${unidade.codigo}` : undefined),
-    });
-
     const cteRow = await emitirCteRemessa(tx, tenant, nfeRow);
-    return { nfeRow, cteRow };
+    return { nfeRow, cteRow, itemRows };
   });
 
-  return { nfe: mapNfe(nfeRow), cte: cteRow };
+  return {
+    nfe: mapNfe(nfeRow, undefined, itemRows),
+    cte: cteRow,
+  };
 }
+
+export type RemessaManualItemInput = {
+  productId: string;
+  quantidade: number;
+};
 
 /** Remessa física manual (UI de fulfillment), sem alterar estoque do produto. */
 export async function emitirRemessaManual(
   prisma: PrismaClient,
   input: {
     tenantId: string;
-    productId: string;
-    quantidade: number;
     unidadeDestinoId: string;
+    items: RemessaManualItemInput[];
   },
 ) {
-  const [tenant, product] = await Promise.all([
-    prisma.tenant.findUniqueOrThrow({ where: { id: input.tenantId } }),
-    prisma.product.findFirst({
-      where: { id: input.productId, tenantId: input.tenantId },
-    }),
-  ]);
-
-  if (!product) {
-    throw new RemessaError("Produto não encontrado");
+  if (input.items.length === 0) {
+    throw new RemessaError("Informe ao menos um produto na remessa");
   }
 
-  return emitirNFeRemessa(prisma, tenant, product, input.quantidade, {
+  const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: input.tenantId } });
+  const productIds = [...new Set(input.items.map((i) => i.productId))];
+  const products = await prisma.product.findMany({
+    where: { tenantId: input.tenantId, id: { in: productIds } },
+  });
+  const byId = new Map(products.map((p) => [p.id, p]));
+
+  const linhas: RemessaLinhaInput[] = [];
+  for (const [index, item] of input.items.entries()) {
+    const product = byId.get(item.productId);
+    if (!product) {
+      throw new RemessaError(`Produto não encontrado (linha ${index + 1})`);
+    }
+    if (item.quantidade < 1) {
+      throw new RemessaError(`Quantidade inválida na linha ${index + 1}`);
+    }
+    linhas.push({ product, quantidade: item.quantidade });
+  }
+
+  return emitirNFeRemessaComItens(prisma, tenant, linhas, {
     unidadeDestinoId: input.unidadeDestinoId,
   });
 }

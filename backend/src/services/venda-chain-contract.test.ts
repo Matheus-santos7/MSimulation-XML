@@ -13,42 +13,60 @@ const productId = "p1";
 
 describe("venda-chain — contrato refNFe (FIFO)", () => {
   it("alocação FIFO[0] é a remessa principal para nfeReferenciaId do retorno", async () => {
-    const nfes = new Map([
+    const items = new Map([
       [
-        "remessa-antiga",
+        "item-antigo",
         {
-          id: "remessa-antiga",
+          id: "item-antigo",
           tenantId,
+          nfeId: "remessa-antiga",
           productId,
-          tipo: NFeTipo.REMESSA,
+          numeroItem: 1,
           saldoDisponivel: 5,
-          emitidaEm: new Date("2025-06-01"),
-          numero: 1,
-          deletedAt: null,
-          unidadeDestinoId: null,
+          nfe: {
+            tenantId,
+            tipo: NFeTipo.REMESSA,
+            emitidaEm: new Date("2025-06-01"),
+            numero: 1,
+            deletedAt: null as null,
+            unidadeDestinoId: null,
+          },
         },
       ],
       [
-        "remessa-recente",
+        "item-recente",
         {
-          id: "remessa-recente",
+          id: "item-recente",
           tenantId,
+          nfeId: "remessa-recente",
           productId,
-          tipo: NFeTipo.REMESSA,
+          numeroItem: 1,
           saldoDisponivel: 5,
-          emitidaEm: new Date("2026-01-01"),
-          numero: 2,
-          deletedAt: null,
-          unidadeDestinoId: null,
+          nfe: {
+            tenantId,
+            tipo: NFeTipo.REMESSA,
+            emitidaEm: new Date("2026-01-01"),
+            numero: 2,
+            deletedAt: null as null,
+            unidadeDestinoId: null,
+          },
         },
       ],
     ]);
-    const consumos: { retornoNfeId: string; remessaNfeId: string; quantidade: number }[] = [];
+    const consumos: {
+      retornoNfeId: string;
+      remessaNfeId: string;
+      nfeItemId: string;
+      quantidade: number;
+    }[] = [];
     const tx = {
-      nFe: {
+      nfeItem: {
         findMany: async () =>
-          [...nfes.values()].sort(
-            (a, b) => a.emitidaEm.getTime() - b.emitidaEm.getTime() || a.numero - b.numero,
+          [...items.values()].sort(
+            (a, b) =>
+              a.nfe.emitidaEm.getTime() - b.nfe.emitidaEm.getTime() ||
+              a.nfe.numero - b.nfe.numero ||
+              a.numeroItem - b.numeroItem,
           ),
         update: async ({
           where,
@@ -57,7 +75,7 @@ describe("venda-chain — contrato refNFe (FIFO)", () => {
           where: { id: string };
           data: { saldoDisponivel: number };
         }) => {
-          nfes.get(where.id)!.saldoDisponivel = data.saldoDisponivel;
+          items.get(where.id)!.saldoDisponivel = data.saldoDisponivel;
         },
       },
       nfeRemessaConsumo: {

@@ -42,10 +42,14 @@ const avancoCdBody = z.object({
   unidadeDestinoId: z.string().uuid(),
 });
 
-const remessaManualBody = z.object({
+const remessaManualItemBody = z.object({
   productId: z.string().uuid(),
   quantidade: z.number().int().min(1),
+});
+
+const remessaManualBody = z.object({
   unidadeDestinoId: z.string().uuid(),
+  items: z.array(remessaManualItemBody).min(1),
 });
 
 const unidadeIdParam = z.object({

@@ -30,15 +30,14 @@ const NAV_OPERACIONAL = [
   { href: "/pedidos", label: "Pedidos", icon: ShoppingCart },
   { href: "/nfe", label: "NF-e Emitidas", icon: FileText },
   { href: "/cte", label: "CT-e Transportes", icon: Truck },
+  { href: "/eventos", label: "Eventos", icon: Bell },
 ] as const;
 
 const NAV_CONFIG = [
-  { href: "/usuarios", label: "Usuários", icon: Users },
+  { href: "/regras", label: "Regras Tributárias", icon: Scale },
   { href: "/unidades-logisticas", label: "Unidades ML", icon: Warehouse },
   { href: "/configuracoes-fiscais", label: "Config. fiscais", icon: Settings2 },
-  { href: "/regras", label: "Regras Tributárias", icon: Scale },
-  { href: "/auditoria", label: "Auditoria", icon: ShieldCheck },
-  { href: "/eventos", label: "Eventos", icon: Bell },
+  { href: "/usuarios", label: "Usuários", icon: Users },
   { href: "/ia", label: "IA Insights", icon: Sparkles },
 ] as const;
 

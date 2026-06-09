@@ -168,6 +168,20 @@ export type PedidoFaturarResult = {
   nfe: NFeDto;
 };
 
+/** Linha de produto em NF-e de remessa (multi-item). */
+export type NFeItemDto = {
+  id: string;
+  productId: string;
+  numeroItem: number;
+  quantidade: number;
+  valor: number;
+  valorICMS: number;
+  ncm: string;
+  cfop: string;
+  saldoDisponivel?: number;
+  product?: ProductDto;
+};
+
 /** Dados de NF-e para UI e para `buildNFeXML` */
 export type NFeDto = {
   id: string;
@@ -189,6 +203,7 @@ export type NFeDto = {
   quantidade: number;
   tipo: "VENDA" | "REMESSA" | "RETORNO_SIMBOLICO" | "DEVOLUCAO" | "REMESSA_SIMBOLICA";
   saldoDisponivel?: number;
+  itens?: NFeItemDto[];
   /** Chave da NF-e referenciada por esta nota (pai na cadeia → vai no XML refNFe). */
   nfeReferenciaChave?: string;
   cteChaveRef?: string;

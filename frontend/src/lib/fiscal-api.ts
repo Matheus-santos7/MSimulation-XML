@@ -556,15 +556,19 @@ export async function emitirAvancoCd(body: {
   return mutateJson<AvancoCdResult>(url("/api/movimentacoes/avanco-cd"), "POST", body) as Promise<AvancoCdResult>;
 }
 
+export type RemessaManualItemInput = {
+  productId: string;
+  quantidade: number;
+};
+
 export type RemessaManualResult = {
   nfe: NFeDto;
   cte: CTeDto;
 };
 
 export async function emitirRemessaManual(body: {
-  productId: string;
-  quantidade: number;
   unidadeDestinoId: string;
+  items: RemessaManualItemInput[];
 }): Promise<RemessaManualResult> {
   return mutateJson<RemessaManualResult>(
     url("/api/movimentacoes/remessa"),

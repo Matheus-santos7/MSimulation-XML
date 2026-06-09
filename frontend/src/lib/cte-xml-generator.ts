@@ -6,6 +6,7 @@ import {
   buildSimulationXmlSignature,
   formatNfeDateTime,
   simulationNProt,
+  simulationProtDigVal,
 } from "@msimulation-xml/fiscal-core";
 import type { CTeDto, TenantDto } from "./fiscal-types";
 import { ufToCodigo } from "./nfe-uf";
@@ -176,7 +177,7 @@ ${buildSimulationXmlSignature(id, cte.chave, "    ")}
       <chCTe>${cte.chave}</chCTe>
       <dhRecbto>${dhEmi}</dhRecbto>
       <nProt>${simulationNProt(cte.numero, "333260367974")}</nProt>
-      <digVal>SIM-${cte.chave.slice(-8)}</digVal>
+      <digVal>${simulationProtDigVal(cte.chave)}</digVal>
       <cStat>${cte.status === "AUTORIZADA" ? 100 : 103}</cStat>
       <xMotivo>${cte.status === "AUTORIZADA" ? "Autorizado o uso do CT-e (SIMULAÇÃO)" : cte.status}</xMotivo>
     </infProt>

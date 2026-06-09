@@ -14,6 +14,7 @@ import {
   buildSimulationXmlSignature,
   ensureNProt,
   simulationNProt,
+  simulationProtDigVal,
   formatNfeDateTime,
   productUnitPriceForNfe,
   xTextoFromNfe,
@@ -137,7 +138,7 @@ function protNFeBlock(nfe: NFeXmlInput, dhEmi: string): string {
       <chNFe>${nfe.chave}</chNFe>
       <dhRecbto>${dhEmi}</dhRecbto>
       <nProt>${simulationNProt(nfe.numero)}</nProt>
-      <digVal>SIM-${nfe.chave.slice(-8)}</digVal>
+      <digVal>${simulationProtDigVal(nfe.chave)}</digVal>
       <cStat>${nfe.status === "AUTORIZADA" ? 100 : nfe.status === "REJEITADA" ? 539 : 103}</cStat>
       <xMotivo>${nfe.status === "AUTORIZADA" ? "Autorizado o uso da NF-e (SIMULAÇÃO)" : nfe.status}</xMotivo>
     </infProt>

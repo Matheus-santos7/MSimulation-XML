@@ -103,6 +103,15 @@ describe("buildNFeXML — REMESSA", () => {
     assert.equal(nProt.length, 15);
   });
 
+  it("digVal no protNFe é Base64 válido", () => {
+    const xml = buildNFeXML(baseNfe(), emit);
+    const digVal = xml.match(/<digVal>([^<]+)<\/digVal>/)?.[1];
+    assert.ok(digVal);
+    assert.equal(digVal.length, 28);
+    assert.match(digVal, /^[A-Za-z0-9+/]+={0,2}$/);
+    assert.doesNotMatch(digVal, /-/);
+  });
+
   it("formata dhEmi/dhSaiEnt com offset -03:00 (sem sufixo Z)", () => {
     const nfe = baseNfe();
     nfe.emitidaEm = "2026-06-09T04:55:14.442Z";

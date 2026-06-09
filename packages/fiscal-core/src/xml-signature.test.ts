@@ -4,6 +4,7 @@ import {
   buildSimulationXmlSignature,
   isValidBase64,
   simulationDigestValue,
+  simulationProtDigVal,
   simulationSignatureValue,
   simulationX509Certificate,
 } from "./xml-signature.js";
@@ -48,5 +49,12 @@ describe("buildSimulationXmlSignature", () => {
     const cert = simulationX509Certificate("chave-teste");
     assert.ok(isValidBase64(cert));
     assert.ok(cert.length > 500);
+  });
+
+  it("simulationProtDigVal gera digVal Base64 de 28 caracteres (SHA-1)", () => {
+    const digVal = simulationProtDigVal("35260112345678000199550010000000011234567890");
+    assert.equal(digVal.length, 28);
+    assert.ok(isValidBase64(digVal));
+    assert.ok(!digVal.includes("-"));
   });
 });

@@ -45,6 +45,11 @@ export function simulationDigestValue(seed: string): string {
   return bytesToBase64(deterministicBytes(`simulation-digest:${seed}`, 20));
 }
 
+/** digVal do protNFe/protCTe (SHA-1, 20 bytes) em Base64 válido — apenas simulação. */
+export function simulationProtDigVal(chave: string): string {
+  return simulationDigestValue(`prot-digval:${chave}`);
+}
+
 /** SignatureValue determinístico em Base64 válido (256 bytes, ~RSA-2048) — apenas simulação. */
 export function simulationSignatureValue(seed: string): string {
   return bytesToBase64(deterministicBytes(`simulation-signature:${seed}`, 256));

@@ -4,6 +4,7 @@ export {
   buildSimulationXmlSignature,
   isValidBase64,
   simulationDigestValue,
+  simulationProtDigVal,
   simulationSignatureValue,
   simulationX509Certificate,
 } from "./xml-signature.js";

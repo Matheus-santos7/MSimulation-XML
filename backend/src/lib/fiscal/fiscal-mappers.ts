@@ -1,3 +1,4 @@
+import { formatNfeDateTime } from "@msimulation-xml/fiscal-core";
 import type { CteModal, FiscalStatus, NFeTipo, PrismaClient, Product, TimelineStatus } from "../../generated/prisma/client.js";
 import { mapProduct } from "../catalog/product-mapper.js";
 
@@ -114,7 +115,7 @@ export function mapNfe(row: NfeRow, nfeReferenciaChave?: string, itens?: NfeItem
     valorICMS: num(row.valorIcms),
     aliqICMS: num(row.aliqIcms),
     status: row.status,
-    emitidaEm: row.emitidaEm.toISOString(),
+    emitidaEm: formatNfeDateTime(row.emitidaEm),
     pedidoML: row.pedidoMl,
     quantidade: row.quantidade,
     tipo: row.tipo,
@@ -180,7 +181,7 @@ export function mapCte(
     valorCarga: num(row.valorCarga),
     pesoCarga: num(row.pesoCarga),
     status: row.status,
-    emitidoEm: row.emitidoEm.toISOString(),
+    emitidoEm: formatNfeDateTime(row.emitidoEm),
     nfeChaveRef: nfeChaveRef ?? undefined,
     vinculadoRemessa: Boolean(row.nfeRemessaId ?? row.nfeVendaId ?? nfeChaveRef),
     vinculadoVenda: Boolean(row.nfeVendaId),

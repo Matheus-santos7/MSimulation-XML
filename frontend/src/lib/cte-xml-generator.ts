@@ -2,6 +2,7 @@
  * CT-e v4.00 XML generator — SIMULATION ONLY (modelo ML com NF-e referenciada).
  */
 
+import { buildSimulationXmlSignature, formatNfeDateTime } from "@msimulation-xml/fiscal-core";
 import type { CTeDto, TenantDto } from "./fiscal-types";
 import { ufToCodigo } from "./nfe-uf";
 
@@ -25,7 +26,7 @@ const CTE_RNTRC = "47923462";
 
 export function buildCTeXML(cte: CTeDto, remetente: TenantDto): string {
   const id = "CTe" + cte.chave;
-  const dhEmi = cte.emitidoEm;
+  const dhEmi = formatNfeDateTime(cte.emitidoEm);
   const cUF = ufToCodigo(CTE_ML_EMIT.uf);
   const vFrete = cte.valor;
   const vCarga = cte.valorCarga;
@@ -162,14 +163,7 @@ export function buildCTeXML(cte: CTeDto, remetente: TenantDto): string {
         </infModal>
       </infCTeNorm>
     </infCte>
-    <Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
-      <SignedInfo>
-        <Reference URI="#${id}">
-          <DigestValue>SIMULATION-${cte.chave.slice(-12)}</DigestValue>
-        </Reference>
-      </SignedInfo>
-      <SignatureValue>FAKE-SIGNATURE-FOR-SIMULATION-ONLY</SignatureValue>
-    </Signature>
+${buildSimulationXmlSignature(id, cte.chave, "    ")}
   </CTe>
   <protCTe versao="4.00">
     <infProt>

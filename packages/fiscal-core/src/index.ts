@@ -1,4 +1,6 @@
 export { NFeTipo, type NFeTipoValue } from "./nfe-tipo.js";
+export { formatNfeDateTime } from "./nfe-datetime.js";
+export { buildSimulationXmlSignature } from "./xml-signature.js";
 export {
   ML_OLSS_WAREHOUSE_SUFFIX,
   buildNfeObsContXTexto,

@@ -1,3 +1,4 @@
+import { buildSimulationXmlSignature } from "@msimulation-xml/fiscal-core";
 import type { EmitenteDto, FiscalEventDto } from "./fiscal-types";
 import { ufToCodigo } from "./nfe-uf";
 
@@ -23,5 +24,6 @@ export function buildProcInutNFeXML(
   const xJust = xmlEscape(inut.xJust?.trim() || "Numero nao utilizado dentro do prazo legal");
   const dhRecbto = inut.ocorridoEm;
 
-  return `<?xml version="1.0" encoding="UTF-8"?><procInutNFe versao="4.00" xmlns="http://www.portalfiscal.inf.br/nfe"><inutNFe xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><infInut Id="${id}"><tpAmb>1</tpAmb><xServ>INUTILIZAR</xServ><cUF>${cUF}</cUF><ano>${ano}</ano><CNPJ>${cnpj}</CNPJ><mod>55</mod><serie>${serie}</serie><nNFIni>${nNFIni}</nNFIni><nNFFin>${nNFFin}</nNFFin><xJust>${xJust}</xJust></infInut><Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><Reference URI="#${id}"><DigestValue>SIMULATION-${id.slice(-12)}</DigestValue></Reference></SignedInfo><SignatureValue>FAKE-SIGNATURE-FOR-SIMULATION-ONLY</SignatureValue></Signature></inutNFe><retInutNFe versao="4.00"><nfeResultMsg><retInutNFe versao="4.00"><infInut><tpAmb>1</tpAmb><verAplic>PR-v4_9_62</verAplic><cStat>102</cStat><xMotivo>Inutilizacao de numero homologado</xMotivo><cUF>${cUF}</cUF><ano>${ano}</ano><CNPJ>${cnpj}</CNPJ><mod>55</mod><serie>${serie}</serie><nNFIni>${nNFIni}</nNFIni><nNFFin>${nNFFin}</nNFFin><dhRecbto>${dhRecbto}</dhRecbto><nProt>${inut.protocolo}</nProt></infInut></retInutNFe></nfeResultMsg></retInutNFe></procInutNFe>`;
+  const signature = buildSimulationXmlSignature(id, id);
+  return `<?xml version="1.0" encoding="UTF-8"?><procInutNFe versao="4.00" xmlns="http://www.portalfiscal.inf.br/nfe"><inutNFe xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><infInut Id="${id}"><tpAmb>1</tpAmb><xServ>INUTILIZAR</xServ><cUF>${cUF}</cUF><ano>${ano}</ano><CNPJ>${cnpj}</CNPJ><mod>55</mod><serie>${serie}</serie><nNFIni>${nNFIni}</nNFIni><nNFFin>${nNFFin}</nNFFin><xJust>${xJust}</xJust></infInut>${signature}</inutNFe><retInutNFe versao="4.00"><nfeResultMsg><retInutNFe versao="4.00"><infInut><tpAmb>1</tpAmb><verAplic>PR-v4_9_62</verAplic><cStat>102</cStat><xMotivo>Inutilizacao de numero homologado</xMotivo><cUF>${cUF}</cUF><ano>${ano}</ano><CNPJ>${cnpj}</CNPJ><mod>55</mod><serie>${serie}</serie><nNFIni>${nNFIni}</nNFIni><nNFFin>${nNFFin}</nNFFin><dhRecbto>${dhRecbto}</dhRecbto><nProt>${inut.protocolo}</nProt></infInut></retInutNFe></nfeResultMsg></retInutNFe></procInutNFe>`;
 }

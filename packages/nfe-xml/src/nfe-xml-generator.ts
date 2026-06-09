@@ -10,7 +10,12 @@
  */
 
 import type { FiscalEmitterSettingsData } from "@msimulation-xml/fiscal-core";
-import { productUnitPriceForNfe, xTextoFromNfe } from "@msimulation-xml/fiscal-core";
+import {
+  buildSimulationXmlSignature,
+  formatNfeDateTime,
+  productUnitPriceForNfe,
+  xTextoFromNfe,
+} from "@msimulation-xml/fiscal-core";
 import {
   REMESSA_INF_CPL,
   REMESSA_ML_DEST_IE,
@@ -123,17 +128,7 @@ function protNFeBlock(nfe: NFeXmlInput, dhEmi: string): string {
 }
 
 function signatureBlock(id: string, chave: string): string {
-  return `    <Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
-      <SignedInfo>
-        <CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
-        <SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>
-        <Reference URI="#${id}">
-          <DigestValue>SIMULATION-${chave.slice(-12)}</DigestValue>
-        </Reference>
-      </SignedInfo>
-      <SignatureValue>FAKE-SIGNATURE-FOR-SIMULATION-ONLY</SignatureValue>
-      <KeyInfo><KeyName>FAKE-SIMULATION-ONLY</KeyName></KeyInfo>
-    </Signature>`;
+  return buildSimulationXmlSignature(id, chave, "    ");
 }
 
 function infAdicXml(
@@ -300,7 +295,7 @@ function buildRemessaNFeXML(
   products?: ProductXmlInput[],
 ): string {
   const id = "NFe" + nfe.chave;
-  const dhEmi = nfe.emitidaEm;
+  const dhEmi = formatNfeDateTime(nfe.emitidaEm);
   const e = emit.endereco;
   const xCplXml = e.xCpl ? `\n          <xCpl>${xmlEscape(e.xCpl)}</xCpl>` : "";
   const foneXml = e.fone ? `\n          <fone>${e.fone.replace(/\D/g, "")}</fone>` : "";
@@ -495,7 +490,7 @@ function buildRetornoNFeXML(
   emitterSettings?: FiscalEmitterSettingsData | null,
 ): string {
   const id = "NFe" + nfe.chave;
-  const dhEmi = nfe.emitidaEm;
+  const dhEmi = formatNfeDateTime(nfe.emitidaEm);
   const e = emit.endereco;
   const xCplXml = e.xCpl ? `\n          <xCpl>${xmlEscape(e.xCpl)}</xCpl>` : "";
   const foneXml = e.fone ? `\n          <fone>${e.fone.replace(/\D/g, "")}</fone>` : "";
@@ -656,7 +651,7 @@ function buildVendaNFeXML(
   emitterSettings?: FiscalEmitterSettingsData | null,
 ): string {
   const id = "NFe" + nfe.chave;
-  const dhEmi = nfe.emitidaEm;
+  const dhEmi = formatNfeDateTime(nfe.emitidaEm);
   const e = emit.endereco;
   const xCplXml = e.xCpl ? `\n          <xCpl>${xmlEscape(e.xCpl)}</xCpl>` : "";
   const foneXml = e.fone ? `\n          <fone>${e.fone.replace(/\D/g, "")}</fone>` : "";
@@ -881,8 +876,8 @@ export function buildProcEventoCancelamentoXML(
 ): string {
   const cOrgao = String(ufToCodigo(emit.uf) ?? 41).padStart(2, "0");
   const cnpj = emit.cnpj.replace(/\D/g, "");
-  const dhEvento = evento.ocorridoEm;
-  const dhReg = evento.ocorridoEm;
+  const dhEvento = formatNfeDateTime(evento.ocorridoEm);
+  const dhReg = formatNfeDateTime(evento.ocorridoEm);
   const nProtNfe = `141260055765${String(nfe.numero).padStart(3, "0")}`.slice(0, 15);
   const xJust = xmlEscape(evento.xJust?.trim() || "Cancelamento solicitado pelo emissor");
   const infEventoId = `ID110111${nfe.chave}01`;

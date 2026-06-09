@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { tenantIdFromRequest } from "../../lib/auth/request-context.js";
+import { handleRouteError } from "../../lib/http/domain-errors.js";
 import { requireAdminHook } from "../../plugins/contexts/guards.js";
 import {
   deleteAllTaxRules,
@@ -12,6 +13,8 @@ import {
   taxRuleGroupQuerySchema,
   taxRulesBulkBodySchema,
 } from "./schemas.js";
+
+const TAX_RULE_ERROR_MAPPINGS = [{ type: TaxRuleCatalogError, status: 400 }] as const;
 
 export function registerTaxRuleRoutes(app: FastifyInstance) {
   app.get("/tax-rules/catalog", async (req) => {
@@ -95,9 +98,7 @@ export function registerTaxRuleRoutes(app: FastifyInstance) {
     try {
       return await deleteAllTaxRules(app.prisma, tid);
     } catch (e) {
-      if (e instanceof TaxRuleCatalogError) {
-        return reply.status(400).send({ error: e.message });
-      }
+      if (handleRouteError(reply, e, { mappings: [...TAX_RULE_ERROR_MAPPINGS] })) return;
       throw e;
     }
   });
@@ -110,9 +111,7 @@ export function registerTaxRuleRoutes(app: FastifyInstance) {
     try {
       return await deleteTaxRuleGroup(app.prisma, tid, decodeURIComponent(baseId), origin.toUpperCase());
     } catch (e) {
-      if (e instanceof TaxRuleCatalogError) {
-        return reply.status(400).send({ error: e.message });
-      }
+      if (handleRouteError(reply, e, { mappings: [...TAX_RULE_ERROR_MAPPINGS] })) return;
       throw e;
     }
   });

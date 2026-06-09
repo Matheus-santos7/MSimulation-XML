@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
-import { ZodError } from "zod";
 import { tenantIdFromRequest } from "../lib/auth/request-context.js";
+import { handleRouteError } from "../lib/http/domain-errors.js";
 import {
   productBulkUpsertBody,
   productCreateBody,
@@ -11,6 +11,13 @@ import { TaxRuleCatalogError } from "../services/tax-rule-catalog-service.js";
 import { ProductConflictError, ProductService } from "../services/product-service.js";
 import { RemessaError } from "../services/remessa-service.js";
 import { UnidadeLogisticaError } from "../services/unidade-logistica-service.js";
+
+const PRODUCT_ERROR_MAPPINGS = [
+  { type: ProductConflictError, status: 409 },
+  { type: RemessaError, status: 400 },
+  { type: UnidadeLogisticaError, status: 400 },
+  { type: TaxRuleCatalogError, status: 400 },
+] as const;
 
 export const productRoutes: FastifyPluginAsync = async (app) => {
   const service = new ProductService(app.prisma);
@@ -35,7 +42,8 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
       const product = await service.create(tid, body);
       return reply.status(201).send(product);
     } catch (e) {
-      return handleProductError(e, reply);
+      if (handleRouteError(reply, e, { mappings: [...PRODUCT_ERROR_MAPPINGS] })) return;
+      throw e;
     }
   });
 
@@ -46,7 +54,8 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
       const result = await service.bulkUpsert(tid, rows);
       return reply.status(200).send(result);
     } catch (e) {
-      return handleProductError(e, reply);
+      if (handleRouteError(reply, e, { mappings: [...PRODUCT_ERROR_MAPPINGS] })) return;
+      throw e;
     }
   });
 
@@ -59,7 +68,8 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
       if (!product) return reply.status(404).send({ error: "Produto não encontrado" });
       return product;
     } catch (e) {
-      return handleProductError(e, reply);
+      if (handleRouteError(reply, e, { mappings: [...PRODUCT_ERROR_MAPPINGS] })) return;
+      throw e;
     }
   });
 
@@ -71,28 +81,8 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
       if (!removed) return reply.status(404).send({ error: "Produto não encontrado" });
       return reply.status(204).send();
     } catch (e) {
-      return handleProductError(e, reply);
+      if (handleRouteError(reply, e, { mappings: [...PRODUCT_ERROR_MAPPINGS] })) return;
+      throw e;
     }
   });
 };
-
-function handleProductError(e: unknown, reply: { status: (code: number) => { send: (body: unknown) => unknown } }) {
-  if (e instanceof ZodError) {
-    const fieldErrors = e.flatten().fieldErrors as Record<string, string[]>;
-    const first = Object.values(fieldErrors).flat()[0];
-    return reply.status(400).send({
-      error: first ?? "Dados inválidos",
-      details: fieldErrors,
-    });
-  }
-  if (e instanceof ProductConflictError) {
-    return reply.status(409).send({ error: e.message });
-  }
-  if (e instanceof RemessaError || e instanceof UnidadeLogisticaError) {
-    return reply.status(400).send({ error: e.message });
-  }
-  if (e instanceof TaxRuleCatalogError) {
-    return reply.status(400).send({ error: e.message });
-  }
-  throw e;
-}

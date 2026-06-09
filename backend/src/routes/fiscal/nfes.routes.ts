@@ -6,17 +6,19 @@ import { CancelamentoError, cancelarVenda } from "../../services/cancelamento-se
 import { DevolucaoError, emitirDevolucaoVenda } from "../../services/devolucao-service.js";
 import { InutilizacaoError, inutilizarNumeracao } from "../../services/inutilizacao-service.js";
 import { resolveNfeXml } from "../../services/nfe-xml-service.js";
+import { handleRouteError } from "../../lib/http/domain-errors.js";
 import {
   cancelamentoBodySchema,
   chaveParamSchema,
   inutilizarBodySchema,
 } from "./schemas.js";
-import { replyDomainError } from "./reply-domain-error.js";
 
 const nfeListInclude = {
   nfeReferencia: { select: { chave: true } },
   itens: { include: { product: true }, orderBy: { numeroItem: "asc" as const } },
 };
+
+const NFE_STATUS_ERRORS = [InutilizacaoError, DevolucaoError, CancelamentoError] as const;
 
 export function registerNfeRoutes(app: FastifyInstance, fiscal: FiscalService) {
   app.get("/nfes", async (req) => {
@@ -98,7 +100,7 @@ export function registerNfeRoutes(app: FastifyInstance, fiscal: FiscalService) {
       });
       return reply.status(201).send(result);
     } catch (e) {
-      if (replyDomainError(reply, e, [InutilizacaoError])) return;
+      if (handleRouteError(reply, e, { statusErrors: [...NFE_STATUS_ERRORS] })) return;
       throw e;
     }
   });
@@ -118,7 +120,7 @@ export function registerNfeRoutes(app: FastifyInstance, fiscal: FiscalService) {
       const result = await emitirDevolucaoVenda(app.prisma, chave, tid);
       return reply.status(201).send(result);
     } catch (e) {
-      if (replyDomainError(reply, e, [DevolucaoError])) return;
+      if (handleRouteError(reply, e, { statusErrors: [...NFE_STATUS_ERRORS] })) return;
       throw e;
     }
   });
@@ -131,7 +133,7 @@ export function registerNfeRoutes(app: FastifyInstance, fiscal: FiscalService) {
       const result = await cancelarVenda(app.prisma, chave, tid, body.xJust);
       return reply.status(200).send(result);
     } catch (e) {
-      if (replyDomainError(reply, e, [CancelamentoError])) return;
+      if (handleRouteError(reply, e, { statusErrors: [...NFE_STATUS_ERRORS] })) return;
       throw e;
     }
   });

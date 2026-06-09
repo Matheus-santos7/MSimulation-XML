@@ -1,8 +1,10 @@
 import type { FastifyPluginAsync } from "fastify";
-import { ZodError } from "zod";
 import { tenantIdFromRequest } from "../lib/auth/request-context.js";
+import { handleRouteError } from "../lib/http/domain-errors.js";
 import { tenantIdParam, tenantUpdateBody } from "../schemas/tenant.js";
 import { TenantConflictError, TenantService } from "../services/tenant-service.js";
+
+const TENANT_ERROR_MAPPINGS = [{ type: TenantConflictError, status: 409 }] as const;
 
 export const tenantRoutes: FastifyPluginAsync = async (app) => {
   const service = new TenantService(app.prisma);
@@ -37,7 +39,8 @@ export const tenantRoutes: FastifyPluginAsync = async (app) => {
       if (!tenant) return reply.status(404).send({ error: "Empresa não encontrada" });
       return tenant;
     } catch (e) {
-      return handleTenantError(e, reply);
+      if (handleRouteError(reply, e, { mappings: [...TENANT_ERROR_MAPPINGS] })) return;
+      throw e;
     }
   });
 
@@ -48,18 +51,3 @@ export const tenantRoutes: FastifyPluginAsync = async (app) => {
     return reply.status(403).send({ error: "Exclusão de empresa não permitida" });
   });
 };
-
-function handleTenantError(e: unknown, reply: { status: (code: number) => { send: (body: unknown) => unknown } }) {
-  if (e instanceof ZodError) {
-    const fieldErrors = e.flatten().fieldErrors as Record<string, string[]>;
-    const first = Object.values(fieldErrors).flat()[0];
-    return reply.status(400).send({
-      error: first ?? "Dados inválidos",
-      details: fieldErrors,
-    });
-  }
-  if (e instanceof TenantConflictError) {
-    return reply.status(409).send({ error: e.message });
-  }
-  throw e;
-}

@@ -2,18 +2,14 @@ import type { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } from
 import { ZodError } from "zod";
 import { Prisma } from "../generated/prisma/client.js";
 import { DATABASE_UNAVAILABLE_MESSAGE, isDatabaseUnavailableError } from "./db/errors.js";
+import { sendZodValidationError } from "./http/domain-errors.js";
 
 const GENERIC_INTERNAL_ERROR = "Erro interno do servidor";
 
 export function registerGlobalErrorHandler(app: FastifyInstance): void {
   app.setErrorHandler((error: FastifyError, _req: FastifyRequest, reply: FastifyReply) => {
     if (error instanceof ZodError) {
-      const fieldErrors = error.flatten().fieldErrors as Record<string, string[]>;
-      const first = Object.values(fieldErrors).flat()[0];
-      return reply.status(400).send({
-        error: first ?? "Dados inválidos",
-        details: fieldErrors,
-      });
+      return sendZodValidationError(reply, error);
     }
 
     if (isDatabaseUnavailableError(error)) {

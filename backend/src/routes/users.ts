@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
-import { ZodError } from "zod";
 import { tenantIdFromRequest, userIdFromRequest } from "../lib/auth/request-context.js";
+import { handleRouteError } from "../lib/http/domain-errors.js";
 import { requireAdminHook } from "../plugins/contexts/guards.js";
 import { userCreateBody, userIdParam, userUpdateBody } from "../schemas/user.js";
 import {
@@ -8,6 +8,11 @@ import {
   UserForbiddenError,
   UserService,
 } from "../services/user-service.js";
+
+const USER_ERROR_MAPPINGS = [
+  { type: UserConflictError, status: 409 },
+  { type: UserForbiddenError, status: 403 },
+] as const;
 
 export const userRoutes: FastifyPluginAsync = async (app) => {
   const service = new UserService(app.prisma);
@@ -32,7 +37,8 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
       const user = await service.create(tenantId, body);
       return reply.status(201).send(user);
     } catch (e) {
-      return handleUserError(e, reply);
+      if (handleRouteError(reply, e, { mappings: [...USER_ERROR_MAPPINGS] })) return;
+      throw e;
     }
   });
 
@@ -45,7 +51,8 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
       if (!user) return reply.status(404).send({ error: "Usuário não encontrado" });
       return user;
     } catch (e) {
-      return handleUserError(e, reply);
+      if (handleRouteError(reply, e, { mappings: [...USER_ERROR_MAPPINGS] })) return;
+      throw e;
     }
   });
 
@@ -58,25 +65,8 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
       if (!removed) return reply.status(404).send({ error: "Usuário não encontrado" });
       return reply.status(204).send();
     } catch (e) {
-      return handleUserError(e, reply);
+      if (handleRouteError(reply, e, { mappings: [...USER_ERROR_MAPPINGS] })) return;
+      throw e;
     }
   });
 };
-
-function handleUserError(e: unknown, reply: { status: (code: number) => { send: (body: unknown) => unknown } }) {
-  if (e instanceof ZodError) {
-    const fieldErrors = e.flatten().fieldErrors as Record<string, string[]>;
-    const first = Object.values(fieldErrors).flat()[0];
-    return reply.status(400).send({
-      error: first ?? "Dados inválidos",
-      details: fieldErrors,
-    });
-  }
-  if (e instanceof UserConflictError) {
-    return reply.status(409).send({ error: e.message });
-  }
-  if (e instanceof UserForbiddenError) {
-    return reply.status(403).send({ error: e.message });
-  }
-  throw e;
-}

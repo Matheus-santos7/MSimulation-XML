@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
-import { ZodError } from "zod";
+import { z } from "zod";
 import { tenantIdFromRequest } from "../lib/auth/request-context.js";
+import { handleRouteError } from "../lib/http/domain-errors.js";
 import { pedidoCheckoutBody } from "../schemas/pedido-checkout.js";
 import { CheckoutError } from "../services/checkout-service.js";
 import {
@@ -8,9 +9,25 @@ import {
   PedidoService,
   SaldoRemessaInsuficienteError,
 } from "../services/pedido-service.js";
-import { z } from "zod";
 
 const pedidoIdParam = z.object({ id: z.string().uuid() });
+
+const PEDIDO_ERROR_MAPPINGS = [
+  { type: PedidoLockedError, status: 409 },
+  { type: CheckoutError, status: 400 },
+  {
+    type: SaldoRemessaInsuficienteError,
+    status: 422,
+    toBody: (error: Error) => {
+      const e = error as SaldoRemessaInsuficienteError;
+      return {
+        error: e.message,
+        disponivel: e.disponivel,
+        solicitado: e.solicitado,
+      };
+    },
+  },
+] as const;
 
 export const pedidoRoutes: FastifyPluginAsync = async (app) => {
   const service = new PedidoService(app.prisma);
@@ -35,7 +52,8 @@ export const pedidoRoutes: FastifyPluginAsync = async (app) => {
       const pedido = await service.createDraft(tid, body);
       return reply.status(201).send(pedido);
     } catch (e) {
-      return handlePedidoError(e, reply);
+      if (handleRouteError(reply, e, { mappings: [...PEDIDO_ERROR_MAPPINGS] })) return;
+      throw e;
     }
   });
 
@@ -48,7 +66,8 @@ export const pedidoRoutes: FastifyPluginAsync = async (app) => {
       if (!pedido) return reply.status(404).send({ error: "Pedido não encontrado" });
       return pedido;
     } catch (e) {
-      return handlePedidoError(e, reply);
+      if (handleRouteError(reply, e, { mappings: [...PEDIDO_ERROR_MAPPINGS] })) return;
+      throw e;
     }
   });
 
@@ -60,7 +79,8 @@ export const pedidoRoutes: FastifyPluginAsync = async (app) => {
       if (!result) return reply.status(404).send({ error: "Pedido não encontrado" });
       return reply.status(201).send(result);
     } catch (e) {
-      return handlePedidoError(e, reply);
+      if (handleRouteError(reply, e, { mappings: [...PEDIDO_ERROR_MAPPINGS] })) return;
+      throw e;
     }
   });
 
@@ -72,7 +92,8 @@ export const pedidoRoutes: FastifyPluginAsync = async (app) => {
       if (!removed) return reply.status(404).send({ error: "Pedido não encontrado" });
       return reply.status(204).send();
     } catch (e) {
-      return handlePedidoError(e, reply);
+      if (handleRouteError(reply, e, { mappings: [...PEDIDO_ERROR_MAPPINGS] })) return;
+      throw e;
     }
   });
 
@@ -85,32 +106,8 @@ export const pedidoRoutes: FastifyPluginAsync = async (app) => {
       const nfe = await checkout.checkout(tid, body);
       return reply.status(201).send(nfe);
     } catch (e) {
-      return handlePedidoError(e, reply);
+      if (handleRouteError(reply, e, { mappings: [...PEDIDO_ERROR_MAPPINGS] })) return;
+      throw e;
     }
   });
 };
-
-function handlePedidoError(e: unknown, reply: { status: (code: number) => { send: (body: unknown) => unknown } }) {
-  if (e instanceof ZodError) {
-    const fieldErrors = e.flatten().fieldErrors as Record<string, string[]>;
-    const first = Object.values(fieldErrors).flat()[0];
-    return reply.status(400).send({
-      error: first ?? "Dados inválidos",
-      details: fieldErrors,
-    });
-  }
-  if (e instanceof PedidoLockedError) {
-    return reply.status(409).send({ error: e.message });
-  }
-  if (e instanceof CheckoutError) {
-    return reply.status(400).send({ error: e.message });
-  }
-  if (e instanceof SaldoRemessaInsuficienteError) {
-    return reply.status(422).send({
-      error: e.message,
-      disponivel: e.disponivel,
-      solicitado: e.solicitado,
-    });
-  }
-  throw e;
-}

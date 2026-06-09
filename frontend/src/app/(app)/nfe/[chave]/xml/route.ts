@@ -1,4 +1,5 @@
 import { resolveNfeCancelamentoEventoXml, resolveNfeXml } from "@/lib/resolve-nfe-xml";
+import { buildXmlRouteResponse } from "@/lib/xml-download-response";
 
 type Props = { params: Promise<{ chave: string }> };
 
@@ -18,17 +19,6 @@ export async function GET(req: Request, { params }: Props) {
   }
 
   const download = new URL(req.url).searchParams.get("download") === "1";
-  const headers: HeadersInit = {
-    "Content-Type": "application/xml; charset=utf-8",
-    "Cache-Control": "no-store",
-  };
-  if (download) {
-    headers["Content-Disposition"] = `attachment; filename="${sanitizeDownloadFilename(resolved.filename)}"`;
-  }
-
-  return new Response(resolved.xml, { headers });
-}
-
-function sanitizeDownloadFilename(name: string): string {
-  return name.replace(/[\r\n"]/g, "_");
+  const { body, headers } = buildXmlRouteResponse(resolved.xml, resolved.filename, download);
+  return new Response(body, { headers });
 }

@@ -1,5 +1,7 @@
+import { fiscalXmlDownloadFilename } from "@msimulation-xml/fiscal-core";
 import { getEmitente, listFiscalEvents } from "./fiscal-api";
-import { buildProcInutNFeXML } from "./inutilizacao-xml";
+import { buildProcInutNFeXML, infInutId } from "./inutilizacao-xml";
+import { ufToCodigo } from "./nfe-uf";
 
 export async function resolveInutilizacaoXml(
   id: string,
@@ -10,7 +12,13 @@ export async function resolveInutilizacaoXml(
 
   const emit = await getEmitente();
   const xml = buildProcInutNFeXML(emit, inut);
-  const nFim = inut.numeroFim ?? inut.numeroIni;
-  const filename = `${inut.serie}-${inut.numeroIni}${nFim !== inut.numeroIni ? `-${nFim}` : ""}-inutNFe.xml`;
+  const serie = inut.serie ?? 1;
+  const nNFIni = inut.numeroIni ?? 1;
+  const nNFFin = inut.numeroFim ?? nNFIni;
+  const cUF = String(ufToCodigo(emit.uf)).padStart(2, "0");
+  const ano = String(new Date(inut.ocorridoEm).getFullYear()).slice(-2);
+  const cnpj = emit.cnpj.replace(/\D/g, "");
+  const chave = infInutId(cUF, ano, cnpj, serie, nNFIni, nNFFin);
+  const filename = fiscalXmlDownloadFilename("Inut", chave);
   return { xml, filename };
 }

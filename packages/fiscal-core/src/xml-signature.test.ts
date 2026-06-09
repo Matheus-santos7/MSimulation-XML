@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { buildSimulationXmlSignature } from "./xml-signature.js";
+import {
+  buildSimulationXmlSignature,
+  isValidBase64,
+  simulationDigestValue,
+  simulationSignatureValue,
+} from "./xml-signature.js";
 
 describe("buildSimulationXmlSignature", () => {
   it("inclui Transforms e DigestMethod antes de DigestValue", () => {
@@ -14,5 +19,24 @@ describe("buildSimulationXmlSignature", () => {
     assert.match(reference, /<DigestMethod Algorithm="http:\/\/www\.w3\.org\/2000\/09\/xmldsig#sha1"\/>/);
     assert.ok(reference.indexOf("<DigestMethod") < reference.indexOf("<DigestValue>"));
     assert.match(xml, /<KeyName>FAKE-SIMULATION-ONLY<\/KeyName>/);
+  });
+
+  it("gera DigestValue e SignatureValue em Base64 válido", () => {
+    const xml = buildSimulationXmlSignature("NFe123", "chave456");
+    const digest = xml.match(/<DigestValue>([^<]+)<\/DigestValue>/)?.[1];
+    const signature = xml.match(/<SignatureValue>([^<]+)<\/SignatureValue>/)?.[1];
+
+    assert.ok(digest, "DigestValue ausente");
+    assert.ok(signature, "SignatureValue ausente");
+    assert.ok(isValidBase64(digest));
+    assert.ok(isValidBase64(signature));
+    assert.ok(!digest.includes("-"));
+    assert.ok(!signature.includes("-"));
+  });
+
+  it("valores são determinísticos para o mesmo seed", () => {
+    assert.equal(simulationDigestValue("abc"), simulationDigestValue("abc"));
+    assert.equal(simulationSignatureValue("abc"), simulationSignatureValue("abc"));
+    assert.notEqual(simulationDigestValue("abc"), simulationDigestValue("xyz"));
   });
 });

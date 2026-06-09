@@ -4,7 +4,8 @@
  * 1. Tenta `GET /api/nfes/:chave/xml` (XML persistido ou regerado no backend).
  * 2. Se indisponível (404), regera localmente via `@msimulation-xml/nfe-xml` (legado).
  */
-import { buildNFeXML, buildProcEventoCancelamentoXML, nfeProcXmlFilename } from "@msimulation-xml/nfe-xml";
+import { fiscalXmlDownloadFilename } from "@msimulation-xml/fiscal-core";
+import { buildNFeXML, buildProcEventoCancelamentoXML } from "@msimulation-xml/nfe-xml";
 import {
   getEmitente,
   getFiscalEmitterSettings,
@@ -40,7 +41,7 @@ export async function resolveNfeXml(chave: string): Promise<{ xml: string; filen
   if (!ctx) return null;
 
   const xml = buildNFeXML(ctx.nfe, ctx.emit, ctx.product, ctx.settings);
-  const filename = nfeProcXmlFilename(ctx.nfe.numero, ctx.nfe.serie);
+  const filename = fiscalXmlDownloadFilename("NFe", chave);
   return { xml, filename };
 }
 
@@ -60,11 +61,11 @@ export async function resolveNfeCancelamentoEventoXml(
       xJust: "Cancelamento solicitado pelo emissor",
     };
     const xml = buildProcEventoCancelamentoXML(ctx.nfe, ctx.emit, fallback);
-    const filename = `${ctx.nfe.numero}_serie${ctx.nfe.serie}_${chave.slice(-8)}-110111-procEventoNFe.xml`;
+    const filename = fiscalXmlDownloadFilename("Canc", chave);
     return { xml, filename };
   }
 
   const xml = buildProcEventoCancelamentoXML(ctx.nfe, ctx.emit, cancelamento);
-  const filename = `${ctx.nfe.numero}_serie${ctx.nfe.serie}_${chave.slice(-8)}-110111-procEventoNFe.xml`;
+  const filename = fiscalXmlDownloadFilename("Canc", chave);
   return { xml, filename };
 }

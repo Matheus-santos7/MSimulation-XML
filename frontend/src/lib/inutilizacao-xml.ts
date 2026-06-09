@@ -5,7 +5,14 @@ import { ufToCodigo } from "./nfe-uf";
 const xmlEscape = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-function infInutId(cUF: string, ano: string, cnpj: string, serie: number, nNFIni: number, nNFFin: number): string {
+export function infInutId(
+  cUF: string,
+  ano: string,
+  cnpj: string,
+  serie: number,
+  nNFIni: number,
+  nNFFin: number,
+): string {
   return `ID${cUF}${ano}${cnpj}55${String(serie).padStart(3, "0")}${String(nNFIni).padStart(9, "0")}${String(nNFFin).padStart(9, "0")}`;
 }
 

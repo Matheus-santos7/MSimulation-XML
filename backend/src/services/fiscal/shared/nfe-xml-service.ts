@@ -5,10 +5,10 @@
  * `buildNFeXML` (tipo REMESSA) → `buildRemessaNFeXML` em @msimulation-xml/nfe-xml.
  * @see docs/remessa-fisica.md — Fase 8
  */
+import { fiscalXmlDownloadFilename } from "@msimulation-xml/fiscal-core";
 import {
   buildNFeXML,
   isNfeXmlPersistSupported,
-  nfeProcXmlFilename,
   UnsupportedNfeXmlTipoError,
 } from "@msimulation-xml/nfe-xml";
 import type { FiscalEmitterSettingsData } from "@msimulation-xml/fiscal-core";
@@ -139,7 +139,7 @@ export async function resolveNfeXml(
   });
   if (!row) return null;
 
-  const filename = nfeProcXmlFilename(row.numero, row.serie);
+  const filename = fiscalXmlDownloadFilename("NFe", chave);
 
   if (row.xmlAutorizado?.trim()) {
     return { xml: row.xmlAutorizado, filename, source: "stored" };

@@ -1,13 +1,13 @@
-import { resolveInutilizacaoXml } from "@/lib/resolve-inutilizacao-xml";
+import { resolveCteXml } from "@/lib/resolve-cte-xml";
 import { buildXmlRouteResponse } from "@/lib/xml-download-response";
 
-type Props = { params: Promise<{ id: string }> };
+type Props = { params: Promise<{ chave: string }> };
 
 export async function GET(req: Request, { params }: Props) {
-  const { id } = await params;
-  const resolved = await resolveInutilizacaoXml(id);
+  const { chave } = await params;
+  const resolved = await resolveCteXml(chave);
   if (!resolved) {
-    return new Response("Inutilização não encontrada", { status: 404 });
+    return new Response("CT-e não encontrado", { status: 404 });
   }
 
   const download = new URL(req.url).searchParams.get("download") === "1";

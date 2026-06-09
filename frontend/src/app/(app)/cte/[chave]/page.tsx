@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CteXmlActions } from "@/components/cte-xml-actions";
 import { PageHeader, StatusBadge } from "@/components/fiscal-ui";
 import { XMLViewer } from "@/components/xml-viewer";
 import { getCteByChave, getTenant } from "@/lib/fiscal-api";
@@ -36,7 +37,12 @@ export default async function CTeDetailPage({ params }: Props) {
       <PageHeader
         title={`CT-e nº ${cte.numero} / série ${cte.serie}`}
         subtitle={cte.natOp}
-        actions={<StatusBadge status={cte.status} />}
+        actions={
+          <div className="flex items-center gap-3">
+            <CteXmlActions chave={chave} />
+            <StatusBadge status={cte.status} />
+          </div>
+        }
       />
 
       <div className="grid grid-cols-12 gap-6">

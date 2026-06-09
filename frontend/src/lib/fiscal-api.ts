@@ -228,7 +228,7 @@ export async function getNfeXml(
   const xml = await res.text();
   const disp = res.headers.get("Content-Disposition");
   const match = disp?.match(/filename="([^"]+)"/);
-  const filename = match?.[1] ?? `nfe_${chave.slice(-6)}_v4.00.xml`;
+  const filename = match?.[1] ?? `NFe_${chave}.xml`;
   return { xml, filename };
 }
 

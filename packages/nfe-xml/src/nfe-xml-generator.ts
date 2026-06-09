@@ -459,7 +459,7 @@ function buildRemessaNFeXML(
         <indPres>2</indPres>
         <indIntermed>1</indIntermed>
         <procEmi>0</procEmi>
-        <verProc>mercadolivre.invoice-SIMULATION</verProc>${ideNfRefXml(nfe)}
+        <verProc>invoice-SIMULATION</verProc>${ideNfRefXml(nfe)}
       </ide>
       <emit>
         <CNPJ>${emit.cnpj.replace(/\D/g, "")}</CNPJ>
@@ -609,7 +609,7 @@ function buildRetornoNFeXML(
         <indPres>2</indPres>
         <indIntermed>1</indIntermed>
         <procEmi>0</procEmi>
-        <verProc>mercadolivre.invoice-SIMULATION</verProc>${ideNfRefXml(nfe)}
+        <verProc>invoice-SIMULATION</verProc>${ideNfRefXml(nfe)}
       </ide>
       <emit>
         <CNPJ>${emit.cnpj.replace(/\D/g, "")}</CNPJ>

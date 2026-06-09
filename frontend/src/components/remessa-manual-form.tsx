@@ -58,10 +58,11 @@ export function RemessaManualForm({ products, unidades }: Props) {
   return (
     <form action={action} className="border border-border rounded-lg bg-card p-4 space-y-3">
       <div className="text-[12px] uppercase font-bold tracking-widest text-muted-foreground">
-        Remessa física para CD (CFOP 6949)
+        Remessa física para CD
       </div>
       <p className="text-sm text-muted-foreground">
-        Emite uma NF-e de remessa física (CFOP 6949) e um CT-e de transporte para o CD selecionado, sem
+        Emite uma NF-e de remessa física (CFOP 5949 na mesma UF ou 6949 interestadual) e um CT-e de
+        transporte para o CD selecionado, sem
         alterar o cadastro de estoque. Adicione quantos produtos precisar — todos entram na mesma nota.
       </p>
 

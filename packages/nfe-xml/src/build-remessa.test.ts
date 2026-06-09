@@ -28,7 +28,7 @@ const baseNfe = (): NFeXmlInput => ({
   numero: 1,
   serie: 1,
   natOp: "Remessa para deposito temporario",
-  cfop: "6949",
+  cfop: "5949",
   ncm: "61091000",
   destinatario: {
     nome: "ML Fulfillment",
@@ -86,5 +86,21 @@ describe("buildNFeXML — REMESSA", () => {
     assert.match(xml, /<nfeProc/);
     assert.match(xml, /<vICMS>18\.00<\/vICMS>/);
     assert.match(xml, /<tpNF>1<\/tpNF>/);
+  });
+
+  it("inclui assinatura simulada com Transforms e DigestMethod no Reference", () => {
+    const xml = buildNFeXML(baseNfe(), emit);
+    assert.match(xml, /<Transforms>/);
+    assert.match(xml, /<DigestMethod Algorithm="http:\/\/www\.w3\.org\/2000\/09\/xmldsig#sha1"\/>/);
+    assert.match(xml, /<KeyName>FAKE-SIMULATION-ONLY<\/KeyName>/);
+  });
+
+  it("formata dhEmi/dhSaiEnt com offset -03:00 (sem sufixo Z)", () => {
+    const nfe = baseNfe();
+    nfe.emitidaEm = "2026-06-09T04:55:14.442Z";
+    const xml = buildNFeXML(nfe, emit);
+    assert.match(xml, /<dhEmi>2026-06-09T01:55:14-03:00<\/dhEmi>/);
+    assert.match(xml, /<dhSaiEnt>2026-06-09T01:55:14-03:00<\/dhSaiEnt>/);
+    assert.doesNotMatch(xml, /T\d{2}:\d{2}:\d{2}(\.\d+)?Z</);
   });
 });

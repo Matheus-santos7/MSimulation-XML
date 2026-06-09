@@ -17,7 +17,7 @@ import {
 import { mapNfe } from "../../lib/fiscal/fiscal-mappers.js";
 import { buildChaveNFe, gerarPedidoMl } from "../../lib/fiscal/nfe-chave.js";
 import { proximoNumeroNfe } from "../../lib/fiscal/nfe-sequencia.js";
-import { REMESSA_CFOP, REMESSA_NAT_OP } from "../../lib/fiscal/remessa-dest.js";
+import { REMESSA_NAT_OP, resolveRemessaCfop } from "../../lib/fiscal/remessa-dest.js";
 import type { UnidadeDestinoFiscal } from "../../lib/logistics/meli-unidade.js";
 import { enrichTaxSnapshot, loadEmitterSettings } from "../../lib/fiscal/fiscal-emitter-runtime.js";
 import { taxSnapshotFromRule } from "../../lib/fiscal/tax-snapshot.js";
@@ -107,7 +107,7 @@ async function emitirNFeRemessaComItens(
       );
     }
 
-    const cfopRemessa = remessaTaxRule.cfop?.trim() || REMESSA_CFOP;
+    const cfopRemessa = resolveRemessaCfop(tenant.uf, destino.uf);
     linhasComRegras.push({
       linha: {
         ...linhaPedidoFromProduto(linha.product, {

@@ -17,7 +17,14 @@ export { labelNfeTipo, mapCte, mapNfe, mapTimeline, num } from "./fiscal-mappers
 export { buildChaveNFe, gerarPedidoMl, ufToCodigo } from "./nfe-chave.js";
 export { proximoNumeroNfe } from "./nfe-sequencia.js";
 export { mapPedido } from "./pedido-mapper.js";
-export { REMESSA_CFOP, REMESSA_ML_DEST, REMESSA_NAT_OP } from "./remessa-dest.js";
+export {
+  REMESSA_CFOP,
+  REMESSA_CFOP_INTRASTATE,
+  REMESSA_CFOP_INTERSTATE,
+  REMESSA_ML_DEST,
+  REMESSA_NAT_OP,
+  resolveRemessaCfop,
+} from "./remessa-dest.js";
 export { REMESSA_SIMBOLICA_CFOP, REMESSA_SIMBOLICA_NAT_OP } from "./remessa-simbolica-dest.js";
 export { RETORNO_SIMBOLICO_CFOP, RETORNO_SIMBOLICO_NAT_OP } from "./retorno-simbolico-dest.js";
 export { gerarProtocoloSefaz } from "./sefaz-protocol.js";

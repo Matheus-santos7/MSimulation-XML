@@ -11,6 +11,7 @@ import {
   listFiscalEvents,
   listProducts,
 } from "@/lib/fiscal-api";
+import { simulationNProt } from "@msimulation-xml/fiscal-core";
 import { brl, formatChave } from "@/lib/format";
 import { buildNFeXML, buildProcEventoCancelamentoXML } from "@/lib/xml-generator";
 
@@ -44,7 +45,7 @@ export default async function NFeDetailPage({ params }: Props) {
   const xmlCancelamento =
     nfe.status === "CANCELADA"
       ? buildProcEventoCancelamentoXML(nfe, emit, cancelamentoEvent ?? {
-          protocolo: `141260056230${String(nfe.numero).padStart(3, "0")}`.slice(0, 15),
+          protocolo: simulationNProt(nfe.numero, "141260056230"),
           ocorridoEm: new Date().toISOString(),
           xJust: "Cancelamento solicitado pelo emissor",
         })

@@ -2,7 +2,11 @@
  * CT-e v4.00 XML generator — SIMULATION ONLY (modelo ML com NF-e referenciada).
  */
 
-import { buildSimulationXmlSignature, formatNfeDateTime } from "@msimulation-xml/fiscal-core";
+import {
+  buildSimulationXmlSignature,
+  formatNfeDateTime,
+  simulationNProt,
+} from "@msimulation-xml/fiscal-core";
 import type { CTeDto, TenantDto } from "./fiscal-types";
 import { ufToCodigo } from "./nfe-uf";
 
@@ -171,7 +175,7 @@ ${buildSimulationXmlSignature(id, cte.chave, "    ")}
       <verAplic>SIMULATION-CTe</verAplic>
       <chCTe>${cte.chave}</chCTe>
       <dhRecbto>${dhEmi}</dhRecbto>
-      <nProt>333260367974${cte.numero}</nProt>
+      <nProt>${simulationNProt(cte.numero, "333260367974")}</nProt>
       <digVal>SIM-${cte.chave.slice(-8)}</digVal>
       <cStat>${cte.status === "AUTORIZADA" ? 100 : 103}</cStat>
       <xMotivo>${cte.status === "AUTORIZADA" ? "Autorizado o uso do CT-e (SIMULAÇÃO)" : cte.status}</xMotivo>

@@ -4,7 +4,7 @@
  * 1. Tenta `GET /api/nfes/:chave/xml` (XML persistido ou regerado no backend).
  * 2. Se indisponível (404), regera localmente via `@msimulation-xml/nfe-xml` (legado).
  */
-import { fiscalXmlDownloadFilename } from "@msimulation-xml/fiscal-core";
+import { fiscalXmlDownloadFilename, simulationNProt } from "@msimulation-xml/fiscal-core";
 import { buildNFeXML, buildProcEventoCancelamentoXML } from "@msimulation-xml/nfe-xml";
 import {
   getEmitente,
@@ -56,7 +56,7 @@ export async function resolveNfeCancelamentoEventoXml(
   if (!cancelamento) {
     if (ctx.nfe.status !== "CANCELADA") return null;
     const fallback = {
-      protocolo: `141260056230${String(ctx.nfe.numero).padStart(3, "0")}`.slice(0, 15),
+      protocolo: simulationNProt(ctx.nfe.numero, "141260056230"),
       ocorridoEm: new Date().toISOString(),
       xJust: "Cancelamento solicitado pelo emissor",
     };

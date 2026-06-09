@@ -12,6 +12,12 @@ export {
   type FiscalXmlDownloadTipo,
 } from "./xml-download.js";
 export {
+  ensureNProt,
+  gerarProtocoloSefazSimulado,
+  isValidNProt,
+  simulationNProt,
+} from "./nprot.js";
+export {
   ML_OLSS_WAREHOUSE_SUFFIX,
   buildNfeObsContXTexto,
   enrichFiscalPayloadWithXTexto,

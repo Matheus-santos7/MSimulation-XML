@@ -22,25 +22,21 @@ import {
   AuthStateError,
   AuthTooManyRequestsError,
   AuthUnauthorizedError,
-} from "../../services/auth/auth-service.js";
-import { TwoFactorRequiredError, TwoFactorService } from "../../services/auth/two-factor-service.js";
-import { TenantConflictError } from "../../services/org/tenant-service.js";
-import {
+  EmailDeliveryError,
+  EmailVerificationInvalidError,
+  EmailVerificationService,
   PasswordResetInvalidError,
   PasswordResetService,
-} from "../../services/auth/password-reset-service.js";
-import { EmailDeliveryError } from "../../services/auth/email-service.js";
+  TwoFactorRequiredError,
+  TwoFactorService,
+} from "../../services/auth/index.js";
+import { TenantConflictError } from "../../services/org/tenant-service.js";
 import {
   DATABASE_UNAVAILABLE_MESSAGE,
   isDatabaseUnavailableError,
 } from "../../lib/db/errors.js";
 import { userIdFromRequest } from "../../lib/auth/request-context.js";
 import { CaptchaVerificationError, verifyTurnstileToken } from "../../lib/auth/turnstile.js";
-import {
-  EmailVerificationInvalidError,
-  EmailVerificationService,
-} from "../../services/auth/email-verification-service.js";
-
 function authMeta(req: FastifyRequest) {
   return {
     userAgent: req.headers["user-agent"],

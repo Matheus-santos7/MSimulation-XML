@@ -1,7 +1,7 @@
 import type { Prisma, PrismaClient } from "../../generated/prisma/client.js";
 import { mapProduct } from "../../lib/catalog/product-mapper.js";
 import type { productCreateBody, productUpdateBody } from "../../schemas/catalog/product.js";
-import { assertProductTaxRuleBaseId, TaxRuleCatalogError } from "../fiscal/tax-rule-catalog-service.js";
+import { assertProductTaxRuleBaseId, TaxRuleCatalogError } from "../fiscal/index.js";
 import type { z } from "zod";
 
 type CreateInput = z.infer<typeof productCreateBody>;

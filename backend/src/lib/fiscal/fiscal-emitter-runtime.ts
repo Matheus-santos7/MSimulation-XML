@@ -1,3 +1,8 @@
+/**
+ * Adaptador backend → @msimulation-xml/fiscal-core para configurações do emissor.
+ * Remessa usa `loadEmitterSettings` + `enrichTaxSnapshot` (canal composição "remessa").
+ * @see docs/remessa-fisica.md — Fase 6
+ */
 import type { NFeTipo } from "../../generated/prisma/client.js";
 import {
   enrichTaxSnapshot as enrichTaxSnapshotCore,

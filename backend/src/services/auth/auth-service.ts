@@ -31,7 +31,7 @@ import { generateRefreshToken, hashRefreshToken } from "../../lib/auth/refresh-t
 import type { registerBodySchema } from "../../schemas/auth/schemas.js";
 import type { tenantCreateBody } from "../../schemas/org/tenant.js";
 import { TenantConflictError, TenantService } from "../org/tenant-service.js";
-import { EmailVerificationService } from "./email-verification-service.js";
+import { EmailVerificationService } from "./email/email-verification-service.js";
 import type { z } from "zod";
 
 type RegisterInput = z.infer<typeof registerBodySchema>;

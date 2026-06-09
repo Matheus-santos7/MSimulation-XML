@@ -1,5 +1,5 @@
 import type { MeliUnidadeLogistica } from "../../generated/prisma/client.js";
-import { REMESSA_ML_DEST } from "../fiscal/remessa-dest.js";
+import { REMESSA_ML_DEST } from "../../services/fiscal/remessa/helpers/remessa-dest.js";
 
 /** Normaliza CNPJ da planilha (float, pontuação) para 14 dígitos. */
 export function normalizeCnpjMeli(raw: unknown): string | null {
@@ -60,6 +60,7 @@ export type UnidadeDestinoFiscal = {
   indIeDest: number;
 };
 
+/** Mapeia unidade ML cadastrada → endereço fiscal do destinatário na NF-e de remessa. */
 export function unidadeParaDestinoFiscal(
   u: Pick<
     MeliUnidadeLogistica,

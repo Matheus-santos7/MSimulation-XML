@@ -2,7 +2,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { tenantIdFromRequest } from "../../lib/auth/request-context.js";
 import { handleRouteError } from "../../lib/http/domain-errors.js";
 import { fiscalEmitterSettingsPatchBody } from "../../schemas/fiscal/emitter-settings.js";
-import { FiscalEmitterSettingsService } from "../../services/fiscal/fiscal-emitter-settings-service.js";
+import { FiscalEmitterSettingsService } from "../../services/fiscal/index.js";
 
 export const fiscalSettingsRoutes: FastifyPluginAsync = async (app) => {
   const service = new FiscalEmitterSettingsService(app.prisma);

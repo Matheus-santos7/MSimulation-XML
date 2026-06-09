@@ -1,4 +1,9 @@
-import type { ResolvedTaxRule } from "../../services/fiscal/tax-rule-service.js";
+/**
+ * Converte `ResolvedTaxRule` (planilha) em snapshot normalizado para payload/XML.
+ * Usado na remessa em conjunto com `enrichTaxSnapshot` (configurações do emissor).
+ * @see docs/remessa-fisica.md — Fase 4 e 6
+ */
+import type { ResolvedTaxRule } from "../../services/fiscal/tax/tax-rule-service.js";
 
 export function taxSnapshotFromRule(rule: ResolvedTaxRule | null, fallbackAliqIcms: number) {
   const taxes = ((rule?.payload?.taxes as Record<string, unknown> | undefined) ?? {}) as Record<

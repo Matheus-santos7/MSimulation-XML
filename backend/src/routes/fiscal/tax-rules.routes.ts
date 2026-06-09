@@ -7,7 +7,7 @@ import {
   deleteTaxRuleGroup,
   listTaxRuleCatalog,
   TaxRuleCatalogError,
-} from "../../services/fiscal/tax-rule-catalog-service.js";
+} from "../../services/fiscal/index.js";
 import {
   taxRuleBaseIdParamSchema,
   taxRuleGroupQuerySchema,

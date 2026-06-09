@@ -148,6 +148,11 @@ export class UnidadeLogisticaService {
     return mapUnidadeLogistica(unidade, tenantId, { padrao: link?.padrao ?? false });
   }
 
+  /**
+   * Resolve CD de destino da remessa: unidade informada ou padrão do tenant.
+   * A UF do destino alimenta `resolveTaxRule` e `resolveRemessaCfop`.
+   * @see docs/remessa-fisica.md — Fase 2
+   */
   async resolveDestinoRemessa(
     tenantId: string,
     unidadeDestinoId?: string,

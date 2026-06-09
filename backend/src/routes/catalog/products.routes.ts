@@ -7,7 +7,7 @@ import {
   productIdParam,
   productUpdateBody,
 } from "../../schemas/catalog/product.js";
-import { TaxRuleCatalogError } from "../../services/fiscal/tax-rule-catalog-service.js";
+import { TaxRuleCatalogError } from "../../services/fiscal/index.js";
 import { ProductConflictError, ProductService } from "../../services/catalog/product-service.js";
 
 const PRODUCT_ERROR_MAPPINGS = [

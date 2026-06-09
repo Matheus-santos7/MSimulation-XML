@@ -24,8 +24,11 @@ export {
   REMESSA_ML_DEST,
   REMESSA_NAT_OP,
   resolveRemessaCfop,
-} from "./remessa-dest.js";
-export { REMESSA_SIMBOLICA_CFOP, REMESSA_SIMBOLICA_NAT_OP } from "./remessa-simbolica-dest.js";
+} from "../../services/fiscal/remessa/helpers/remessa-dest.js";
+export {
+  REMESSA_SIMBOLICA_CFOP,
+  REMESSA_SIMBOLICA_NAT_OP,
+} from "../../services/fiscal/remessa/helpers/remessa-simbolica-dest.js";
 export { RETORNO_SIMBOLICO_CFOP, RETORNO_SIMBOLICO_NAT_OP } from "./retorno-simbolico-dest.js";
 export { gerarProtocoloSefaz } from "./sefaz-protocol.js";
 export {

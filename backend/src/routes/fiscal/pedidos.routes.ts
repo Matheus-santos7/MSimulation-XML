@@ -2,12 +2,12 @@ import type { FastifyPluginAsync } from "fastify";
 import { tenantIdFromRequest } from "../../lib/auth/request-context.js";
 import { handleRouteError } from "../../lib/http/domain-errors.js";
 import { pedidoCheckoutBody, pedidoIdParam } from "../../schemas/orders/pedido.js";
-import { CheckoutError } from "../../services/fiscal/checkout-service.js";
 import {
+  CheckoutError,
   PedidoLockedError,
   PedidoService,
   SaldoRemessaInsuficienteError,
-} from "../../services/fiscal/pedido-service.js";
+} from "../../services/fiscal/index.js";
 
 const PEDIDO_ERROR_MAPPINGS = [
   { type: PedidoLockedError, status: 409 },
@@ -98,7 +98,7 @@ export const pedidoRoutes: FastifyPluginAsync = async (app) => {
     try {
       const tid = tenantIdFromRequest(req);
       const body = pedidoCheckoutBody.parse(req.body);
-      const { CheckoutService } = await import("../../services/fiscal/checkout-service.js");
+      const { CheckoutService } = await import("../../services/fiscal/index.js");
       const checkout = new CheckoutService(app.prisma);
       const nfe = await checkout.checkout(tid, body);
       return reply.status(201).send(nfe);

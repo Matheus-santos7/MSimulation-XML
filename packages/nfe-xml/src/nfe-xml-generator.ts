@@ -287,6 +287,11 @@ export function buildNFeXML(
   return buildVendaNFeXML(nfe, emit, product, emitterSettings);
 }
 
+/**
+ * Layout XML NF-e v4.00 para remessa física (tpNF=1, idDest dinâmico, engine no payload).
+ * Chamado por `buildNFeXML` quando `nfe.tipo === "REMESSA"`.
+ * @see docs/remessa-fisica.md — Fase 8
+ */
 function buildRemessaNFeXML(
   nfe: NFeXmlInput,
   emit: EmitenteXml,

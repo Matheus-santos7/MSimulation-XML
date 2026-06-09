@@ -1,3 +1,7 @@
+/**
+ * Rotas logísticas — ponto de entrada da remessa física manual.
+ * POST /movimentacoes/remessa → emitirRemessaManual (docs/remessa-fisica.md Fase 1).
+ */
 import type { FastifyInstance } from "fastify";
 import { tenantIdFromRequest } from "../../lib/auth/request-context.js";
 import {
@@ -7,7 +11,7 @@ import {
 } from "../../schemas/logistics/unidades-logisticas.js";
 import { emitirAvancoEntreCds, AvancoCdError } from "../../services/logistics/avanco-cd-service.js";
 import { listarMovimentacoesProduto } from "../../services/logistics/movimentacao-produto-service.js";
-import { emitirRemessaManual, RemessaError } from "../../services/fiscal/remessa-service.js";
+import { emitirRemessaManual, RemessaError } from "../../services/fiscal/index.js";
 import { UnidadeLogisticaError } from "../../services/logistics/unidade-logistica-service.js";
 
 export function registerMovimentacoesRoutes(app: FastifyInstance) {

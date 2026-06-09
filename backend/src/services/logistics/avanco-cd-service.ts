@@ -20,14 +20,14 @@ import { unidadeParaDestinoFiscal } from "../../lib/logistics/meli-unidade.js";
 import {
   SaldoRemessaInsuficienteError,
   debitarSaldoRemessaPorCd,
-} from "../fiscal/remessa-fifo.js";
+} from "../fiscal/remessa/remessa-fifo.js";
 import { registrarMovimentacaoProduto } from "./movimentacao-produto-service.js";
 import { getUnidadeAtivaDoTenant, UnidadeLogisticaError } from "./unidade-logistica-service.js";
-import { emitirNFeRemessa } from "../fiscal/remessa-service.js";
 import {
+  emitirNFeRemessa,
   prepararRemessaSimbolicaFiscal,
   RemessaSimbolicaFiscalError,
-} from "../fiscal/remessa-simbolica-fiscal.js";
+} from "../fiscal/remessa/index.js";
 
 export class AvancoCdError extends Error {
   constructor(message: string) {

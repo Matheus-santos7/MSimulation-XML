@@ -77,6 +77,38 @@ export async function collectRemessaSaldoProductIds(
   return [...ids];
 }
 
+/**
+ * Alinha `nfe_itens.product_id` ao cadastro atual da empresa (por SKU).
+ * Corrige saldo FIFO legado após reimportação de produtos ou troca de tenant.
+ */
+export async function realignRemessaFifoProductIdsBySku(
+  prisma: Pick<PrismaClient, "product" | "nfeItem">,
+  tenantId: string,
+  sku: string,
+): Promise<{ atualizados: number; productId: string | null }> {
+  const skuNorm = sku.trim();
+  if (!skuNorm) return { atualizados: 0, productId: null };
+
+  const cadastro = await prisma.product.findFirst({
+    where: { tenantId, sku: skuNorm },
+    select: { id: true },
+  });
+  if (!cadastro) return { atualizados: 0, productId: null };
+
+  const result = await prisma.nfeItem.updateMany({
+    where: {
+      tenantId,
+      productId: { not: cadastro.id },
+      saldoDisponivel: { gt: 0 },
+      product: { sku: skuNorm },
+      nfe: remessaSaldoNfeWhere(tenantId),
+    },
+    data: { productId: cadastro.id },
+  });
+
+  return { atualizados: result.count, productId: cadastro.id };
+}
+
 export async function saldoRemessaDisponivel(
   prisma: PrismaClient,
   tenantId: string,

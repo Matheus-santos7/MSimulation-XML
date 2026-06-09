@@ -20,6 +20,7 @@ import { unidadeParaDestinoFiscal } from "../../lib/logistics/meli-unidade.js";
 import {
   SaldoRemessaInsuficienteError,
   debitarSaldoRemessaPorCd,
+  realignRemessaFifoProductIdsBySku,
 } from "../fiscal/remessa/remessa-fifo.js";
 import { registrarMovimentacaoProduto } from "./movimentacao-produto-service.js";
 import { getUnidadeAtivaDoTenant, UnidadeLogisticaError } from "./unidade-logistica-service.js";
@@ -64,6 +65,10 @@ export async function emitirAvancoEntreCds(
     getUnidadeAtivaDoTenant(prisma, input.tenantId, input.unidadeOrigemId),
     getUnidadeAtivaDoTenant(prisma, input.tenantId, input.unidadeDestinoId),
   ]);
+
+  if (input.productSku?.trim()) {
+    await realignRemessaFifoProductIdsBySku(prisma, input.tenantId, input.productSku);
+  }
 
   const resolved = await resolveProductForAvanco(
     prisma,

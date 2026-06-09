@@ -9,6 +9,7 @@ export {
   debitarSaldoRemessaPorCd,
   estornarConsumosRemessa,
   listarSaldoRemessaPorCd,
+  realignRemessaFifoProductIdsBySku,
   remessaItemSaldoWhere,
   saldoRemessaDisponivel,
   SaldoRemessaInsuficienteError,

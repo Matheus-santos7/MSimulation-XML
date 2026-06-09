@@ -1,9 +1,10 @@
 "use client";
 
 import { useActionState, useCallback, useEffect, useState, useTransition } from "react";
-import type { AvancoCdState } from "@/app/(app)/unidades-logisticas/actions";
+import type { AvancoCdState, RemessaCdOrigemState } from "@/app/(app)/unidades-logisticas/actions";
 import {
   emitirAvancoCdAction,
+  emitirRemessaCdOrigemAction,
   listarSaldoCdRemessaAction,
 } from "@/app/(app)/unidades-logisticas/actions";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,10 @@ export function AvancoCdForm({ products, unidades }: Props) {
     emitirAvancoCdAction,
     {},
   );
+  const [remessaState, emitirRemessa, remessaPending] = useActionState<
+    RemessaCdOrigemState,
+    FormData
+  >(emitirRemessaCdOrigemAction, {});
   const [, startTransition] = useTransition();
   const [productId, setProductId] = useState("");
   const [origemId, setOrigemId] = useState("");
@@ -57,24 +62,35 @@ export function AvancoCdForm({ products, unidades }: Props) {
   }, [productId, selectedProduct?.sku, carregarSaldos]);
 
   useEffect(() => {
-    if (state.success) {
+    if (state.success || remessaState.success) {
       void carregarSaldos(productId, selectedProduct?.sku);
     }
-  }, [state.success, productId, selectedProduct?.sku, carregarSaldos]);
+  }, [state.success, remessaState.success, productId, selectedProduct?.sku, carregarSaldos]);
 
   const saldoPorCd = new Map(saldos.map((s) => [s.unidadeDestinoId, s.saldo]));
   const saldoOrigem = origemId ? (saldoPorCd.get(origemId) ?? 0) : 0;
   const quantidadeInvalida = origemId.length > 0 && quantidade > saldoOrigem;
 
-  function handleSubmit() {
+  function buildAvancoFormData() {
     const formData = new FormData();
     formData.set("avanco_productId", productId);
     if (selectedProduct?.sku) formData.set("avanco_productSku", selectedProduct.sku);
     formData.set("avanco_unidadeOrigemId", origemId);
     formData.set("avanco_unidadeDestinoId", destinoId);
     formData.set("avanco_quantidade", String(quantidade));
+    return formData;
+  }
+
+  function handleSubmit() {
     startTransition(() => {
-      submit(formData);
+      submit(buildAvancoFormData());
+    });
+  }
+
+  function handleEmitirRemessaOrigem() {
+    const formData = buildAvancoFormData();
+    startTransition(() => {
+      emitirRemessa(formData);
     });
   }
 
@@ -203,24 +219,58 @@ export function AvancoCdForm({ products, unidades }: Props) {
         </p>
       )}
 
-      <Button
-        type="button"
-        onClick={handleSubmit}
-        disabled={
-          pending ||
-          saldoLoading ||
-          products.length === 0 ||
-          !productId ||
-          !origemId ||
-          !destinoId ||
-          quantidadeInvalida ||
-          saldoOrigem <= 0
-        }
-      >
-        {pending ? "Emitindo…" : "Emitir avanço entre CDs"}
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          onClick={handleSubmit}
+          disabled={
+            pending ||
+            remessaPending ||
+            saldoLoading ||
+            products.length === 0 ||
+            !productId ||
+            !origemId ||
+            !destinoId ||
+            quantidadeInvalida ||
+            saldoOrigem <= 0
+          }
+        >
+          {pending ? "Emitindo…" : "Emitir avanço entre CDs"}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleEmitirRemessaOrigem}
+          disabled={
+            pending ||
+            remessaPending ||
+            saldoLoading ||
+            !productId ||
+            !origemId ||
+            quantidadeInvalida
+          }
+        >
+          {remessaPending ? "Emitindo remessa…" : "Emitir remessa física no CD origem"}
+        </Button>
+      </div>
 
-      {state.error && <p className="text-sm text-destructive">{state.error}</p>}
+      {state.error && (
+        <p className="text-sm text-destructive">
+          {state.error}
+          <span className="block text-muted-foreground mt-1">
+            Se o saldo aparece mas o avanço falha, use &quot;Emitir remessa física no CD origem&quot; para
+            corrigir o vínculo e gerar nova NF-e de remessa.
+          </span>
+        </p>
+      )}
+      {remessaState.error && <p className="text-sm text-destructive">{remessaState.error}</p>}
+      {remessaState.success && (
+        <p className="text-sm text-success">
+          Remessa física emitida para o CD origem
+          {remessaState.realinhados ? ` (${remessaState.realinhados} linha(s) FIFO realinhada(s))` : ""}. NF-e …
+          {remessaState.chaveNfe?.slice(-8)} · CT-e …{remessaState.chaveCte?.slice(-8)}. Tente o avanço novamente.
+        </p>
+      )}
       {state.success && (
         <p className="text-sm text-success">
           Avanço emitido. Saldo debitado no CD origem. Remessa destino: {state.chaveRemessa?.slice(-8)} ·

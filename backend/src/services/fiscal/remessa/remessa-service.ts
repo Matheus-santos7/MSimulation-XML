@@ -40,6 +40,7 @@ import { resolveTaxRule } from "../tax/tax-rule-service.js";
 import { UnidadeLogisticaService } from "../../logistics/unidade-logistica-service.js";
 import { registrarMovimentacaoProduto } from "../../logistics/movimentacao-produto-service.js";
 import { persistNfeXmlAutorizado } from "../shared/nfe-xml-service.js";
+import { realignRemessaFifoProductIdsBySku } from "./remessa-fifo.js";
 
 export type EmitirRemessaOptions = {
   unidadeDestinoId?: string;
@@ -306,6 +307,9 @@ export async function emitirRemessaManual(
   const products = await prisma.product.findMany({
     where: { tenantId: input.tenantId, id: { in: productIds } },
   });
+  for (const product of products) {
+    await realignRemessaFifoProductIdsBySku(prisma, input.tenantId, product.sku);
+  }
   const byId = new Map(products.map((p) => [p.id, p]));
 
   const linhas: RemessaLinhaInput[] = [];

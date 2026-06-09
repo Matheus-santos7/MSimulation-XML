@@ -600,6 +600,17 @@ export async function emitirRemessaManual(body: {
   ) as Promise<RemessaManualResult>;
 }
 
+export async function realignRemessaFifo(productSku: string): Promise<{
+  atualizados: number;
+  productId: string | null;
+}> {
+  return mutateJson<{ atualizados: number; productId: string | null }>(
+    url("/api/movimentacoes/remessa/realign-fifo"),
+    "POST",
+    { productSku },
+  ) as Promise<{ atualizados: number; productId: string | null }>;
+}
+
 export async function listMovimentacoesProduto(opts?: {
   productId?: string;
   limit?: number;

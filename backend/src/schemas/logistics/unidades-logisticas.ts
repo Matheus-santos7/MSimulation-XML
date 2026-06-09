@@ -46,6 +46,10 @@ export const remessaManualBody = z.object({
   items: z.array(remessaManualItemBody).min(1),
 });
 
+export const realignFifoBody = z.object({
+  productSku: z.string().trim().min(1),
+});
+
 export const unidadeIdParam = z.object({
   id: z.string().uuid("ID de unidade inválido"),
 });

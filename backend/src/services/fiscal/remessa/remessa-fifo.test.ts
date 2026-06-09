@@ -7,6 +7,7 @@ import {
   debitarSaldoRemessaPorCd,
   estornarConsumosRemessa,
   listarSaldoRemessaPorCd,
+  realignRemessaFifoProductIdsBySku,
   SaldoRemessaInsuficienteError,
 } from "./remessa-fifo.js";
 
@@ -222,6 +223,45 @@ describe("remessa-fifo", () => {
 
     const alocacoes = await consumirSaldoRemessaFifo(tx, tenantId, productId, 2, "ret-1");
     assert.deepEqual(alocacoes, [{ remessaNfeId: "r1", nfeItemId: "ok", quantidade: 2 }]);
+  });
+});
+
+describe("realignRemessaFifoProductIdsBySku", () => {
+  it("atualiza product_id das linhas FIFO para o cadastro atual do SKU", async () => {
+    const cadastroId = "prod-cadastro";
+    const legadoId = "prod-legado";
+    const sku = "4133250001";
+    let updated = 0;
+
+    const prisma = {
+      product: {
+        findFirst: async ({ where }: { where: { tenantId?: string; sku?: string } }) => {
+          if (where.tenantId === tenantId && where.sku === sku) {
+            return { id: cadastroId };
+          }
+          return null;
+        },
+      },
+      nfeItem: {
+        updateMany: async ({
+          where,
+        }: {
+          where: { productId?: { not: string } };
+        }) => {
+          if (where.productId?.not === cadastroId) {
+            updated = 2;
+            return { count: 2 };
+          }
+          return { count: 0 };
+        },
+      },
+    } as unknown as PrismaClient;
+
+    const result = await realignRemessaFifoProductIdsBySku(prisma, tenantId, sku);
+
+    assert.equal(result.atualizados, 2);
+    assert.equal(result.productId, cadastroId);
+    assert.equal(updated, 2);
   });
 });
 

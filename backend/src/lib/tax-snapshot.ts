@@ -1,4 +1,4 @@
-import type { ResolvedTaxRule } from "../services/tax-rule-service.js";
+import type { ResolvedTaxRule } from "../services/fiscal/tax-rule-service.js";
 
 export function taxSnapshotFromRule(rule: ResolvedTaxRule | null, fallbackAliqIcms: number) {
   const taxes = ((rule?.payload?.taxes as Record<string, unknown> | undefined) ?? {}) as Record<

@@ -1,17 +1,17 @@
 import type { FastifyInstance } from "fastify";
 import { tenantIdFromRequest } from "../../lib/auth/request-context.js";
 import { mapNfe } from "../../lib/fiscal-mappers.js";
-import { FiscalService, fiscalNotDeleted } from "../../services/fiscal-service.js";
-import { CancelamentoError, cancelarVenda } from "../../services/cancelamento-service.js";
-import { DevolucaoError, emitirDevolucaoVenda } from "../../services/devolucao-service.js";
-import { InutilizacaoError, inutilizarNumeracao } from "../../services/inutilizacao-service.js";
-import { resolveNfeXml } from "../../services/nfe-xml-service.js";
+import { FiscalService, fiscalNotDeleted } from "../../services/fiscal/fiscal-service.js";
+import { CancelamentoError, cancelarVenda } from "../../services/fiscal/cancelamento-service.js";
+import { DevolucaoError, emitirDevolucaoVenda } from "../../services/fiscal/devolucao-service.js";
+import { InutilizacaoError, inutilizarNumeracao } from "../../services/fiscal/inutilizacao-service.js";
+import { resolveNfeXml } from "../../services/fiscal/nfe-xml-service.js";
 import { handleRouteError } from "../../lib/http/domain-errors.js";
 import {
   cancelamentoBodySchema,
   chaveParamSchema,
   inutilizarBodySchema,
-} from "./schemas.js";
+} from "../../schemas/fiscal/nfe.js";
 
 const nfeListInclude = {
   nfeReferencia: { select: { chave: true } },

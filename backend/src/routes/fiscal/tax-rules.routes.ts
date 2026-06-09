@@ -7,12 +7,12 @@ import {
   deleteTaxRuleGroup,
   listTaxRuleCatalog,
   TaxRuleCatalogError,
-} from "../../services/tax-rule-catalog-service.js";
+} from "../../services/fiscal/tax-rule-catalog-service.js";
 import {
   taxRuleBaseIdParamSchema,
   taxRuleGroupQuerySchema,
   taxRulesBulkBodySchema,
-} from "./schemas.js";
+} from "../../schemas/fiscal/tax-rules.js";
 
 const TAX_RULE_ERROR_MAPPINGS = [{ type: TaxRuleCatalogError, status: 400 }] as const;
 

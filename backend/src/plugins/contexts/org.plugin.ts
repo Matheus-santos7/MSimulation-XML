@@ -1,6 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { tenantRoutes } from "../../routes/tenants.js";
-import { userRoutes } from "../../routes/users.js";
+import { tenantRoutes, userRoutes } from "../../routes/org/index.js";
 
 /** Organização: tenant (emitente) e usuários do tenant. */
 export const orgContextPlugin: FastifyPluginAsync = async (app) => {

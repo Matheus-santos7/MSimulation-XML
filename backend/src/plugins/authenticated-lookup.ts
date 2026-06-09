@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { lookupRoutes } from "../routes/lookup.js";
+import { lookupRoutes } from "../routes/lookup/index.js";
 
 /**
  * Lookup CNPJ/CEP: só JWT, sem tenant (onboarding).

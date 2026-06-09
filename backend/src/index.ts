@@ -16,7 +16,7 @@ import { authPlugin } from "./plugins/auth/index.js";
 import { prismaPlugin } from "./plugins/prisma.js";
 import { authenticatedLookupPlugin } from "./plugins/authenticated-lookup.js";
 import { protectedApiPlugin } from "./plugins/protected-api.js";
-import { healthRoutes } from "./routes/health.js";
+import { healthRoutes } from "./routes/health/index.js";
 import { authRoutes } from "./routes/auth/index.js";
 const trustProxy = process.env.TRUST_PROXY === "true" || process.env.NODE_ENV === "production";
 const app = Fastify({ logger: true, trustProxy });

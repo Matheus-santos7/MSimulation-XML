@@ -154,20 +154,35 @@ backend/
 │   │       ├── logistics.plugin.ts → unidades logísticas
 │   │       └── guards.ts           → requireTenant, requireAdmin
 │   │
-│   ├── routes/                # Handlers HTTP (finos)
-│   │   ├── auth/
-│   │   ├── fiscal.ts
-│   │   ├── pedidos.ts
-│   │   ├── products.ts
-│   │   └── ...
+│   ├── routes/                # Handlers HTTP (finos), por domínio
+│   │   ├── auth/index.ts
+│   │   ├── health/index.ts
+│   │   ├── lookup/index.ts
+│   │   ├── org/               # tenants.routes.ts, users.routes.ts
+│   │   ├── catalog/           # products.routes.ts
+│   │   ├── fiscal/            # nfes, ctes, tax-rules, pedidos, …
+│   │   └── logistics/         # unidades, movimentacoes
 │   │
-│   ├── schemas/               # Schemas Zod reutilizáveis
-│   ├── services/              # Lógica de negócio
-│   │   ├── venda-chain/       # Submódulo: retorno + venda + CT-e
-│   │   └── auth/              # Login, 2FA, reset, verificação e-mail
+│   ├── schemas/               # Schemas Zod por contexto
+│   │   ├── auth/
+│   │   ├── catalog/
+│   │   ├── org/
+│   │   ├── fiscal/
+│   │   ├── orders/
+│   │   └── logistics/
+│   │
+│   ├── services/              # Lógica de negócio, espelhando routes/
+│   │   ├── auth/              # Login, 2FA, reset, verificação e-mail
+│   │   ├── catalog/           # product-service
+│   │   ├── org/               # tenant-service, user-service
+│   │   ├── lookup/            # lookup-service (CNPJ/CEP)
+│   │   ├── logistics/         # CDs, movimentações, avanço entre CDs
+│   │   └── fiscal/            # emissão, FIFO, pedidos, XML, regras
+│   │       └── venda-chain/   # Submódulo: retorno + venda + CT-e
 │   │
 │   ├── lib/                   # Utilitários e engine tributária
 │   │   ├── tax-engine.ts      # ICMS por dentro, totais por item
+│   │   ├── http/              # handleRouteError, erros de domínio HTTP
 │   │   ├── db/                # Prisma singleton, RLS, transações
 │   │   └── auth/              # JWT config, senha, Turnstile
 │   │
@@ -178,6 +193,8 @@ backend/
 ├── package.json
 └── tsconfig.json
 ```
+
+**Convenção:** cada domínio em `routes/` tem pasta homônima em `services/` e (quando há validação reutilizável) em `schemas/`. Arquivos de rota usam sufixo `*.routes.ts`; services usam `*-service.ts`. Cada pasta exporta um `index.ts` agregador.
 
 ---
 
@@ -206,7 +223,7 @@ Fluxo dentro de `protected-api`:
 4. **`requireEmailVerifiedHook`** — bloqueia se `REQUIRE_EMAIL_VERIFICATION=true`.
 5. Handler da rota → service → resposta JSON.
 
-Erros globais são tratados em [`src/lib/error-handler.ts`](./src/lib/error-handler.ts) (`ZodError` → 400, Prisma P2002 → 409, etc.).
+Erros globais são tratados em [`src/lib/error-handler.ts`](./src/lib/error-handler.ts) (`ZodError` → 400, Prisma P2002 → 409, etc.). Rotas usam [`handleRouteError`](./src/lib/http/domain-errors.ts) para erros de domínio com `.status` HTTP.
 
 ---
 
@@ -336,7 +353,7 @@ CT-e venda (referencia chave da NF-e de venda)
 
 ### FIFO de remessa
 
-O saldo fica em **`nfe_itens.saldo_disponivel`**, não mais só na NF-e pai. Ao faturar um pedido, [`remessa-fifo.ts`](./src/services/remessa-fifo.ts) consome as remessas **mais antigas primeiro** e registra em `nfe_remessa_consumos`.
+O saldo fica em **`nfe_itens.saldo_disponivel`**, não mais só na NF-e pai. Ao faturar um pedido, [`remessa-fifo.ts`](./src/services/fiscal/remessa-fifo.ts) consome as remessas **mais antigas primeiro** e registra em `nfe_remessa_consumos`.
 
 Erro comum: `SaldoRemessaInsuficienteError` — falta remessa física ou quantidade maior que o saldo.
 
@@ -346,11 +363,11 @@ Erro comum: `SaldoRemessaInsuficienteError` — falta remessa física ou quantid
 
 - ICMS **por dentro** por item.
 - `<ICMSTot>` = soma dos itens (evita rejeição 532/533).
-- Alíquotas vêm de `TaxRule` via [`tax-rule-service.ts`](./src/services/tax-rule-service.ts) + [`tax-calculation-service.ts`](./src/services/tax-calculation-service.ts).
+- Alíquotas vêm de `TaxRule` via [`tax-rule-service.ts`](./src/services/fiscal/tax-rule-service.ts) + [`tax-calculation-service.ts`](./src/services/fiscal/tax-calculation-service.ts).
 
 ### XML persistido
 
-Cada emissão grava `xmlAutorizado` na NF-e via [`nfe-xml-service.ts`](./src/services/nfe-xml-service.ts), usando `@msimulation-xml/nfe-xml`.
+Cada emissão grava `xmlAutorizado` na NF-e via [`nfe-xml-service.ts`](./src/services/fiscal/nfe-xml-service.ts), usando `@msimulation-xml/nfe-xml`.
 
 ---
 
@@ -408,17 +425,58 @@ Todas as rotas de negócio têm prefixo **`/api`** e exigem JWT (salvo auth e he
 | GET | `/lookup/cnpj/:cnpj` | `lookup-service` |
 | GET | `/lookup/cep/:cep` | `lookup-service` |
 
-Documentação inline detalhada: [`src/routes/fiscal.ts`](./src/routes/fiscal.ts).
+Documentação inline detalhada: [`src/routes/fiscal/documents.routes.ts`](./src/routes/fiscal/documents.routes.ts) e sub-arquivos (`nfes.routes.ts`, `ctes.routes.ts`, …).
 
 ---
 
 ## Mapa de services
 
+Services seguem a mesma organização por domínio que `routes/`:
+
+### `services/auth/`
+
+| Arquivo | Responsabilidade |
+|---------|------------------|
+| `auth-service.ts` | Login, registro, refresh, onboarding |
+| `two-factor-service.ts` | TOTP 2FA |
+| `password-reset-service.ts` | Fluxo de reset de senha |
+| `email-verification-service.ts` | Confirmação de e-mail |
+| `email-service.ts` | Envio via Resend |
+
+### `services/org/`
+
+| Arquivo | Responsabilidade |
+|---------|------------------|
+| `tenant-service.ts` | CRUD de empresas (tenants) |
+| `user-service.ts` | Gestão de usuários do tenant |
+
+### `services/catalog/`
+
+| Arquivo | Responsabilidade |
+|---------|------------------|
+| `product-service.ts` | Produtos, bulk upsert, vínculo com regras |
+
+### `services/lookup/`
+
+| Arquivo | Responsabilidade |
+|---------|------------------|
+| `lookup-service.ts` | Consulta CNPJ (BrasilAPI) e CEP |
+
+### `services/logistics/`
+
+| Arquivo | Responsabilidade |
+|---------|------------------|
+| `unidade-logistica-service.ts` | CDs Meli Full por tenant |
+| `movimentacao-produto-service.ts` | Histórico de movimentações |
+| `avanco-cd-service.ts` | Movimentação entre CDs + remessa |
+
+### `services/fiscal/`
+
 | Arquivo | Responsabilidade |
 |---------|------------------|
 | `remessa-service.ts` | NF-e remessa física + CT-e remessa + saldo inicial |
 | `remessa-fifo.ts` | Consumo/estorno FIFO por `nfe_itens` |
-| `venda-chain/` | Orquestra retorno → venda → CT-e venda |
+| `venda-chain/` + `venda-chain-service.ts` | Orquestra retorno → venda → CT-e venda |
 | `devolucao-service.ts` | Devolução + estorno FIFO + remessa simbólica |
 | `cancelamento-service.ts` | Evento 110111; cancela venda e retorno |
 | `inutilizacao-service.ts` | Faixa de numeração inutilizada |
@@ -429,12 +487,12 @@ Documentação inline detalhada: [`src/routes/fiscal.ts`](./src/routes/fiscal.ts
 | `nfe-xml-service.ts` | Gera/persiste `xmlAutorizado` |
 | `timeline-service.ts` | Agrupa cadeias para o dashboard |
 | `tax-rule-service.ts` | Resolve regra origem×destino |
+| `tax-rule-catalog-service.ts` | CRUD/importação de regras |
 | `tax-calculation-service.ts` | Monta linha + chama `tax-engine` |
 | `fiscal-service.ts` | Soft delete NF-e / CT-e |
-| `avanco-cd-service.ts` | Movimentação entre CDs |
-| `unidade-logistica-service.ts` | CDs Meli Full por tenant |
+| `fiscal-emitter-settings-service.ts` | Configurações do emissor ML |
 
-Mapa complementar: [`src/services/README.md`](./src/services/README.md).
+Cada pasta expõe um `index.ts` com re-exports dos símbolos públicos. Mapa complementar: [`src/services/README.md`](./src/services/README.md).
 
 ---
 
@@ -461,13 +519,13 @@ O script `pnpm test` do backend já faz isso automaticamente.
 
 ### 1. Validação com Zod
 
-Schemas ficam em `src/schemas/` ou no topo do arquivo de rota. Sempre parse antes de usar:
+Schemas ficam em `src/schemas/<domínio>/` (ex.: `schemas/catalog/product.ts`). Sempre parse antes de usar:
 
 ```typescript
 const body = productCreateBody.parse(req.body);
 ```
 
-Erros Zod viram 400 automaticamente pelo error handler global.
+Erros Zod viram 400 via `handleRouteError` ou automaticamente pelo error handler global.
 
 ### 2. Erros de domínio
 
@@ -483,7 +541,14 @@ export class RemessaError extends Error {
 }
 ```
 
-Nas rotas, capture e converta em JSON `{ error: string }` (veja `handleProductError` em `products.ts`).
+Nas rotas, use `handleRouteError` de [`src/lib/http/domain-errors.ts`](./src/lib/http/domain-errors.ts):
+
+```typescript
+} catch (e) {
+  if (handleRouteError(reply, e, { mappings: [{ type: RemessaError, status: 422 }] })) return;
+  throw e;
+}
+```
 
 ### 3. Mappers
 
@@ -526,15 +591,15 @@ pnpm --filter @msimulation-xml/backend db:generate
 
 ### 3. Service
 
-- Crie ou estenda um arquivo em `src/services/`.
+- Crie ou estenda um arquivo em `src/services/<domínio>/`.
 - Use transação quando houver múltiplas escritas.
 - Reutilize `tax-calculation-service`, `remessa-fifo`, mappers existentes.
 
 ### 4. Schema Zod + rota
 
-- Schema em `src/schemas/` (se reutilizável) ou inline na rota.
+- Schema em `src/schemas/<domínio>/` (se reutilizável).
 - Handler fino: parse → `tenantIdFromRequest` → service → status code.
-- Registre a rota no plugin de contexto correto (`fiscal`, `catalog`, etc.).
+- Registre a rota no plugin de contexto correto (`fiscal`, `catalog`, etc.) ou no `index.ts` do domínio em `routes/`.
 
 ### 5. Frontend (outro pacote)
 
@@ -557,9 +622,9 @@ pnpm --filter @msimulation-xml/backend db:generate
 | 401 / sessão encerrada | `plugins/auth`, `tokenVersion`, cookies no frontend |
 | 403 tenant / e-mail | `guards.ts`, onboarding incompleto |
 | 409 duplicado | Prisma P2002 — constraint unique (SKU, CNPJ…) |
-| Saldo remessa insuficiente | `remessa-fifo.ts`, remessas do produto/CD |
+| Saldo remessa insuficiente | `services/fiscal/remessa-fifo.ts`, remessas do produto/CD |
 | Imposto divergente | `tax-engine.ts`, `TaxRule` do produto, UF origem/destino |
-| XML errado | `nfe-xml-service`, pacote `nfe-xml`, `fiscalPayload` |
+| XML errado | `services/fiscal/nfe-xml-service`, pacote `nfe-xml`, `fiscalPayload` |
 | Dados de outro tenant | RLS, `tenantIdFromRequest`, query sem filtro |
 
 ### Debug local
@@ -611,8 +676,9 @@ Arquivos de teste atuais:
 | Arquivo | Cobertura |
 |---------|-----------|
 | `src/lib/tax-engine.test.ts` | Cálculo ICMS, totais, arredondamento |
-| `src/services/remessa-fifo.test.ts` | Consumo e estorno FIFO |
-| `src/services/venda-chain-contract.test.ts` | Contrato da cadeia de venda |
+| `src/lib/http/domain-errors.test.ts` | Helper `handleRouteError` e erros HTTP |
+| `src/services/fiscal/remessa-fifo.test.ts` | Consumo e estorno FIFO |
+| `src/services/fiscal/venda-chain-contract.test.ts` | Contrato da cadeia de venda |
 
 Framework: **Node.js test runner** (`node --import tsx --test`).
 
@@ -639,8 +705,9 @@ Framework: **Node.js test runner** (`node --import tsx --test`).
 |-----------|----------|
 | [README raiz](../README.md) | Visão geral do monorepo, deploy, segurança |
 | [docs/SECURITY.md](../docs/SECURITY.md) | Hardening, cookies, CORS, RLS |
-| [src/services/README.md](./src/services/README.md) | Mapa rápido de services |
-| [src/routes/fiscal.ts](./src/routes/fiscal.ts) | Documentação inline das rotas fiscais |
+| [src/services/README.md](./src/services/README.md) | Mapa rápido de services por domínio |
+| [src/routes/fiscal/](./src/routes/fiscal/) | Rotas fiscais (nfes, ctes, pedidos, tax-rules, …) |
+| [src/lib/http/domain-errors.ts](./src/lib/http/domain-errors.ts) | Tratamento padronizado de erros nas rotas |
 | [`.env.example`](./.env.example) | Variáveis de ambiente |
 | [`.cursor/rules/02-backend-fastify.mdc`](../.cursor/rules/02-backend-fastify.mdc) | Convenções Fastify do projeto |
 | [`.cursor/rules/01-db-dba.mdc`](../.cursor/rules/01-db-dba.mdc) | Convenções Prisma / multi-tenant |

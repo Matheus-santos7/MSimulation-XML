@@ -2,8 +2,8 @@ import type { FastifyInstance } from "fastify";
 import { tenantIdFromRequest } from "../../lib/auth/request-context.js";
 import { mapCte } from "../../lib/fiscal-mappers.js";
 import { mapEmitente } from "../../lib/tenant-mapper.js";
-import { FiscalService, fiscalNotDeleted } from "../../services/fiscal-service.js";
-import { chaveParamSchema } from "./schemas.js";
+import { FiscalService, fiscalNotDeleted } from "../../services/fiscal/fiscal-service.js";
+import { chaveParamSchema } from "../../schemas/fiscal/nfe.js";
 
 export function registerCteAndEmitenteRoutes(app: FastifyInstance, fiscal: FiscalService) {
   app.get("/emitente", async (req) => {

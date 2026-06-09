@@ -15,7 +15,7 @@ import {
   verify2faBodySchema,
   verifyEmailBodySchema,
 } from "../../schemas/auth/schemas.js";
-import { tenantCreateBody } from "../../schemas/tenant.js";
+import { tenantCreateBody } from "../../schemas/org/tenant.js";
 import {
   AuthConflictError,
   AuthService,
@@ -24,7 +24,7 @@ import {
   AuthUnauthorizedError,
 } from "../../services/auth/auth-service.js";
 import { TwoFactorRequiredError, TwoFactorService } from "../../services/auth/two-factor-service.js";
-import { TenantConflictError } from "../../services/tenant-service.js";
+import { TenantConflictError } from "../../services/org/tenant-service.js";
 import {
   PasswordResetInvalidError,
   PasswordResetService,

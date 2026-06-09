@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { tenantIdFromRequest } from "../../lib/auth/request-context.js";
 import { mapTimeline } from "../../lib/fiscal-mappers.js";
-import { listTimelineChains } from "../../services/timeline-service.js";
+import { listTimelineChains } from "../../services/fiscal/timeline-service.js";
 
 async function listFiscalEventsForTenant(app: FastifyInstance, tenantId: string) {
   const [rows, inuts] = await Promise.all([

@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { fiscalRoutes } from "../../routes/fiscal.js";
+import { fiscalRoutes } from "../../routes/fiscal/index.js";
 import { fiscalSettingsRoutes } from "../../routes/fiscal-settings.js";
 import { pedidoRoutes } from "../../routes/pedidos.js";
 

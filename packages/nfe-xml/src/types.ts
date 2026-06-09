@@ -14,6 +14,8 @@ export type DestinatarioXml = {
   doc: string;
   uf: string;
   indIEDest: number;
+  /** IE do CD destinatário (opcional; preferir `fiscalPayload.destIe` na remessa). */
+  ie?: string;
   docTipo?: "CNPJ" | "CPF";
   endereco: {
     logradouro: string;

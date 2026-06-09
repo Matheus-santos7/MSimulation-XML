@@ -19,7 +19,7 @@
  * |------------|--------|
  * | Emitente   | `CTE_ML_EMIT` (transportador ML no XML de referência) |
  * | Origem     | Município/UF do tenant (seller) |
- * | Destino    | `REMESSA_ML_DEST` (depósito temporário) |
+ * | Destino    | Município/UF da NF-e de remessa (CD selecionado) |
  * | valorCarga | Valor da NF-e de remessa |
  * | valor      | Frete estimado (`calcularValorFreteRemessa`) |
  * | pesoCarga  | Estimado por quantidade (`calcularPesoCarga`) |
@@ -47,7 +47,6 @@ import {
 } from "../../../lib/fiscal/cte-remessa-template.js";
 import { proximoNumeroCte } from "../../../lib/fiscal/cte-sequencia.js";
 import { mapCte } from "../../../lib/fiscal/fiscal-mappers.js";
-import { REMESSA_ML_DEST } from "./helpers/remessa-dest.js";
 import type { PrismaTx } from "../../../lib/db/prisma-tx.js";
 
 // ---------------------------------------------------------------------------
@@ -70,10 +69,10 @@ type RotasCte = {
 // ---------------------------------------------------------------------------
 
 /** Rota textual exibida na UI e persistida em `ctes.origem` / `destino`. */
-function rotasRemessa(tenant: Tenant): RotasCte {
+function rotasRemessa(tenant: Tenant, nfeRemessa: NFe): RotasCte {
   return {
     origem: `${tenant.municipio}/${tenant.uf}`,
-    destino: `${REMESSA_ML_DEST.municipio}/${REMESSA_ML_DEST.uf}`,
+    destino: `${nfeRemessa.destMunicipio}/${nfeRemessa.destUf}`,
   };
 }
 
@@ -141,7 +140,7 @@ export async function emitirCteRemessa(prisma: PrismaTx, tenant: Tenant, nfeReme
   const numero = await proximoNumeroCte(prisma, tenant.id, serie);
   const emitidoEm = new Date();
 
-  const rotas = rotasRemessa(tenant);
+  const rotas = rotasRemessa(tenant, nfeRemessa);
   const totais = totaisDaRemessa(nfeRemessa);
   const chave = buildChaveCteRemessa(tenant, serie, numero);
 

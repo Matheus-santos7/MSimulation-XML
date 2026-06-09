@@ -18,7 +18,6 @@ import {
 } from "@msimulation-xml/fiscal-core";
 import {
   REMESSA_INF_CPL,
-  REMESSA_ML_DEST_IE,
   REMESSA_ML_INTERMED_CNPJ,
   REMESSA_ML_INTERMED_ID,
   ufToCodigo,
@@ -40,6 +39,22 @@ import type {
 
 const xmlEscape = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/** IE do destinatário — vem do CD (`fiscalPayload.destIe`), não de constante fixa. */
+function destIeXmlFromPayload(
+  indIEDest: number,
+  fiscal: Record<string, unknown>,
+  ie?: string,
+): string {
+  if (indIEDest !== 1) return "";
+  const raw =
+    (typeof fiscal.destIe === "string" && fiscal.destIe) ||
+    (typeof ie === "string" && ie) ||
+    "";
+  const digits = String(raw).replace(/\D/g, "");
+  if (!digits) return "";
+  return `\n        <IE>${digits}</IE>`;
+}
 
 function formatEanForXml(ean?: string): string {
   const digits = (ean ?? "").replace(/\D/g, "");
@@ -310,9 +325,9 @@ function buildRemessaNFeXML(
   const de = d.endereco;
   const docDigits = d.doc.replace(/\D/g, "");
   const destXCpl = de.complemento ? `\n          <xCpl>${xmlEscape(de.complemento)}</xCpl>` : "";
-  const destIeXml = d.indIEDest === 1 ? `\n        <IE>${REMESSA_ML_DEST_IE}</IE>` : "";
-  const cUF = ufToCodigo(e.uf);
   const fiscal = (nfe.fiscalPayload ?? {}) as Record<string, unknown>;
+  const destIeXml = destIeXmlFromPayload(d.indIEDest, fiscal, d.ie);
+  const cUF = ufToCodigo(e.uf);
   const engine = parseEngineFromFiscalPayload(fiscal);
   const icms = (fiscal.icms as Record<string, unknown> | undefined) ?? { cst: "00", aliquota: nfe.aliqICMS };
   const emitter = resolveEmitterFromPayload(fiscal, emitterSettings ?? null, nfe.tipo, nfe.valor, nfe.valorICMS);
@@ -517,10 +532,10 @@ function buildRetornoNFeXML(
   const de = d.endereco;
   const docDigits = d.doc.replace(/\D/g, "");
   const destXCpl = de.complemento ? `\n          <xCpl>${xmlEscape(de.complemento)}</xCpl>` : "";
-  const destIeXml = d.indIEDest === 1 ? `\n        <IE>${REMESSA_ML_DEST_IE}</IE>` : "";
+  const fiscal = (nfe.fiscalPayload ?? {}) as Record<string, unknown>;
+  const destIeXml = destIeXmlFromPayload(d.indIEDest, fiscal, d.ie);
   const cUF = ufToCodigo(e.uf);
   const infAdProd = nfe.pedidoML ? `\n        <infAdProd>xPed:${xmlEscape(nfe.pedidoML)}</infAdProd>` : "";
-  const fiscal = (nfe.fiscalPayload ?? {}) as Record<string, unknown>;
   const engine = parseEngineFromFiscalPayload(fiscal);
   const emitter = resolveEmitterFromPayload(fiscal, emitterSettings ?? null, nfe.tipo, nfe.valor, nfe.valorICMS);
   const vFrete = emitter.freteNoCalculo ? emitter.bases.vFrete : 0;

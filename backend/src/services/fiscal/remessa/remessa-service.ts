@@ -172,6 +172,9 @@ async function emitirNFeRemessaComItens(
           indFinal: 0,
         }),
         engine: nota,
+        ...(destino.indIeDest === 1 && destino.ie
+          ? { destIe: destino.ie.replace(/\D/g, "") }
+          : {}),
       } as Record<string, unknown>,
       {
         tipo: NFeTipo.REMESSA,

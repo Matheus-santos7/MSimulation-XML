@@ -21,7 +21,6 @@ export {
   REMESSA_CFOP,
   REMESSA_CFOP_INTRASTATE,
   REMESSA_CFOP_INTERSTATE,
-  REMESSA_ML_DEST,
   REMESSA_NAT_OP,
   resolveRemessaCfop,
 } from "../../services/fiscal/remessa/helpers/remessa-dest.js";

@@ -175,7 +175,7 @@ export class UnidadeLogisticaService {
     }
 
     throw new UnidadeLogisticaError(
-      "Nenhum CD padrão definido para esta empresa. Selecione uma unidade em Unidades ML.",
+      "Nenhum CD padrão definido para esta empresa. Cadastre unidades em Unidades ML, vincule à empresa e defina uma como padrão — ou selecione o CD de destino ao emitir a remessa.",
     );
   }
 

@@ -59,11 +59,9 @@ flowchart TD
 | `unidadeParaDestinoFiscal` | `backend/src/lib/logistics/meli-unidade.ts` | Converte cadastro ML → campos `dest*` da NF-e |
 | `destinoToNfeFields` | `backend/src/services/fiscal/remessa/remessa-service.ts` | Mapeia `UnidadeDestinoFiscal` → colunas Prisma |
 
-Constantes de fallback legado (não usadas quando há unidade cadastrada):
+Sem CD padrão nem unidade selecionada, a emissão falha com orientação para cadastrar em **Unidades ML** e definir padrão ou escolher o destino na remessa.
 
-| Constante | Arquivo |
-|-----------|---------|
-| `REMESSA_ML_DEST`, `REMESSA_ML_INTERMED` | `backend/src/lib/fiscal/remessa-dest.ts` |
+Intermediador ML no XML (`infIntermed`): `REMESSA_ML_INTERMED` em `backend/src/services/fiscal/remessa/helpers/remessa-dest.ts`.
 
 ---
 

@@ -1,5 +1,4 @@
 import type { MeliUnidadeLogistica } from "../../generated/prisma/client.js";
-import { REMESSA_ML_DEST } from "../../services/fiscal/remessa/helpers/remessa-dest.js";
 
 /** Normaliza CNPJ da planilha (float, pontuação) para 14 dígitos. */
 export function normalizeCnpjMeli(raw: unknown): string | null {
@@ -95,25 +94,5 @@ export function unidadeParaDestinoFiscal(
     codigoPais: u.codigoPais,
     nomePais: u.nomePais,
     indIeDest: u.indIeDest,
-  };
-}
-
-/** Fallback legado quando tenant não tem CD cadastrado. */
-export function remessaDestinoLegado(): UnidadeDestinoFiscal {
-  return {
-    nome: REMESSA_ML_DEST.nome,
-    cnpj: REMESSA_ML_DEST.cnpj,
-    ie: REMESSA_ML_DEST.ie,
-    logradouro: REMESSA_ML_DEST.logradouro,
-    numero: REMESSA_ML_DEST.numero,
-    complemento: REMESSA_ML_DEST.complemento,
-    bairro: REMESSA_ML_DEST.bairro,
-    codigoMunicipio: REMESSA_ML_DEST.codigoMunicipio,
-    municipio: REMESSA_ML_DEST.municipio,
-    uf: REMESSA_ML_DEST.uf,
-    cep: REMESSA_ML_DEST.cep,
-    codigoPais: REMESSA_ML_DEST.codigoPais,
-    nomePais: REMESSA_ML_DEST.nomePais,
-    indIeDest: REMESSA_ML_DEST.indIeDest,
   };
 }

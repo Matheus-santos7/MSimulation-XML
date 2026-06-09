@@ -92,7 +92,15 @@ describe("buildNFeXML — REMESSA", () => {
     const xml = buildNFeXML(baseNfe(), emit);
     assert.match(xml, /<Transforms>/);
     assert.match(xml, /<DigestMethod Algorithm="http:\/\/www\.w3\.org\/2000\/09\/xmldsig#sha1"\/>/);
-    assert.match(xml, /<KeyName>FAKE-SIMULATION-ONLY<\/KeyName>/);
+    assert.match(xml, /<X509Data>/);
+    assert.match(xml, /<X509Certificate>[^<]+<\/X509Certificate>/);
+  });
+
+  it("nProt no protNFe tem exatamente 15 dígitos", () => {
+    const xml = buildNFeXML(baseNfe(), emit);
+    const nProt = xml.match(/<nProt>(\d+)<\/nProt>/)?.[1];
+    assert.ok(nProt);
+    assert.equal(nProt.length, 15);
   });
 
   it("formata dhEmi/dhSaiEnt com offset -03:00 (sem sufixo Z)", () => {

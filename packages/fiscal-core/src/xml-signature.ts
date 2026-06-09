@@ -50,13 +50,19 @@ export function simulationSignatureValue(seed: string): string {
   return bytesToBase64(deterministicBytes(`simulation-signature:${seed}`, 256));
 }
 
+/** Certificado X509 simulado em Base64 válido (DER fictício) — apenas simulação. */
+export function simulationX509Certificate(seed: string): string {
+  return bytesToBase64(deterministicBytes(`simulation-x509:${seed}`, 768));
+}
+
 /**
  * Bloco <Signature> estruturalmente válido (XML-DSig) para simulação.
- * DigestValue e SignatureValue são Base64 válidos; KeyName permanece explícito como fake.
+ * DigestValue, SignatureValue e X509Certificate são Base64 válidos.
  */
 export function buildSimulationXmlSignature(referenceId: string, digestSeed: string, indent = ""): string {
   const digest = simulationDigestValue(digestSeed);
   const signature = simulationSignatureValue(digestSeed);
+  const x509 = simulationX509Certificate(digestSeed);
   const uri = referenceId.startsWith("#") ? referenceId : `#${referenceId}`;
   const i = indent;
   const ii = `${indent}  `;
@@ -77,7 +83,11 @@ ${iiii}<DigestValue>${digest}</DigestValue>
 ${iii}</Reference>
 ${ii}</SignedInfo>
 ${ii}<SignatureValue>${signature}</SignatureValue>
-${ii}<KeyInfo><KeyName>FAKE-SIMULATION-ONLY</KeyName></KeyInfo>
+${ii}<KeyInfo>
+${iii}<X509Data>
+${iii}  <X509Certificate>${x509}</X509Certificate>
+${iii}</X509Data>
+${ii}</KeyInfo>
 ${i}</Signature>`;
 }
 

@@ -5,6 +5,7 @@ export {
   isValidBase64,
   simulationDigestValue,
   simulationSignatureValue,
+  simulationX509Certificate,
 } from "./xml-signature.js";
 export {
   compactXmlForDownload,

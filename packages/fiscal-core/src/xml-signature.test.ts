@@ -5,6 +5,7 @@ import {
   isValidBase64,
   simulationDigestValue,
   simulationSignatureValue,
+  simulationX509Certificate,
 } from "./xml-signature.js";
 
 describe("buildSimulationXmlSignature", () => {
@@ -18,7 +19,9 @@ describe("buildSimulationXmlSignature", () => {
     assert.match(reference, /enveloped-signature/);
     assert.match(reference, /<DigestMethod Algorithm="http:\/\/www\.w3\.org\/2000\/09\/xmldsig#sha1"\/>/);
     assert.ok(reference.indexOf("<DigestMethod") < reference.indexOf("<DigestValue>"));
-    assert.match(xml, /<KeyName>FAKE-SIMULATION-ONLY<\/KeyName>/);
+    assert.match(xml, /<X509Data>/);
+    assert.match(xml, /<X509Certificate>[^<]+<\/X509Certificate>/);
+    assert.doesNotMatch(xml, /<KeyName>/);
   });
 
   it("gera DigestValue e SignatureValue em Base64 válido", () => {
@@ -37,6 +40,13 @@ describe("buildSimulationXmlSignature", () => {
   it("valores são determinísticos para o mesmo seed", () => {
     assert.equal(simulationDigestValue("abc"), simulationDigestValue("abc"));
     assert.equal(simulationSignatureValue("abc"), simulationSignatureValue("abc"));
+    assert.equal(simulationX509Certificate("abc"), simulationX509Certificate("abc"));
     assert.notEqual(simulationDigestValue("abc"), simulationDigestValue("xyz"));
+  });
+
+  it("X509Certificate é Base64 válido", () => {
+    const cert = simulationX509Certificate("chave-teste");
+    assert.ok(isValidBase64(cert));
+    assert.ok(cert.length > 500);
   });
 });

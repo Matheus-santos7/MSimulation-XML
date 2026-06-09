@@ -1,12 +1,10 @@
 /**
- * Cálculo fiscal unificado para NF-e de remessa simbólica (CFOP 5949).
+ * Cálculo fiscal unificado para NF-e de remessa simbólica (CFOP 5949/6949 conforme UF).
  */
 import { NFeTipo } from "../../../generated/prisma/client.js";
 import type { PrismaTx } from "../../../lib/db/prisma-tx.js";
-import {
-  REMESSA_SIMBOLICA_CFOP,
-  REMESSA_SIMBOLICA_NAT_OP,
-} from "./helpers/remessa-simbolica-dest.js";
+import { resolveRemessaCfop } from "./helpers/remessa-dest.js";
+import { REMESSA_SIMBOLICA_NAT_OP } from "./helpers/remessa-simbolica-dest.js";
 import { enrichTaxSnapshot, loadEmitterSettings } from "../../../lib/fiscal/fiscal-emitter-runtime.js";
 import {
   enrichFiscalPayloadMlFulfillment,
@@ -86,7 +84,7 @@ export async function prepararRemessaSimbolicaFiscal(
   }
 
   const aliqFallback = inferAliqIcmsRemessa(input.emitUf, input.destUf);
-  const cfop = REMESSA_SIMBOLICA_CFOP;
+  const cfop = resolveRemessaCfop(input.emitUf, input.destUf);
   const calc = calcularNotaInbound(
     linhaPedidoFromProduto(input.product, {
       cfop,

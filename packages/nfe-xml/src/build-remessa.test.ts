@@ -69,6 +69,7 @@ const baseNfe = (): NFeXmlInput => ({
           icms: { cst: "00", orig: 0, vBC: 100, pICMS: 18, vICMS: 18 },
           pis: { cst: "09", vBC: 0, vPIS: 0 },
           cofins: { cst: "09", vBC: 0, vCOFINS: 0 },
+          ipi: { cst: "55", cEnq: "103", vBC: 0, pIPI: 0, vIPI: 0 },
         },
       ],
       totais: {
@@ -178,29 +179,54 @@ describe("buildNFeXML — REMESSA", () => {
     assert.match(xml, /<COFINSOutr>\s*<CST>49<\/CST>/);
   });
 
+  it("usa cEnq numérico do snapshot fiscal quando engine não traz IPI", () => {
+    const nfe = baseNfe();
+    const engine = (nfe.fiscalPayload as { engine: { itens: Record<string, unknown>[] } }).engine;
+    delete engine.itens[0]!.ipi;
+    nfe.fiscalPayload = {
+      ...nfe.fiscalPayload,
+      ipi: { st: "55 - Saída com Suspensão", aliquota: 0, codEnq: 103 },
+    };
+    const xml = buildNFeXML(nfe, emit);
+    assert.match(xml, /<cEnq>103<\/cEnq>/);
+    assert.match(xml, /<IPINT>\s*<CST>55<\/CST>\s*<\/IPINT>/);
+  });
+
   it("alinha estrutura ML: IBSCBS, vItem, transporta, autXML e reforma nos totais", () => {
     const xml = buildNFeXML(baseNfe(), emit);
     assert.match(xml, /<IBSCBS>\s*<CST>410<\/CST>\s*<cClassTrib>410999<\/cClassTrib>\s*<\/IBSCBS>/);
+    assert.doesNotMatch(xml, /<gIBSCBS>/);
     assert.match(xml, /<vItem>100\.00<\/vItem>/);
     assert.match(xml, /<IBSCBSTot>\s*<vBCIBSCBS>0\.00<\/vBCIBSCBS>\s*<\/IBSCBSTot>/);
     assert.match(xml, /<vNFTot>100\.00<\/vNFTot>/);
     assert.match(xml, /<modFrete>2<\/modFrete>/);
     assert.match(xml, /<transporta>/);
     assert.match(xml, /<autXML>\s*<CPF>87659808915<\/CPF>\s*<\/autXML>/);
-    assert.match(xml, /<cEnq>999<\/cEnq>/);
-    assert.match(xml, /<IPINT>\s*<CST>53<\/CST>\s*<\/IPINT>/);
+    assert.match(xml, /<cEnq>103<\/cEnq>/);
+    assert.match(xml, /<IPINT>\s*<CST>55<\/CST>\s*<\/IPINT>/);
     assert.match(xml, /Portaria CAT 31\/2019/);
     assert.match(xml, /<xCpl>Nao consta<\/xCpl>/);
     assert.doesNotMatch(xml, /<vFCPUFDest>/);
     assert.doesNotMatch(xml, /<CEST>/);
   });
 
-  it("obsCont external_id segue padrão WAREHOUSE_TRANSFER ML", () => {
+  it("obsCont external_id segue padrão INBOUND ML", () => {
     const xml = buildNFeXML(baseNfe(), emit);
     assert.match(
       xml,
-      /<xTexto>WAREHOUSE_TRANSFER_MFL_TO_OLSS-inbound-ORDER-1-21-OLS<\/xTexto>/,
+      /<xTexto>INBOUND-inbound-ORDER-1-1-1-OLSS-279642028<\/xTexto>/,
     );
+  });
+
+  it("emite gIBSCBS/vBC e soma vBCIBSCBS quando CST exige o grupo", () => {
+    const nfe = baseNfe();
+    nfe.fiscalPayload = {
+      ...(nfe.fiscalPayload as Record<string, unknown>),
+      ibsCbs: { st: "000", cClassTrib: "000001" },
+    };
+    const xml = buildNFeXML(nfe, emit);
+    assert.match(xml, /<gIBSCBS>\s*<vBC>82\.00<\/vBC>\s*<\/gIBSCBS>/);
+    assert.match(xml, /<IBSCBSTot>\s*<vBCIBSCBS>82\.00<\/vBCIBSCBS>\s*<\/IBSCBSTot>/);
   });
 
   it("usa idCadIntTran e pesos do fiscalPayload enriquecido (emissão real)", () => {

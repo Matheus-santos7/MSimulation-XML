@@ -133,7 +133,10 @@ export function parseTaxRuleXlsx(buffer: ArrayBuffer): TaxRulePlanilhaParseResul
         ipi: {
           st: byKey.IPI_ST,
           aliquota: byKey.IPI_ALIQUOTA,
-          codEnq: byKey.IPI_COD_ENQ,
+          codEnq:
+            byKey.IPI_COD_ENQ != null && String(byKey.IPI_COD_ENQ).trim() !== ""
+              ? String(byKey.IPI_COD_ENQ).trim()
+              : undefined,
         },
         pis: { st: byKey.PIS_ST, aliquota: byKey.PIS_ALIQUOTA },
         cofins: { st: byKey.COFINS_ST, aliquota: byKey.COFINS_ALIQUOTA },
@@ -151,7 +154,7 @@ export function parseTaxRuleXlsx(buffer: ArrayBuffer): TaxRulePlanilhaParseResul
     };
 
     rows.push({
-      ruleId: `${ruleId}-${customerType}-${transactionType}`,
+      ruleId: `${ruleId}-${uf}-${customerType}-${transactionType}`,
       nome: `${nome} (${destinationLabel(transactionType, customerType)})`,
       tipo,
       uf,

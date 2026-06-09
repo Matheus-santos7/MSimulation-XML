@@ -23,8 +23,14 @@ export const movimentacoesQuery = z.object({
   limit: z.coerce.number().int().positive().max(200).optional(),
 });
 
+export const saldoCdQuery = z.object({
+  productId: z.string().uuid(),
+  productSku: z.string().trim().min(1).optional(),
+});
+
 export const avancoCdBody = z.object({
   productId: z.string().uuid(),
+  productSku: z.string().trim().min(1).optional(),
   quantidade: z.number().int().min(1),
   unidadeOrigemId: z.string().uuid(),
   unidadeDestinoId: z.string().uuid(),

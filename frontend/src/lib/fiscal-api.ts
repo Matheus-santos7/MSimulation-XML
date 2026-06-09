@@ -501,6 +501,17 @@ export type AvancoCdResult = {
   alocacoesOrigem: { remessaNfeId: string; quantidade: number }[];
 };
 
+export type SaldoRemessaCdDto = {
+  unidadeDestinoId: string;
+  productId: string;
+  saldo: number;
+  unidade: {
+    codigo: string;
+    nome: string;
+    uf: string;
+  } | null;
+};
+
 export type MovimentacaoProdutoDto = {
   id: string;
   tipoOperacao: string;
@@ -551,11 +562,21 @@ export async function setUnidadeLogisticaPadrao(unidadeId: string): Promise<Unid
 
 export async function emitirAvancoCd(body: {
   productId: string;
+  productSku?: string;
   quantidade: number;
   unidadeOrigemId: string;
   unidadeDestinoId: string;
 }): Promise<AvancoCdResult> {
   return mutateJson<AvancoCdResult>(url("/api/movimentacoes/avanco-cd"), "POST", body) as Promise<AvancoCdResult>;
+}
+
+export async function listSaldoRemessaPorCd(
+  productId: string,
+  productSku?: string,
+): Promise<SaldoRemessaCdDto[]> {
+  return getJson<SaldoRemessaCdDto[]>(
+    url("/api/movimentacoes/saldo-cd", { productId, productSku }),
+  );
 }
 
 export type RemessaManualItemInput = {

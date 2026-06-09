@@ -28,6 +28,10 @@ import {
   prepararRemessaSimbolicaFiscal,
   RemessaSimbolicaFiscalError,
 } from "../fiscal/remessa/index.js";
+import {
+  hasRemessaSaldoForAvanco,
+  resolveProductForAvanco,
+} from "./avanco-product-resolve.js";
 
 export class AvancoCdError extends Error {
   constructor(message: string) {
@@ -41,6 +45,7 @@ export async function emitirAvancoEntreCds(
   input: {
     tenantId: string;
     productId: string;
+    productSku?: string;
     quantidade: number;
     unidadeOrigemId: string;
     unidadeDestinoId: string;
@@ -53,14 +58,37 @@ export async function emitirAvancoEntreCds(
     throw new AvancoCdError("CD de origem e destino devem ser diferentes");
   }
 
-  const [tenant, product, origem, destino] = await Promise.all([
+  const productId = input.productId.trim();
+  const [tenant, origem, destino] = await Promise.all([
     prisma.tenant.findUniqueOrThrow({ where: { id: input.tenantId } }),
-    prisma.product.findFirst({ where: { id: input.productId, tenantId: input.tenantId } }),
     getUnidadeAtivaDoTenant(prisma, input.tenantId, input.unidadeOrigemId),
     getUnidadeAtivaDoTenant(prisma, input.tenantId, input.unidadeDestinoId),
   ]);
 
-  if (!product) throw new AvancoCdError("Produto não encontrado");
+  const resolved = await resolveProductForAvanco(
+    prisma,
+    input.tenantId,
+    productId,
+    input.productSku,
+  );
+  if (!resolved) {
+    const temSaldo = await hasRemessaSaldoForAvanco(
+      prisma,
+      input.tenantId,
+      productId,
+      input.productSku,
+    );
+    const skuHint = input.productSku?.trim() ? ` (SKU ${input.productSku.trim()})` : "";
+    if (temSaldo) {
+      throw new AvancoCdError(
+        `Há saldo FIFO${skuHint}, mas o produto não está no cadastro desta empresa. Abra Produtos e confira se o SKU está cadastrado com regra fiscal e preço de custo.`,
+      );
+    }
+    throw new AvancoCdError(
+      `Produto não encontrado nesta empresa${skuHint}. Cadastre em Produtos ou emita nova remessa física para o CD de origem.`,
+    );
+  }
+  const { product, fifoProductId } = resolved;
   if (!origem) throw new UnidadeLogisticaError("CD de origem não encontrado ou inativo");
   if (!destino) throw new UnidadeLogisticaError("CD de destino não encontrado ou inativo");
 
@@ -74,7 +102,7 @@ export async function emitirAvancoEntreCds(
       alocacoes = await debitarSaldoRemessaPorCd(
         tx,
         input.tenantId,
-        input.productId,
+        fifoProductId,
         input.quantidade,
         input.unidadeOrigemId,
       );

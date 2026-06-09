@@ -190,7 +190,7 @@ Usadas em outros fluxos, não na emissão inicial:
 | Função | Arquivo | Uso |
 |--------|---------|-----|
 | `debitarSaldoRemessaPorCd` | `backend/src/services/fiscal/remessa/remessa-fifo.ts` | Avanço entre CDs / venda consome saldo FIFO |
-| `prepararRemessaSimbolicaFiscal` | `backend/src/services/fiscal/remessa/remessa-simbolica-fiscal.ts` | Remessa **simbólica** (CFOP 5949 fixo, outro tipo) |
+| `prepararRemessaSimbolicaFiscal` | `backend/src/services/fiscal/remessa/remessa-simbolica-fiscal.ts` | Remessa **simbólica** (CFOP 5949/6949 via `resolveRemessaCfop`) |
 
 ---
 

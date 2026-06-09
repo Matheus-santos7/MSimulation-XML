@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { NFeTipo } from "../../../generated/prisma/client.js";
+import type { PrismaClient } from "../../../generated/prisma/client.js";
 import {
   consumirSaldoRemessaFifo,
   debitarSaldoRemessaPorCd,
   estornarConsumosRemessa,
+  listarSaldoRemessaPorCd,
   SaldoRemessaInsuficienteError,
 } from "./remessa-fifo.js";
 
@@ -220,5 +222,48 @@ describe("remessa-fifo", () => {
 
     const alocacoes = await consumirSaldoRemessaFifo(tx, tenantId, productId, 2, "ret-1");
     assert.deepEqual(alocacoes, [{ remessaNfeId: "r1", nfeItemId: "ok", quantidade: 2 }]);
+  });
+});
+
+describe("listarSaldoRemessaPorCd", () => {
+  it("agrega saldo FIFO por CD de destino da remessa", async () => {
+    const prisma = {
+      nfeItem: {
+        findMany: async () => [
+          {
+            productId,
+            saldoDisponivel: 5,
+            nfe: {
+              unidadeDestinoId: "unidade-a",
+              unidadeDestino: { codigo: "SP01", nome: "Cajamar", uf: "SP" },
+            },
+          },
+          {
+            productId,
+            saldoDisponivel: 3,
+            nfe: {
+              unidadeDestinoId: "unidade-a",
+              unidadeDestino: { codigo: "SP01", nome: "Cajamar", uf: "SP" },
+            },
+          },
+          {
+            productId,
+            saldoDisponivel: 7,
+            nfe: {
+              unidadeDestinoId: "unidade-b",
+              unidadeDestino: { codigo: "SC01", nome: "Joinville", uf: "SC" },
+            },
+          },
+        ],
+      },
+    } as unknown as PrismaClient;
+
+    const rows = await listarSaldoRemessaPorCd(prisma, tenantId, productId);
+
+    assert.equal(rows.length, 2);
+    assert.equal(rows.find((r) => r.unidadeDestinoId === "unidade-a")?.saldo, 8);
+    assert.equal(rows.find((r) => r.unidadeDestinoId === "unidade-b")?.saldo, 7);
+    assert.equal(rows[0]!.unidade?.codigo, "SC01");
+    assert.equal(rows[1]!.unidade?.codigo, "SP01");
   });
 });

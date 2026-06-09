@@ -15,7 +15,15 @@ export function taxSnapshotFromRule(rule: ResolvedTaxRule | null, fallbackAliqIc
   const cofins = (taxes.cofins as Record<string, unknown> | undefined) ?? {};
   const ibsCbs = (taxes.ibsCbs as Record<string, unknown> | undefined) ?? {};
 
-  const toText = (v: unknown, fallback = ""): string => (typeof v === "string" ? v : fallback);
+  const toText = (v: unknown, fallback = ""): string => {
+    if (v == null) return fallback;
+    if (typeof v === "string") {
+      const t = v.trim();
+      return t || fallback;
+    }
+    if (typeof v === "number" && Number.isFinite(v)) return String(Math.trunc(v));
+    return fallback;
+  };
   const toNum = (v: unknown, fallback = 0): number => {
     if (typeof v === "number" && Number.isFinite(v)) return v;
     const n = Number(v);

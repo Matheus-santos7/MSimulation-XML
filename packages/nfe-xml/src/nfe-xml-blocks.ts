@@ -52,9 +52,9 @@ export function formatNfeQuantity(q: number): string {
   return rounded.toFixed(4);
 }
 
-/** IPI não tributado — remessa ML: cEnq 999, CST 53. */
+/** @deprecated Use `buildIpiXmlFromEngine` / snapshot da regra — mantido só para compat. */
 export function impostoIpiRemessaXml(): string {
-  return impostoIpiIntXml("53", "999");
+  return impostoIpiIntXml();
 }
 
 export function impostoIpiIntXml(cst = "55", cEnq = "103"): string {
@@ -64,27 +64,120 @@ export function impostoIpiIntXml(cst = "55", cEnq = "103"): string {
           </IPI>`;
 }
 
+/** Arredondamento comercial em 2 casas — alinhado ao tax-engine do backend. */
+export function roundMoney(value: number): number {
+  return Number((value + Number.EPSILON).toFixed(2));
+}
+
+/** Entradas para cálculo da BC do IBS/CBS por item (NT 2025.002, regra UB16-10). */
+export type IbsCbsVBcInput = {
+  vProd: number;
+  vServ?: number;
+  vFrete?: number;
+  vSeg?: number;
+  vOutro?: number;
+  vII?: number;
+  vDesc?: number;
+  vPIS?: number;
+  vCOFINS?: number;
+  vICMS?: number;
+  vICMSUFDest?: number;
+  vFCP?: number;
+  vFCPUFDest?: number;
+  vICMSMono?: number;
+  vISSQN?: number;
+  vIS?: number;
+};
+
+/**
+ * CST com ind_gIBSCBS = 0 (isenção, suspensão, imunidade etc.) não deve informar gIBSCBS.
+ * Faixa 400–619 conforme tabela de indicadores da NT 2025.002.
+ */
+export function cstRequiresGIbscbs(cst: string): boolean {
+  const code = Number(cst.slice(0, 3));
+  if (!Number.isFinite(code)) return true;
+  return code < 400 || code >= 620;
+}
+
+function resolveEmitGIbscbs(ibsCbs: Record<string, unknown> | null | undefined, cst: string): boolean {
+  const flag = ibsCbs?.emitGIBSCBS ?? ibsCbs?.indGIbscbs;
+  if (flag === true || flag === 1 || flag === "1") return true;
+  if (flag === false || flag === 0 || flag === "0") return false;
+  return cstRequiresGIbscbs(cst);
+}
+
+/** BC do item: vProd (+ encargos) − tributos que compõem a base (UB16-10). */
+export function calcIbsCbsItemVBc(input: IbsCbsVBcInput): number {
+  return roundMoney(
+    (input.vProd ?? 0) +
+      (input.vServ ?? 0) +
+      (input.vFrete ?? 0) +
+      (input.vSeg ?? 0) +
+      (input.vOutro ?? 0) +
+      (input.vII ?? 0) -
+      (input.vDesc ?? 0) -
+      (input.vPIS ?? 0) -
+      (input.vCOFINS ?? 0) -
+      (input.vICMS ?? 0) -
+      (input.vICMSUFDest ?? 0) -
+      (input.vFCP ?? 0) -
+      (input.vFCPUFDest ?? 0) -
+      (input.vICMSMono ?? 0) -
+      (input.vISSQN ?? 0) +
+      (input.vIS ?? 0),
+  );
+}
+
+/** Soma das BC já arredondadas por item — evita rejeição 1076. */
+export function sumIbsCbsVBc(values: readonly number[]): number {
+  return values.reduce((acc, v) => roundMoney(acc + v), 0);
+}
+
+/** Resolve vBC do item: explícito no payload ou fórmula UB16-10; null se CST não exige gIBSCBS. */
+export function resolveIbsCbsItemVBc(
+  ibsCbs: Record<string, unknown> | null | undefined,
+  bcInput: IbsCbsVBcInput,
+  defaults: IbsCbsDefaults,
+): number | null {
+  const cst = String(ibsCbs?.st ?? ibsCbs?.cst ?? defaults.cst).slice(0, 3);
+  if (!resolveEmitGIbscbs(ibsCbs, cst)) return null;
+  const explicit = ibsCbs?.vBC ?? ibsCbs?.vBc;
+  if (explicit != null) return roundMoney(asNum(explicit, 0));
+  return calcIbsCbsItemVBc(bcInput);
+}
+
 function ibsCbsImpostoXml(
   ibsCbs: Record<string, unknown> | null | undefined,
   defaults: IbsCbsDefaults,
   alwaysEmit: boolean,
+  vBC?: number | null,
 ): string {
   const hasExplicit =
     !!ibsCbs && (ibsCbs.st != null || ibsCbs.cst != null || ibsCbs.cClassTrib != null);
   if (!alwaysEmit && !hasExplicit) return "";
   const cst = String(ibsCbs?.st ?? ibsCbs?.cst ?? defaults.cst).slice(0, 3);
   const cClassTrib = String(ibsCbs?.cClassTrib ?? defaults.cClassTrib).slice(0, 6);
-  return `<IBSCBS><CST>${cst}</CST><cClassTrib>${cClassTrib}</cClassTrib></IBSCBS>`;
+  const gIbscbsXml =
+    vBC != null && Number.isFinite(vBC)
+      ? `<gIBSCBS><vBC>${vBC.toFixed(2)}</vBC></gIBSCBS>`
+      : "";
+  return `<IBSCBS><CST>${cst}</CST><cClassTrib>${cClassTrib}</cClassTrib>${gIbscbsXml}</IBSCBS>`;
 }
 
 /** Venda: emite IBSCBS apenas quando o payload traz dados. */
-export function ibsCbsImpostoXmlFromPayload(ibsCbs?: Record<string, unknown> | null): string {
-  return ibsCbsImpostoXml(ibsCbs, VENDA_IBS_CBS_DEFAULTS, false);
+export function ibsCbsImpostoXmlFromPayload(
+  ibsCbs?: Record<string, unknown> | null,
+  vBC?: number | null,
+): string {
+  return ibsCbsImpostoXml(ibsCbs, VENDA_IBS_CBS_DEFAULTS, false, vBC);
 }
 
 /** Remessa: sempre emite IBSCBS (padrão ML reforma tributária). */
-export function ibsCbsImpostoXmlRemessa(ibsCbs?: Record<string, unknown> | null): string {
-  return ibsCbsImpostoXml(ibsCbs, REMESSA_IBS_CBS_DEFAULTS, true);
+export function ibsCbsImpostoXmlRemessa(
+  ibsCbs?: Record<string, unknown> | null,
+  vBC?: number | null,
+): string {
+  return ibsCbsImpostoXml(ibsCbs, REMESSA_IBS_CBS_DEFAULTS, true, vBC);
 }
 
 export function vItemXml(vItem: number): string {

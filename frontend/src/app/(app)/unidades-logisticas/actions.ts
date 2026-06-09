@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { emitirAvancoCd, setUnidadeLogisticaPadrao } from "@/lib/fiscal-api";
+import { emitirAvancoCd, listSaldoRemessaPorCd, setUnidadeLogisticaPadrao } from "@/lib/fiscal-api";
+import type { SaldoRemessaCdDto } from "@/lib/fiscal-api";
 
 export type AvancoCdState = {
   error?: string;
@@ -10,14 +11,27 @@ export type AvancoCdState = {
   chaveSimbolica?: string;
 };
 
+export async function listarSaldoCdRemessaAction(
+  productId: string,
+  productSku?: string,
+): Promise<SaldoRemessaCdDto[]> {
+  if (!productId) return [];
+  return listSaldoRemessaPorCd(productId, productSku);
+}
+
+function readAvancoField(formData: FormData, key: string): string {
+  return String(formData.get(`avanco_${key}`) ?? "").trim();
+}
+
 export async function emitirAvancoCdAction(
   _prev: AvancoCdState,
   formData: FormData,
 ): Promise<AvancoCdState> {
-  const productId = String(formData.get("productId") ?? "");
-  const unidadeOrigemId = String(formData.get("unidadeOrigemId") ?? "");
-  const unidadeDestinoId = String(formData.get("unidadeDestinoId") ?? "");
-  const quantidade = Number(formData.get("quantidade") ?? 0);
+  const productId = readAvancoField(formData, "productId");
+  const productSku = readAvancoField(formData, "productSku");
+  const unidadeOrigemId = readAvancoField(formData, "unidadeOrigemId");
+  const unidadeDestinoId = readAvancoField(formData, "unidadeDestinoId");
+  const quantidade = Number(readAvancoField(formData, "quantidade"));
 
   if (!productId || !unidadeOrigemId || !unidadeDestinoId) {
     return { error: "Preencha produto, CD origem e CD destino" };
@@ -29,11 +43,13 @@ export async function emitirAvancoCdAction(
   try {
     const result = await emitirAvancoCd({
       productId,
+      productSku: productSku || undefined,
       quantidade,
       unidadeOrigemId,
       unidadeDestinoId,
     });
     revalidatePath("/unidades-logisticas");
+    revalidatePath("/operacoes");
     revalidatePath("/nfe");
     return {
       success: true,

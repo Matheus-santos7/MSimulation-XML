@@ -139,6 +139,8 @@ function transactionLabel(v?: string): string {
 }
 
 function baseRuleId(v: string): string {
+  const withOrigin = v.match(/^(.+)-[A-Z]{2}-(taxpayer|non_taxpayer)-(sale|inbound)$/i);
+  if (withOrigin) return withOrigin[1]!;
   return v.replace(/[-_](taxpayer|non_taxpayer|sale|inbound)$/i, "").replace(/[-_](taxpayer|non_taxpayer)$/i, "");
 }
 

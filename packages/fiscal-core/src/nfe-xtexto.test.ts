@@ -4,7 +4,7 @@ import { NFeTipo } from "./nfe-tipo.js";
 import { buildNfeObsContXTexto, xTextoFromNfe } from "./nfe-xtexto.js";
 
 describe("fiscal-core / nfe-xtexto", () => {
-  it("remessa física — padrão WAREHOUSE_TRANSFER ML", () => {
+  it("remessa física — padrão INBOUND ML", () => {
     const pedidoMl = "40000018781520";
     assert.equal(
       buildNfeObsContXTexto({
@@ -13,7 +13,7 @@ describe("fiscal-core / nfe-xtexto", () => {
         natOp: "Outras Saidas - Remessa para Deposito Temporario",
         pedidoMl,
       }),
-      `WAREHOUSE_TRANSFER_MFL_TO_OLSS-inbound-${pedidoMl}-21-OLS`,
+      `INBOUND-inbound-${pedidoMl}-1-1-OLSS-279642028`,
     );
   });
 

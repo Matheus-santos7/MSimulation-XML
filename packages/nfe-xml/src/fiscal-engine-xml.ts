@@ -88,6 +88,16 @@ function asRecord(v: unknown): Record<string, unknown> | null {
   return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
 }
 
+export function fiscalCodeText(v: unknown, fallback: string): string {
+  if (v == null) return fallback;
+  if (typeof v === "string") {
+    const t = v.trim();
+    return t || fallback;
+  }
+  if (typeof v === "number" && Number.isFinite(v)) return String(Math.trunc(v));
+  return fallback;
+}
+
 function num(v: unknown, fallback = 0): number {
   if (typeof v === "number" && Number.isFinite(v)) return v;
   const n = Number(v);
@@ -211,13 +221,38 @@ export function buildIcmsXmlFromEngineItem(icms: EngineIcms): string {
   return `<ICMS><ICMS${cst}><orig>${icms.orig}</orig><CST>${cst}</CST><modBC>${modBC}</modBC><vBC>${icms.vBC.toFixed(2)}</vBC><pICMS>${icms.pICMS.toFixed(4)}</pICMS><vICMS>${icms.vICMS.toFixed(2)}</vICMS>${pFcpXml}</ICMS${cst}></ICMS>`;
 }
 
+const IPI_CST_NAO_TRIBUTADO = new Set(["53", "54", "55"]);
+
+export function isIpiNaoTributadoCst(cst: string): boolean {
+  return IPI_CST_NAO_TRIBUTADO.has(cst.slice(0, 2));
+}
+
 export function buildIpiXmlFromEngine(ipi: EngineIpi): string {
   const cst = ipi.cst.slice(0, 2);
   const cEnq = ipi.cEnq ?? "999";
-  if (cst === "55" || cst === "54" || cst === "53") {
+  if (isIpiNaoTributadoCst(cst)) {
     return `<IPI><cEnq>${cEnq}</cEnq><IPINT><CST>${cst}</CST></IPINT></IPI>`;
   }
   return `<IPI><cEnq>${cEnq}</cEnq><IPITrib><CST>${cst}</CST><vBC>${ipi.vBC.toFixed(2)}</vBC><pIPI>${ipi.pIPI.toFixed(2)}</pIPI><vIPI>${ipi.vIPI.toFixed(2)}</vIPI></IPITrib></IPI>`;
+}
+
+/** Fallback quando o item da engine não traz IPI — lê snapshot da regra no fiscalPayload. */
+export function buildIpiXmlFromFiscalSnapshot(
+  ipi: Record<string, unknown>,
+  vBcFallback: number,
+): string {
+  const cstIpi =
+    typeof ipi.st === "string"
+      ? ipi.st.slice(0, 2)
+      : fiscalCodeText(ipi.st, "55").slice(0, 2);
+  const cEnq = fiscalCodeText(ipi.codEnq, "103");
+  if (isIpiNaoTributadoCst(cstIpi)) {
+    return buildIpiXmlFromEngine({ cst: cstIpi, cEnq, vBC: 0, pIPI: 0, vIPI: 0 });
+  }
+  const vBcIpi = num(ipi.vBc, vBcFallback);
+  const pIpi = num(ipi.aliquota, 0);
+  const vIpi = Math.round(vBcIpi * (pIpi / 100) * 100) / 100;
+  return buildIpiXmlFromEngine({ cst: cstIpi, cEnq, vBC: vBcIpi, pIPI: pIpi, vIPI: vIpi });
 }
 
 const PIS_COFINS_NT = new Set(["04", "05", "06", "07", "08", "09"]);

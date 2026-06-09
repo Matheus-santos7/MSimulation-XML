@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import { AvancoCdForm } from "@/components/avanco-cd-form";
 import { PageHeader } from "@/components/fiscal-ui";
 import { UnidadesLogisticasTable } from "@/components/unidades-logisticas-table";
-import { listUnidadesLogisticas } from "@/lib/fiscal-api";
+import { listProducts, listUnidadesLogisticas } from "@/lib/fiscal-api";
 
 export const metadata: Metadata = { title: "Unidades Logísticas" };
 
@@ -12,11 +13,14 @@ type Props = {
 export default async function UnidadesLogisticasPage({ searchParams }: Props) {
   const { q, cnpj } = await searchParams;
 
-  const unidades = await listUnidadesLogisticas({
-    q: q?.trim() || undefined,
-    cnpj: cnpj?.trim() || undefined,
-    ativa: true,
-  });
+  const [unidades, products] = await Promise.all([
+    listUnidadesLogisticas({
+      q: q?.trim() || undefined,
+      cnpj: cnpj?.trim() || undefined,
+      ativa: true,
+    }),
+    listProducts(),
+  ]);
 
   const padrao = unidades.find((u) => u.padrao);
 
@@ -46,6 +50,8 @@ export default async function UnidadesLogisticasPage({ searchParams }: Props) {
           </p>
         )}
       </div>
+
+      <AvancoCdForm products={products} unidades={unidades} />
 
       <div className="space-y-3">
         <form className="flex flex-wrap gap-2 items-end">

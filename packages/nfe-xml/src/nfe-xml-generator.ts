@@ -36,9 +36,13 @@ import {
   resolveRemessaTranspVol,
   ibsCbsImpostoXmlFromPayload,
   ibsCbsImpostoXmlRemessa,
+  type IbsCbsVBcInput,
   icmsTotXml,
+  REMESSA_IBS_CBS_DEFAULTS,
+  resolveIbsCbsItemVBc,
+  sumIbsCbsVBc,
+  VENDA_IBS_CBS_DEFAULTS,
   impostoIpiIntXml,
-  impostoIpiRemessaXml,
   nfeAutXmlBlocks,
   nfeTotalXml,
   nfeTranspXml,
@@ -49,9 +53,12 @@ import {
 import {
   buildIcmsXmlFromEngineItem,
   buildIpiXmlFromEngine,
+  buildIpiXmlFromFiscalSnapshot,
   buildPisCofinsXmlFromEngine,
+  fiscalCodeText,
   icmsTotFromEngine,
   parseEngineFromFiscalPayload,
+  type EngineItem,
 } from "./fiscal-engine-xml.js";
 import { resolveEmitterFromPayload } from "./resolve-emitter.js";
 import type {
@@ -249,9 +256,45 @@ function hasMlFulfillmentPayload(fiscal: Record<string, unknown>): boolean {
   return fiscal.ibsCbs != null || fiscal.autXmlCpfs != null || fiscal.infIntermed != null;
 }
 
-function fulfillmentImpostoExtras(fiscal: Record<string, unknown>): string {
+function ibsCbsBcInputFromEngineItem(engineItem?: EngineItem): IbsCbsVBcInput {
+  return {
+    vProd: engineItem?.vProd ?? 0,
+    vPIS: engineItem?.pis.vPIS ?? 0,
+    vCOFINS: engineItem?.cofins.vCOFINS ?? 0,
+    vICMS: engineItem?.icms.vICMS ?? 0,
+    vFCP: engineItem?.icms.vFCP ?? 0,
+    vICMSUFDest: engineItem?.difal?.vICMSUFDest ?? 0,
+    vFCPUFDest: engineItem?.difal?.vFCPUFDest ?? 0,
+  };
+}
+
+function ibsCbsBcInputFromSnapshot(
+  vProd: number,
+  fiscal: Record<string, unknown>,
+  valorIcms: number,
+): IbsCbsVBcInput {
+  const pis = (fiscal.pis as Record<string, unknown> | undefined) ?? {};
+  const cofins = (fiscal.cofins as Record<string, unknown> | undefined) ?? {};
+  const vBcPis = asNum(pis.vBc, vProd);
+  const pPis = asNum(pis.aliquota, 0);
+  const pCofins = asNum(cofins.aliquota, 0);
+  const difal = (fiscal.difal as Record<string, unknown> | undefined) ?? {};
+  return {
+    vProd,
+    vPIS: Math.round(vBcPis * (pPis / 100) * 100) / 100,
+    vCOFINS: Math.round(vBcPis * (pCofins / 100) * 100) / 100,
+    vICMS: valorIcms,
+    vICMSUFDest: asNum(difal.vICMSUFDest, 0),
+    vFCPUFDest: asNum(difal.vFCPUFDest, 0),
+  };
+}
+
+function fulfillmentImpostoExtras(
+  fiscal: Record<string, unknown>,
+  vBC: number | null,
+): string {
   if (!fiscal.ibsCbs) return "";
-  return `\n          ${ibsCbsImpostoXmlRemessa(fiscal.ibsCbs as Record<string, unknown>)}`;
+  return `\n          ${ibsCbsImpostoXmlRemessa(fiscal.ibsCbs as Record<string, unknown>, vBC)}`;
 }
 
 function fulfillmentDetTail(fiscal: Record<string, unknown>, vProd: number): string {
@@ -269,7 +312,7 @@ function icmsTotBlock(
 function totalBlock(
   icmsTot: string,
   vNF: number,
-  opts?: { includeReformaTributaria?: boolean },
+  opts?: { includeReformaTributaria?: boolean; vBCIBSCBS?: number },
 ): string {
   return nfeTotalXml(icmsTot, vNF, opts);
 }
@@ -393,9 +436,8 @@ function buildRemessaNFeXML(
       idDest === 2,
     );
   }
-  const totBlock = totalBlock(icmsTot, vNFTotal, { includeReformaTributaria: true });
-
   const detBlocks: string[] = [];
+  const ibsCbsVBcValues: number[] = [];
   for (let i = 0; i < itemCount; i++) {
     const dtoItem = nfe.itens?.[i];
     const prod = products?.[i] ?? dtoItem?.product ?? (i === 0 ? product : undefined);
@@ -418,15 +460,40 @@ function buildRemessaNFeXML(
 
     let icmsXml: string;
     let pisCofinsXml: string;
+    let ipiXml: string;
     if (engineItem) {
       icmsXml = buildIcmsXmlFromEngineItem(engineItem.icms);
       pisCofinsXml = buildPisCofinsXmlFromEngine(engineItem.pis, engineItem.cofins);
+      if (engineItem.ipi) {
+        ipiXml = buildIpiXmlFromEngine(engineItem.ipi);
+      } else {
+        const ipiSnap = (fiscal.ipi as Record<string, unknown> | undefined) ?? {};
+        ipiXml =
+          ipiSnap.st != null || ipiSnap.codEnq != null
+            ? buildIpiXmlFromFiscalSnapshot(ipiSnap, emitter.bases.vBcIpi)
+            : impostoIpiIntXml();
+      }
     } else {
       const vBcIcms = asNum(icms.vBc, emitter.bases.vBcIcms);
       const valorIcms = asNum(icms.valorIcms, nfe.valorICMS);
       icmsXml = buildIcmsXmlFromSnapshot(icms, { orig, valor: vBcIcms, valorIcms });
       pisCofinsXml = pisCofinsXmlFromSnapshot(fiscal, emitter);
+      const ipiSnap = (fiscal.ipi as Record<string, unknown> | undefined) ?? {};
+      ipiXml =
+        ipiSnap.st != null || ipiSnap.codEnq != null
+          ? buildIpiXmlFromFiscalSnapshot(ipiSnap, emitter.bases.vBcIpi)
+          : impostoIpiIntXml();
     }
+
+    const ibsCbsBcInput = engineItem
+      ? ibsCbsBcInputFromEngineItem(engineItem)
+      : ibsCbsBcInputFromSnapshot(
+          vProdOut,
+          fiscal,
+          asNum(icms.valorIcms, nfe.valorICMS),
+        );
+    const itemVBcIbsCbs = resolveIbsCbsItemVBc(ibsCbs, ibsCbsBcInput, REMESSA_IBS_CBS_DEFAULTS);
+    if (itemVBcIbsCbs != null) ibsCbsVBcValues.push(itemVBcIbsCbs);
 
     detBlocks.push(`      <det nItem="${i + 1}">
         <prod>
@@ -448,12 +515,17 @@ function buildRemessaNFeXML(
         <imposto>
           <vTotTrib>0.00</vTotTrib>
           ${icmsXml}
-          ${impostoIpiRemessaXml()}
+          ${ipiXml}
           ${pisCofinsXml}
-          ${ibsCbsImpostoXmlRemessa(ibsCbs)}
+          ${ibsCbsImpostoXmlRemessa(ibsCbs, itemVBcIbsCbs)}
         </imposto>${infAdProd}${vItem}
       </det>`);
   }
+
+  const totBlock = totalBlock(icmsTot, vNFTotal, {
+    includeReformaTributaria: true,
+    vBCIBSCBS: sumIbsCbsVBc(ibsCbsVBcValues),
+  });
 
   const detXml = detBlocks.join("\n");
 
@@ -614,8 +686,25 @@ function buildRetornoNFeXML(
       idDest === 2,
     );
   }
+  const ibsCbs = (fiscal.ibsCbs as Record<string, unknown> | undefined) ?? {};
+  const retornoIbsCbsBcInput = engine?.itens[0]
+    ? ibsCbsBcInputFromEngineItem(engine.itens[0])
+    : ibsCbsBcInputFromSnapshot(
+        vProd,
+        fiscal,
+        asNum(
+          ((fiscal.icms as Record<string, unknown> | undefined) ?? {}).valorIcms,
+          nfe.valorICMS,
+        ),
+      );
+  const retornoVBcIbsCbs = fulfillment
+    ? resolveIbsCbsItemVBc(ibsCbs, retornoIbsCbsBcInput, REMESSA_IBS_CBS_DEFAULTS)
+    : null;
   const totBlock = fulfillment
-    ? totalBlock(icmsTot, vProd, { includeReformaTributaria: true })
+    ? totalBlock(icmsTot, vProd, {
+        includeReformaTributaria: true,
+        vBCIBSCBS: retornoVBcIbsCbs != null ? sumIbsCbsVBc([retornoVBcIbsCbs]) : 0,
+      })
     : icmsTot;
 
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -699,7 +788,7 @@ ${autXml}      <det nItem="1">
           <vTotTrib>0.00</vTotTrib>
           ${icmsXml}
           ${impostoIpiIntXml("05")}
-          ${impostoPisCofinsOutrXml("98", "98")}${fulfillmentImpostoExtras(fiscal)}
+          ${impostoPisCofinsOutrXml("98", "98")}${fulfillmentImpostoExtras(fiscal, retornoVBcIbsCbs)}
         </imposto>${infAdProd}${fulfillmentDetTail(fiscal, vProd)}
       </det>
       <total>
@@ -791,7 +880,7 @@ function buildVendaNFeXML(
     const cstPis = typeof pis.st === "string" ? pis.st.slice(0, 2) : "01";
     const cstCofins = typeof cofins.st === "string" ? cofins.st.slice(0, 2) : "01";
     const cstIpi = typeof ipi.st === "string" ? ipi.st.slice(0, 2) : "50";
-    const cenq = typeof ipi.codEnq === "string" ? ipi.codEnq : "999";
+    const cenq = fiscalCodeText(ipi.codEnq, "999");
 
     icmsXml = buildIcmsXmlFromSnapshot(icms, { orig, valor: vBcIcms, valorIcms });
     ipiXml =
@@ -822,7 +911,22 @@ function buildVendaNFeXML(
     );
   }
 
-  const ibsCbsXml = ibsCbsImpostoXmlFromPayload(ibsCbs);
+  const vendaIbsCbsBcInput = engine?.itens[0]
+    ? ibsCbsBcInputFromEngineItem(engine.itens[0])
+    : ibsCbsBcInputFromSnapshot(vProdOut, fiscal, asNum(icms.valorIcms, nfe.valorICMS));
+  const hasIbsCbsPayload =
+    ibsCbs.st != null || ibsCbs.cst != null || ibsCbs.cClassTrib != null;
+  const vendaVBcIbsCbs = hasIbsCbsPayload
+    ? resolveIbsCbsItemVBc(ibsCbs, vendaIbsCbsBcInput, VENDA_IBS_CBS_DEFAULTS)
+    : null;
+  const ibsCbsXml = ibsCbsImpostoXmlFromPayload(ibsCbs, vendaVBcIbsCbs);
+  if (ibsCbsXml) {
+    const vNFTotal = engine?.totais.vNF ?? nfe.valor + vFrete;
+    totBlock = totalBlock(totBlock, vNFTotal, {
+      includeReformaTributaria: true,
+      vBCIBSCBS: vendaVBcIbsCbs != null ? sumIbsCbsVBc([vendaVBcIbsCbs]) : 0,
+    });
+  }
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">

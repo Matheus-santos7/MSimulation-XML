@@ -8,6 +8,10 @@ export {
   consumirSaldoRemessaFifo,
   debitarSaldoRemessaPorCd,
   estornarConsumosRemessa,
+  listarSaldoRemessaPorCd,
+  remessaItemSaldoWhere,
+  saldoRemessaDisponivel,
   SaldoRemessaInsuficienteError,
+  type SaldoRemessaCdRow,
 } from "./remessa-fifo.js";
 export { emitirCteRemessa } from "./cte-remessa-service.js";

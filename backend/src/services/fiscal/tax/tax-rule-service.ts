@@ -67,14 +67,23 @@ export async function resolveTaxRule(
   const originUf = params.originUf.toUpperCase().trim();
   const destinationUf = params.destinationUf.toUpperCase().trim();
 
-  const ruleId = params.ruleBaseId?.trim()
-    ? buildTaxRuleRowId(params.ruleBaseId.trim(), params.customerType, params.transactionType)
+  const ruleBaseId = params.ruleBaseId?.trim();
+  const ruleId = ruleBaseId
+    ? buildTaxRuleRowId(ruleBaseId, params.customerType, params.transactionType, originUf)
+    : undefined;
+  const legacyRuleId = ruleBaseId
+    ? buildTaxRuleRowId(ruleBaseId, params.customerType, params.transactionType)
     : undefined;
 
   const rule = ruleId
-    ? await prisma.taxRule.findUnique({
+    ? (await prisma.taxRule.findUnique({
         where: { tenantId_ruleId: { tenantId, ruleId } },
-      })
+      })) ??
+      (legacyRuleId
+        ? await prisma.taxRule.findUnique({
+            where: { tenantId_ruleId: { tenantId, ruleId: legacyRuleId } },
+          })
+        : null)
     : await prisma.taxRule.findFirst({
         where: {
           tenantId,

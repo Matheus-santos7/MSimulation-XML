@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { AvancoCdForm } from "@/components/avanco-cd-form";
 import { RemessaManualForm } from "@/components/remessa-manual-form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { UnidadeLogisticaDto } from "@/lib/fiscal-api";
@@ -42,13 +43,7 @@ export function OperacoesTabs({ products, unidades }: Props) {
       </TabsContent>
 
       <TabsContent value="avanco">
-        <PlaceholderFase
-          titulo="Avanço entre CDs"
-          fase={3}
-          detalhe="Já disponível em Unidades ML; será movido para esta tela na fase 3."
-          linkHref="/unidades-logisticas"
-          linkLabel="Ir para Unidades ML"
-        />
+        <AvancoCdForm products={products} unidades={unidades} />
       </TabsContent>
 
       <TabsContent value="simbolica">

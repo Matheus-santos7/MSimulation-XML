@@ -8,8 +8,11 @@ import { VendaChainError } from "./types.js";
 export function assertProdutoComRegra(pedido: PedidoForEmit): string {
   const ruleBaseId = pedido.product.taxRuleBaseId?.trim();
   if (!ruleBaseId) {
+    const label = pedido.product.sku
+      ? `${pedido.product.nome ?? "Produto"} (SKU ${pedido.product.sku})`
+      : (pedido.product.nome ?? "Produto");
     throw new VendaChainError(
-      "Produto sem regra fiscal associada. Edite o cadastro do produto e selecione a regra da planilha.",
+      `${label} sem regra fiscal associada. Edite o cadastro do produto e selecione a regra da planilha (necessário se as regras foram excluídas e reimportadas).`,
     );
   }
   return ruleBaseId;

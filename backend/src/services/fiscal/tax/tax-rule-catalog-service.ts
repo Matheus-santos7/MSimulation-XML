@@ -45,8 +45,17 @@ export async function assertProductTaxRuleBaseId(
   const baseId = taxRuleBaseId.trim();
   if (!baseId) throw new TaxRuleCatalogError("Selecione a regra fiscal do produto");
 
+  const tenantOrigin = tenantUf?.toUpperCase().slice(0, 2);
   const row = await prisma.taxRule.findFirst({
-    where: { tenantId, ruleId: { startsWith: `${baseId}-` } },
+    where: {
+      tenantId,
+      ruleId: { startsWith: `${baseId}-` },
+      ...(tenantOrigin
+        ? {
+            OR: [{ origin: tenantOrigin }, { uf: tenantOrigin }],
+          }
+        : {}),
+    },
     select: { origin: true, uf: true },
   });
   if (!row) {
@@ -68,25 +77,14 @@ export async function assertProductTaxRuleBaseId(
 export async function deleteAllTaxRules(
   prisma: PrismaClient,
   tenantId: string,
-): Promise<{ deleted: number; unlinkedProducts: number }> {
+): Promise<{ deleted: number }> {
   const rulesCount = await prisma.taxRule.count({ where: { tenantId } });
   if (rulesCount === 0) {
     throw new TaxRuleCatalogError("Nenhuma regra cadastrada para esta empresa");
   }
 
-  return prisma.$transaction(async (tx) => {
-    const unlinked = await tx.product.updateMany({
-      where: {
-        tenantId,
-        taxRuleBaseId: { not: null },
-        NOT: { taxRuleBaseId: "" },
-      },
-      data: { taxRuleBaseId: null },
-    });
-
-    const result = await tx.taxRule.deleteMany({ where: { tenantId } });
-    return { deleted: result.count, unlinkedProducts: unlinked.count };
-  });
+  const result = await prisma.taxRule.deleteMany({ where: { tenantId } });
+  return { deleted: result.count };
 }
 
 export async function deleteTaxRuleGroup(

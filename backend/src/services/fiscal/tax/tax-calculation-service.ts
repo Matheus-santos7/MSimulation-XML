@@ -195,13 +195,15 @@ export function montarItemFiscal(
       pRedBC: snapshot.icms.pRedBc,
       pFCP: snapshot.icms.pIcmsFcp,
     },
-    ipi: snapshot.ipi.aliquota > 0
-      ? {
-          cst: String(snapshot.ipi.st).slice(0, 2),
-          pIPI: snapshot.ipi.aliquota,
-          cEnq: snapshot.ipi.codEnq,
-        }
-      : undefined,
+  // IPI com alíquota zero ainda deve ir ao XML (ex.: CST 55 + cEnq 103 na remessa).
+    ipi:
+      rule != null || snapshot.ipi.aliquota > 0
+        ? {
+            cst: String(snapshot.ipi.st).slice(0, 2),
+            pIPI: snapshot.ipi.aliquota,
+            cEnq: snapshot.ipi.codEnq,
+          }
+        : undefined,
     pis: {
       cst: String(snapshot.pis.st).slice(0, 2),
       aliquota: snapshot.pis.aliquota,

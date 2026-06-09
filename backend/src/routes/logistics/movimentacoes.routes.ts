@@ -8,10 +8,11 @@ import {
   avancoCdBody,
   movimentacoesQuery,
   remessaManualBody,
+  saldoCdQuery,
 } from "../../schemas/logistics/unidades-logisticas.js";
 import { emitirAvancoEntreCds, AvancoCdError } from "../../services/logistics/avanco-cd-service.js";
 import { listarMovimentacoesProduto } from "../../services/logistics/movimentacao-produto-service.js";
-import { emitirRemessaManual, RemessaError } from "../../services/fiscal/index.js";
+import { emitirRemessaManual, listarSaldoRemessaPorCd, RemessaError } from "../../services/fiscal/index.js";
 import { UnidadeLogisticaError } from "../../services/logistics/unidade-logistica-service.js";
 
 export function registerMovimentacoesRoutes(app: FastifyInstance) {
@@ -54,5 +55,19 @@ export function registerMovimentacoesRoutes(app: FastifyInstance) {
       productId: q.productId,
       limit: q.limit,
     });
+  });
+
+  app.get("/movimentacoes/saldo-cd", async (req, reply) => {
+    const tenantId = tenantIdFromRequest(req);
+    const parsed = saldoCdQuery.safeParse(req.query);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: "productId obrigatório", details: parsed.error.flatten() });
+    }
+    return listarSaldoRemessaPorCd(
+      app.prisma,
+      tenantId,
+      parsed.data.productId,
+      parsed.data.productSku,
+    );
   });
 }

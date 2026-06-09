@@ -25,7 +25,7 @@ export function buildNfeObsContXTexto(input: XTextoInput): string | null {
   const suf = ML_OLSS_WAREHOUSE_SUFFIX;
 
   if (tipo === NFeTipo.REMESSA || (nat.includes("Remessa para Deposito") && !nat.includes("Simbolica"))) {
-    return `WAREHOUSE_TRANSFER_MFL_TO_OLSS-inbound-${pedido}-21-OLS`;
+    return `INBOUND-inbound-${pedido}-1-1-OLSS-${suf}`;
   }
 
   if (tipo === NFeTipo.REMESSA_SIMBOLICA || (nat.includes("Remessa Simbolica") && nat.includes("Saidas"))) {

@@ -19,7 +19,7 @@ export class SaldoRemessaInsuficienteError extends Error {
   }
 }
 
-function remessaItemSaldoWhere(
+export function remessaItemSaldoWhere(
   tenantId: string,
   productId: string,
   unidadeDestinoId?: string,
@@ -37,6 +37,46 @@ function remessaItemSaldoWhere(
   };
 }
 
+const remessaSaldoNfeWhere = (tenantId: string) => ({
+  tenantId,
+  tipo: NFeTipo.REMESSA,
+  ...fiscalNotDeleted,
+});
+
+/** IDs de produto que podem ter saldo FIFO (cadastro + linhas legadas pelo SKU). */
+export async function collectRemessaSaldoProductIds(
+  prisma: Pick<PrismaClient, "product" | "nfeItem">,
+  tenantId: string,
+  productId: string,
+  productSku?: string,
+): Promise<string[]> {
+  const ids = new Set<string>();
+  if (productId) ids.add(productId);
+
+  const sku = productSku?.trim();
+  if (sku) {
+    const cadastro = await prisma.product.findFirst({
+      where: { tenantId, sku },
+      select: { id: true },
+    });
+    if (cadastro) ids.add(cadastro.id);
+
+    const fifoBySku = await prisma.nfeItem.findMany({
+      where: {
+        tenantId,
+        saldoDisponivel: { gt: 0 },
+        product: { sku },
+        nfe: remessaSaldoNfeWhere(tenantId),
+      },
+      select: { productId: true },
+      distinct: ["productId"],
+    });
+    for (const row of fifoBySku) ids.add(row.productId);
+  }
+
+  return [...ids];
+}
+
 export async function saldoRemessaDisponivel(
   prisma: PrismaClient,
   tenantId: string,
@@ -48,6 +88,83 @@ export async function saldoRemessaDisponivel(
     select: { saldoDisponivel: true },
   });
   return rows.reduce((acc, r) => acc + (r.saldoDisponivel ?? 0), 0);
+}
+
+export type SaldoRemessaCdRow = {
+  unidadeDestinoId: string;
+  productId: string;
+  saldo: number;
+  unidade: {
+    codigo: string;
+    nome: string;
+    uf: string;
+  } | null;
+};
+
+/** Saldo FIFO agregado por CD (unidade destino da remessa física). */
+export async function listarSaldoRemessaPorCd(
+  prisma: PrismaClient,
+  tenantId: string,
+  productId: string,
+  productSku?: string,
+): Promise<SaldoRemessaCdRow[]> {
+  const productIds = await collectRemessaSaldoProductIds(
+    prisma,
+    tenantId,
+    productId,
+    productSku,
+  );
+  const rows = await prisma.nfeItem.findMany({
+    where: {
+      tenantId,
+      productId: { in: productIds },
+      saldoDisponivel: { gt: 0 },
+      nfe: remessaSaldoNfeWhere(tenantId),
+    },
+    select: {
+      productId: true,
+      saldoDisponivel: true,
+      nfe: {
+        select: {
+          unidadeDestinoId: true,
+          unidadeDestino: {
+            select: { codigo: true, nome: true, uf: true },
+          },
+        },
+      },
+    },
+  });
+
+  const byCd = new Map<
+    string,
+    { saldo: number; unidade: SaldoRemessaCdRow["unidade"] }
+  >();
+
+  for (const row of rows) {
+    const cdId = row.nfe.unidadeDestinoId;
+    if (!cdId) continue;
+    const qty = row.saldoDisponivel ?? 0;
+    if (qty <= 0) continue;
+
+    const prev = byCd.get(cdId);
+    byCd.set(cdId, {
+      saldo: (prev?.saldo ?? 0) + qty,
+      unidade: row.nfe.unidadeDestino ?? prev?.unidade ?? null,
+    });
+  }
+
+  return [...byCd.entries()]
+    .map(([unidadeDestinoId, { saldo, unidade }]) => ({
+      unidadeDestinoId,
+      productId,
+      saldo,
+      unidade,
+    }))
+    .sort((a, b) => {
+      const codA = a.unidade?.codigo ?? "";
+      const codB = b.unidade?.codigo ?? "";
+      return codA.localeCompare(codB);
+    });
 }
 
 async function listarItensRemessaFifo(

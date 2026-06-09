@@ -15,7 +15,7 @@
     "test": "pnpm run build && node --import tsx --test src/nfe-datetime.test.ts src/nfe-xtexto.test.ts src/product-pricing.test.ts src/fiscal-emitter-runtime.test.ts src/xml-signature.test.ts src/xml-download.test.ts src/nprot.test.ts"
   },
   "devDependencies": {
-    "tsx": "^4.19.4",
-    "typescript": "^5.8.3"
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3"
   }
 }

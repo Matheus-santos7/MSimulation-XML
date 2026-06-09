@@ -21,7 +21,7 @@
     "test:nfe-xml": "pnpm --filter @msimulation-xml/nfe-xml test"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1",
+    "concurrently": "^10.0.3",
     "prettier": "^3.7.3"
   }
 }

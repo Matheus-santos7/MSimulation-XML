@@ -269,15 +269,29 @@ function impostoIpiIntXml(cst = "55", cEnq = "103"): string {
           </IPI>`;
 }
 
-function impostoPisCofinsNtXml(): string {
-  return `<PIS><PISNT><CST>09</CST></PISNT></PIS>
-          <COFINS><COFINSNT><CST>09</CST></COFINSNT></COFINS>`;
-}
-
 /** PIS/COFINS Outr — retorno (98) e remessa simbólica (99) nos XMLs ML. */
 function impostoPisCofinsOutrXml(cstPis: string, cstCofins: string): string {
   return `<PIS><PISOutr><CST>${cstPis}</CST><vBC>0.00</vBC><pPIS>0.0000</pPIS><vPIS>0.00</vPIS></PISOutr></PIS>
           <COFINS><COFINSOutr><CST>${cstCofins}</CST><vBC>0.00</vBC><pCOFINS>0.0000</pCOFINS><vCOFINS>0.00</vCOFINS></COFINSOutr></COFINS>`;
+}
+
+function pisCofinsXmlFromSnapshot(
+  fiscal: Record<string, unknown>,
+  emitter: ReturnType<typeof resolveEmitterFromPayload>,
+): string {
+  const pis = (fiscal.pis as Record<string, unknown> | undefined) ?? {};
+  const cofins = (fiscal.cofins as Record<string, unknown> | undefined) ?? {};
+  const vBc = asNum(pis.vBc, emitter.bases.vBcPisCofins);
+  const pPis = asNum(pis.aliquota, 0);
+  const pCofins = asNum(cofins.aliquota, 0);
+  const vPis = Math.round(vBc * (pPis / 100) * 100) / 100;
+  const vCofins = Math.round(vBc * (pCofins / 100) * 100) / 100;
+  const cstPis = typeof pis.st === "string" ? pis.st.slice(0, 2) : "09";
+  const cstCofins = typeof cofins.st === "string" ? cofins.st.slice(0, 2) : "09";
+  return buildPisCofinsXmlFromEngine(
+    { cst: cstPis, vBC: vBc, pPIS: pPis, vPIS: vPis, vCOFINS: 0, aliquota: pPis },
+    { cst: cstCofins, vBC: vBc, pCOFINS: pCofins, vPIS: 0, vCOFINS: vCofins, aliquota: pCofins },
+  );
 }
 
 export function buildNFeXML(
@@ -381,12 +395,15 @@ function buildRemessaNFeXML(
       i === 0 && nfe.pedidoML ? `\n        <infAdProd>xPed:${xmlEscape(nfe.pedidoML)}</infAdProd>` : "";
 
     let icmsXml: string;
+    let pisCofinsXml: string;
     if (engineItem) {
       icmsXml = buildIcmsXmlFromEngineItem(engineItem.icms);
+      pisCofinsXml = buildPisCofinsXmlFromEngine(engineItem.pis, engineItem.cofins);
     } else {
       const vBcIcms = asNum(icms.vBc, emitter.bases.vBcIcms);
       const valorIcms = asNum(icms.valorIcms, nfe.valorICMS);
       icmsXml = buildIcmsXmlFromSnapshot(icms, { orig, valor: vBcIcms, valorIcms });
+      pisCofinsXml = pisCofinsXmlFromSnapshot(fiscal, emitter);
     }
 
     detBlocks.push(`      <det nItem="${i + 1}">
@@ -410,7 +427,7 @@ function buildRemessaNFeXML(
           <vTotTrib>0.00</vTotTrib>
           ${icmsXml}
           ${impostoIpiIntXml("55")}
-          ${impostoPisCofinsNtXml()}
+          ${pisCofinsXml}
         </imposto>${infAdProd}
       </det>`);
   }

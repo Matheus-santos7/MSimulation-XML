@@ -220,12 +220,62 @@ export function buildIpiXmlFromEngine(ipi: EngineIpi): string {
   return `<IPI><cEnq>${cEnq}</cEnq><IPITrib><CST>${cst}</CST><vBC>${ipi.vBC.toFixed(2)}</vBC><pIPI>${ipi.pIPI.toFixed(2)}</pIPI><vIPI>${ipi.vIPI.toFixed(2)}</vIPI></IPITrib></IPI>`;
 }
 
+const PIS_COFINS_NT = new Set(["04", "05", "06", "07", "08", "09"]);
+const PIS_COFINS_OUTR = new Set(["49", "99"]);
+
+function cst2(value: string): string {
+  return value.slice(0, 2);
+}
+
+function pisCofinsNtXml(cstPis: string, cstCofins: string): string {
+  return `<PIS><PISNT><CST>${cstPis}</CST></PISNT></PIS>
+          <COFINS><COFINSNT><CST>${cstCofins}</CST></COFINSNT></COFINS>`;
+}
+
+function pisCofinsOutrXml(
+  cstPis: string,
+  cstCofins: string,
+  pis: { vBC: number; pPIS: number; vPIS: number },
+  cofins: { vBC: number; pCOFINS: number; vCOFINS: number },
+): string {
+  return `<PIS><PISOutr><CST>${cstPis}</CST><vBC>${pis.vBC.toFixed(2)}</vBC><pPIS>${pis.pPIS.toFixed(4)}</pPIS><vPIS>${pis.vPIS.toFixed(2)}</vPIS></PISOutr></PIS>
+          <COFINS><COFINSOutr><CST>${cstCofins}</CST><vBC>${cofins.vBC.toFixed(2)}</vBC><pCOFINS>${cofins.pCOFINS.toFixed(4)}</pCOFINS><vCOFINS>${cofins.vCOFINS.toFixed(2)}</vCOFINS></COFINSOutr></COFINS>`;
+}
+
+function pisCofinsAliqXml(
+  cstPis: string,
+  cstCofins: string,
+  pis: { vBC: number; pPIS: number; vPIS: number },
+  cofins: { vBC: number; pCOFINS: number; vCOFINS: number },
+): string {
+  return `<PIS><PISAliq><CST>${cstPis}</CST><vBC>${pis.vBC.toFixed(2)}</vBC><pPIS>${pis.pPIS.toFixed(2)}</pPIS><vPIS>${pis.vPIS.toFixed(2)}</vPIS></PISAliq></PIS>
+          <COFINS><COFINSAliq><CST>${cstCofins}</CST><vBC>${cofins.vBC.toFixed(2)}</vBC><pCOFINS>${cofins.pCOFINS.toFixed(2)}</pCOFINS><vCOFINS>${cofins.vCOFINS.toFixed(2)}</vCOFINS></COFINSAliq></COFINS>`;
+}
+
+/** Monta `<PIS>`/`<COFINS>` conforme o grupo do CST (NT, Outr ou Aliq). */
 export function buildPisCofinsXmlFromEngine(pis: EnginePisCofins, cofins: EnginePisCofins): string {
-  const cstPis = pis.cst.slice(0, 2);
-  const cstCofins = cofins.cst.slice(0, 2);
+  const cstPis = cst2(String(pis.cst ?? "01"));
+  const cstCofins = cst2(String(cofins.cst ?? "01"));
   const pPis = pis.pPIS ?? pis.aliquota ?? 0;
   const pCofins = cofins.pCOFINS ?? cofins.aliquota ?? 0;
-  return `<PIS><PISAliq><CST>${cstPis}</CST><vBC>${pis.vBC.toFixed(2)}</vBC><pPIS>${pPis.toFixed(2)}</pPIS><vPIS>${pis.vPIS.toFixed(2)}</vPIS></PISAliq></PIS>
-          <COFINS><COFINSAliq><CST>${cstCofins}</CST><vBC>${cofins.vBC.toFixed(2)}</vBC><pCOFINS>${pCofins.toFixed(2)}</pCOFINS><vCOFINS>${cofins.vCOFINS.toFixed(2)}</vCOFINS></COFINSAliq></COFINS>`;
+
+  if (PIS_COFINS_NT.has(cstPis) && PIS_COFINS_NT.has(cstCofins)) {
+    return pisCofinsNtXml(cstPis, cstCofins);
+  }
+
+  if (PIS_COFINS_OUTR.has(cstPis) || PIS_COFINS_OUTR.has(cstCofins)) {
+    return pisCofinsOutrXml(cstPis, cstCofins, { vBC: pis.vBC, pPIS: pPis, vPIS: pis.vPIS }, {
+      vBC: cofins.vBC,
+      pCOFINS: pCofins,
+      vCOFINS: cofins.vCOFINS,
+    });
+  }
+
+  return pisCofinsAliqXml(
+    cstPis,
+    cstCofins,
+    { vBC: pis.vBC, pPIS: pPis, vPIS: pis.vPIS },
+    { vBC: cofins.vBC, pCOFINS: pCofins, vCOFINS: cofins.vCOFINS },
+  );
 }
 

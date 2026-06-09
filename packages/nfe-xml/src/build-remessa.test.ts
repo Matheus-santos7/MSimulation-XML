@@ -103,4 +103,52 @@ describe("buildNFeXML — REMESSA", () => {
     assert.match(xml, /<dhSaiEnt>2026-06-09T01:55:14-03:00<\/dhSaiEnt>/);
     assert.doesNotMatch(xml, /T\d{2}:\d{2}:\d{2}(\.\d+)?Z</);
   });
+
+  it("usa PISNT/COFINSNT CST 09 do engine quando a matriz parametriza suspensão", () => {
+    const xml = buildNFeXML(baseNfe(), emit);
+    assert.match(xml, /<PISNT>\s*<CST>09<\/CST>\s*<\/PISNT>/);
+    assert.match(xml, /<COFINSNT>\s*<CST>09<\/CST>\s*<\/COFINSNT>/);
+  });
+
+  it("usa PISOutr/COFINSOutr CST 49 do engine (matriz tributária)", () => {
+    const nfe = baseNfe();
+    nfe.fiscalPayload = {
+      engine: {
+        itens: [
+          {
+            vProd: 100,
+            quantidade: 2,
+            valorUnitario: 50,
+            icms: { cst: "00", orig: 0, vBC: 100, pICMS: 18, vICMS: 18 },
+            pis: { cst: "49", vBC: 100, vPIS: 0, aliquota: 0 },
+            cofins: { cst: "49", vBC: 100, vCOFINS: 0, aliquota: 0 },
+          },
+        ],
+        totais: {
+          vBC: 100,
+          vICMS: 18,
+          vProd: 100,
+          vIPI: 0,
+          vPIS: 0,
+          vCOFINS: 0,
+          vNF: 100,
+        },
+      },
+    };
+    const xml = buildNFeXML(nfe, emit);
+    assert.match(xml, /<PISOutr>\s*<CST>49<\/CST>/);
+    assert.match(xml, /<COFINSOutr>\s*<CST>49<\/CST>/);
+    assert.doesNotMatch(xml, /<PISNT>/);
+  });
+
+  it("fallback do snapshot fiscal usa CST da matriz quando não há engine", () => {
+    const nfe = baseNfe();
+    nfe.fiscalPayload = {
+      pis: { st: "49 - Outras Operações de Saída", aliquota: 0 },
+      cofins: { st: "49 - Outras Operações de Saída", aliquota: 0 },
+    };
+    const xml = buildNFeXML(nfe, emit);
+    assert.match(xml, /<PISOutr>\s*<CST>49<\/CST>/);
+    assert.match(xml, /<COFINSOutr>\s*<CST>49<\/CST>/);
+  });
 });

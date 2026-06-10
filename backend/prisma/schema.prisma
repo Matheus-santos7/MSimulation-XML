@@ -414,6 +414,8 @@ model CTe {
   valor        Decimal      @db.Decimal(15, 2)
   valorCarga   Decimal      @default(0) @map("valor_carga") @db.Decimal(15, 2)
   pesoCarga    Decimal      @default(0) @map("peso_carga") @db.Decimal(15, 4)
+  fiscalPayload Json?       @map("fiscal_payload")
+  xmlAutorizado String?     @map("xml_autorizado") @db.Text
   status       FiscalStatus
   emitidoEm    DateTime     @map("emitido_em")
   deletedAt    DateTime?    @map("deleted_at")

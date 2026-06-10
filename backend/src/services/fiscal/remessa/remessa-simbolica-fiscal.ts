@@ -79,7 +79,7 @@ export async function prepararRemessaSimbolicaFiscal(
   });
   if (!taxRule) {
     throw new RemessaSimbolicaFiscalError(
-      `Regra "${ruleBaseId}" sem linha inbound (origem ${input.emitUf} → ${input.destUf}). Importe ou revise a planilha.`,
+      `Regra "${ruleBaseId}" sem linha inbound (envio de estoque) para ${input.emitUf} → ${input.destUf}. Importe ou revise a planilha.`,
     );
   }
 

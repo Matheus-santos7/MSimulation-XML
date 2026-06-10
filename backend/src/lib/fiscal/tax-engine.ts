@@ -214,13 +214,14 @@ export function calcularItem(input: ItemFiscalInput): ItemFiscalResult {
   let ipiResult: ItemFiscalResult["ipi"];
   let vIPI = 0;
   if (input.ipi) {
-    const vBCIpi = baseBruta;
-    vIPI = round2(vBCIpi * (pct(input.ipi.pIPI) / 100));
+    const pIPI = pct(input.ipi.pIPI);
+    const vBCIpi = pIPI === 0 ? 0 : baseBruta;
+    vIPI = round2(vBCIpi * (pIPI / 100));
     ipiResult = {
       cst: input.ipi.cst,
       cEnq: input.ipi.cEnq ?? "999",
       vBC: vBCIpi,
-      pIPI: pct(input.ipi.pIPI),
+      pIPI,
       vIPI,
     };
   }
@@ -229,19 +230,23 @@ export function calcularItem(input: ItemFiscalInput): ItemFiscalResult {
   //    a base (espelha os XMLs reais do fulfillment ML).
   const baseAntesReducao = round2(baseBruta + (input.incluirIpiNaBaseIcms ? vIPI : 0));
   const pRedBcIcms = pct(input.icms.pRedBC);
-  const vBCIcms = round2(baseAntesReducao * (1 - pRedBcIcms / 100));
   const pICMS = pct(input.icms.pICMS);
-  const vICMS = round2(vBCIcms * (pICMS / 100));
-
-  // FCP: alíquota própria; NUNCA somada ao pICMS.
   const pFCP = pct(input.icms.pFCP);
+  const vBCIcmsBruta = round2(baseAntesReducao * (1 - pRedBcIcms / 100));
+  // SEFAZ: sem alíquota efetiva (remessa/retorno CST 90 etc.) → vBC zerada.
+  const vBCIcms = pICMS === 0 && pFCP === 0 ? 0 : vBCIcmsBruta;
+  const vICMS = round2(vBCIcms * (pICMS / 100));
   const vFCP = round2(vBCIcms * (pFCP / 100));
 
   // 5) PIS e COFINS — base pode ter redução própria.
-  const vBCPis = round2(baseBruta * (1 - pct(input.pis.pRedBC) / 100));
-  const vPIS = round2(vBCPis * (pct(input.pis.aliquota) / 100));
-  const vBCCofins = round2(baseBruta * (1 - pct(input.cofins.pRedBC) / 100));
-  const vCOFINS = round2(vBCCofins * (pct(input.cofins.aliquota) / 100));
+  const pPIS = pct(input.pis.aliquota);
+  const pCOFINS = pct(input.cofins.aliquota);
+  const vBCPisBruta = round2(baseBruta * (1 - pct(input.pis.pRedBC) / 100));
+  const vBCCofinsBruta = round2(baseBruta * (1 - pct(input.cofins.pRedBC) / 100));
+  const vBCPis = pPIS === 0 ? 0 : vBCPisBruta;
+  const vBCCofins = pCOFINS === 0 ? 0 : vBCCofinsBruta;
+  const vPIS = round2(vBCPis * (pPIS / 100));
+  const vCOFINS = round2(vBCCofins * (pCOFINS / 100));
 
   // 6) DIFAL (ICMSUFDest) — partilha para consumidor final em operação interestadual.
   let difalResult: ItemFiscalResult["difal"];
@@ -296,8 +301,8 @@ export function calcularItem(input: ItemFiscalInput): ItemFiscalResult {
       vFCP,
     },
     ipi: ipiResult,
-    pis: { cst: input.pis.cst, vBC: vBCPis, pPIS: pct(input.pis.aliquota), vPIS },
-    cofins: { cst: input.cofins.cst, vBC: vBCCofins, pCOFINS: pct(input.cofins.aliquota), vCOFINS },
+    pis: { cst: input.pis.cst, vBC: vBCPis, pPIS: pPIS, vPIS },
+    cofins: { cst: input.cofins.cst, vBC: vBCCofins, pCOFINS: pCOFINS, vCOFINS },
     difal: difalResult,
   };
 }

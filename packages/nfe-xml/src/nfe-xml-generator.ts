@@ -125,7 +125,8 @@ function buildIcmsXmlFromSnapshot(
   const motDesIcms = Math.trunc(asNum(icms.motDesIcms, 0));
 
   const vBcFromSnapshot = icms.vBc != null ? asNum(icms.vBc, args.valor) : null;
-  const vBc = vBcFromSnapshot ?? Math.max(0, args.valor * (1 - pRedBc / 100));
+  const vBc =
+    vBcFromSnapshot ?? (pIcms === 0 ? 0 : Math.max(0, args.valor * (1 - pRedBc / 100)));
   const vIcms =
     asNum(icms.valorIcms, 0) || args.valorIcms || Math.round(vBc * (pIcms / 100) * 100) / 100;
   const vBcSt = Math.max(0, vBc * (1 + pMva / 100) * (1 - pRedBcSt / 100));
@@ -321,12 +322,6 @@ function totalBlock(
   return nfeTotalXml(icmsTot, vNF, opts);
 }
 
-/** PIS/COFINS Outr — retorno (98) e remessa simbólica (99) nos XMLs ML. */
-function impostoPisCofinsOutrXml(cstPis: string, cstCofins: string): string {
-  return `<PIS><PISOutr><CST>${cstPis}</CST><vBC>0.00</vBC><pPIS>0.0000</pPIS><vPIS>0.00</vPIS></PISOutr></PIS>
-          <COFINS><COFINSOutr><CST>${cstCofins}</CST><vBC>0.00</vBC><pCOFINS>0.0000</pCOFINS><vCOFINS>0.00</vCOFINS></COFINSOutr></COFINS>`;
-}
-
 function pisCofinsXmlFromSnapshot(
   fiscal: Record<string, unknown>,
   emitter: ReturnType<typeof resolveEmitterFromPayload>,
@@ -344,6 +339,51 @@ function pisCofinsXmlFromSnapshot(
     { cst: cstPis, vBC: vBc, pPIS: pPis, vPIS: vPis, vCOFINS: 0, aliquota: pPis },
     { cst: cstCofins, vBC: vBc, pCOFINS: pCofins, vPIS: 0, vCOFINS: vCofins, aliquota: pCofins },
   );
+}
+
+/**
+ * ICMS/IPI/PIS/COFINS do item: prioriza `engine` (tax-engine + planilha);
+ * fallback no snapshot fiscal (`fiscalPayload.pis/ipi/cofins`).
+ */
+function buildItemImpostoXml(opts: {
+  engineItem?: EngineItem;
+  fiscal: Record<string, unknown>;
+  emitter: ReturnType<typeof resolveEmitterFromPayload>;
+  icmsSnapshotFallback: {
+    orig: number;
+    icms?: Record<string, unknown>;
+    vBcIcms: number;
+    valorIcms: number;
+  };
+}): { icmsXml: string; ipiXml: string; pisCofinsXml: string } {
+  const { engineItem, fiscal, emitter, icmsSnapshotFallback } = opts;
+  const { orig, icms, vBcIcms, valorIcms } = icmsSnapshotFallback;
+
+  if (engineItem) {
+    const icmsXml = buildIcmsXmlFromEngineItem(engineItem.icms);
+    const pisCofinsXml = buildPisCofinsXmlFromEngine(engineItem.pis, engineItem.cofins);
+    let ipiXml: string;
+    if (engineItem.ipi) {
+      ipiXml = buildIpiXmlFromEngine(engineItem.ipi);
+    } else {
+      const ipiSnap = (fiscal.ipi as Record<string, unknown> | undefined) ?? {};
+      ipiXml =
+        ipiSnap.st != null || ipiSnap.codEnq != null
+          ? buildIpiXmlFromFiscalSnapshot(ipiSnap, emitter.bases.vBcIpi)
+          : impostoIpiIntXml();
+    }
+    return { icmsXml, ipiXml, pisCofinsXml };
+  }
+
+  const icmsSnap = icms ?? { cst: "00", aliquota: 0 };
+  const icmsXml = buildIcmsXmlFromSnapshot(icmsSnap, { orig, valor: vBcIcms, valorIcms });
+  const pisCofinsXml = pisCofinsXmlFromSnapshot(fiscal, emitter);
+  const ipiSnap = (fiscal.ipi as Record<string, unknown> | undefined) ?? {};
+  const ipiXml =
+    ipiSnap.st != null || ipiSnap.codEnq != null
+      ? buildIpiXmlFromFiscalSnapshot(ipiSnap, emitter.bases.vBcIpi)
+      : impostoIpiIntXml();
+  return { icmsXml, ipiXml, pisCofinsXml };
 }
 
 export function buildNFeXML(
@@ -462,32 +502,19 @@ function buildRemessaNFeXML(
       i === 0 && nfe.pedidoML ? `\n        <infAdProd>xPed:${xmlEscape(nfe.pedidoML)}</infAdProd>` : "";
     const vItem = vItemXml(vProdOut);
 
-    let icmsXml: string;
-    let pisCofinsXml: string;
-    let ipiXml: string;
-    if (engineItem) {
-      icmsXml = buildIcmsXmlFromEngineItem(engineItem.icms);
-      pisCofinsXml = buildPisCofinsXmlFromEngine(engineItem.pis, engineItem.cofins);
-      if (engineItem.ipi) {
-        ipiXml = buildIpiXmlFromEngine(engineItem.ipi);
-      } else {
-        const ipiSnap = (fiscal.ipi as Record<string, unknown> | undefined) ?? {};
-        ipiXml =
-          ipiSnap.st != null || ipiSnap.codEnq != null
-            ? buildIpiXmlFromFiscalSnapshot(ipiSnap, emitter.bases.vBcIpi)
-            : impostoIpiIntXml();
-      }
-    } else {
-      const vBcIcms = asNum(icms.vBc, emitter.bases.vBcIcms);
-      const valorIcms = asNum(icms.valorIcms, nfe.valorICMS);
-      icmsXml = buildIcmsXmlFromSnapshot(icms, { orig, valor: vBcIcms, valorIcms });
-      pisCofinsXml = pisCofinsXmlFromSnapshot(fiscal, emitter);
-      const ipiSnap = (fiscal.ipi as Record<string, unknown> | undefined) ?? {};
-      ipiXml =
-        ipiSnap.st != null || ipiSnap.codEnq != null
-          ? buildIpiXmlFromFiscalSnapshot(ipiSnap, emitter.bases.vBcIpi)
-          : impostoIpiIntXml();
-    }
+    const vBcIcmsItem = asNum(icms.vBc, emitter.bases.vBcIcms);
+    const valorIcmsItem = asNum(icms.valorIcms, nfe.valorICMS);
+    const { icmsXml, ipiXml, pisCofinsXml } = buildItemImpostoXml({
+      engineItem,
+      fiscal,
+      emitter,
+      icmsSnapshotFallback: {
+        orig,
+        icms,
+        vBcIcms: vBcIcmsItem,
+        valorIcms: valorIcmsItem,
+      },
+    });
 
     const ibsCbsBcInput = engineItem
       ? ibsCbsBcInputFromEngineItem(engineItem)
@@ -607,18 +634,17 @@ ${protNFeBlock(nfe, dhEmi)}
 </nfeProc>`;
 }
 
-/** Remessa simbólica — ML: tpNF=1, NFref, PIS/COFINS Outr CST 99, idDest dinâmico. */
+/** Remessa simbólica — ML: tpNF=1, NFref, tributos da engine/planilha, idDest dinâmico. */
 function buildRemessaSimbolicaNFeXML(
   nfe: NFeXmlInput,
   emit: EmitenteXml,
   product?: ProductXmlInput,
   emitterSettings?: FiscalEmitterSettingsData | null,
 ): string {
-  const base = buildRemessaNFeXML(nfe, emit, product, emitterSettings);
-  return base.replace(/<PIS>[\s\S]*?<\/COFINS>/, impostoPisCofinsOutrXml("99", "99"));
+  return buildRemessaNFeXML(nfe, emit, product, emitterSettings);
 }
 
-/** Retorno simbólico — ML: tpNF=0 (entrada), NFref→remessa, PIS/COFINS Outr CST 98. */
+/** Retorno simbólico — ML: tpNF=0 (entrada), NFref→remessa; tributos da engine/planilha. */
 function buildRetornoNFeXML(
   nfe: NFeXmlInput,
   emit: EmitenteXml,
@@ -674,19 +700,28 @@ function buildRetornoNFeXML(
   const autXml = autXmlBlock(fiscal);
   const fulfillment = hasMlFulfillmentPayload(fiscal);
 
-  let icmsXml: string;
+  const icmsSnap = (fiscal.icms as Record<string, unknown> | undefined) ?? {
+    cst: "00",
+    aliquota: nfe.aliqICMS,
+  };
+  const vBcIcms = asNum(icmsSnap.vBc, emitter.bases.vBcIcms);
+  const valorIcms = asNum(icmsSnap.valorIcms, nfe.valorICMS);
+  const { icmsXml, ipiXml, pisCofinsXml } = buildItemImpostoXml({
+    engineItem,
+    fiscal,
+    emitter,
+    icmsSnapshotFallback: {
+      orig,
+      icms: icmsSnap,
+      vBcIcms,
+      valorIcms,
+    },
+  });
+
   let icmsTot: string;
-  if (engineItem) {
-    icmsXml = buildIcmsXmlFromEngineItem(engineItem.icms);
-    icmsTot = icmsTotBlock(icmsTotFromEngine(engine!.totais, vFrete), idDest === 2);
+  if (engineItem && engine) {
+    icmsTot = icmsTotBlock(icmsTotFromEngine(engine.totais, vFrete), idDest === 2);
   } else {
-    const icms = (fiscal.icms as Record<string, unknown> | undefined) ?? {
-      cst: "00",
-      aliquota: nfe.aliqICMS,
-    };
-    const vBcIcms = asNum(icms.vBc, emitter.bases.vBcIcms);
-    const valorIcms = asNum(icms.valorIcms, nfe.valorICMS);
-    icmsXml = buildIcmsXmlFromSnapshot(icms, { orig, valor: vBcIcms, valorIcms });
     icmsTot = icmsTotBlock(
       {
         vBC: vBcIcms,
@@ -803,8 +838,8 @@ ${autXml}      <det nItem="1">
         <imposto>
           <vTotTrib>0.00</vTotTrib>
           ${icmsXml}
-          ${impostoIpiIntXml("05")}
-          ${impostoPisCofinsOutrXml("98", "98")}${fulfillmentImpostoExtras(fiscal, retornoVBcIbsCbs)}
+          ${ipiXml}
+          ${pisCofinsXml}${fulfillmentImpostoExtras(fiscal, retornoVBcIbsCbs)}
         </imposto>${infAdProd}${fulfillmentDetTail(fiscal, vProd)}
       </det>
       <total>

@@ -36,7 +36,7 @@ export function taxSnapshotFromRule(rule: ResolvedTaxRule | null, fallbackAliqIc
       cst: typeof rule?.icms?.cst === "string" ? rule.icms.cst : "00",
       aliquota: rule?.aliquotaIcmsInterna ?? fallbackAliqIcms,
       pDif: toNum(rule?.icms?.pDif, 0),
-      pIcmsInterstate: toNum(rule?.icms?.pIcmsInterstate, 12),
+      pIcmsInterstate: rule?.icms?.pIcmsInterstate,
       pRedBc: toNum(rule?.icms?.pRedBc, 0),
       pRedBcSt: toNum(rule?.icms?.pRedBcSt, 0),
       pMva: toNum(rule?.icms?.pMva, 0),

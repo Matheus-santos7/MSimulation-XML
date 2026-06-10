@@ -8,8 +8,6 @@ import { buildChaveNFe } from "../../../../lib/fiscal/nfe-chave.js";
 import { enrichTaxSnapshot, loadEmitterSettings } from "../../../../lib/fiscal/fiscal-emitter-runtime.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import {
-  destIeRetornoFromRemessa,
-  destinoRetornoFromRemessa,
   resolveRetornoSimbolicoCfop,
   RETORNO_SIMBOLICO_NAT_OP,
 } from "../../../../lib/fiscal/retorno-simbolico-dest.js";
@@ -54,6 +52,12 @@ function destinoFiscalParaCampos(destino: ReturnType<typeof unidadeParaDestinoFi
   };
 }
 
+function destIeFromUnidade(unidade: { ie: string | null }): string | undefined {
+  const raw = unidade.ie?.trim() ?? "";
+  const digits = raw.replace(/\D/g, "");
+  return digits || undefined;
+}
+
 export class FiscalEmissorAdapter implements EmissorNotaPort {
   constructor(private readonly db: Db) {}
 
@@ -63,6 +67,7 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
     quantidade: number,
     remessaReferencia: { id: string; chave: string },
     unidadeOrigemId: string,
+    unidadeDestinoId: string,
   ): Promise<DocumentoFiscalPreparado> {
     const { tenant, product } = ctx;
     const unitCusto = productUnitPrice(product, "REMESSA");
@@ -79,10 +84,20 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
       );
     }
 
+    const unidadeDestino = await getUnidadeAtivaDoTenant(
+      tx as unknown as PrismaClient,
+      tenant.id,
+      unidadeDestinoId,
+    );
+    if (!unidadeDestino) {
+      throw new RemessaDomainError("CD destino não encontrado ou inativo");
+    }
+
     const remessaPai = await loadRemessaDestinoRetorno(tx, remessaReferencia.id);
-    const destUf = remessaPai.destUf;
-    const destino = destinoRetornoFromRemessa(remessaPai, remessaPai.unidadeDestino);
-    const destIe = destIeRetornoFromRemessa(remessaPai, remessaPai.unidadeDestino);
+    const destinoFiscal = unidadeParaDestinoFiscal(unidadeDestino);
+    const destino = destinoFiscalParaCampos(destinoFiscal);
+    const destUf = destinoFiscal.uf;
+    const destIe = destIeFromUnidade(unidadeDestino);
 
     const inboundTaxRule = await resolveTaxRule(tx, tenant.id, {
       originUf: tenant.uf,
@@ -93,7 +108,7 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
     });
     if (!inboundTaxRule) {
       throw new RemessaDomainError(
-        `Regra "${ruleBaseId}" sem linha inbound para retorno simbólico (${tenant.uf} → ${destUf}).`,
+        `Regra "${ruleBaseId}" sem linha inbound (envio de estoque) para retorno simbólico (${tenant.uf} → ${destUf}).`,
       );
     }
 
@@ -150,11 +165,10 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
         quantidadeTotal: quantidade,
         withLogistics: false,
         destIe,
-        idCadIntTran: remessaPai.unidadeDestino?.idCadIntTran ?? null,
+        idCadIntTran: unidadeDestino.idCadIntTran?.trim() || null,
         autXmlCpfs: autXmlCpfs?.length ? autXmlCpfs : null,
       },
     );
-
 
     const rascunho = criarRetornoSimbolicoAvanco(
       {
@@ -163,7 +177,7 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
         serie: ctx.serie,
         quantidade,
         unidadeOrigemId,
-        unidadeDestinoId: null,
+        unidadeDestinoId,
       },
       {
         id: remessaPai.id,

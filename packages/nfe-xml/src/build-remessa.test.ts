@@ -268,14 +268,14 @@ describe("buildNFeXML — REMESSA", () => {
               vProd: 609,
               quantidade: 1,
               valorUnitario: 609,
-              icms: { cst: "90", orig: 2, vBC: 609, pICMS: 0, vICMS: 0 },
-              pis: { cst: "98", vBC: 0, vPIS: 0 },
-              cofins: { cst: "98", vBC: 0, vCOFINS: 0 },
-              ipi: { cst: "05", cEnq: "103", vBC: 0, pIPI: 0, vIPI: 0 },
+              icms: { cst: "90", orig: 2, vBC: 0, pICMS: 0, vICMS: 0 },
+              pis: { cst: "09", vBC: 0, vPIS: 0 },
+              cofins: { cst: "09", vBC: 0, vCOFINS: 0 },
+              ipi: { cst: "55", cEnq: "103", vBC: 0, pIPI: 0, vIPI: 0 },
             },
           ],
           totais: {
-            vBC: 609,
+            vBC: 0,
             vICMS: 0,
             vProd: 609,
             vIPI: 0,
@@ -315,11 +315,90 @@ describe("buildNFeXML — REMESSA", () => {
     assert.match(xml, /<NFref>\s*<refNFe>/);
     assert.match(xml, /<infRespTec>/);
     assert.match(xml, /<EXTIPI>/);
+    assert.match(xml, /<IPINT>\s*<CST>55<\/CST>\s*<\/IPINT>/);
+    assert.match(xml, /<PISNT>\s*<CST>09<\/CST>\s*<\/PISNT>/);
+    assert.match(xml, /<COFINSNT>\s*<CST>09<\/CST>\s*<\/COFINSNT>/);
+    assert.doesNotMatch(xml, /<IPINT>\s*<CST>05<\/CST>/);
+    assert.doesNotMatch(xml, /<PISOutr>\s*<CST>98<\/CST>/);
 
     const doc = new DOMParser().parseFromString(xml, "text/xml");
     const err = doc.getElementsByTagName("parsererror");
     assert.equal(err.length, 0, err[0]?.textContent ?? "XML malformado");
     assert.equal(verifySimulationXmlSignature(xml), true);
+  });
+
+  it("REMESSA_SIMBOLICA usa CST da planilha em PIS/COFINS (não força 99)", () => {
+    const nfe = {
+      ...baseNfe(),
+      tipo: "REMESSA_SIMBOLICA" as const,
+      nfeReferenciaChave: "35260612345678000199550010000000021000000023",
+      fiscalPayload: {
+        engine: {
+          itens: [
+            {
+              vProd: 100,
+              quantidade: 1,
+              valorUnitario: 100,
+              icms: { cst: "00", orig: 0, vBC: 100, pICMS: 18, vICMS: 18 },
+              pis: { cst: "49", vBC: 100, vPIS: 0, aliquota: 0 },
+              cofins: { cst: "49", vBC: 100, vCOFINS: 0, aliquota: 0 },
+            },
+          ],
+          totais: {
+            vBC: 100,
+            vICMS: 18,
+            vProd: 100,
+            vIPI: 0,
+            vPIS: 0,
+            vCOFINS: 0,
+            vNF: 100,
+          },
+        },
+      },
+    };
+    const xml = buildNFeXML(nfe, emit);
+    assert.match(xml, /<PISOutr>\s*<CST>49<\/CST>/);
+    assert.match(xml, /<COFINSOutr>\s*<CST>49<\/CST>/);
+    assert.doesNotMatch(xml, /<PISOutr>\s*<CST>99<\/CST>/);
+    assert.doesNotMatch(xml, /<COFINSOutr>\s*<CST>99<\/CST>/);
+    assert.match(xml, /<NFref>\s*<refNFe>/);
+  });
+
+  it("RETORNO_SIMBOLICO usa CST 98 da planilha em PISOutr/COFINSOutr", () => {
+    const nfe = {
+      ...baseNfe(),
+      tipo: "RETORNO_SIMBOLICO" as const,
+      cfop: "2949",
+      nfeReferenciaChave: baseNfe().chave,
+      fiscalPayload: {
+        engine: {
+          itens: [
+            {
+              vProd: 100,
+              quantidade: 1,
+              valorUnitario: 100,
+              icms: { cst: "90", orig: 0, vBC: 0, pICMS: 0, vICMS: 0 },
+              pis: { cst: "98", vBC: 0, vPIS: 0, aliquota: 0 },
+              cofins: { cst: "98", vBC: 0, vCOFINS: 0, aliquota: 0 },
+              ipi: { cst: "55", cEnq: "103", vBC: 0, pIPI: 0, vIPI: 0 },
+            },
+          ],
+          totais: {
+            vBC: 0,
+            vICMS: 0,
+            vProd: 100,
+            vIPI: 0,
+            vPIS: 0,
+            vCOFINS: 0,
+            vNF: 100,
+          },
+        },
+      },
+    };
+    const xml = buildNFeXML(nfe, emit);
+    assert.match(xml, /<PISOutr>\s*<CST>98<\/CST>/);
+    assert.match(xml, /<COFINSOutr>\s*<CST>98<\/CST>/);
+    assert.doesNotMatch(xml, /<PISNT>/);
   });
 
   it("usa idCadIntTran e pesos do fiscalPayload enriquecido (emissão real)", () => {

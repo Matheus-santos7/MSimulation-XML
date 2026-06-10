@@ -221,7 +221,8 @@ export function buildIcmsXmlFromEngineItem(icms: EngineIcms): string {
   return `<ICMS><ICMS${cst}><orig>${icms.orig}</orig><CST>${cst}</CST><modBC>${modBC}</modBC><vBC>${icms.vBC.toFixed(2)}</vBC><pICMS>${icms.pICMS.toFixed(4)}</pICMS><vICMS>${icms.vICMS.toFixed(2)}</vICMS>${pFcpXml}</ICMS${cst}></ICMS>`;
 }
 
-const IPI_CST_NAO_TRIBUTADO = new Set(["53", "54", "55"]);
+/** CST IPI sem grupo IPITrib (suspensão, isenção, outras entradas/saídas sem débito). */
+const IPI_CST_NAO_TRIBUTADO = new Set(["05", "51", "52", "53", "54", "55"]);
 
 export function isIpiNaoTributadoCst(cst: string): boolean {
   return IPI_CST_NAO_TRIBUTADO.has(cst.slice(0, 2));
@@ -256,7 +257,7 @@ export function buildIpiXmlFromFiscalSnapshot(
 }
 
 const PIS_COFINS_NT = new Set(["04", "05", "06", "07", "08", "09"]);
-const PIS_COFINS_OUTR = new Set(["49", "99"]);
+const PIS_COFINS_OUTR = new Set(["49", "98", "99"]);
 
 function cst2(value: string): string {
   return value.slice(0, 2);

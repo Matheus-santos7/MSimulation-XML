@@ -172,10 +172,11 @@ export class EmitirAvancoMercadoriaUseCase {
 
       const docRetorno = await emissorNota.prepararRetornoSimbolicoAvanco(
         tx,
-        ctx,
+        { ...ctx, destUf: destino.uf },
         command.quantidade,
         { id: remessaPrincipal.id, chave: remessaPrincipal.chave },
         origem.id,
+        destino.id,
       );
       this.validador.validarRascunho(docRetorno.rascunho);
 

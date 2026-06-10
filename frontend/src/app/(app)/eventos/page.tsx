@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { FiscalEventXmlActions } from "@/components/fiscal-xml-actions";
 import { NfeInutilizarForm } from "@/components/nfe-inutilizar-form";
 import { PageHeader } from "@/components/fiscal-ui";
 import { getFiscalEmitterSettings, listFiscalEvents } from "@/lib/fiscal-api";
@@ -40,6 +41,7 @@ export default async function EventosPage() {
                 <th className="px-4 py-3 font-medium">Referência</th>
                 <th className="px-4 py-3 font-medium">Protocolo</th>
                 <th className="px-4 py-3 font-medium">Ocorrido em</th>
+                <th className="px-4 py-3 font-medium text-right">XML</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -68,6 +70,9 @@ export default async function EventosPage() {
                   </td>
                   <td className="px-4 py-3 font-mono text-[13px]">{e.protocolo}</td>
                   <td className="px-4 py-3 text-[14px]">{new Date(e.ocorridoEm).toLocaleString("pt-BR")}</td>
+                  <td className="px-4 py-3">
+                    <FiscalEventXmlActions event={e} />
+                  </td>
                 </tr>
               ))}
             </tbody>

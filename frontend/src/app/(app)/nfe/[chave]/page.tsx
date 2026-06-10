@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader, StatusBadge } from "@/components/fiscal-ui";
-import { NfeXmlActions } from "@/components/nfe-xml-actions";
+import { NfeXmlActions } from "@/components/fiscal-xml-actions";
 import { XMLViewer } from "@/components/xml-viewer";
 import {
   getEmitente,

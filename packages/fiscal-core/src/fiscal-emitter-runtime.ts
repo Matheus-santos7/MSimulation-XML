@@ -252,9 +252,14 @@ export function enrichTaxSnapshot(snapshot: TaxSnapshot, ctx: EnrichTaxContext):
     acrescimo: settings.nfe.acrescimoPrecoProduto ? 0 : 0,
   };
 
-  const vBcIcms = calcTributoBase(valor, parts, comp.icms, channel);
-  const vBcPis = calcTributoBase(valor, parts, comp.pisCofins, channel);
-  const vBcIpi = calcTributoBase(valor, parts, comp.ipi, channel);
+  const icmsAliq = snapshot.icms.aliquota ?? 0;
+  const pisAliq = typeof snapshot.pis.aliquota === "number" ? snapshot.pis.aliquota : null;
+  const ipiAliq = typeof snapshot.ipi.aliquota === "number" ? snapshot.ipi.aliquota : null;
+
+  const vBcIcms = icmsAliq === 0 ? 0 : calcTributoBase(valor, parts, comp.icms, channel);
+  const vBcPis =
+    pisAliq === 0 ? 0 : calcTributoBase(valor, parts, comp.pisCofins, channel);
+  const vBcIpi = ipiAliq === 0 ? 0 : calcTributoBase(valor, parts, comp.ipi, channel);
 
   const difalMode = resolveDifalMode(settings, destUf);
   const indFinal = ctx.indFinal ?? (tipo === "VENDA" ? 1 : 0);

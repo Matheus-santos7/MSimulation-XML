@@ -36,6 +36,7 @@ export interface EmissorNotaPort {
     quantidade: number,
     remessaReferencia: { id: string; chave: string },
     unidadeOrigemId: string,
+    unidadeDestinoId: string,
   ): Promise<DocumentoFiscalPreparado>;
 
   prepararRemessaSimbolicaAvanco(

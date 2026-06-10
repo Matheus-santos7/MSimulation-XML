@@ -298,6 +298,24 @@ export async function getCteByChave(chave: string): Promise<CTeDto | null> {
   return res.json() as Promise<CTeDto>;
 }
 
+/** XML persistido na emissão. Retorna null se 404 ou 409. */
+export async function getCteXml(
+  chave: string,
+  options?: { download?: boolean },
+): Promise<{ xml: string; filename: string } | null> {
+  const href = url(`/api/ctes/${chave}/xml`, options?.download ? { download: "1" } : undefined);
+  const res = await fetch(href, { cache: "no-store", headers: await authHeaders() });
+  if (res.status === 404 || res.status === 409) return null;
+  if (!res.ok) {
+    throw new Error(await readApiError(res));
+  }
+  const xml = await res.text();
+  const disp = res.headers.get("Content-Disposition");
+  const match = disp?.match(/filename="([^"]+)"/);
+  const filename = match?.[1] ?? `CTe_${chave}.xml`;
+  return { xml, filename };
+}
+
 export async function deleteCte(chave: string): Promise<void> {
   await mutateJson(url(`/api/ctes/${chave}`), "DELETE");
 }

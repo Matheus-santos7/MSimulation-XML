@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CteXmlActions } from "@/components/cte-xml-actions";
+import { CteXmlActions } from "@/components/fiscal-xml-actions";
 import { PageHeader, StatusBadge } from "@/components/fiscal-ui";
 import { XMLViewer } from "@/components/xml-viewer";
 import { getCteByChave, getTenant } from "@/lib/fiscal-api";
@@ -73,6 +73,13 @@ export default async function CTeDetailPage({ params }: Props) {
             <h3 className="text-[12px] uppercase tracking-widest font-bold text-muted-foreground mb-2">Valores</h3>
             <Row label="Valor da carga" value={brl(cte.valorCarga)} />
             <Row label="Peso bruto (kg)" value={cte.pesoCarga.toFixed(4)} mono />
+            {cte.aliqIcms != null && (
+              <Row
+                label={`ICMS frete (${cte.aliqIcms}%)`}
+                value={brl(cte.valorIcms ?? 0)}
+                mono
+              />
+            )}
             <div className="border-t border-border pt-2 mt-2">
               <Row label="Frete (vTPrest)" value={brl(cte.valor)} bold />
             </div>

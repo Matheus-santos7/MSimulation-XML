@@ -117,4 +117,27 @@ describe("tax-engine", () => {
     assert.equal(item.icms.vBC, 100);
     assert.equal(item.icms.vICMS, 18);
   });
+
+  it("zera vBC de ICMS/PIS/COFINS/IPI quando alíquota é 0% (remessa/retorno)", () => {
+    const item = calcularItem({
+      numeroItem: 1,
+      codigo: "C",
+      descricao: "Inbound",
+      ncm: "85094010",
+      cfop: "6949",
+      unidade: "UN",
+      quantidade: 10,
+      valorUnitario: 609,
+      icms: { cst: "90", orig: 2, pICMS: 0 },
+      ipi: { cst: "55", pIPI: 0, cEnq: "103" },
+      pis: { cst: "98", aliquota: 0 },
+      cofins: { cst: "98", aliquota: 0 },
+    });
+    assert.equal(item.vProd, 6090);
+    assert.equal(item.icms.vBC, 0);
+    assert.equal(item.icms.vICMS, 0);
+    assert.equal(item.pis.vBC, 0);
+    assert.equal(item.cofins.vBC, 0);
+    assert.equal(item.ipi?.vBC, 0);
+  });
 });

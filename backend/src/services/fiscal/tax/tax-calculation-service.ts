@@ -125,9 +125,33 @@ export function calcularNotaInbound(
     nota,
     valor: nota.totais.vNF,
     valorIcms: nota.totais.vICMS,
-    aliqIcms: item.icms.pICMS || fallbackAliqIcms,
+    aliqIcms: item.icms.pICMS,
     cfop: linha.cfop,
   };
+}
+
+/**
+ * ICMS próprio em operação interestadual.
+ * Com regra da planilha: respeita 0% explícito (envio de estoque / inbound ML).
+ * Sem regra: usa padrão legal (12% / 7%) para vendas B2B.
+ */
+function resolveAliqIcmsInterestadual(
+  rule: ResolvedTaxRule | null,
+  snapshot: ReturnType<typeof taxSnapshotFromRule>,
+  ctx: ContextoFiscal,
+  fallbackAliqIcms: number,
+  pInterna: number,
+): number {
+  if (rule != null) {
+    if (rule.icms?.pIcmsInterstate != null) return rule.icms.pIcmsInterstate;
+    if (rule.aliquotaIcmsInterna != null) return rule.aliquotaIcmsInterna;
+    return fallbackAliqIcms;
+  }
+  return (
+    snapshot.icms.pIcmsInterstate ??
+    aliquotaInterestadualPadrao(ctx.ufOrigem, ctx.ufDestino) ??
+    pInterna
+  );
 }
 
 /** Alíquota interestadual padrão por UF de origem (Sul/Sudeste exceto ES = 12; demais = 7). */
@@ -161,15 +185,11 @@ export function montarItemFiscal(
   const consumidorFinal = ctx.customerType === "non_taxpayer";
   const aplicaDifal = interestadual && consumidorFinal;
 
-  // Alíquota interna da UF de destino (vinda da planilha) e a interestadual.
+  // Alíquota interna da UF de destino (vinda da planilha).
   const pInterna = snapshot.icms.aliquota;
-  const pInter =
-    snapshot.icms.pIcmsInterstate ||
-    aliquotaInterestadualPadrao(ctx.ufOrigem, ctx.ufDestino) ||
-    pInterna;
-
-  // ICMS próprio: interestadual usa a alíquota interestadual; intraestadual usa a interna.
-  const pICMS = interestadual ? pInter : pInterna;
+  const pICMS = interestadual
+    ? resolveAliqIcmsInterestadual(rule, snapshot, ctx, fallbackAliqIcms, pInterna)
+    : pInterna;
 
   return {
     numeroItem: linha.numeroItem ?? 1,
@@ -214,7 +234,7 @@ export function montarItemFiscal(
     },
     difal: aplicaDifal
       ? {
-          pICMSInter: pInter,
+          pICMSInter: pICMS,
           pICMSUFDest: pInterna,
           pFCPUFDest: snapshot.icms.pIcmsFcp,
           pRedBC: snapshot.icms.pRedBcDifal,

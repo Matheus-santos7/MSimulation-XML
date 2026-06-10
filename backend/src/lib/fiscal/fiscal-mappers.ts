@@ -156,28 +156,42 @@ const CTE_MODAL_LABEL: Record<CteModal, string> = {
   AEREO: "Aéreo",
 };
 
-export function mapCte(
-  row: {
-    id: string;
-    tenantId: string;
-    chave: string;
-    numero: number;
-    serie: number;
-    cfop: string;
-    natOp: string;
-    modal: CteModal;
-    origem: string;
-    destino: string;
-    valor: { toString(): string };
-    valorCarga: { toString(): string };
-    pesoCarga: { toString(): string };
-    status: FiscalStatus;
-    emitidoEm: Date;
-    nfeRemessaId?: string | null;
-    nfeVendaId?: string | null;
-  },
-  nfeChaveRef?: string,
-) {
+type CteRow = {
+  id: string;
+  tenantId: string;
+  chave: string;
+  numero: number;
+  serie: number;
+  cfop: string;
+  natOp: string;
+  modal: CteModal;
+  origem: string;
+  destino: string;
+  valor: { toString(): string };
+  valorCarga: { toString(): string };
+  pesoCarga: { toString(): string };
+  status: FiscalStatus;
+  emitidoEm: Date;
+  fiscalPayload?: unknown;
+  nfeRemessaId?: string | null;
+  nfeVendaId?: string | null;
+  nfeRemessa?: { chave: string } | null;
+  nfeVenda?: { chave: string } | null;
+};
+
+function resolveCteNfeChaveRef(row: CteRow): string | undefined {
+  const fp = row.fiscalPayload as { nfeChaveRef?: string } | null | undefined;
+  if (typeof fp?.nfeChaveRef === "string" && fp.nfeChaveRef.length === 44) {
+    return fp.nfeChaveRef;
+  }
+  return row.nfeRemessa?.chave ?? row.nfeVenda?.chave ?? undefined;
+}
+
+export function mapCte(row: CteRow) {
+  const nfeChaveRef = resolveCteNfeChaveRef(row);
+  const fp = row.fiscalPayload as Record<string, unknown> | null | undefined;
+  const icms = fp?.icms as { pICMS?: number; vICMS?: number } | undefined;
+
   return {
     id: row.id,
     tenantId: row.tenantId,
@@ -194,8 +208,11 @@ export function mapCte(
     pesoCarga: num(row.pesoCarga),
     status: row.status,
     emitidoEm: formatNfeDateTime(row.emitidoEm),
-    nfeChaveRef: nfeChaveRef ?? undefined,
-    vinculadoRemessa: Boolean(row.nfeRemessaId ?? row.nfeVendaId ?? nfeChaveRef),
+    nfeChaveRef,
+    fiscalPayload: fp ?? undefined,
+    aliqIcms: typeof icms?.pICMS === "number" ? icms.pICMS : undefined,
+    valorIcms: typeof icms?.vICMS === "number" ? icms.vICMS : undefined,
+    vinculadoRemessa: Boolean(row.nfeRemessaId),
     vinculadoVenda: Boolean(row.nfeVendaId),
   };
 }

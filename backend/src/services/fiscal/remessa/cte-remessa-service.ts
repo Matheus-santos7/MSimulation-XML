@@ -1,162 +1,28 @@
 /**
- * CT-e de transporte da remessa física (seller → depósito Mercado Livre).
+ * CT-e de transporte da remessa física ou simbólica (seller → destino da NF-e).
  *
- * ## Quando é emitido
- *
- * Dentro da mesma transação de `remessa-service.ts` ou do avanço entre CDs
- * (`emitir-avanco-mercadoria.ts`), logo após criar a NF-e de remessa física ou
- * simbólica (CFOP 5949/6949 conforme UF).
- *
+ * @see cte-emissao.ts — montagem unificada com venda
  * @see docs/remessa-fisica.md — Fase 9
- *
- * ## Vínculos
- *
- * - `ctes.nfe_remessa_id` → NF-e de remessa (relação 1:1, `@unique`).
- * - No XML, o CT-e referencia a chave da NF-e (`mapCte` expõe `nfeChaveRef`).
- *
- * ## Dados do documento (simulação)
- *
- * | Campo      | Origem |
- * |------------|--------|
- * | Emitente   | `CTE_ML_EMIT` (transportador ML no XML de referência) |
- * | Origem     | Município/UF do tenant (seller) |
- * | Destino    | Município/UF da NF-e de remessa (CD selecionado) |
- * | valorCarga | Valor da NF-e de remessa |
- * | valor      | Frete estimado (`calcularValorFreteRemessa`) |
- * | pesoCarga  | Estimado por quantidade (`calcularPesoCarga`) |
- *
- * Chave CT-e: modelo 57 via `cte-chave.ts`; numeração em `cte-sequencia.ts`.
- *
- * @see cte-venda-service.ts — CT-e full → consumidor na venda
- * @see cte-remessa-template.ts — CFOP 6353, constantes ML
  */
-import {
-  CteModal,
-  FiscalStatus,
-  type NFe,
-  type Prisma,
-  type PrismaClient,
-  type Tenant,
-} from "../../../generated/prisma/client.js";
-import { buildChaveCTe } from "../../../lib/fiscal/cte-chave.js";
-import {
-  calcularPesoCarga,
-  calcularValorFreteRemessa,
-  CTE_ML_EMIT,
-  CTE_REMESSA_CFOP,
-  CTE_REMESSA_NAT_OP,
-} from "../../../lib/fiscal/cte-remessa-template.js";
+import type { NFe, Tenant } from "../../../generated/prisma/client.js";
+import { dadosCteToPrismaCreate, montarDadosCteFromNfe } from "../../../lib/fiscal/cte-emissao.js";
 import { proximoNumeroCte } from "../../../lib/fiscal/cte-sequencia.js";
 import { mapCte } from "../../../lib/fiscal/fiscal-mappers.js";
 import type { PrismaTx } from "../../../lib/db/prisma-tx.js";
-
-// ---------------------------------------------------------------------------
-// Tipos
-// ---------------------------------------------------------------------------
-
-type TotaisCteRemessa = {
-  valorCarga: number;
-  valorFrete: number;
-  pesoCarga: number;
-};
-
-type RotasCte = {
-  origem: string;
-  destino: string;
-};
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Rota textual exibida na UI e persistida em `ctes.origem` / `destino`. */
-function rotasRemessa(tenant: Tenant, nfeRemessa: NFe): RotasCte {
-  return {
-    origem: `${tenant.municipio}/${tenant.uf}`,
-    destino: `${nfeRemessa.destMunicipio}/${nfeRemessa.destUf}`,
-  };
-}
-
-function totaisDaRemessa(nfeRemessa: NFe): TotaisCteRemessa {
-  const valorCarga = Number(nfeRemessa.valor);
-  return {
-    valorCarga,
-    valorFrete: calcularValorFreteRemessa(valorCarga),
-    pesoCarga: calcularPesoCarga(nfeRemessa.quantidade),
-  };
-}
-
-function buildChaveCteRemessa(tenant: Tenant, serie: number, numero: number): string {
-  return buildChaveCTe({
-    uf: CTE_ML_EMIT.uf,
-    cnpj: CTE_ML_EMIT.cnpj,
-    serie,
-    numero,
-  });
-}
-
-function dadosCreateCteRemessa(params: {
-  tenant: Tenant;
-  nfeRemessa: NFe;
-  serie: number;
-  numero: number;
-  chave: string;
-  rotas: RotasCte;
-  totais: TotaisCteRemessa;
-  emitidoEm: Date;
-}): Prisma.CTeUncheckedCreateInput {
-  const { tenant, nfeRemessa, serie, numero, chave, rotas, totais, emitidoEm } = params;
-  return {
-    tenantId: tenant.id,
-    nfeRemessaId: nfeRemessa.id,
-    chave,
-    numero,
-    serie,
-    cfop: CTE_REMESSA_CFOP,
-    natOp: CTE_REMESSA_NAT_OP,
-    modal: CteModal.RODOVIARIO,
-    origem: rotas.origem,
-    destino: rotas.destino,
-    valor: totais.valorFrete,
-    valorCarga: totais.valorCarga,
-    pesoCarga: totais.pesoCarga,
-    status: FiscalStatus.AUTORIZADA,
-    emitidoEm,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// API pública
-// ---------------------------------------------------------------------------
+import { buildCteXmlAutorizado } from "../shared/cte-xml-service.js";
 
 /**
- * Cria CT-e de remessa vinculado à NF-e recém-emitida.
- *
- * @param prisma — client da transação Prisma (mesma de `emitirNFeRemessa`).
- * @param nfeRemessa — linha `nfes` de remessa (física ou simbólica) já persistida.
- * @returns DTO do CT-e com `nfeChaveRef` = chave da remessa.
+ * Cria CT-e vinculado à NF-e de remessa (física ou simbólica) recém-emitida.
  */
 export async function emitirCteRemessa(prisma: PrismaTx, tenant: Tenant, nfeRemessa: NFe) {
   const serie = tenant.serieCte;
   const numero = await proximoNumeroCte(prisma, tenant.id, serie);
-  const emitidoEm = new Date();
-
-  const rotas = rotasRemessa(tenant, nfeRemessa);
-  const totais = totaisDaRemessa(nfeRemessa);
-  const chave = buildChaveCteRemessa(tenant, serie, numero);
+  const dados = await montarDadosCteFromNfe(prisma, tenant, nfeRemessa, "remessa", { serie, numero });
+  const xmlAutorizado = buildCteXmlAutorizado(dados, tenant);
 
   const row = await prisma.cTe.create({
-    data: dadosCreateCteRemessa({
-      tenant,
-      nfeRemessa,
-      serie,
-      numero,
-      chave,
-      rotas,
-      totais,
-      emitidoEm,
-    }),
+    data: dadosCteToPrismaCreate(tenant.id, dados, xmlAutorizado),
   });
 
-  return mapCte(row, nfeRemessa.chave);
+  return mapCte(row);
 }

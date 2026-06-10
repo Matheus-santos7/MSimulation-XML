@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CteXmlActions } from "@/components/fiscal-xml-actions";
 import { FiscalDocumentDeleteButton } from "@/components/fiscal-document-delete-button";
 import { PageHeader, StatusBadge } from "@/components/fiscal-ui";
 import { resolveActiveTenantId } from "@/lib/active-tenant";
@@ -29,6 +30,7 @@ export default async function CTePage() {
                 <th className="px-4 py-3 font-medium">Origem → Destino</th>
                 <th className="px-4 py-3 font-medium">Valor Frete</th>
                 <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium text-right">XML</th>
                 <th className="px-4 py-3 font-medium w-12" aria-label="Ações" />
               </tr>
             </thead>
@@ -57,6 +59,9 @@ export default async function CTePage() {
                   <td className="px-4 py-3 font-mono">{brl(c.valor)}</td>
                   <td className="px-4 py-3">
                     <StatusBadge status={c.status} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <CteXmlActions chave={c.chave} variant="list" />
                   </td>
                   <td className="px-4 py-3 text-right">
                     <FiscalDocumentDeleteButton tipo="cte" chave={c.chave} label={`CT-e ${c.numero}`} />

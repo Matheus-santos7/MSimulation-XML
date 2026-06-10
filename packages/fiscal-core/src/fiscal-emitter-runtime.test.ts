@@ -112,4 +112,30 @@ describe("fiscal-emitter-runtime", () => {
     assert.equal(out.pis.vBc, 164);
     assert.equal(out.emitter?.bases.vBcPisCofins, 164);
   });
+
+  it("enrichTaxSnapshot zera vBc quando alíquota explícita é 0%", () => {
+    const out = enrichTaxSnapshot(
+      {
+        icms: { cst: "90", aliquota: 0 },
+        ipi: { aliquota: 0 },
+        pis: { aliquota: 0 },
+        cofins: { aliquota: 0 },
+        ibsCbs: {},
+      },
+      {
+        settings: minimalSettings(),
+        tipo: "REMESSA_SIMBOLICA",
+        valor: 6090,
+        valorIcms: 0,
+        emitUf: "SP",
+        destUf: "MG",
+        indFinal: 0,
+      },
+    );
+    assert.equal(out.icms.vBc, 0);
+    assert.equal(out.pis.vBc, 0);
+    assert.equal(out.cofins.vBc, 0);
+    assert.equal(out.ipi.vBc, 0);
+    assert.equal(out.emitter?.bases.vBcIcms, 0);
+  });
 });

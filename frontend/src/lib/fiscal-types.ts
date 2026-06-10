@@ -254,6 +254,9 @@ export type CTeDto = {
   status: FiscalStatus;
   emitidoEm: string;
   nfeChaveRef?: string;
+  fiscalPayload?: Record<string, unknown>;
+  aliqIcms?: number;
+  valorIcms?: number;
   vinculadoRemessa: boolean;
   vinculadoVenda?: boolean;
 };

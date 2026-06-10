@@ -229,7 +229,7 @@ Gerado em `nfe-xtexto.ts` e persistido em `fiscalPayload.obsContXTexto`.
 
 ```
 msimulation-xml/
-├── backend/                    # API Fastify + engine fiscal (ver `backend/docs/COMENTARIOS.md`)
+├── backend/                    # API Fastify + engine fiscal (ver `backend/README.md`)
 │   ├── prisma/                 # Schema e migrations
 │   └── src/
 │       ├── lib/                # tax-engine, nfe-xtexto, chaves, mappers

@@ -13,7 +13,6 @@ import {
   PackageCheck,
   Scale,
   Bell,
-  Sparkles,
   ShieldCheck,
   Settings2,
   Users,
@@ -38,7 +37,6 @@ const NAV_CONFIG = [
   { href: "/unidades-logisticas", label: "Unidades ML", icon: Warehouse },
   { href: "/configuracoes-fiscais", label: "Config. fiscais", icon: Settings2 },
   { href: "/usuarios", label: "Usuários", icon: Users },
-  { href: "/ia", label: "IA Insights", icon: Sparkles },
 ] as const;
 
 function ambienteLabel(a: TenantDto["ambiente"]): string {

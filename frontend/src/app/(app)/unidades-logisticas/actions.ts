@@ -13,7 +13,7 @@ import type { SaldoRemessaCdDto } from "@/lib/fiscal-api";
 export type AvancoCdState = {
   error?: string;
   success?: boolean;
-  chaveRemessa?: string;
+  chaveRetorno?: string;
   chaveSimbolica?: string;
 };
 
@@ -59,7 +59,7 @@ export async function emitirAvancoCdAction(
     revalidatePath("/nfe");
     return {
       success: true,
-      chaveRemessa: result.remessaDestino.chave,
+      chaveRetorno: result.retornoSimbolico.chave,
       chaveSimbolica: result.remessaSimbolica.chave,
     };
   } catch (e) {
@@ -101,7 +101,7 @@ export async function emitirRemessaCdOrigemAction(
 
     const result = await emitirRemessaManual({
       unidadeDestinoId,
-      items: [{ productId, quantidade }],
+      items: [{ productId, productSku: productSku || undefined, quantidade }],
     });
 
     revalidatePath("/operacoes");

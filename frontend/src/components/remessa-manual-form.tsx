@@ -14,12 +14,13 @@ type Props = {
 };
 
 type LinhaProduto = {
-  id: string;
+  rowKey: string;
+  productId: string;
   quantidade: number;
 };
 
 function novaLinha(): LinhaProduto {
-  return { id: crypto.randomUUID(), quantidade: 1 };
+  return { rowKey: crypto.randomUUID(), productId: "", quantidade: 1 };
 }
 
 export function RemessaManualForm({ products, unidades }: Props) {
@@ -47,12 +48,16 @@ export function RemessaManualForm({ products, unidades }: Props) {
     setLinhas((prev) => [...prev, novaLinha()]);
   }
 
-  function removerLinha(id: string) {
-    setLinhas((prev) => (prev.length <= 1 ? prev : prev.filter((l) => l.id !== id)));
+  function removerLinha(rowKey: string) {
+    setLinhas((prev) => (prev.length <= 1 ? prev : prev.filter((l) => l.rowKey !== rowKey)));
   }
 
-  function atualizarQuantidade(id: string, quantidade: number) {
-    setLinhas((prev) => prev.map((l) => (l.id === id ? { ...l, quantidade } : l)));
+  function atualizarProduto(rowKey: string, productId: string) {
+    setLinhas((prev) => prev.map((l) => (l.rowKey === rowKey ? { ...l, productId } : l)));
+  }
+
+  function atualizarQuantidade(rowKey: string, quantidade: number) {
+    setLinhas((prev) => prev.map((l) => (l.rowKey === rowKey ? { ...l, quantidade } : l)));
   }
 
   return (
@@ -75,55 +80,61 @@ export function RemessaManualForm({ products, unidades }: Props) {
         </div>
 
         <div className="space-y-2">
-          {linhas.map((linha, index) => (
-            <div
-              key={linha.id}
-              className="grid gap-2 rounded-md border border-border/60 bg-background/50 p-3 sm:grid-cols-[1fr_7rem_auto]"
-            >
-              <label className="block space-y-1 min-w-0">
-                <span className="text-xs text-muted-foreground">Produto {index + 1}</span>
-                <select
-                  name="productId"
-                  required
-                  className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
-                >
-                  <option value="">Selecione…</option>
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.sku} — {p.nome}
-                      {p.estoque > 0 ? ` (cadastro: ${p.estoque} un.)` : ""}
-                    </option>
-                  ))}
-                </select>
-              </label>
+          {linhas.map((linha, index) => {
+            const skuSelecionado = products.find((p) => p.id === linha.productId)?.sku ?? "";
+            return (
+              <div
+                key={linha.rowKey}
+                className="grid gap-2 rounded-md border border-border/60 bg-background/50 p-3 sm:grid-cols-[1fr_7rem_auto]"
+              >
+                <label className="block space-y-1 min-w-0">
+                  <span className="text-xs text-muted-foreground">Produto {index + 1}</span>
+                  <select
+                    name="productId"
+                    required
+                    value={linha.productId}
+                    onChange={(e) => atualizarProduto(linha.rowKey, e.target.value)}
+                    className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
+                  >
+                    <option value="">Selecione…</option>
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.sku} — {p.nome}
+                        {p.estoque > 0 ? ` (cadastro: ${p.estoque} un.)` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <input type="hidden" name="productSku" value={skuSelecionado} />
+                </label>
 
-              <label className="block space-y-1">
-                <span className="text-xs text-muted-foreground">Quantidade</span>
-                <input
-                  type="number"
-                  name="quantidade"
-                  min={1}
-                  value={linha.quantidade}
-                  onChange={(e) => atualizarQuantidade(linha.id, Number(e.target.value))}
-                  required
-                  className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
-                />
-              </label>
+                <label className="block space-y-1">
+                  <span className="text-xs text-muted-foreground">Quantidade</span>
+                  <input
+                    type="number"
+                    name="quantidade"
+                    min={1}
+                    value={linha.quantidade}
+                    onChange={(e) => atualizarQuantidade(linha.rowKey, Number(e.target.value))}
+                    required
+                    className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
+                  />
+                </label>
 
-              <div className="flex items-end sm:justify-end">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removerLinha(linha.id)}
-                  disabled={pending || linhas.length <= 1}
-                  className="text-muted-foreground"
-                >
-                  Remover
-                </Button>
+                <div className="flex items-end sm:justify-end">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removerLinha(linha.rowKey)}
+                    disabled={pending || linhas.length <= 1}
+                    className="text-muted-foreground"
+                  >
+                    Remover
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

@@ -47,6 +47,7 @@ import {
   nfeTotalXml,
   nfeTranspXml,
   remessaInfCplText,
+  retornoInfCplText,
   resolveTransportaFromFiscal,
   vItemXml,
 } from "./nfe-xml-blocks.js";
@@ -654,7 +655,7 @@ function buildRetornoNFeXML(
   const destIe =
     (typeof fiscal.destIe === "string" && fiscal.destIe) || (typeof d.ie === "string" && d.ie) || "";
   const idDest = idDestFromUfs(e.uf, de.uf);
-  const infAdic = infAdicXml(nfe, emitter, remessaInfCplText(destIe));
+  const infAdic = infAdicXml(nfe, emitter, retornoInfCplText());
   const autXml = autXmlBlock(fiscal);
   const fulfillment = hasMlFulfillmentPayload(fiscal);
 
@@ -719,7 +720,7 @@ function buildRetornoNFeXML(
         <serie>${nfe.serie}</serie>
         <nNF>${nfe.numero}</nNF>
         <dhEmi>${dhEmi}</dhEmi>
-        <dhSaiEnt>${dhEmi}</dhEmi>
+        <dhSaiEnt>${dhEmi}</dhSaiEnt>
         <tpNF>0</tpNF>
         <idDest>${idDestFromUfs(e.uf, de.uf)}</idDest>
         <cMunFG>${e.cMun}</cMunFG>

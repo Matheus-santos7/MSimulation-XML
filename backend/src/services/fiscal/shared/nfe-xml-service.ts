@@ -22,6 +22,11 @@ import type { Product as ProductModel, Tenant } from "../../../generated/prisma/
 
 export type NfeXmlPersistTx = PrismaTx;
 
+/** XML persistido com defeitos conhecidos — força regeneração na leitura. */
+function hasKnownNfeXmlDefect(xml: string): boolean {
+  return /<dhSaiEnt>[\s\S]*?<\/dhEmi>/.test(xml);
+}
+
 export type NfeXmlResult = {
   xml: string;
   filename: string;
@@ -141,8 +146,9 @@ export async function resolveNfeXml(
 
   const filename = fiscalXmlDownloadFilename("NFe", chave);
 
-  if (row.xmlAutorizado?.trim()) {
-    return { xml: row.xmlAutorizado, filename, source: "stored" };
+  const stored = row.xmlAutorizado?.trim();
+  if (stored && !hasKnownNfeXmlDefect(stored)) {
+    return { xml: stored, filename, source: "stored" };
   }
 
   if (!isNfeXmlPersistSupported(row.tipo)) {

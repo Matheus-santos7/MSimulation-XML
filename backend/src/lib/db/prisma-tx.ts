@@ -8,3 +8,9 @@ export type PrismaTx = Omit<
   PrismaClient,
   "$connect" | "$disconnect" | "$on" | "$transaction" | "$extends"
 >;
+
+/** Transações fiscais com múltiplas notas (avanço CD, cadeia de venda). */
+export const FISCAL_TRANSACTION_OPTIONS = {
+  maxWait: 10_000,
+  timeout: 60_000,
+} as const;

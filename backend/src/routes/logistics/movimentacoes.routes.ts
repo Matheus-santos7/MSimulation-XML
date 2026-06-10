@@ -16,6 +16,7 @@ import {
   listarSaldoRemessaPorCd,
   realignRemessaFifoProductIdsBySku,
   RemessaError,
+  SaldoRemessaInsuficienteError,
 } from "../../services/fiscal/index.js";
 import { UnidadeLogisticaError } from "../../services/logistics/unidade-logistica-service.js";
 import {
@@ -28,7 +29,11 @@ import { RemessaSimbolicaFiscalError } from "../../services/fiscal/remessa/remes
 import { resolveProductForAvanco, hasRemessaSaldoForAvanco } from "../../services/logistics/avanco-product-resolve.js";
 
 function mapRemessaModuleError(e: unknown): { status: number; message: string } | null {
-  if (e instanceof RemessaDomainError || e instanceof SaldoFifoInsuficienteError) {
+  if (
+    e instanceof RemessaDomainError ||
+    e instanceof SaldoFifoInsuficienteError ||
+    e instanceof SaldoRemessaInsuficienteError
+  ) {
     return { status: 400, message: e.message };
   }
   if (e instanceof RemessaError || e instanceof RemessaSimbolicaFiscalError) {
@@ -36,6 +41,18 @@ function mapRemessaModuleError(e: unknown): { status: number; message: string } 
   }
   if (e instanceof UnidadeLogisticaError) {
     return { status: 400, message: e.message };
+  }
+  if (
+    typeof e === "object" &&
+    e !== null &&
+    "code" in e &&
+    (e as { code: string }).code === "P2028"
+  ) {
+    return {
+      status: 503,
+      message:
+        "A emissão demorou mais que o esperado. Tente novamente; se persistir, reduza a quantidade ou contate o suporte.",
+    };
   }
   return null;
 }

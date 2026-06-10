@@ -496,8 +496,7 @@ export type UnidadeLogisticaBulkImportResult = {
 
 export type AvancoCdResult = {
   remessaSimbolica: NFeDto;
-  remessaDestino: NFeDto;
-  cte?: CTeDto;
+  retornoSimbolico: NFeDto;
   alocacoesOrigem: { remessaNfeId: string; quantidade: number }[];
 };
 
@@ -581,6 +580,7 @@ export async function listSaldoRemessaPorCd(
 
 export type RemessaManualItemInput = {
   productId: string;
+  productSku?: string;
   quantidade: number;
 };
 

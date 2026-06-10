@@ -57,8 +57,9 @@ export class EmitirRemessaInicialUseCase {
       }
     }
 
-    return this.deps.prisma.$transaction((tx) =>
-      this.deps.emitirRemessaLegado(tx, { ...command, unidadeDestinoId }),
+    return this.deps.emitirRemessaLegado(
+      this.deps.prisma as unknown as PrismaTx,
+      { ...command, unidadeDestinoId },
     );
   }
 }

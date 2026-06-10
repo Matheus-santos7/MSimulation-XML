@@ -40,6 +40,7 @@ import { resolveTaxRule } from "../tax/tax-rule-service.js";
 import { UnidadeLogisticaService } from "../../logistics/unidade-logistica-service.js";
 import { registrarMovimentacaoProduto } from "../../logistics/movimentacao-produto-service.js";
 import { persistNfeXmlAutorizado } from "../shared/nfe-xml-service.js";
+import { findProductInTenant } from "../../logistics/avanco-product-resolve.js";
 import { realignRemessaFifoProductIdsBySku } from "./remessa-fifo.js";
 
 export type EmitirRemessaOptions = {
@@ -283,6 +284,7 @@ async function emitirNFeRemessaComItens(
 
 export type RemessaManualItemInput = {
   productId: string;
+  productSku?: string;
   quantidade: number;
 };
 
@@ -303,21 +305,20 @@ export async function emitirRemessaManual(
   }
 
   const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: input.tenantId } });
-  const productIds = [...new Set(input.items.map((i) => i.productId))];
-  const products = await prisma.product.findMany({
-    where: { tenantId: input.tenantId, id: { in: productIds } },
-  });
-  for (const product of products) {
-    await realignRemessaFifoProductIdsBySku(prisma, input.tenantId, product.sku);
-  }
-  const byId = new Map(products.map((p) => [p.id, p]));
 
   const linhas: RemessaLinhaInput[] = [];
   for (const [index, item] of input.items.entries()) {
-    const product = byId.get(item.productId);
+    const product = await findProductInTenant(prisma, input.tenantId, {
+      productId: item.productId,
+      sku: item.productSku,
+    });
     if (!product) {
-      throw new RemessaError(`Produto não encontrado (linha ${index + 1})`);
+      const skuHint = item.productSku?.trim() ? ` (SKU ${item.productSku.trim()})` : "";
+      throw new RemessaError(
+        `Produto não encontrado (linha ${index + 1})${skuHint}. Confira o cadastro em Produtos.`,
+      );
     }
+    await realignRemessaFifoProductIdsBySku(prisma, input.tenantId, product.sku);
     if (item.quantidade < 1) {
       throw new RemessaError(`Quantidade inválida na linha ${index + 1}`);
     }

@@ -10,7 +10,7 @@ export type AvancoProductResolved = {
   fifoProductId: string;
 };
 
-async function findProductInTenant(
+export async function findProductInTenant(
   prisma: PrismaClient,
   tenantId: string,
   opts: { productId?: string; sku?: string },

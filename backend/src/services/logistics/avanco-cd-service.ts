@@ -21,6 +21,8 @@ import {
   SaldoRemessaInsuficienteError,
   debitarSaldoRemessaPorCd,
   realignRemessaFifoProductIdsBySku,
+  resolveUnidadeFifoOrigemId,
+  saldoRemessaDisponivel,
 } from "../fiscal/remessa/remessa-fifo.js";
 import { registrarMovimentacaoProduto } from "./movimentacao-produto-service.js";
 import { getUnidadeAtivaDoTenant, UnidadeLogisticaError } from "./unidade-logistica-service.js";
@@ -66,10 +68,6 @@ export async function emitirAvancoEntreCds(
     getUnidadeAtivaDoTenant(prisma, input.tenantId, input.unidadeDestinoId),
   ]);
 
-  if (input.productSku?.trim()) {
-    await realignRemessaFifoProductIdsBySku(prisma, input.tenantId, input.productSku);
-  }
-
   const resolved = await resolveProductForAvanco(
     prisma,
     input.tenantId,
@@ -93,9 +91,35 @@ export async function emitirAvancoEntreCds(
       `Produto não encontrado nesta empresa${skuHint}. Cadastre em Produtos ou emita nova remessa física para o CD de origem.`,
     );
   }
-  const { product, fifoProductId } = resolved;
+  const { product } = resolved;
+  const productSku = input.productSku?.trim() || product.sku;
+  if (productSku) {
+    await realignRemessaFifoProductIdsBySku(prisma, input.tenantId, productSku);
+  }
   if (!origem) throw new UnidadeLogisticaError("CD de origem não encontrado ou inativo");
   if (!destino) throw new UnidadeLogisticaError("CD de destino não encontrado ou inativo");
+
+  const fifoOrigemId = await resolveUnidadeFifoOrigemId(
+    prisma,
+    input.tenantId,
+    product.id,
+    input.unidadeOrigemId,
+    origem.codigo,
+    productSku,
+  );
+
+  const saldoDisponivel = await saldoRemessaDisponivel(
+    prisma,
+    input.tenantId,
+    product.id,
+    fifoOrigemId,
+    productSku,
+  );
+  if (saldoDisponivel < input.quantidade) {
+    throw new AvancoCdError(
+      `Saldo insuficiente no CD ${origem.codigo}. Disponível: ${saldoDisponivel}, solicitado: ${input.quantidade}.`,
+    );
+  }
 
   const destOrigem = unidadeParaDestinoFiscal(origem);
   const serie = tenant.serieRemessa;
@@ -107,9 +131,10 @@ export async function emitirAvancoEntreCds(
       alocacoes = await debitarSaldoRemessaPorCd(
         tx,
         input.tenantId,
-        fifoProductId,
+        product.id,
         input.quantidade,
-        input.unidadeOrigemId,
+        fifoOrigemId,
+        productSku,
       );
     } catch (e) {
       if (e instanceof SaldoRemessaInsuficienteError) {

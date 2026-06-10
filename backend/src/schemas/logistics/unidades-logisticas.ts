@@ -38,6 +38,7 @@ export const avancoCdBody = z.object({
 
 export const remessaManualItemBody = z.object({
   productId: z.string().uuid(),
+  productSku: z.string().trim().min(1).optional(),
   quantidade: z.number().int().min(1),
 });
 

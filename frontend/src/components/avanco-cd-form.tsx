@@ -62,13 +62,24 @@ export function AvancoCdForm({ products, unidades }: Props) {
   }, [productId, selectedProduct?.sku, carregarSaldos]);
 
   useEffect(() => {
+    const comSaldo = saldos.filter((s) => s.saldo > 0);
+    if (comSaldo.length === 1) {
+      setOrigemId(comSaldo[0]!.unidadeDestinoId);
+    } else if (origemId && !comSaldo.some((s) => s.unidadeDestinoId === origemId)) {
+      setOrigemId("");
+    }
+  }, [saldos, origemId]);
+
+  useEffect(() => {
     if (state.success || remessaState.success) {
       void carregarSaldos(productId, selectedProduct?.sku);
     }
   }, [state.success, remessaState.success, productId, selectedProduct?.sku, carregarSaldos]);
 
   const saldoPorCd = new Map(saldos.map((s) => [s.unidadeDestinoId, s.saldo]));
-  const saldoOrigem = origemId ? (saldoPorCd.get(origemId) ?? 0) : 0;
+  const saldoOrigem = origemId
+    ? (saldos.find((s) => s.unidadeDestinoId === origemId)?.saldo ?? 0)
+    : 0;
   const quantidadeInvalida = origemId.length > 0 && quantidade > saldoOrigem;
 
   function buildAvancoFormData() {
@@ -171,12 +182,14 @@ export function AvancoCdForm({ products, unidades }: Props) {
             className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
           >
             <option value="">Selecione…</option>
-            {unidades.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.codigo} — {u.endereco.uf} / {u.endereco.municipio} (
-                {saldoLabel(saldoPorCd.get(u.id))})
-              </option>
-            ))}
+            {saldos
+              .filter((s) => s.saldo > 0)
+              .map((s) => (
+                <option key={s.unidadeDestinoId} value={s.unidadeDestinoId}>
+                  {s.unidade?.codigo ?? s.unidadeDestinoId.slice(0, 8)} — {s.unidade?.uf ?? "?"}{" "}
+                  / {s.unidade?.nome ?? "CD"} (saldo: {s.saldo})
+                </option>
+              ))}
           </select>
         </label>
         <label className="block space-y-1">
@@ -273,8 +286,8 @@ export function AvancoCdForm({ products, unidades }: Props) {
       )}
       {state.success && (
         <p className="text-sm text-success">
-          Avanço emitido. Saldo debitado no CD origem. Remessa destino: {state.chaveRemessa?.slice(-8)} ·
-          Simbólica: {state.chaveSimbolica?.slice(-8)}
+          Avanço emitido. Saldo debitado no CD origem e creditado na remessa simbólica do CD destino.
+          Retorno: {state.chaveRetorno?.slice(-8)} · Simbólica: {state.chaveSimbolica?.slice(-8)}
         </p>
       )}
     </div>

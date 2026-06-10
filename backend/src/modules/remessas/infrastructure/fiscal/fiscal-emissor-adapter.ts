@@ -1,8 +1,4 @@
-import {
-  enrichFiscalPayloadMlFulfillment,
-  enrichFiscalPayloadWithXTexto,
-  productUnitPrice,
-} from "@msimulation-xml/fiscal-core";
+import { enrichFiscalPayloadWithXTexto, productUnitPrice } from "@msimulation-xml/fiscal-core";
 import { NFeTipo, type PrismaClient } from "../../../../generated/prisma/client.js";
 import { buildChaveNFe } from "../../../../lib/fiscal/nfe-chave.js";
 import { enrichTaxSnapshot, loadEmitterSettings } from "../../../../lib/fiscal/fiscal-emitter-runtime.js";
@@ -113,28 +109,25 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
     );
 
     const emitterSettings = await loadEmitterSettings(tx, tenant.id);
-    const fiscalPayload = enrichFiscalPayloadMlFulfillment(
-      enrichFiscalPayloadWithXTexto(
-        {
-          ...enrichTaxSnapshot(taxSnapshotFromRule(inboundTaxRule, aliqFallback), {
-            settings: emitterSettings,
-            tipo: NFeTipo.RETORNO_SIMBOLICO,
-            valor: calc.valor,
-            valorIcms: calc.valorIcms,
-            emitUf: tenant.uf,
-            destUf: tenant.uf,
-            indFinal: 0,
-          }),
-          engine: calc.nota,
-        } as Record<string, unknown>,
-        {
+    const fiscalPayload = enrichFiscalPayloadWithXTexto(
+      {
+        ...enrichTaxSnapshot(taxSnapshotFromRule(inboundTaxRule, aliqFallback), {
+          settings: emitterSettings,
           tipo: NFeTipo.RETORNO_SIMBOLICO,
-          cfop,
-          natOp: RETORNO_SIMBOLICO_NAT_OP,
-          pedidoMl: ctx.pedidoMl,
-        },
-      ),
-      { quantidadeTotal: quantidade, withLogistics: false },
+          valor: calc.valor,
+          valorIcms: calc.valorIcms,
+          emitUf: tenant.uf,
+          destUf: tenant.uf,
+          indFinal: 0,
+        }),
+        engine: calc.nota,
+      } as Record<string, unknown>,
+      {
+        tipo: NFeTipo.RETORNO_SIMBOLICO,
+        cfop,
+        natOp: RETORNO_SIMBOLICO_NAT_OP,
+        pedidoMl: ctx.pedidoMl,
+      },
     );
 
     const remessaPai = await tx.nFe.findUniqueOrThrow({

@@ -9,6 +9,8 @@ export {
   debitarSaldoRemessaPorCd,
   estornarConsumosRemessa,
   listarSaldoRemessaPorCd,
+  resolveOrigemFiscalParaAvanco,
+  resolveUnidadeFifoOrigemId,
   realignRemessaFifoProductIdsBySku,
   remessaItemSaldoWhere,
   saldoRemessaDisponivel,

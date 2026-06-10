@@ -7,6 +7,7 @@ import {
   debitarSaldoRemessaPorCd,
   estornarConsumosRemessa,
   listarSaldoRemessaPorCd,
+  resolveUnidadeFifoOrigemId,
   realignRemessaFifoProductIdsBySku,
   SaldoRemessaInsuficienteError,
 } from "./remessa-fifo.js";
@@ -35,6 +36,16 @@ type ConsumoRow = {
   quantidade: number;
 };
 
+function matchesNfeTipoFilter(
+  rowTipo: NFeTipo,
+  filter: NFeTipo | { in: NFeTipo[] },
+): boolean {
+  if (typeof filter === "object" && filter !== null && "in" in filter) {
+    return filter.in.includes(rowTipo);
+  }
+  return rowTipo === filter;
+}
+
 function createFifoMock(initial: ItemRow[]) {
   const items = new Map(initial.map((r) => [r.id, structuredClone(r)]));
   const consumos: ConsumoRow[] = [];
@@ -51,7 +62,7 @@ function createFifoMock(initial: ItemRow[]) {
           saldoDisponivel?: { gt: number };
           nfe: {
             tenantId: string;
-            tipo: NFeTipo;
+            tipo: NFeTipo | { in: NFeTipo[] };
             deletedAt: null;
             unidadeDestinoId?: string;
           };
@@ -67,7 +78,7 @@ function createFifoMock(initial: ItemRow[]) {
             r.tenantId === where.tenantId &&
             r.productId === where.productId &&
             r.nfe.tenantId === where.nfe.tenantId &&
-            r.nfe.tipo === where.nfe.tipo &&
+            matchesNfeTipoFilter(r.nfe.tipo, where.nfe.tipo) &&
             r.nfe.deletedAt === null &&
             (where.saldoDisponivel?.gt !== undefined
               ? (r.saldoDisponivel ?? 0) > where.saldoDisponivel.gt
@@ -305,5 +316,39 @@ describe("listarSaldoRemessaPorCd", () => {
     assert.equal(rows.find((r) => r.unidadeDestinoId === "unidade-b")?.saldo, 7);
     assert.equal(rows[0]!.unidade?.codigo, "SC01");
     assert.equal(rows[1]!.unidade?.codigo, "SP01");
+  });
+});
+
+describe("resolveUnidadeFifoOrigemId", () => {
+  it("usa o ID do saldo FIFO quando o UUID do catálogo diverge do gravado na NF-e", async () => {
+    const fifoUnidadeId = "uuid-fifo-sp02";
+    const catalogoUnidadeId = "uuid-catalogo-sp02";
+    const prisma = {
+      product: {
+        findFirst: async () => ({ id: productId }),
+      },
+      nfeItem: {
+        findMany: async () => [
+          {
+            productId,
+            saldoDisponivel: 10,
+            nfe: {
+              unidadeDestinoId: fifoUnidadeId,
+              unidadeDestino: { codigo: "SP02", nome: "Cajamar", uf: "SP" },
+            },
+          },
+        ],
+      },
+    } as unknown as PrismaClient;
+
+    const resolved = await resolveUnidadeFifoOrigemId(
+      prisma,
+      tenantId,
+      productId,
+      catalogoUnidadeId,
+      "SP02",
+    );
+
+    assert.equal(resolved, fifoUnidadeId);
   });
 });

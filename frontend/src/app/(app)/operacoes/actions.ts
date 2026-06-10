@@ -17,6 +17,7 @@ export async function emitirRemessaManualAction(
 ): Promise<RemessaManualState> {
   const unidadeDestinoId = String(formData.get("unidadeDestinoId") ?? "");
   const productIds = formData.getAll("productId").map(String);
+  const productSkus = formData.getAll("productSku").map(String);
   const quantidades = formData.getAll("quantidade").map((v) => Number(v));
 
   if (!unidadeDestinoId) {
@@ -29,9 +30,10 @@ export async function emitirRemessaManualAction(
     return { error: "Linhas de produto incompletas" };
   }
 
-  const items: { productId: string; quantidade: number }[] = [];
+  const items: { productId: string; productSku?: string; quantidade: number }[] = [];
   for (let i = 0; i < productIds.length; i++) {
     const productId = productIds[i]?.trim() ?? "";
+    const productSku = productSkus[i]?.trim() ?? "";
     const quantidade = quantidades[i] ?? 0;
     if (!productId) {
       return { error: `Selecione o produto na linha ${i + 1}` };
@@ -39,7 +41,11 @@ export async function emitirRemessaManualAction(
     if (!Number.isFinite(quantidade) || quantidade < 1) {
       return { error: `Quantidade inválida na linha ${i + 1}` };
     }
-    items.push({ productId, quantidade });
+    items.push({
+      productId,
+      productSku: productSku || undefined,
+      quantidade,
+    });
   }
 
   try {

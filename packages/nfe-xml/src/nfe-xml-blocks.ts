@@ -338,3 +338,7 @@ export function remessaInfCplText(destIe?: string): string {
   if (!ie) return base;
   return `${base} Inscricao Estadual do Operador Logistico: ${ie}`;
 }
+
+export function retornoInfCplText(): string {
+  return "Retorno Simbolico de Deposito Temporario - Portaria CAT 31/2019.";
+}

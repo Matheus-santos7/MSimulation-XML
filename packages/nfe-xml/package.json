@@ -19,6 +19,7 @@
     "@msimulation-xml/fiscal-core": "workspace:*"
   },
   "devDependencies": {
+    "@xmldom/xmldom": "^0.9.10",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3"
   }

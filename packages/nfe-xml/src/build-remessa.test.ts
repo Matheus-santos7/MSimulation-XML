@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { DOMParser } from "@xmldom/xmldom";
 import {
   enrichFiscalPayloadMlFulfillment,
   verifySimulationXmlSignature,
@@ -227,6 +228,71 @@ describe("buildNFeXML — REMESSA", () => {
     const xml = buildNFeXML(nfe, emit);
     assert.match(xml, /<gIBSCBS>\s*<vBC>82\.00<\/vBC>\s*<\/gIBSCBS>/);
     assert.match(xml, /<IBSCBSTot>\s*<vBCIBSCBS>82\.00<\/vBCIBSCBS>\s*<\/IBSCBSTot>/);
+  });
+
+  it("RETORNO_SIMBOLICO gera XML válido com infCpl de retorno e assinatura", () => {
+    const nfe = {
+      ...baseNfe(),
+      numero: 2,
+      tipo: "RETORNO_SIMBOLICO" as const,
+      natOp: "Outras Entradas - Retorno Simbolico de Deposito Temporario",
+      cfop: "1949",
+      nfeReferenciaChave: baseNfe().chave,
+      valor: 609,
+      valorICMS: 0,
+      aliqICMS: 0,
+      quantidade: 1,
+      pedidoML: "ML-781050649173",
+      destinatario: {
+        ...baseNfe().destinatario,
+        nome: emit.xNome,
+        doc: emit.cnpj,
+      },
+      fiscalPayload: {
+        engine: {
+          itens: [
+            {
+              vProd: 609,
+              quantidade: 1,
+              valorUnitario: 609,
+              icms: { cst: "90", orig: 2, vBC: 609, pICMS: 0, vICMS: 0 },
+              pis: { cst: "98", vBC: 0, vPIS: 0 },
+              cofins: { cst: "98", vBC: 0, vCOFINS: 0 },
+              ipi: { cst: "05", cEnq: "103", vBC: 0, pIPI: 0, vIPI: 0 },
+            },
+          ],
+          totais: {
+            vBC: 609,
+            vICMS: 0,
+            vProd: 609,
+            vIPI: 0,
+            vPIS: 0,
+            vCOFINS: 0,
+            vNF: 609,
+          },
+        },
+        obsContXTexto: "SALE-symbolic_inbound_return-ML-781050649173-1-OLSS-279642028",
+      },
+    };
+    const product = {
+      sku: "4133250001",
+      nome: "Liquidificador Portatil",
+      ncm: "85094010",
+      unidade: "PC",
+      origem: 2,
+      preco: 609,
+      precoCusto: 609,
+    };
+    const xml = buildNFeXML(nfe, emit, product);
+    assert.match(xml, /<tpNF>0<\/tpNF>/);
+    assert.match(xml, /Retorno Simbolico de Deposito Temporario/);
+    assert.doesNotMatch(xml, /Remessa para Deposito Temporario/);
+    assert.match(xml, /<NFref>\s*<refNFe>/);
+
+    const doc = new DOMParser().parseFromString(xml, "text/xml");
+    const err = doc.getElementsByTagName("parsererror");
+    assert.equal(err.length, 0, err[0]?.textContent ?? "XML malformado");
+    assert.equal(verifySimulationXmlSignature(xml), true);
   });
 
   it("usa idCadIntTran e pesos do fiscalPayload enriquecido (emissão real)", () => {

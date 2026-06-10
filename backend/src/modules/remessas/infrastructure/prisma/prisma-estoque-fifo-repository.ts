@@ -6,13 +6,10 @@ import type {
   ListarSaldoFifoFiltro,
 } from "../../domain/ports/estoque-fifo-repository.js";
 import {
-  collectRemessaSaldoProductIds,
   debitarSaldoRemessaPorCd,
   realignRemessaFifoProductIdsBySku,
-  remessaItemSaldoWhere,
+  remessaSaldoItensWhere,
 } from "../../../../services/fiscal/remessa/remessa-fifo.js";
-import { NFeTipo } from "../../../../generated/prisma/client.js";
-
 type Db = PrismaClient | PrismaTx;
 
 /**
@@ -23,24 +20,16 @@ export class PrismaEstoqueFifoRepository implements EstoqueFifoRepository {
   constructor(private readonly db: Db) {}
 
   async listarLinhasComSaldo(filtro: ListarSaldoFifoFiltro) {
-    const productIds = await collectRemessaSaldoProductIds(
+    const where = await remessaSaldoItensWhere(
       this.db,
       filtro.tenantId,
       filtro.productId,
       filtro.productSku,
+      filtro.unidadeDestinoId,
     );
 
     const rows = await this.db.nfeItem.findMany({
-      where: {
-        tenantId: filtro.tenantId,
-        productId: { in: productIds },
-        saldoDisponivel: { gt: 0 },
-        nfe: {
-          tipo: NFeTipo.REMESSA,
-          deletedAt: null,
-          ...(filtro.unidadeDestinoId ? { unidadeDestinoId: filtro.unidadeDestinoId } : {}),
-        },
-      },
+      where,
       select: {
         id: true,
         tenantId: true,
@@ -120,4 +109,3 @@ export async function debitarFifoPorCd(
   return debitarSaldoRemessaPorCd(db, tenantId, productId, quantidade, unidadeOrigemId);
 }
 
-export { remessaItemSaldoWhere };

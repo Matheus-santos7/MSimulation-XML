@@ -8,13 +8,12 @@ export type EmitirAvancoMercadoriaCommand = {
 };
 
 /**
- * Resultado do avanço com cadeia fiscal completa:
- * Remessa (FIFO) → Retorno Simbólico → Remessa Simbólica [→ Remessa física destino].
+ * Resultado do avanço: Remessa (FIFO) → Retorno Simbólico → Remessa Simbólica.
+ * O saldo fica na remessa simbólica no CD destino (sem nova remessa física).
  */
 export type EmitirAvancoMercadoriaResult = {
   remessaReferenciaId: string;
   retornoSimbolico: { id: string; chave: string };
   remessaSimbolica: { id: string; chave: string };
-  remessaDestino: { id: string; chave: string };
   alocacoesFifo: { remessaNfeId: string; nfeItemId: string; quantidade: number }[];
 };

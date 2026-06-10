@@ -4,7 +4,7 @@
 import { NFeTipo, type Prisma, type PrismaClient } from "../../../generated/prisma/client.js";
 import { fiscalNotDeleted } from "../shared/fiscal-service.js";
 
-type Tx = Pick<PrismaClient, "nfeItem" | "nfeRemessaConsumo">;
+type Tx = Pick<PrismaClient, "nfeItem" | "nfeRemessaConsumo" | "product">;
 
 export class SaldoRemessaInsuficienteError extends Error {
   constructor(
@@ -24,22 +24,53 @@ export function remessaItemSaldoWhere(
   productId: string,
   unidadeDestinoId?: string,
 ): Prisma.NfeItemWhereInput {
+  return remessaItemSaldoWhereMulti(tenantId, [productId], unidadeDestinoId);
+}
+
+/** Mesmo critério da listagem de saldo por CD — aceita cadastro + IDs legados do SKU. */
+export function remessaItemSaldoWhereMulti(
+  tenantId: string,
+  productIds: string[],
+  unidadeDestinoId?: string,
+): Prisma.NfeItemWhereInput {
+  if (productIds.length === 0) {
+    return { id: { in: [] } };
+  }
   return {
     tenantId,
-    productId,
+    productId: productIds.length === 1 ? productIds[0]! : { in: productIds },
     saldoDisponivel: { gt: 0 },
     nfe: {
       tenantId,
-      tipo: NFeTipo.REMESSA,
+      tipo: { in: REMESSA_FIFO_TIPOS },
       ...fiscalNotDeleted,
       ...(unidadeDestinoId ? { unidadeDestinoId } : {}),
     },
   };
 }
 
+export async function remessaSaldoItensWhere(
+  prisma: Pick<PrismaClient, "product" | "nfeItem">,
+  tenantId: string,
+  productId: string,
+  productSku?: string,
+  unidadeDestinoId?: string,
+): Promise<Prisma.NfeItemWhereInput> {
+  const productIds = await collectRemessaSaldoProductIds(
+    prisma,
+    tenantId,
+    productId,
+    productSku,
+  );
+  return remessaItemSaldoWhereMulti(tenantId, productIds, unidadeDestinoId);
+}
+
+/** Saldo FIFO: remessa física + remessa simbólica (avanço entre CDs). */
+const REMESSA_FIFO_TIPOS: NFeTipo[] = [NFeTipo.REMESSA, NFeTipo.REMESSA_SIMBOLICA];
+
 const remessaSaldoNfeWhere = (tenantId: string) => ({
   tenantId,
-  tipo: NFeTipo.REMESSA,
+  tipo: { in: REMESSA_FIFO_TIPOS },
   ...fiscalNotDeleted,
 });
 
@@ -65,7 +96,7 @@ export async function collectRemessaSaldoProductIds(
       where: {
         tenantId,
         saldoDisponivel: { gt: 0 },
-        product: { sku },
+        product: { sku, tenantId },
         nfe: remessaSaldoNfeWhere(tenantId),
       },
       select: { productId: true },
@@ -114,9 +145,17 @@ export async function saldoRemessaDisponivel(
   tenantId: string,
   productId: string,
   unidadeDestinoId?: string,
+  productSku?: string,
 ): Promise<number> {
+  const where = await remessaSaldoItensWhere(
+    prisma,
+    tenantId,
+    productId,
+    productSku,
+    unidadeDestinoId,
+  );
   const rows = await prisma.nfeItem.findMany({
-    where: remessaItemSaldoWhere(tenantId, productId, unidadeDestinoId),
+    where,
     select: { saldoDisponivel: true },
   });
   return rows.reduce((acc, r) => acc + (r.saldoDisponivel ?? 0), 0);
@@ -133,6 +172,87 @@ export type SaldoRemessaCdRow = {
   } | null;
 };
 
+/**
+ * ID gravado nas NF-es de remessa (`unidade_destino_id`) para debitar FIFO no CD origem.
+ * Se o catálogo de CDs foi reimportado, o UUID do dropdown pode divergir do das notas antigas;
+ * nesse caso casa pelo código (ex.: SP02).
+ */
+/**
+ * CD ativo do catálogo para metadados fiscais do avanço.
+ * O saldo FIFO pode estar em NF-es com `unidade_destino_id` legado/inativo.
+ */
+export async function resolveOrigemFiscalParaAvanco(
+  prisma: PrismaClient,
+  tenantId: string,
+  productId: string,
+  unidadeOrigemId: string,
+  productSku: string | undefined,
+  obterAtiva: (id: string) => Promise<{ id: string; codigo: string; uf: string; nome: string } | null>,
+  obterAtivaPorCodigo: (codigo: string) => Promise<{ id: string; codigo: string; uf: string; nome: string } | null>,
+): Promise<{ origem: { id: string; codigo: string; uf: string; nome: string }; fifoOrigemId: string } | null> {
+  const saldos = await listarSaldoRemessaPorCd(prisma, tenantId, productId, productSku);
+
+  const direta = await obterAtiva(unidadeOrigemId);
+  const codigoDireto = direta?.codigo;
+  let fifoOrigemId: string;
+  try {
+    fifoOrigemId = await resolveUnidadeFifoOrigemId(
+      prisma,
+      tenantId,
+      productId,
+      unidadeOrigemId,
+      codigoDireto ?? saldos.find((s) => s.unidadeDestinoId === unidadeOrigemId)?.unidade?.codigo ?? "",
+      productSku,
+    );
+  } catch (e) {
+    if (e instanceof SaldoRemessaInsuficienteError) return null;
+    throw e;
+  }
+
+  if (direta) {
+    return { origem: direta, fifoOrigemId };
+  }
+
+  const saldoRow = saldos.find((s) => s.unidadeDestinoId === fifoOrigemId);
+  const codigoSaldo = saldoRow?.unidade?.codigo?.trim();
+  if (codigoSaldo) {
+    const porCodigo = await obterAtivaPorCodigo(codigoSaldo);
+    if (porCodigo) {
+      return { origem: porCodigo, fifoOrigemId };
+    }
+  }
+
+  return null;
+}
+
+export async function resolveUnidadeFifoOrigemId(
+  prisma: PrismaClient,
+  tenantId: string,
+  productId: string,
+  unidadeOrigemId: string,
+  unidadeOrigemCodigo: string,
+  productSku?: string,
+): Promise<string> {
+  const saldos = await listarSaldoRemessaPorCd(prisma, tenantId, productId, productSku);
+  const direct = saldos.find((s) => s.unidadeDestinoId === unidadeOrigemId && s.saldo > 0);
+  if (direct) return unidadeOrigemId;
+
+  const codigo = unidadeOrigemCodigo.trim().toUpperCase();
+  const byCodigo = saldos.find(
+    (s) => s.unidade?.codigo?.trim().toUpperCase() === codigo && s.saldo > 0,
+  );
+  if (byCodigo) return byCodigo.unidadeDestinoId;
+
+  const total = saldos.reduce((acc, s) => acc + s.saldo, 0);
+  if (total <= 0) return unidadeOrigemId;
+
+  throw new SaldoRemessaInsuficienteError(
+    productId,
+    1,
+    saldos.find((s) => s.unidadeDestinoId === unidadeOrigemId)?.saldo ?? 0,
+  );
+}
+
 /** Saldo FIFO agregado por CD (unidade destino da remessa física). */
 export async function listarSaldoRemessaPorCd(
   prisma: PrismaClient,
@@ -140,19 +260,9 @@ export async function listarSaldoRemessaPorCd(
   productId: string,
   productSku?: string,
 ): Promise<SaldoRemessaCdRow[]> {
-  const productIds = await collectRemessaSaldoProductIds(
-    prisma,
-    tenantId,
-    productId,
-    productSku,
-  );
+  const where = await remessaSaldoItensWhere(prisma, tenantId, productId, productSku);
   const rows = await prisma.nfeItem.findMany({
-    where: {
-      tenantId,
-      productId: { in: productIds },
-      saldoDisponivel: { gt: 0 },
-      nfe: remessaSaldoNfeWhere(tenantId),
-    },
+    where,
     select: {
       productId: true,
       saldoDisponivel: true,
@@ -204,9 +314,17 @@ async function listarItensRemessaFifo(
   tenantId: string,
   productId: string,
   unidadeDestinoId?: string,
+  productSku?: string,
 ) {
+  const where = await remessaSaldoItensWhere(
+    tx,
+    tenantId,
+    productId,
+    productSku,
+    unidadeDestinoId,
+  );
   return tx.nfeItem.findMany({
-    where: remessaItemSaldoWhere(tenantId, productId, unidadeDestinoId),
+    where,
     orderBy: [{ nfe: { emitidaEm: "asc" } }, { nfe: { numero: "asc" } }, { numeroItem: "asc" }],
   });
 }
@@ -260,8 +378,15 @@ export async function debitarSaldoRemessaPorCd(
   productId: string,
   quantidade: number,
   unidadeDestinoId: string,
+  productSku?: string,
 ): Promise<{ remessaNfeId: string; quantidade: number; nfeItemId: string }[]> {
-  const itens = await listarItensRemessaFifo(tx, tenantId, productId, unidadeDestinoId);
+  const itens = await listarItensRemessaFifo(
+    tx,
+    tenantId,
+    productId,
+    unidadeDestinoId,
+    productSku,
+  );
 
   let restante = quantidade;
   const alocacoes: { remessaNfeId: string; quantidade: number; nfeItemId: string }[] = [];

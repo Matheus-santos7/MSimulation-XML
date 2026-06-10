@@ -96,6 +96,18 @@ export async function getUnidadeAtivaDoTenant(
   });
 }
 
+/** Unidade ativa do catálogo global pelo código (ex.: SP02). */
+export async function getUnidadeAtivaPorCodigo(
+  prisma: PrismaClient,
+  codigo: string,
+): Promise<MeliUnidadeLogistica | null> {
+  const norm = codigo.trim().toUpperCase();
+  if (!norm) return null;
+  return prisma.meliUnidadeLogistica.findFirst({
+    where: { codigo: norm, ativa: true },
+  });
+}
+
 function unidadeSearchFilter(q: string): Prisma.MeliUnidadeLogisticaWhereInput {
   const cnpjDigits = q.replace(/\D/g, "");
   return {

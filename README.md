@@ -39,6 +39,7 @@
 - [Interface web](#interface-web)
 - [Identidade visual](#identidade-visual)
 - [Como rodar localmente](#como-rodar-localmente)
+- [Fluxo de branches (Git)](#fluxo-de-branches-git)
 - [Deploy em produção](#deploy-em-produção)
 - [Variáveis de ambiente](#variáveis-de-ambiente)
 - [Segurança](#segurança)
@@ -382,6 +383,46 @@ Acesse http://localhost:3000/login e **crie uma conta** → confirme o e-mail (l
 
 ---
 
+## Fluxo de branches (Git)
+
+O repositório usa duas branches principais para isolar refatorações e features da produção:
+
+| Branch | Papel | Deploy automático |
+|--------|-------|-------------------|
+| `main` | **Produção** — código estável em https://msimulation-xml.vercel.app | Sim (Vercel + Render) |
+| `dev` | **Desenvolvimento** — refatorações, testes e integração contínua | Não |
+
+> **Regra:** não commite direto na `main`. Trabalhe sempre na `dev` e só integre em produção via pull request.
+
+### Fluxo do dia a dia
+
+```bash
+# 1. Garantir que está na dev
+git checkout dev
+git pull origin dev
+
+# 2. Desenvolver, commitar e subir
+git add .
+git commit -m "feat: descrição da mudança"
+git push origin dev
+
+# 3. Quando estiver validado, abrir PR dev → main
+gh pr create --base main --head dev --title "..." --body "..."
+
+# 4. Após revisão, CI verde e testes — merge na main (dispara deploy)
+```
+
+### Checklist antes do merge em `main`
+
+- [ ] CI do GitHub Actions passou (lint, build, testes)
+- [ ] Testado localmente com `pnpm dev`
+- [ ] Migrations revisadas (se houver alteração no Prisma)
+- [ ] Variáveis de ambiente novas documentadas em `.env.example`
+
+Se algo quebrar após o merge, corrija na `dev` e abra um novo PR — evite commits diretos na `main`.
+
+---
+
 ## Variáveis de ambiente
 
 Três arquivos, três papéis:
@@ -432,7 +473,7 @@ Preferir `API_URL` (server-only) em vez de `NEXT_PUBLIC_API_URL`. Referência: [
 
 ## Deploy em produção
 
-Aplicação publicada em **Vercel** (frontend) + **Render** (API Docker + PostgreSQL). Cada push na branch `main` dispara deploy automático nos dois provedores, após o CI do GitHub Actions.
+Aplicação publicada em **Vercel** (frontend) + **Render** (API Docker + PostgreSQL). Apenas push na branch **`main`** dispara deploy automático nos dois provedores (veja [Fluxo de branches](#fluxo-de-branches-git) — desenvolvimento ocorre na `dev`).
 
 ### URLs
 

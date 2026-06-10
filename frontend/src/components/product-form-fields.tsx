@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { ProdutoFormValues } from "@/lib/produto-form";
+import { taxRuleSelectValue } from "@/lib/produto-form";
 import { EX_TIPI_FIELD_HELP } from "@/lib/produto-planilha";
 import type { ProductDto, TaxRuleCatalogEntry } from "@/lib/fiscal-types";
 
@@ -30,7 +31,11 @@ type Props = {
   taxRuleCatalog?: TaxRuleCatalogEntry[];
 };
 
-function toFormState(product?: ProductDto, draft?: ProdutoFormValues): ProdutoFormValues {
+function toFormState(
+  product?: ProductDto,
+  draft?: ProdutoFormValues,
+  taxRuleCatalog: TaxRuleCatalogEntry[] = [],
+): ProdutoFormValues {
   if (draft) return draft;
   return {
     sku: product?.sku ?? "",
@@ -44,7 +49,7 @@ function toFormState(product?: ProductDto, draft?: ProdutoFormValues): ProdutoFo
     preco: product != null ? String(product.preco) : "",
     precoCusto: product != null ? String(product.precoCusto) : "",
     estoque: product != null ? String(product.estoque) : "1",
-    taxRuleBaseId: product?.taxRuleBaseId ?? "",
+    taxRuleBaseId: taxRuleSelectValue(product?.taxRuleBaseId, taxRuleCatalog),
   };
 }
 
@@ -55,15 +60,17 @@ export function ProductFormFields({
   idPrefix = "prod",
   taxRuleCatalog = [],
 }: Props) {
-  const [form, setForm] = useState<ProdutoFormValues>(() => toFormState(product, draft));
+  const [form, setForm] = useState<ProdutoFormValues>(() =>
+    toFormState(product, draft, taxRuleCatalog),
+  );
 
   useEffect(() => {
     if (draft) {
       setForm(draft);
       return;
     }
-    if (product) setForm(toFormState(product));
-  }, [product?.id, draft]);
+    if (product) setForm(toFormState(product, undefined, taxRuleCatalog));
+  }, [product?.id, draft, taxRuleCatalog]);
 
   const set = (key: keyof ProdutoFormValues, value: string) => setForm((f) => ({ ...f, [key]: value }));
   const err = (name: keyof ProdutoFormValues) => fieldErrors?.[name]?.[0];
@@ -95,11 +102,14 @@ export function ProductFormFields({
           required
           options={
             taxRuleCatalog.length > 0
-              ? taxRuleCatalog.map((r) => ({ value: r.baseId, label: r.label }))
-              : [{ value: "", label: "Importe regras em Regras tributárias" }]
+              ? taxRuleCatalog.map((r) => ({
+                  value: `${r.baseId}::${r.origin}`,
+                  label: r.label,
+                }))
+              : [{ value: "", label: "Importe regras com ORIGIN = UF da sua empresa" }]
           }
           error={err("taxRuleBaseId")}
-          hint="No faturamento, cruzamos origem da empresa × UF do destinatário nesta regra."
+          hint="Só aparecem regras cuja coluna ORIGIN da planilha coincide com a UF do emitente."
         />
         <div className="grid grid-cols-2 gap-3">
           <Field id={`${idPrefix}-ncm`} label="NCM" name="ncm" value={form.ncm} onChange={set} required mono error={err("ncm")} />

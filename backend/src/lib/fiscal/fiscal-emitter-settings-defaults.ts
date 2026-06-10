@@ -102,7 +102,7 @@ export const DEFAULT_FISCAL_EMITTER_SETTINGS: FiscalEmitterSettingsData = {
     modalidadeFrete: {
       mode: "CUSTOM",
       fullfilmentVendas: "0",
-      fullfilmentEntrada: "0",
+      fullfilmentEntrada: "9",
       coleta: "2",
       flex: "0",
       turbo: "0",
@@ -190,6 +190,7 @@ export function mergeFiscalEmitterSettings(partial: unknown): FiscalEmitterSetti
         ...p.nfe?.prazoCancelamento,
       },
       contatos: p.nfe?.contatos ?? base.nfe.contatos,
+      autXmlCpfs: p.nfe?.autXmlCpfs ?? base.nfe.autXmlCpfs,
     },
   };
 }

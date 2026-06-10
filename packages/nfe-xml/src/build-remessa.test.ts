@@ -236,17 +236,30 @@ describe("buildNFeXML — REMESSA", () => {
       numero: 2,
       tipo: "RETORNO_SIMBOLICO" as const,
       natOp: "Outras Entradas - Retorno Simbolico de Deposito Temporario",
-      cfop: "1949",
+      cfop: "2949",
       nfeReferenciaChave: baseNfe().chave,
       valor: 609,
-      valorICMS: 0,
-      aliqICMS: 0,
+      valorICMS: 73.08,
+      aliqICMS: 12,
       quantidade: 1,
       pedidoML: "ML-781050649173",
       destinatario: {
-        ...baseNfe().destinatario,
-        nome: emit.xNome,
-        doc: emit.cnpj,
+        nome: "EBAZAR.COM.BR LTDA",
+        doc: "03007331012077",
+        uf: "SC",
+        indIEDest: 1,
+        endereco: {
+          logradouro: "Av. Papenborg",
+          numero: "S/N",
+          complemento: "Nao consta",
+          bairro: "Guaporanga",
+          codigoMunicipio: "4206009",
+          municipio: "Governador Celso Ramos",
+          uf: "SC",
+          cep: "88195900",
+          codigoPais: 1058,
+          nomePais: "Brasil",
+        },
       },
       fiscalPayload: {
         engine: {
@@ -272,22 +285,36 @@ describe("buildNFeXML — REMESSA", () => {
           },
         },
         obsContXTexto: "SALE-symbolic_inbound_return-ML-781050649173-1-OLSS-279642028",
+        destIe: "261755994",
+        ibsCbs: { st: "410", cClassTrib: "410999" },
+        autXmlCpfs: ["87659808915", "72556455772"],
+        infIntermed: { cnpj: "03007331000141", idCadIntTran: "279642028" },
       },
     };
     const product = {
       sku: "4133250001",
       nome: "Liquidificador Portatil",
       ncm: "85094010",
+      cest: "2100100",
+      exTipi: "01",
       unidade: "PC",
       origem: 2,
-      preco: 609,
+      preco: 999,
       precoCusto: 609,
     };
-    const xml = buildNFeXML(nfe, emit, product);
+    const xml = buildNFeXML(nfe, { ...emit, uf: "PR", endereco: { ...emit.endereco, uf: "PR" } }, product);
+    assert.match(xml, /<vUnCom>609\.00000000<\/vUnCom>/);
+    assert.match(xml, /<vProd>609\.00<\/vProd>/);
+    assert.match(xml, /<vItem>609\.00<\/vItem>/);
     assert.match(xml, /<tpNF>0<\/tpNF>/);
-    assert.match(xml, /Retorno Simbolico de Deposito Temporario/);
+    assert.match(xml, /<idDest>2<\/idDest>/);
+    assert.match(xml, /<modFrete>9<\/modFrete>/);
+    assert.match(xml, /Retorno Simbolico de Deposito Temporario\./);
+    assert.doesNotMatch(xml, /Portaria CAT 31\/2019/);
     assert.doesNotMatch(xml, /Remessa para Deposito Temporario/);
     assert.match(xml, /<NFref>\s*<refNFe>/);
+    assert.match(xml, /<infRespTec>/);
+    assert.match(xml, /<EXTIPI>/);
 
     const doc = new DOMParser().parseFromString(xml, "text/xml");
     const err = doc.getElementsByTagName("parsererror");

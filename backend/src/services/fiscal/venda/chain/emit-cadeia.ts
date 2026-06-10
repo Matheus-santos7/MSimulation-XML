@@ -3,6 +3,7 @@ import { FISCAL_TRANSACTION_OPTIONS } from "../../../../lib/db/prisma-tx.js";
 import { mapNfe } from "../../../../lib/fiscal/fiscal-mappers.js";
 import { emitirCteVenda } from "../cte-venda-service.js";
 import { assertProdutoComRegra, buildContextoEmissao } from "./context.js";
+import { previewRemessaPrincipalFifoParaVenda } from "../../remessa/remessa-fifo.js";
 import { consumirRemessaEVincularRetorno, emitirNotaRetorno } from "./emit-retorno.js";
 import { emitirNotaVenda } from "./emit-venda.js";
 import { resolverRegrasFiscais } from "./resolver-regras.js";
@@ -18,9 +19,17 @@ export async function emitirCadeiaVenda(prisma: PrismaClient, pedido: PedidoForE
   const ctx = buildContextoEmissao(pedido, ruleBaseId);
 
   return prisma.$transaction(async (tx) => {
-    const regras = await resolverRegrasFiscais(tx, pedido, ctx);
+    const previewFifo = await previewRemessaPrincipalFifoParaVenda(
+      tx,
+      pedido.tenant.id,
+      pedido.product.id,
+      pedido.quantidade,
+      pedido.destUf,
+      pedido.product.sku,
+    );
+    const regras = await resolverRegrasFiscais(tx, pedido, ctx, previewFifo.destUf);
 
-    const retorno = await emitirNotaRetorno(tx, pedido, ctx, regras);
+    const retorno = await emitirNotaRetorno(tx, pedido, ctx, regras, previewFifo);
     const alocacoes = await consumirRemessaEVincularRetorno(
       tx,
       pedido,

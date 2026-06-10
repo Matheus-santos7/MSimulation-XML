@@ -603,7 +603,7 @@ type FifoItemRow = {
 };
 
 async function listarItensRemessaFifo(
-  tx: Tx,
+  tx: FifoPrisma,
   tenantId: string,
   productId: string,
   unidadeDestinoId?: string,
@@ -636,7 +636,7 @@ async function listarItensRemessaFifo(
         : {}),
     },
     orderBy: [{ nfe: { emitidaEm: "asc" } }, { nfe: { numero: "asc" } }, { numeroItem: "asc" }],
-  });
+  }) as unknown as Promise<FifoItemRow[]>;
 }
 
 async function debitarItensFifo(
@@ -703,7 +703,8 @@ export async function consumirSaldoRemessaFifo(
   retornoNfeId: string,
   unidadeDestinoId?: string,
 ): Promise<{ remessaNfeId: string; quantidade: number; nfeItemId: string }[]> {
-  const itens = await listarItensRemessaFifo(tx, tenantId, productId, unidadeDestinoId);
+  const fifoTx = tx as unknown as FifoPrisma;
+  const itens = await listarItensRemessaFifo(fifoTx, tenantId, productId, unidadeDestinoId);
   return debitarItensFifo(tx, itens, quantidade, retornoNfeId, productId);
 }
 
@@ -711,6 +712,92 @@ export async function consumirSaldoRemessaFifo(
  * Venda full: debita saldo preferindo CDs na UF do comprador; se não houver,
  * consome remessa simbólica ou remessa física com saldo (FIFO global).
  */
+const REMESSA_DEST_SELECT = {
+  id: true,
+  chave: true,
+  tipo: true,
+  destNome: true,
+  destDoc: true,
+  destUf: true,
+  destLogradouro: true,
+  destNumero: true,
+  destComplemento: true,
+  destBairro: true,
+  destCodigoMunicipio: true,
+  destMunicipio: true,
+  destCep: true,
+  destCodigoPais: true,
+  destNomePais: true,
+  destTelefone: true,
+  destIndIeDest: true,
+  fiscalPayload: true,
+  unidadeDestino: { select: { ie: true, idCadIntTran: true } },
+} as const;
+
+export type PreviewRemessaFifoVenda = {
+  remessaNfeId: string;
+  remessaChave: string;
+  destUf: string;
+};
+
+/**
+ * Simula o FIFO da venda sem debitar saldo — usado para montar retorno com destino/CFOP corretos.
+ */
+export async function previewRemessaPrincipalFifoParaVenda(
+  tx: Tx,
+  tenantId: string,
+  productId: string,
+  quantidade: number,
+  destUf: string,
+  productSku?: string,
+): Promise<PreviewRemessaFifoVenda> {
+  const fifoTx = tx as unknown as FifoPrisma;
+  const sku = await prepararSaldoFifoParaOperacao(fifoTx, tenantId, productId, productSku);
+  const itens = await listarItensRemessaFifo(
+    fifoTx,
+    tenantId,
+    productId,
+    undefined,
+    sku ?? productSku,
+    true,
+  );
+  const ordenados = ordenarFifoPreferindoUf(itens, destUf);
+
+  let restante = quantidade;
+  let remessaNfeId: string | null = null;
+
+  for (const item of ordenados) {
+    if (restante <= 0) break;
+    const saldo = item.saldoDisponivel ?? 0;
+    if (saldo <= 0) continue;
+    if (!remessaNfeId) remessaNfeId = item.nfeId;
+    restante -= Math.min(restante, saldo);
+  }
+
+  if (restante > 0 || !remessaNfeId) {
+    const disponivel = quantidade - restante;
+    throw new SaldoRemessaInsuficienteError(productId, quantidade, disponivel);
+  }
+
+  const remessa = await tx.nFe.findUniqueOrThrow({
+    where: { id: remessaNfeId },
+    select: REMESSA_DEST_SELECT,
+  });
+
+  return {
+    remessaNfeId: remessa.id,
+    remessaChave: remessa.chave,
+    destUf: remessa.destUf,
+  };
+}
+
+export async function loadRemessaDestinoRetorno(tx: Tx, remessaNfeId: string) {
+  return tx.nFe.findUniqueOrThrow({
+    where: { id: remessaNfeId },
+    select: REMESSA_DEST_SELECT,
+  });
+}
+
 export async function consumirSaldoRemessaFifoParaVenda(
   tx: Tx,
   tenantId: string,
@@ -720,9 +807,10 @@ export async function consumirSaldoRemessaFifoParaVenda(
   destUf: string,
   productSku?: string,
 ): Promise<{ remessaNfeId: string; quantidade: number; nfeItemId: string }[]> {
-  const sku = await prepararSaldoFifoParaOperacao(tx, tenantId, productId, productSku);
+  const fifoTx = tx as unknown as FifoPrisma;
+  const sku = await prepararSaldoFifoParaOperacao(fifoTx, tenantId, productId, productSku);
   const itens = await listarItensRemessaFifo(
-    tx,
+    fifoTx,
     tenantId,
     productId,
     undefined,
@@ -741,8 +829,9 @@ export async function debitarSaldoRemessaPorCd(
   unidadeDestinoId: string,
   productSku?: string,
 ): Promise<{ remessaNfeId: string; quantidade: number; nfeItemId: string }[]> {
+  const fifoTx = tx as unknown as FifoPrisma;
   const itens = await listarItensRemessaFifo(
-    tx,
+    fifoTx,
     tenantId,
     productId,
     unidadeDestinoId,

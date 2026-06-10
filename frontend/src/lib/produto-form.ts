@@ -1,4 +1,22 @@
-import type { ProductInput } from "@/lib/fiscal-types";
+import type { ProductInput, TaxRuleCatalogEntry } from "@/lib/fiscal-types";
+
+/** Extrai o RULE_ID curto salvo no produto a partir do valor do select (`baseId::origin`). */
+export function taxRuleBaseIdFromFormValue(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+  return trimmed.split("::")[0] ?? trimmed;
+}
+
+/** Valor do select alinhado ao catálogo filtrado pela UF do emitente. */
+export function taxRuleSelectValue(
+  baseId: string | undefined | null,
+  catalog: TaxRuleCatalogEntry[],
+): string {
+  const base = baseId?.trim() ?? "";
+  if (!base) return "";
+  const entry = catalog.find((r) => r.baseId === base);
+  return entry ? `${entry.baseId}::${entry.origin}` : base;
+}
 
 export type ProdutoFormValues = {
   sku: string;
@@ -93,6 +111,6 @@ export function parseProductForm(formData: FormData): ProductInput {
     preco: Number(String(formData.get("preco") ?? "0").replace(",", ".")),
     precoCusto: Number(String(formData.get("precoCusto") ?? "0").replace(",", ".")),
     estoque: Number(String(formData.get("estoque") ?? "0").replace(",", ".")) || 0,
-    taxRuleBaseId: String(formData.get("taxRuleBaseId") ?? "").trim(),
+    taxRuleBaseId: taxRuleBaseIdFromFormValue(String(formData.get("taxRuleBaseId") ?? "")),
   };
 }

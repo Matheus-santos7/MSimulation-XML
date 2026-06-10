@@ -39,6 +39,7 @@ export {
   REMESSA_IBS_CBS_DEFAULT,
   REMESSA_ML_INTERMED_CNPJ,
   REMESSA_ML_INTERMED_ID_DEFAULT,
+  ML_INF_RESP_TEC,
   REMESSA_ML_TRANSPORTA_DEFAULT,
   enrichFiscalPayloadMlFulfillment,
   estimateRemessaPesoVol,

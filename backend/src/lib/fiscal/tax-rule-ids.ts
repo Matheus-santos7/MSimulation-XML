@@ -31,3 +31,21 @@ export function normalizeTaxRuleDisplayName(nome: string): string {
     .replace(/\s*\((?:contribuinte.*|não contribuinte.*|envio de estoque.*)\)\s*$/i, "")
     .trim();
 }
+
+/** UF de origem fiscal da linha importada (prioriza coluna `uf` / sufixo do `ruleId`). */
+export function taxRuleOriginUf(row: {
+  origin?: string | null;
+  uf?: string | null;
+  ruleId?: string;
+}): string {
+  const uf = row.uf?.trim().toUpperCase() ?? "";
+  if (/^[A-Z]{2}$/.test(uf)) return uf;
+
+  const fromRuleId = row.ruleId?.match(TAX_RULE_ROW_WITH_ORIGIN);
+  if (fromRuleId) return fromRuleId[2]!.toUpperCase();
+
+  const origin = row.origin?.trim().toUpperCase() ?? "";
+  if (/^[A-Z]{2}$/.test(origin)) return origin;
+
+  return origin.slice(0, 2);
+}

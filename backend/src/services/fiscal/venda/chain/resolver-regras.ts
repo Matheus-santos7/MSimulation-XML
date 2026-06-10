@@ -7,6 +7,7 @@ export async function resolverRegrasFiscais(
   tx: VendaChainTx,
   pedido: PedidoForEmit,
   ctx: ContextoEmissao,
+  destUfRetorno: string,
 ): Promise<RegrasCadeiaVenda> {
   const { tenant } = pedido;
   const emitterSettings = await loadEmitterSettings(tx, tenant.id);
@@ -32,7 +33,7 @@ export async function resolverRegrasFiscais(
   const inboundTaxRule = requireTaxRule(
     await resolveTaxRule(tx, tenant.id, {
       originUf: tenant.uf,
-      destinationUf: tenant.uf,
+      destinationUf: destUfRetorno,
       transactionType: "inbound",
       customerType: "taxpayer",
       ruleBaseId: ctx.ruleBaseId,
@@ -41,7 +42,7 @@ export async function resolverRegrasFiscais(
       label: "retorno simbólico",
       ruleBaseId: ctx.ruleBaseId,
       originUf: tenant.uf,
-      destinationUf: tenant.uf,
+      destinationUf: destUfRetorno,
     },
   );
 

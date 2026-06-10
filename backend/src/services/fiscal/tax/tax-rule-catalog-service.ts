@@ -1,5 +1,9 @@
 import type { PrismaClient } from "../../../generated/prisma/client.js";
-import { normalizeTaxRuleDisplayName, taxRuleBaseIdFromRuleId } from "../../../lib/fiscal/tax-rule-ids.js";
+import {
+  normalizeTaxRuleDisplayName,
+  taxRuleBaseIdFromRuleId,
+  taxRuleOriginUf,
+} from "../../../lib/fiscal/tax-rule-ids.js";
 
 export type TaxRuleCatalogEntry = {
   baseId: string;
@@ -12,16 +16,23 @@ export async function listTaxRuleCatalog(
   prisma: PrismaClient,
   tenantId: string,
 ): Promise<TaxRuleCatalogEntry[]> {
-  const rows = await prisma.taxRule.findMany({
-    where: { tenantId, source: "xlsx" },
-    select: { ruleId: true, nome: true, origin: true, uf: true },
-    orderBy: { nome: "asc" },
-  });
+  const [rows, tenant] = await Promise.all([
+    prisma.taxRule.findMany({
+      where: { tenantId, source: "xlsx" },
+      select: { ruleId: true, nome: true, origin: true, uf: true },
+      orderBy: { nome: "asc" },
+    }),
+    prisma.tenant.findUnique({ where: { id: tenantId }, select: { uf: true } }),
+  ]);
+
+  const tenantOrigin = tenant?.uf.toUpperCase().slice(0, 2) ?? "";
 
   const map = new Map<string, TaxRuleCatalogEntry>();
   for (const row of rows) {
     const baseId = taxRuleBaseIdFromRuleId(row.ruleId);
-    const origin = (row.origin ?? row.uf).toUpperCase().slice(0, 2);
+    const origin = taxRuleOriginUf(row);
+    if (tenantOrigin && origin !== tenantOrigin) continue;
+
     const key = `${baseId}::${origin}`;
     if (map.has(key)) continue;
     const nome = normalizeTaxRuleDisplayName(row.nome);
@@ -46,31 +57,30 @@ export async function assertProductTaxRuleBaseId(
   if (!baseId) throw new TaxRuleCatalogError("Selecione a regra fiscal do produto");
 
   const tenantOrigin = tenantUf?.toUpperCase().slice(0, 2);
-  const row = await prisma.taxRule.findFirst({
+  const rows = await prisma.taxRule.findMany({
     where: {
       tenantId,
       ruleId: { startsWith: `${baseId}-` },
-      ...(tenantOrigin
-        ? {
-            OR: [{ origin: tenantOrigin }, { uf: tenantOrigin }],
-          }
-        : {}),
     },
-    select: { origin: true, uf: true },
+    select: { origin: true, uf: true, ruleId: true },
   });
-  if (!row) {
+
+  if (rows.length === 0) {
     throw new TaxRuleCatalogError(
       `Regra fiscal "${baseId}" não encontrada. Importe a planilha em Regras tributárias.`,
     );
   }
 
-  if (tenantUf) {
-    const ruleOrigin = (row.origin ?? row.uf).toUpperCase().slice(0, 2);
-    if (ruleOrigin !== tenantUf.toUpperCase().slice(0, 2)) {
-      throw new TaxRuleCatalogError(
-        `A regra "${baseId}" é de origem ${ruleOrigin}, mas a empresa emite em ${tenantUf.toUpperCase().slice(0, 2)}.`,
-      );
-    }
+  if (!tenantOrigin) return;
+
+  const match = rows.find((row) => taxRuleOriginUf(row) === tenantOrigin);
+  if (!match) {
+    const available = [...new Set(rows.map((row) => taxRuleOriginUf(row)))].sort().join(", ");
+    throw new TaxRuleCatalogError(
+      `A regra "${baseId}" não possui linhas para origem ${tenantOrigin}. ` +
+        `Origens disponíveis na planilha: ${available}. ` +
+        `Importe regras com ORIGIN=${tenantOrigin} ou ajuste a UF da empresa.`,
+    );
   }
 }
 
@@ -112,12 +122,10 @@ export async function deleteTaxRuleGroup(
       tenantId,
       ruleId: { startsWith: `${normalizedBase}-` },
     },
-    select: { id: true, nome: true, origin: true, uf: true },
+    select: { id: true, nome: true, origin: true, uf: true, ruleId: true },
   });
 
-  const toDelete = rules.filter(
-    (r) => (r.origin ?? r.uf).toUpperCase().slice(0, 2) === normalizedOrigin,
-  );
+  const toDelete = rules.filter((r) => taxRuleOriginUf(r) === normalizedOrigin);
   if (toDelete.length === 0) {
     throw new TaxRuleCatalogError("Regra não encontrada para esta origem");
   }

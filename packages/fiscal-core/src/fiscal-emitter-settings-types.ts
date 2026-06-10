@@ -68,5 +68,7 @@ export type FiscalEmitterSettingsData = {
     prazoCancelamento: { horas: number; naoInformar: boolean };
     acessoExternoContatos: number;
     contatos: { nome: string; email: string }[];
+    /** CPFs autorizados a baixar XML (`autXML`) — padrão ML quando vazio. */
+    autXmlCpfs?: string[];
   };
 };

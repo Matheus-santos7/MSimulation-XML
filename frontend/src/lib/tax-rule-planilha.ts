@@ -125,7 +125,8 @@ export function parseTaxRuleXlsx(buffer: ArrayBuffer): TaxRulePlanilhaParseResul
     const transactionType = detectTransactionType(customerLabel);
     const customerType = detectCustomerType(customerLabel);
     const tipo = "MELI_RULE";
-    const cfop = transactionType === "inbound" ? "6949" : "";
+    // CFOP é resolvido na emissão (remessa 5949/6949, retorno 1949/2949) — não gravar na planilha.
+    const cfop = "";
     const aliquota = String(byKey[`ICMS_${uf}_PICMS_INTERNAL`] ?? byKey.IPI_ALIQUOTA ?? "");
 
     const payload: Record<string, unknown> = {

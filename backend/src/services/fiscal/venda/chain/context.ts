@@ -1,5 +1,4 @@
 import { lineTotal } from "@msimulation-xml/fiscal-core";
-import type { Tenant } from "../../../../generated/prisma/client.js";
 import { gerarPedidoMl } from "../../../../lib/fiscal/nfe-chave.js";
 import type { CustomerType, ResolvedTaxRule } from "../../tax/tax-rule-service.js";
 import type { ContextoEmissao, PedidoForEmit } from "./types.js";
@@ -36,26 +35,6 @@ export function buildContextoEmissao(pedido: PedidoForEmit, ruleBaseId: string):
     valorUnitCusto,
     valorTotalCusto: lineTotal(valorUnitCusto, q),
     ruleBaseId,
-  };
-}
-
-/** Destinatário do retorno = próprio emitente (entrada simbólica no full). */
-export function enderecoDestRetorno(tenant: Tenant) {
-  return {
-    destNome: tenant.razaoSocial,
-    destDoc: tenant.cnpj,
-    destUf: tenant.uf,
-    destLogradouro: tenant.logradouro,
-    destNumero: tenant.numero,
-    destComplemento: tenant.complemento,
-    destBairro: tenant.bairro,
-    destCodigoMunicipio: tenant.codigoMunicipio,
-    destMunicipio: tenant.municipio,
-    destCep: tenant.cep,
-    destCodigoPais: tenant.codigoPais,
-    destNomePais: tenant.nomePais,
-    destTelefone: tenant.telefone?.replace(/\D/g, "") ?? null,
-    destIndIeDest: 1,
   };
 }
 

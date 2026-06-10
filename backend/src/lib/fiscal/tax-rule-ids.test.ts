@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { buildTaxRuleRowId, taxRuleBaseIdFromRuleId } from "./tax-rule-ids.js";
+import { buildTaxRuleRowId, taxRuleBaseIdFromRuleId, taxRuleOriginUf } from "./tax-rule-ids.js";
 
 describe("tax-rule-ids", () => {
   it("inclui origem fiscal no ruleId da linha", () => {
@@ -18,5 +18,20 @@ describe("tax-rule-ids", () => {
   it("mantém compatibilidade com ruleId legado sem origem", () => {
     assert.equal(buildTaxRuleRowId("797515", "taxpayer", "sale"), "797515-taxpayer-sale");
     assert.equal(taxRuleBaseIdFromRuleId("797515-taxpayer-sale"), "797515");
+  });
+
+  it("taxRuleOriginUf prioriza coluna uf e sufixo do ruleId", () => {
+    assert.equal(
+      taxRuleOriginUf({
+        ruleId: "4133250001-SP-taxpayer-inbound",
+        origin: "São Paulo",
+        uf: "SP",
+      }),
+      "SP",
+    );
+    assert.equal(
+      taxRuleOriginUf({ ruleId: "4133250001-PR-taxpayer-inbound", origin: "Paraná", uf: "PR" }),
+      "PR",
+    );
   });
 });

@@ -8,6 +8,16 @@ export const REMESSA_ML_INTERMED_ID_DEFAULT = "279642028";
 
 export const REMESSA_AUT_XML_CPFS = ["87659808915", "72556455772"] as const;
 
+/** Responsável técnico ML — bloco `infRespTec` nos XMLs de fulfillment. */
+export const ML_INF_RESP_TEC = {
+  cnpj: REMESSA_ML_INTERMED_CNPJ,
+  xContato: "EBAZAR.COM.BR. LTDA",
+  email: "fiscal@mercadolivre.com",
+  fone: "1125434155",
+  idCSRT: "01",
+  hashCSRT: "4ET98v7L2eZzffy/WSCSTlYq+N4=",
+} as const;
+
 export const REMESSA_IBS_CBS_DEFAULT = {
   st: "410",
   cClassTrib: "410999",
@@ -49,6 +59,8 @@ export type EnrichMlFulfillmentPayloadInput = {
   quantidadeTotal: number;
   destIe?: string | null;
   idCadIntTran?: string | null;
+  /** CPFs do bloco `autXML` — quando omitido, usa `REMESSA_AUT_XML_CPFS`. */
+  autXmlCpfs?: readonly string[] | null;
   /** Inclui `transporta` + `transp` (remessa física e simbólica outbound). */
   withLogistics?: boolean;
 };
@@ -76,10 +88,19 @@ export function enrichFiscalPayloadMlFulfillment(
     (typeof existingIntermed?.idCadIntTran === "string" ? existingIntermed.idCadIntTran : null) ||
     REMESSA_ML_INTERMED_ID_DEFAULT;
 
+  const autXmlFromInput =
+    input.autXmlCpfs?.filter((c) => c.replace(/\D/g, "").length === 11) ?? null;
+  const autXmlCpfs =
+    autXmlFromInput && autXmlFromInput.length > 0
+      ? [...autXmlFromInput]
+      : Array.isArray(payload.autXmlCpfs) && payload.autXmlCpfs.length > 0
+        ? payload.autXmlCpfs
+        : [...REMESSA_AUT_XML_CPFS];
+
   const out: Record<string, unknown> = {
     ...payload,
     ibsCbs: payload.ibsCbs ?? { ...REMESSA_IBS_CBS_DEFAULT },
-    autXmlCpfs: Array.isArray(payload.autXmlCpfs) ? payload.autXmlCpfs : [...REMESSA_AUT_XML_CPFS],
+    autXmlCpfs,
     infIntermed: {
       ...existingIntermed,
       cnpj: REMESSA_ML_INTERMED_CNPJ,

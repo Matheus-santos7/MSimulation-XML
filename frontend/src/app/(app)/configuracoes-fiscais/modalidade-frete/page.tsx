@@ -15,7 +15,7 @@ export default async function ModalidadeFretePage() {
         cfg?.settings.taxes.modalidadeFrete ?? {
           mode: "CUSTOM",
           fullfilmentVendas: "0",
-          fullfilmentEntrada: "0",
+          fullfilmentEntrada: "9",
           coleta: "2",
           flex: "0",
           turbo: "0",

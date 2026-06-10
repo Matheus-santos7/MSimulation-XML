@@ -10,6 +10,7 @@
  */
 
 import type { FiscalEmitterSettingsData } from "@msimulation-xml/fiscal-core";
+import { ML_INF_RESP_TEC } from "@msimulation-xml/fiscal-core";
 import {
   ensureNProt,
   injectSimulationSignature,
@@ -18,6 +19,7 @@ import {
   simulationNProt,
   simulationProtDigVal,
   formatNfeDateTime,
+  lineTotal,
   productUnitPriceForNfe,
   xTextoFromNfe,
 } from "@msimulation-xml/fiscal-core";
@@ -48,6 +50,7 @@ import {
   nfeTranspXml,
   remessaInfCplText,
   retornoInfCplText,
+  infRespTecXml,
   resolveTransportaFromFiscal,
   vItemXml,
 } from "./nfe-xml-blocks.js";
@@ -636,21 +639,33 @@ function buildRetornoNFeXML(
   const ncm = product?.ncm ?? nfe.ncm;
   const cfop = nfe.cfop;
   const uCom = product?.unidade ?? "UNID";
-  const vUnCom = productUnitPriceForNfe(product, nfe);
-  const vProd = nfe.valor;
   const orig = product?.origem ?? 1;
+  const fiscal = (nfe.fiscalPayload ?? {}) as Record<string, unknown>;
+  const engine = parseEngineFromFiscalPayload(fiscal);
+  const engineItem = engine?.itens[0];
+  const vUnCom = engineItem?.valorUnitario ?? productUnitPriceForNfe(product, nfe);
+  const vProd = engineItem?.vProd ?? lineTotal(vUnCom, qCom);
   const cestXml = product?.cest ? `\n          <CEST>${product.cest}</CEST>` : "";
+  const exTipiXml = product?.exTipi
+    ? `\n          <EXTIPI>${product.exTipi}</EXTIPI>`
+    : typeof fiscal.exTipi === "string" && fiscal.exTipi
+      ? `\n          <EXTIPI>${fiscal.exTipi}</EXTIPI>`
+      : "";
+  const nfciRaw =
+    (typeof fiscal.nfci === "string" && fiscal.nfci) ||
+    (typeof (product as { nfci?: string } | undefined)?.nfci === "string"
+      ? (product as { nfci?: string }).nfci
+      : "");
+  const nfciXml = nfciRaw ? `\n          <nFCI>${xmlEscape(nfciRaw)}</nFCI>` : "";
 
   const d = nfe.destinatario;
   const de = d.endereco;
   const docDigits = d.doc.replace(/\D/g, "");
   const destXCpl = destComplementoXml(de.complemento);
-  const fiscal = (nfe.fiscalPayload ?? {}) as Record<string, unknown>;
   const destIeXml = destIeXmlFromPayload(d.indIEDest, fiscal, d.ie);
   const cUF = ufToCodigo(e.uf);
   const infAdProd = nfe.pedidoML ? `\n        <infAdProd>xPed:${xmlEscape(nfe.pedidoML)}</infAdProd>` : "";
-  const engine = parseEngineFromFiscalPayload(fiscal);
-  const emitter = resolveEmitterFromPayload(fiscal, emitterSettings ?? null, nfe.tipo, nfe.valor, nfe.valorICMS);
+  const emitter = resolveEmitterFromPayload(fiscal, emitterSettings ?? null, nfe.tipo, vProd, nfe.valorICMS);
   const vFrete = emitter.freteNoCalculo ? emitter.bases.vFrete : 0;
   const destIe =
     (typeof fiscal.destIe === "string" && fiscal.destIe) || (typeof d.ie === "string" && d.ie) || "";
@@ -661,10 +676,9 @@ function buildRetornoNFeXML(
 
   let icmsXml: string;
   let icmsTot: string;
-  if (engine?.itens[0]) {
-    const item = engine.itens[0];
-    icmsXml = buildIcmsXmlFromEngineItem(item.icms);
-    icmsTot = icmsTotBlock(icmsTotFromEngine(engine.totais, vFrete), idDest === 2);
+  if (engineItem) {
+    icmsXml = buildIcmsXmlFromEngineItem(engineItem.icms);
+    icmsTot = icmsTotBlock(icmsTotFromEngine(engine!.totais, vFrete), idDest === 2);
   } else {
     const icms = (fiscal.icms as Record<string, unknown> | undefined) ?? {
       cst: "00",
@@ -688,8 +702,8 @@ function buildRetornoNFeXML(
     );
   }
   const ibsCbs = (fiscal.ibsCbs as Record<string, unknown> | undefined) ?? {};
-  const retornoIbsCbsBcInput = engine?.itens[0]
-    ? ibsCbsBcInputFromEngineItem(engine.itens[0])
+  const retornoIbsCbsBcInput = engineItem
+    ? ibsCbsBcInputFromEngineItem(engineItem)
     : ibsCbsBcInputFromSnapshot(
         vProd,
         fiscal,
@@ -707,6 +721,7 @@ function buildRetornoNFeXML(
         vBCIBSCBS: retornoVBcIbsCbs != null ? sumIbsCbsVBc([retornoVBcIbsCbs]) : 0,
       })
     : icmsTot;
+  const infRespTec = `\n${infRespTecXml(ML_INF_RESP_TEC)}`;
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
@@ -773,7 +788,7 @@ ${autXml}      <det nItem="1">
           <cProd>${xmlEscape(cProd)}</cProd>
           <cEAN>${cEAN}</cEAN>
           <xProd>${xmlEscape(xProd)}</xProd>
-          <NCM>${ncm}</NCM>${cestXml}
+          <NCM>${ncm}</NCM>${cestXml}${exTipiXml}
           <CFOP>${cfop}</CFOP>
           <uCom>${xmlEscape(uCom)}</uCom>
           <qCom>${formatNfeQuantity(qCom)}</qCom>
@@ -783,7 +798,7 @@ ${autXml}      <det nItem="1">
           <uTrib>${xmlEscape(uCom)}</uTrib>
           <qTrib>${formatNfeQuantity(qCom)}</qTrib>
           <vUnTrib>${vUnCom.toFixed(8)}</vUnTrib>
-          <indTot>1</indTot>
+          <indTot>1</indTot>${nfciXml}
         </prod>
         <imposto>
           <vTotTrib>0.00</vTotTrib>
@@ -797,7 +812,7 @@ ${autXml}      <det nItem="1">
       </total>
 ${transpXml(emitter.modFrete, fiscal, qCom)}
 ${pagBlock()}
-${infIntermedBlock(fiscal)}${infAdic}
+${infIntermedBlock(fiscal)}${infAdic}${infRespTec}
     </infNFe>
   </NFe>
 ${protNFeBlock(nfe, dhEmi)}

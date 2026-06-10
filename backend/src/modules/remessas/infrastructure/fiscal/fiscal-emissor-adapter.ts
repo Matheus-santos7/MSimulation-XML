@@ -1,19 +1,25 @@
-import { enrichFiscalPayloadWithXTexto, productUnitPrice } from "@msimulation-xml/fiscal-core";
+import {
+  enrichFiscalPayloadMlFulfillment,
+  enrichFiscalPayloadWithXTexto,
+  productUnitPrice,
+} from "@msimulation-xml/fiscal-core";
 import { NFeTipo, type PrismaClient } from "../../../../generated/prisma/client.js";
 import { buildChaveNFe } from "../../../../lib/fiscal/nfe-chave.js";
 import { enrichTaxSnapshot, loadEmitterSettings } from "../../../../lib/fiscal/fiscal-emitter-runtime.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import {
-  RETORNO_SIMBOLICO_CFOP,
+  destIeRetornoFromRemessa,
+  destinoRetornoFromRemessa,
+  resolveRetornoSimbolicoCfop,
   RETORNO_SIMBOLICO_NAT_OP,
 } from "../../../../lib/fiscal/retorno-simbolico-dest.js";
 import { unidadeParaDestinoFiscal } from "../../../../lib/logistics/meli-unidade.js";
 import { taxSnapshotFromRule } from "../../../../lib/fiscal/tax-snapshot.js";
 import { proximoNumeroNfe } from "../../../../lib/fiscal/nfe-sequencia.js";
-import { enderecoDestRetorno } from "../../../../services/fiscal/venda/chain/context.js";
+import { loadRemessaDestinoRetorno } from "../../../../services/fiscal/remessa/remessa-fifo.js";
 import {
   calcularNotaInbound,
-  inferAliqIcmsRemessa,
+  inferAliqIcmsIntraestadual,
   linhaPedidoFromProduto,
 } from "../../../../services/fiscal/tax/tax-calculation-service.js";
 import { resolveTaxRule } from "../../../../services/fiscal/tax/tax-rule-service.js";
@@ -73,16 +79,21 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
       );
     }
 
+    const remessaPai = await loadRemessaDestinoRetorno(tx, remessaReferencia.id);
+    const destUf = remessaPai.destUf;
+    const destino = destinoRetornoFromRemessa(remessaPai, remessaPai.unidadeDestino);
+    const destIe = destIeRetornoFromRemessa(remessaPai, remessaPai.unidadeDestino);
+
     const inboundTaxRule = await resolveTaxRule(tx, tenant.id, {
       originUf: tenant.uf,
-      destinationUf: tenant.uf,
+      destinationUf: destUf,
       transactionType: "inbound",
       customerType: "taxpayer",
       ruleBaseId,
     });
     if (!inboundTaxRule) {
       throw new RemessaDomainError(
-        `Regra "${ruleBaseId}" sem linha inbound para retorno simbólico.`,
+        `Regra "${ruleBaseId}" sem linha inbound para retorno simbólico (${tenant.uf} → ${destUf}).`,
       );
     }
 
@@ -94,8 +105,8 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
       numero,
     });
 
-    const aliqFallback = inferAliqIcmsRemessa(tenant.uf, tenant.uf);
-    const cfop = inboundTaxRule.cfop ?? RETORNO_SIMBOLICO_CFOP;
+    const aliqFallback = inferAliqIcmsIntraestadual(tenant.uf, destUf);
+    const cfop = resolveRetornoSimbolicoCfop(tenant.uf, destUf);
     const calc = calcularNotaInbound(
       linhaPedidoFromProduto(product, {
         cfop,
@@ -104,36 +115,46 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
       }),
       inboundTaxRule,
       tenant.uf,
-      tenant.uf,
+      destUf,
       aliqFallback,
     );
 
     const emitterSettings = await loadEmitterSettings(tx, tenant.id);
-    const fiscalPayload = enrichFiscalPayloadWithXTexto(
-      {
-        ...enrichTaxSnapshot(taxSnapshotFromRule(inboundTaxRule, aliqFallback), {
-          settings: emitterSettings,
+    const autXmlCpfs = emitterSettings.nfe.autXmlCpfs?.filter(
+      (c) => c.replace(/\D/g, "").length === 11,
+    );
+    const fiscalPayload = enrichFiscalPayloadMlFulfillment(
+      enrichFiscalPayloadWithXTexto(
+        {
+          ...enrichTaxSnapshot(taxSnapshotFromRule(inboundTaxRule, aliqFallback), {
+            settings: emitterSettings,
+            tipo: NFeTipo.RETORNO_SIMBOLICO,
+            valor: calc.valor,
+            valorIcms: calc.valorIcms,
+            emitUf: tenant.uf,
+            destUf,
+            indFinal: 0,
+          }),
+          engine: calc.nota,
+          ...(destIe ? { destIe } : {}),
+          ...(product.exTipi ? { exTipi: product.exTipi } : {}),
+        } as Record<string, unknown>,
+        {
           tipo: NFeTipo.RETORNO_SIMBOLICO,
-          valor: calc.valor,
-          valorIcms: calc.valorIcms,
-          emitUf: tenant.uf,
-          destUf: tenant.uf,
-          indFinal: 0,
-        }),
-        engine: calc.nota,
-      } as Record<string, unknown>,
+          cfop,
+          natOp: RETORNO_SIMBOLICO_NAT_OP,
+          pedidoMl: ctx.pedidoMl,
+        },
+      ),
       {
-        tipo: NFeTipo.RETORNO_SIMBOLICO,
-        cfop,
-        natOp: RETORNO_SIMBOLICO_NAT_OP,
-        pedidoMl: ctx.pedidoMl,
+        quantidadeTotal: quantidade,
+        withLogistics: false,
+        destIe,
+        idCadIntTran: remessaPai.unidadeDestino?.idCadIntTran ?? null,
+        autXmlCpfs: autXmlCpfs?.length ? autXmlCpfs : null,
       },
     );
 
-    const remessaPai = await tx.nFe.findUniqueOrThrow({
-      where: { id: remessaReferencia.id },
-      select: { id: true, chave: true, tipo: true },
-    });
 
     const rascunho = criarRetornoSimbolicoAvanco(
       {
@@ -144,7 +165,11 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
         unidadeOrigemId,
         unidadeDestinoId: null,
       },
-      { id: remessaPai.id, chave: remessaPai.chave, tipo: remessaPai.tipo as "REMESSA" | "REMESSA_SIMBOLICA" },
+      {
+        id: remessaPai.id,
+        chave: remessaPai.chave,
+        tipo: remessaPai.tipo as "REMESSA" | "REMESSA_SIMBOLICA",
+      },
     );
 
     return {
@@ -157,7 +182,7 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
       valorIcms: calc.valorIcms,
       aliqIcms: calc.aliqIcms,
       fiscalPayload,
-      destino: enderecoDestRetorno(tenant),
+      destino,
     };
   }
 

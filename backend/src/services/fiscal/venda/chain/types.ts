@@ -71,4 +71,5 @@ export type RegrasCadeiaVenda = {
 export type NotaRetornoCriada = {
   id: string;
   chave: string;
+  remessaChave: string;
 };

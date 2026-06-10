@@ -259,14 +259,20 @@ export function nfeTranspXml(opts: {
 }): string {
   const transportaBlock =
     opts.modFrete === "2" && opts.transporta ? `\n${transportaXml(opts.transporta)}` : "";
-  const qVol = opts.vol.qVol ?? 1;
-  return `      <transp>
-        <modFrete>${opts.modFrete}</modFrete>${transportaBlock}
+  const volBlock =
+    opts.modFrete === "9"
+      ? ""
+      : (() => {
+          const qVol = opts.vol.qVol ?? 1;
+          return `
         <vol>
           <qVol>${qVol}</qVol>
           <pesoL>${opts.vol.pesoL.toFixed(3)}</pesoL>
           <pesoB>${opts.vol.pesoB.toFixed(3)}</pesoB>
-        </vol>
+        </vol>`;
+        })();
+  return `      <transp>
+        <modFrete>${opts.modFrete}</modFrete>${transportaBlock}${volBlock}
       </transp>`;
 }
 
@@ -340,5 +346,23 @@ export function remessaInfCplText(destIe?: string): string {
 }
 
 export function retornoInfCplText(): string {
-  return "Retorno Simbolico de Deposito Temporario - Portaria CAT 31/2019.";
+  return "Retorno Simbolico de Deposito Temporario.";
+}
+
+export function infRespTecXml(opts: {
+  cnpj: string;
+  xContato: string;
+  email: string;
+  fone: string;
+  idCSRT: string;
+  hashCSRT: string;
+}): string {
+  return `      <infRespTec>
+        <CNPJ>${opts.cnpj.replace(/\D/g, "")}</CNPJ>
+        <xContato>${xmlEscape(opts.xContato)}</xContato>
+        <email>${xmlEscape(opts.email)}</email>
+        <fone>${opts.fone.replace(/\D/g, "")}</fone>
+        <idCSRT>${xmlEscape(opts.idCSRT)}</idCSRT>
+        <hashCSRT>${xmlEscape(opts.hashCSRT)}</hashCSRT>
+      </infRespTec>`;
 }

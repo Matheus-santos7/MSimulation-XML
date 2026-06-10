@@ -7,7 +7,9 @@ import { buildChaveNFe } from "../../../../lib/fiscal/nfe-chave.js";
 import { enrichTaxSnapshot } from "../../../../lib/fiscal/fiscal-emitter-runtime.js";
 import { proximoNumeroNfe } from "../../../../lib/fiscal/nfe-sequencia.js";
 import {
-  RETORNO_SIMBOLICO_CFOP,
+  destIeRetornoFromRemessa,
+  destinoRetornoFromRemessa,
+  resolveRetornoSimbolicoCfop,
   RETORNO_SIMBOLICO_NAT_OP,
 } from "../../../../lib/fiscal/retorno-simbolico-dest.js";
 import { taxSnapshotFromRule } from "../../../../lib/fiscal/tax-snapshot.js";
@@ -16,9 +18,12 @@ import {
   inferAliqIcmsIntraestadual,
   linhaPedidoFromProduto,
 } from "../../tax/tax-calculation-service.js";
-import { consumirSaldoRemessaFifoParaVenda } from "../../remessa/remessa-fifo.js";
+import {
+  consumirSaldoRemessaFifoParaVenda,
+  loadRemessaDestinoRetorno,
+  type PreviewRemessaFifoVenda,
+} from "../../remessa/remessa-fifo.js";
 import { persistNfeXmlFromEmission } from "../../shared/nfe-xml-service.js";
-import { enderecoDestRetorno } from "./context.js";
 import type {
   ContextoEmissao,
   NotaRetornoCriada,
@@ -27,20 +32,33 @@ import type {
   VendaChainTx,
 } from "./types.js";
 
+function autXmlCpfsFromSettings(
+  settings: RegrasCadeiaVenda["emitterSettings"],
+): string[] | undefined {
+  const cpfs = settings.nfe.autXmlCpfs?.filter((c) => c.replace(/\D/g, "").length === 11);
+  return cpfs?.length ? cpfs : undefined;
+}
+
 export async function emitirNotaRetorno(
   tx: VendaChainTx,
   pedido: PedidoForEmit,
   ctx: ContextoEmissao,
   regras: RegrasCadeiaVenda,
+  previewFifo: PreviewRemessaFifoVenda,
 ): Promise<NotaRetornoCriada> {
   const { tenant } = pedido;
   const { inboundTaxRule, emitterSettings } = regras;
 
+  const remessa = await loadRemessaDestinoRetorno(tx, previewFifo.remessaNfeId);
+  const destUf = remessa.destUf;
+  const destino = destinoRetornoFromRemessa(remessa, remessa.unidadeDestino);
+  const destIe = destIeRetornoFromRemessa(remessa, remessa.unidadeDestino);
+
   const numero = await proximoNumeroNfe(tx, tenant.id, ctx.serie);
   const chave = buildChaveNFe({ uf: tenant.uf, cnpj: tenant.cnpj, serie: ctx.serie, numero });
 
-  const aliqFallback = inferAliqIcmsIntraestadual(tenant.uf, tenant.uf);
-  const cfop = inboundTaxRule.cfop ?? RETORNO_SIMBOLICO_CFOP;
+  const aliqFallback = inferAliqIcmsIntraestadual(tenant.uf, destUf);
+  const cfop = resolveRetornoSimbolicoCfop(tenant.uf, destUf);
   const calc = calcularNotaInbound(
     linhaPedidoFromProduto(pedido.product, {
       cfop,
@@ -49,10 +67,13 @@ export async function emitirNotaRetorno(
     }),
     inboundTaxRule,
     tenant.uf,
-    tenant.uf,
+    destUf,
     aliqFallback,
   );
   const { valor, valorIcms, aliqIcms } = calc;
+
+  const idCadIntTran = remessa.unidadeDestino?.idCadIntTran?.trim() || undefined;
+  const autXmlCpfs = autXmlCpfsFromSettings(emitterSettings);
 
   const row = await tx.nFe.create({
     data: {
@@ -64,7 +85,7 @@ export async function emitirNotaRetorno(
       natOp: RETORNO_SIMBOLICO_NAT_OP,
       cfop,
       ncm: pedido.product.ncm,
-      ...enderecoDestRetorno(tenant),
+      ...destino,
       valor,
       valorIcms,
       aliqIcms,
@@ -74,6 +95,7 @@ export async function emitirNotaRetorno(
       quantidade: pedido.quantidade,
       tipo: NFeTipo.RETORNO_SIMBOLICO,
       saldoDisponivel: null,
+      nfeReferenciaId: remessa.id,
       fiscalPayload: enrichFiscalPayloadMlFulfillment(
         enrichFiscalPayloadWithXTexto(
           {
@@ -83,10 +105,12 @@ export async function emitirNotaRetorno(
               valor,
               valorIcms,
               emitUf: tenant.uf,
-              destUf: tenant.uf,
+              destUf,
               indFinal: 0,
             }),
             engine: calc.nota,
+            ...(destIe ? { destIe } : {}),
+            ...(pedido.product.exTipi ? { exTipi: pedido.product.exTipi } : {}),
           } as Record<string, unknown>,
           {
             tipo: NFeTipo.RETORNO_SIMBOLICO,
@@ -98,16 +122,19 @@ export async function emitirNotaRetorno(
         {
           quantidadeTotal: pedido.quantidade,
           withLogistics: false,
+          destIe,
+          idCadIntTran,
+          autXmlCpfs,
         },
       ) as Prisma.InputJsonValue,
     },
   });
 
-  return { id: row.id, chave: row.chave };
+  return { id: row.id, chave: row.chave, remessaChave: previewFifo.remessaChave };
 }
 
 /**
- * Debita remessas (FIFO) e grava `nfeReferenciaId` do retorno → remessa principal.
+ * Debita remessas (FIFO) e confirma `nfeReferenciaId` do retorno → remessa principal.
  * Deve rodar logo após criar o retorno, antes da venda.
  */
 export async function consumirRemessaEVincularRetorno(
@@ -126,23 +153,12 @@ export async function consumirRemessaEVincularRetorno(
     pedido.product.sku,
   );
 
-  const remessaPrincipalId = alocacoes[0]!.remessaNfeId;
-  const remessa = await tx.nFe.findUniqueOrThrow({
-    where: { id: remessaPrincipalId },
-    select: { chave: true },
-  });
-
-  await tx.nFe.update({
-    where: { id: retorno.id },
-    data: { nfeReferenciaId: remessaPrincipalId },
-  });
-
   await persistNfeXmlFromEmission(tx, {
     nfeId: retorno.id,
     tenant: pedido.tenant,
     productId: pedido.product.id,
     settings: emitterSettings,
-    nfeReferenciaChave: remessa.chave,
+    nfeReferenciaChave: retorno.remessaChave,
   });
 
   return alocacoes;

@@ -6,9 +6,17 @@ export type ProductPrices = {
   precoCusto: { toString(): string } | number;
 };
 
-/** Preço unitário na NF-e: custo na remessa, venda na venda. */
+function usesPrecoCusto(tipo: NFeTipoValue | string): boolean {
+  return (
+    tipo === NFeTipo.REMESSA ||
+    tipo === NFeTipo.REMESSA_SIMBOLICA ||
+    tipo === NFeTipo.RETORNO_SIMBOLICO
+  );
+}
+
+/** Preço unitário na NF-e: custo em remessa/retorno, venda na venda. */
 export function productUnitPrice(product: ProductPrices, tipo: NFeTipoValue): number {
-  if (tipo === NFeTipo.REMESSA) return Number(product.precoCusto);
+  if (usesPrecoCusto(tipo)) return Number(product.precoCusto);
   return Number(product.preco);
 }
 
@@ -28,6 +36,6 @@ export function productUnitPriceForNfe(
 ): number {
   const q = nfe.quantidade > 0 ? nfe.quantidade : 1;
   if (!product) return nfe.valor / q;
-  if (nfe.tipo === NFeTipo.REMESSA) return product.precoCusto;
+  if (usesPrecoCusto(nfe.tipo)) return product.precoCusto;
   return product.preco;
 }

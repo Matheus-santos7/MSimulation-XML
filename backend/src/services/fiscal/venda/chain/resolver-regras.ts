@@ -25,6 +25,7 @@ export async function resolverRegrasFiscais(
       ruleBaseId: ctx.ruleBaseId,
       originUf: tenant.uf,
       destinationUf: pedido.destUf,
+      customerType,
     },
   );
 

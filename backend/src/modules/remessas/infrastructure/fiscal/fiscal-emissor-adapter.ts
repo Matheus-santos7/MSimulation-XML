@@ -144,7 +144,7 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
         unidadeOrigemId,
         unidadeDestinoId: null,
       },
-      { id: remessaPai.id, chave: remessaPai.chave, tipo: "REMESSA" },
+      { id: remessaPai.id, chave: remessaPai.chave, tipo: remessaPai.tipo as "REMESSA" | "REMESSA_SIMBOLICA" },
     );
 
     return {

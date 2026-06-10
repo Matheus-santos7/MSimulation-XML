@@ -28,8 +28,12 @@ function detectTransactionType(customerLabel: string): "sale" | "inbound" {
 }
 
 function detectCustomerType(customerLabel: string): "taxpayer" | "non_taxpayer" {
-  const t = customerLabel.toLowerCase();
-  return t.includes("não contribuinte") ? "non_taxpayer" : "taxpayer";
+  const t = customerLabel
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "");
+  if (t.includes("nao contribuinte") || t.includes("consumidor final")) return "non_taxpayer";
+  return "taxpayer";
 }
 
 function destinationLabel(transactionType: "sale" | "inbound", customerType: "taxpayer" | "non_taxpayer"): string {

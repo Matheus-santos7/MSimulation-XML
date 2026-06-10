@@ -16,7 +16,7 @@ import {
   inferAliqIcmsIntraestadual,
   linhaPedidoFromProduto,
 } from "../../tax/tax-calculation-service.js";
-import { consumirSaldoRemessaFifo } from "../../remessa/remessa-fifo.js";
+import { consumirSaldoRemessaFifoParaVenda } from "../../remessa/remessa-fifo.js";
 import { persistNfeXmlFromEmission } from "../../shared/nfe-xml-service.js";
 import { enderecoDestRetorno } from "./context.js";
 import type {
@@ -116,12 +116,14 @@ export async function consumirRemessaEVincularRetorno(
   retorno: NotaRetornoCriada,
   emitterSettings: RegrasCadeiaVenda["emitterSettings"],
 ) {
-  const alocacoes = await consumirSaldoRemessaFifo(
+  const alocacoes = await consumirSaldoRemessaFifoParaVenda(
     tx,
     pedido.tenant.id,
     pedido.product.id,
     pedido.quantidade,
     retorno.id,
+    pedido.destUf,
+    pedido.product.sku,
   );
 
   const remessaPrincipalId = alocacoes[0]!.remessaNfeId;

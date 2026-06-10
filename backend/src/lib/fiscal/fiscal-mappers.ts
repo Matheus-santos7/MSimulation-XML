@@ -71,14 +71,24 @@ export function mapNfeItem(row: NfeItemRow) {
   };
 }
 
-function saldoRemessaFromItens(itens?: NfeItemRow[], headerSaldo?: number | null): number | undefined {
+function saldoRemessaFromItens(
+  itens?: NfeItemRow[],
+  headerSaldo?: number | null,
+  saldoOverride?: number,
+): number | undefined {
+  if (saldoOverride != null) return saldoOverride;
   if (itens && itens.length > 0) {
     return itens.reduce((acc, item) => acc + (item.saldoDisponivel ?? 0), 0);
   }
   return headerSaldo ?? undefined;
 }
 
-export function mapNfe(row: NfeRow, nfeReferenciaChave?: string, itens?: NfeItemRow[]) {
+export function mapNfe(
+  row: NfeRow,
+  nfeReferenciaChave?: string,
+  itens?: NfeItemRow[],
+  saldoFifoOverride?: number,
+) {
   const doc = row.destDoc.replace(/\D/g, "");
   const mappedItens = itens?.map(mapNfeItem);
   return {
@@ -120,7 +130,9 @@ export function mapNfe(row: NfeRow, nfeReferenciaChave?: string, itens?: NfeItem
     quantidade: row.quantidade,
     tipo: row.tipo,
     saldoDisponivel:
-      row.tipo === "REMESSA" ? saldoRemessaFromItens(itens, row.saldoDisponivel) : undefined,
+      row.tipo === "REMESSA" || row.tipo === "REMESSA_SIMBOLICA"
+        ? saldoRemessaFromItens(itens, row.saldoDisponivel, saldoFifoOverride)
+        : undefined,
     itens: mappedItens,
     nfeReferenciaChave: nfeReferenciaChave ?? undefined,
     fiscalPayload: (row.fiscalPayload as Record<string, unknown> | undefined) ?? undefined,

@@ -20,6 +20,7 @@ export async function mapAvancoMercadoriaParaApi(
   return {
     remessaSimbolica: mapNfe(remessaSimbRow, remessaSimbRow.nfeReferencia?.chave),
     retornoSimbolico: mapNfe(retornoRow, retornoRow.nfeReferencia?.chave),
+    cte: result.cte,
     alocacoesOrigem: result.alocacoesFifo.map((a) => ({
       remessaNfeId: a.remessaNfeId,
       quantidade: a.quantidade,

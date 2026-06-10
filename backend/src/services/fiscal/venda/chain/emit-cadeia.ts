@@ -1,4 +1,5 @@
 import type { PrismaClient } from "../../../../generated/prisma/client.js";
+import { FISCAL_TRANSACTION_OPTIONS } from "../../../../lib/db/prisma-tx.js";
 import { mapNfe } from "../../../../lib/fiscal/fiscal-mappers.js";
 import { emitirCteVenda } from "../cte-venda-service.js";
 import { assertProdutoComRegra, buildContextoEmissao } from "./context.js";
@@ -41,5 +42,5 @@ export async function emitirCadeiaVenda(prisma: PrismaClient, pedido: PedidoForE
       cteVenda,
       alocacoes,
     };
-  });
+  }, FISCAL_TRANSACTION_OPTIONS);
 }

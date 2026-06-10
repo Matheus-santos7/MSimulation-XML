@@ -6,9 +6,13 @@ export {
 } from "./remessa-simbolica-fiscal.js";
 export {
   consumirSaldoRemessaFifo,
+  consumirSaldoRemessaFifoParaVenda,
   debitarSaldoRemessaPorCd,
   estornarConsumosRemessa,
   listarSaldoRemessaPorCd,
+  atualizarItensSaldoFifoParaNfes,
+  saldoLiquidoRemessaNfe,
+  prepararSaldoFifoParaOperacao,
   resolveOrigemFiscalParaAvanco,
   resolveUnidadeFifoOrigemId,
   realignRemessaFifoProductIdsBySku,

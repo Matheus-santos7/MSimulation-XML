@@ -81,11 +81,23 @@ export function enderecoDestVenda(pedido: PedidoForEmit) {
 
 export function requireTaxRule(
   rule: ResolvedTaxRule | null,
-  ctx: { label: string; ruleBaseId: string; originUf: string; destinationUf: string },
+  ctx: {
+    label: string;
+    ruleBaseId: string;
+    originUf: string;
+    destinationUf: string;
+    customerType?: CustomerType;
+  },
 ): ResolvedTaxRule {
   if (rule) return rule;
+  const perfil =
+    ctx.customerType === "non_taxpayer"
+      ? " (não contribuinte)"
+      : ctx.customerType === "taxpayer"
+        ? " (contribuinte)"
+        : "";
   throw new VendaChainError(
-    `Regra fiscal "${ctx.ruleBaseId}" sem linha de ${ctx.label} para origem ${ctx.originUf} → destino ${ctx.destinationUf}. Confira a planilha importada.`,
+    `Regra fiscal "${ctx.ruleBaseId}" sem linha de ${ctx.label}${perfil} para origem ${ctx.originUf} → destino ${ctx.destinationUf}. Confira a planilha importada.`,
   );
 }
 

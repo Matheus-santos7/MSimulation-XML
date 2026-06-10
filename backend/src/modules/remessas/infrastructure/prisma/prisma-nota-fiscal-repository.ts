@@ -74,7 +74,11 @@ export class PrismaNotaFiscalRepository implements NotaFiscalRepository {
     if (!remessaNfeId) return null;
 
     const row = await this.db.nFe.findFirst({
-      where: { id: remessaNfeId, tipo: NFeTipo.REMESSA, deletedAt: null },
+      where: {
+        id: remessaNfeId,
+        tipo: { in: [NFeTipo.REMESSA, NFeTipo.REMESSA_SIMBOLICA] },
+        deletedAt: null,
+      },
       include: { nfeReferencia: { select: { chave: true, tipo: true } } },
     });
     return row ? mapRowToNota(row) : null;

@@ -50,7 +50,18 @@ type ChainNode = {
   pedidoMl: string;
   nfeReferenciaId: string | null;
   nfeReferencia?: { chave: string } | null;
+  itens?: { saldoDisponivel: number | null }[];
 };
+
+function saldoFifoNota(nfe: ChainNode): number | undefined {
+  if (nfe.tipo !== NFeTipo.REMESSA && nfe.tipo !== NFeTipo.REMESSA_SIMBOLICA) {
+    return undefined;
+  }
+  if (nfe.itens && nfe.itens.length > 0) {
+    return nfe.itens.reduce((acc, item) => acc + (item.saldoDisponivel ?? 0), 0);
+  }
+  return nfe.saldoDisponivel ?? 0;
+}
 
 function mapStep(nfe: ChainNode): TimelineChainStepDto {
   return {
@@ -61,7 +72,7 @@ function mapStep(nfe: ChainNode): TimelineChainStepDto {
     serie: nfe.serie,
     emitidaEm: nfe.emitidaEm.toISOString(),
     quantidade: nfe.quantidade,
-    saldoDisponivel: nfe.tipo === NFeTipo.REMESSA ? (nfe.saldoDisponivel ?? 0) : undefined,
+    saldoDisponivel: saldoFifoNota(nfe),
     nfeReferenciaChave: nfe.nfeReferencia?.chave,
   };
 }
@@ -112,7 +123,10 @@ export async function listTimelineChains(
 ): Promise<TimelineRemessaGroupDto[]> {
   const nfes = await prisma.nFe.findMany({
     where: { tenantId, ...fiscalNotDeleted },
-    include: { nfeReferencia: { select: { chave: true } } },
+    include: {
+      nfeReferencia: { select: { chave: true } },
+      itens: { select: { saldoDisponivel: true } },
+    },
     orderBy: { emitidaEm: "asc" },
   });
 
@@ -136,7 +150,7 @@ export async function listTimelineChains(
         remessaSerie: remessa?.serie,
         emitidaEm: (remessa?.emitidaEm ?? new Date()).toISOString(),
         quantidadeRemessa: remessa?.quantidade,
-        saldoDisponivel: remessa ? (remessa.saldoDisponivel ?? 0) : undefined,
+        saldoDisponivel: remessa ? saldoFifoNota(remessa) : undefined,
         cenarios: [],
       };
       grupos.set(key, g);

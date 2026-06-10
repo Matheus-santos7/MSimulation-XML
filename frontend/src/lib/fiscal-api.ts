@@ -497,11 +497,13 @@ export type UnidadeLogisticaBulkImportResult = {
 export type AvancoCdResult = {
   remessaSimbolica: NFeDto;
   retornoSimbolico: NFeDto;
+  cte: CTeDto;
   alocacoesOrigem: { remessaNfeId: string; quantidade: number }[];
 };
 
 export type SaldoRemessaCdDto = {
   unidadeDestinoId: string;
+  fifoUnidadeDestinoId?: string;
   productId: string;
   saldo: number;
   unidade: {

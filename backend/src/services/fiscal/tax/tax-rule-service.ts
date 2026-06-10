@@ -43,6 +43,84 @@ function toNum(value: unknown): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
+type TaxRuleRow = {
+  ruleId: string;
+  origin: string | null;
+  uf: string;
+  cfop: string;
+  payload: unknown;
+};
+
+/** UF fiscal da linha: prioriza `uf` (2 letras) em vez de fatiar `origin` (texto livre da planilha). */
+function fiscalOriginUfFromRule(rule: Pick<TaxRuleRow, "origin" | "uf">): string {
+  const uf = rule.uf?.trim().toUpperCase();
+  if (uf && uf.length === 2) return uf;
+  const origin = rule.origin?.trim().toUpperCase() ?? "";
+  if (origin.length === 2) return origin;
+  const match = origin.match(/\b([A-Z]{2})\b/);
+  return match?.[1] ?? origin.slice(0, 2);
+}
+
+function ruleIdEmbedsOrigin(ruleId: string, originUf: string): boolean {
+  return ruleId.toUpperCase().includes(`-${originUf}-`);
+}
+
+function taxRuleMatchesOrigin(rule: TaxRuleRow, originUf: string): boolean {
+  if (ruleIdEmbedsOrigin(rule.ruleId, originUf)) return true;
+  return fiscalOriginUfFromRule(rule) === originUf;
+}
+
+async function findTaxRuleRow(
+  prisma: PrismaTx,
+  tenantId: string,
+  params: {
+    ruleBaseId?: string;
+    originUf: string;
+    transactionType: TransactionType;
+    customerType: CustomerType;
+  },
+): Promise<TaxRuleRow | null> {
+  const { ruleBaseId, originUf, transactionType, customerType } = params;
+
+  if (ruleBaseId) {
+    const candidates = [
+      buildTaxRuleRowId(ruleBaseId, customerType, transactionType, originUf),
+      buildTaxRuleRowId(ruleBaseId, customerType, transactionType),
+    ];
+
+    for (const candidateId of candidates) {
+      const row = await prisma.taxRule.findUnique({
+        where: { tenantId_ruleId: { tenantId, ruleId: candidateId } },
+      });
+      if (row && taxRuleMatchesOrigin(row, originUf)) return row;
+    }
+
+    const fallback = await prisma.taxRule.findFirst({
+      where: {
+        tenantId,
+        transactionType,
+        customerType,
+        ruleId: { startsWith: `${ruleBaseId}-` },
+        OR: [{ uf: originUf }, { origin: { startsWith: originUf } }],
+      },
+      orderBy: { updatedAt: "desc" },
+    });
+    if (fallback && taxRuleMatchesOrigin(fallback, originUf)) return fallback;
+    return null;
+  }
+
+  return prisma.taxRule.findFirst({
+    where: {
+      tenantId,
+      source: "xlsx",
+      transactionType,
+      customerType,
+      OR: [{ uf: originUf }, { origin: { startsWith: originUf } }],
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+}
+
 /**
  * Resolve linha da planilha fiscal (`tax_rules`).
  *
@@ -67,38 +145,13 @@ export async function resolveTaxRule(
   const originUf = params.originUf.toUpperCase().trim();
   const destinationUf = params.destinationUf.toUpperCase().trim();
 
-  const ruleBaseId = params.ruleBaseId?.trim();
-  const ruleId = ruleBaseId
-    ? buildTaxRuleRowId(ruleBaseId, params.customerType, params.transactionType, originUf)
-    : undefined;
-  const legacyRuleId = ruleBaseId
-    ? buildTaxRuleRowId(ruleBaseId, params.customerType, params.transactionType)
-    : undefined;
-
-  const rule = ruleId
-    ? (await prisma.taxRule.findUnique({
-        where: { tenantId_ruleId: { tenantId, ruleId } },
-      })) ??
-      (legacyRuleId
-        ? await prisma.taxRule.findUnique({
-            where: { tenantId_ruleId: { tenantId, ruleId: legacyRuleId } },
-          })
-        : null)
-    : await prisma.taxRule.findFirst({
-        where: {
-          tenantId,
-          source: "xlsx",
-          origin: originUf,
-          transactionType: params.transactionType,
-          customerType: params.customerType,
-        },
-        orderBy: { updatedAt: "desc" },
-      });
-
+  const rule = await findTaxRuleRow(prisma, tenantId, {
+    ruleBaseId: params.ruleBaseId?.trim(),
+    originUf,
+    transactionType: params.transactionType,
+    customerType: params.customerType,
+  });
   if (!rule) return null;
-
-  const ruleOrigin = (rule.origin ?? rule.uf).toUpperCase().slice(0, 2);
-  if (ruleOrigin !== originUf) return null;
 
   const payload = (rule.payload ?? {}) as Record<string, unknown>;
   const icmsByUf = (payload.icmsByUf ?? {}) as Record<string, unknown>;

@@ -1,8 +1,10 @@
 import { prepareFiscalXmlForDownload } from "@msimulation-xml/fiscal-core";
 import type { FastifyInstance } from "fastify";
+import { NFeTipo } from "../../generated/prisma/client.js";
 import { tenantIdFromRequest } from "../../lib/auth/request-context.js";
 import { mapNfe } from "../../lib/fiscal/fiscal-mappers.js";
 import {
+  atualizarItensSaldoFifoParaNfes,
   CancelamentoError,
   cancelarVenda,
   DevolucaoError,
@@ -12,6 +14,7 @@ import {
   InutilizacaoError,
   inutilizarNumeracao,
   resolveNfeXml,
+  saldoLiquidoRemessaNfe,
 } from "../../services/fiscal/index.js";
 import { handleRouteError } from "../../lib/http/domain-errors.js";
 import {
@@ -27,6 +30,10 @@ const nfeListInclude = {
 
 const NFE_STATUS_ERRORS = [InutilizacaoError, DevolucaoError, CancelamentoError] as const;
 
+function isRemessaComSaldoFifo(tipo: NFeTipo): boolean {
+  return tipo === NFeTipo.REMESSA || tipo === NFeTipo.REMESSA_SIMBOLICA;
+}
+
 export function registerNfeRoutes(app: FastifyInstance, fiscal: FiscalService) {
   app.get("/nfes", async (req) => {
     const tid = tenantIdFromRequest(req);
@@ -35,7 +42,16 @@ export function registerNfeRoutes(app: FastifyInstance, fiscal: FiscalService) {
       include: nfeListInclude,
       orderBy: [{ emitidaEm: "desc" }, { serie: "desc" }, { numero: "desc" }],
     });
-    return rows.map((r) => mapNfe(r, r.nfeReferencia?.chave, r.itens));
+    if (rows.length === 0) return [];
+    await atualizarItensSaldoFifoParaNfes(app.prisma, tid, rows);
+    return Promise.all(
+      rows.map(async (r) => {
+        const saldoFifo = isRemessaComSaldoFifo(r.tipo)
+          ? await saldoLiquidoRemessaNfe(app.prisma, r.id, r.quantidade)
+          : undefined;
+        return mapNfe(r, r.nfeReferencia?.chave, r.itens, saldoFifo);
+      }),
+    );
   });
 
   app.get("/nfes/:chave/xml", async (req, reply) => {
@@ -81,7 +97,13 @@ export function registerNfeRoutes(app: FastifyInstance, fiscal: FiscalService) {
     });
     if (!row) return reply.status(404).send({ error: "NF-e não encontrada" });
 
-    const dto = mapNfe(row, row.nfeReferencia?.chave, row.itens);
+    if (isRemessaComSaldoFifo(row.tipo)) {
+      await atualizarItensSaldoFifoParaNfes(app.prisma, tid, [row]);
+    }
+    const saldoFifo = isRemessaComSaldoFifo(row.tipo)
+      ? await saldoLiquidoRemessaNfe(app.prisma, row.id, row.quantidade)
+      : undefined;
+    const dto = mapNfe(row, row.nfeReferencia?.chave, row.itens, saldoFifo);
     return {
       ...dto,
       cteChaveRef: row.cteRemessa?.chave ?? row.cteVenda?.chave,

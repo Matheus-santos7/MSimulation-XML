@@ -59,6 +59,8 @@ export async function faturarPedidoAction(
     const { nfe } = await faturarPedido(id);
     revalidatePath("/pedidos");
     revalidatePath("/nfe");
+    revalidatePath("/operacoes");
+    revalidatePath("/unidades-logisticas");
     revalidatePath("/");
     redirect(`/nfe/${nfe.chave}`);
   } catch (e) {

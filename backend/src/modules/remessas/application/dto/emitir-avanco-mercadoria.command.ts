@@ -15,5 +15,13 @@ export type EmitirAvancoMercadoriaResult = {
   remessaReferenciaId: string;
   retornoSimbolico: { id: string; chave: string };
   remessaSimbolica: { id: string; chave: string };
+  cte: {
+    id: string;
+    chave: string;
+    numero: number;
+    serie: number;
+    origem: string;
+    destino: string;
+  };
   alocacoesFifo: { remessaNfeId: string; nfeItemId: string; quantidade: number }[];
 };

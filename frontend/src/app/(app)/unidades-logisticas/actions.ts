@@ -15,6 +15,7 @@ export type AvancoCdState = {
   success?: boolean;
   chaveRetorno?: string;
   chaveSimbolica?: string;
+  chaveCte?: string;
 };
 
 export async function listarSaldoCdRemessaAction(
@@ -57,10 +58,12 @@ export async function emitirAvancoCdAction(
     revalidatePath("/unidades-logisticas");
     revalidatePath("/operacoes");
     revalidatePath("/nfe");
+    revalidatePath("/cte");
     return {
       success: true,
       chaveRetorno: result.retornoSimbolico.chave,
       chaveSimbolica: result.remessaSimbolica.chave,
+      chaveCte: result.cte.chave,
     };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Erro ao emitir avanço" };

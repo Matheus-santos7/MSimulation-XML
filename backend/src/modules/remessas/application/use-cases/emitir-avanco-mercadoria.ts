@@ -3,6 +3,7 @@ import type { PrismaClient } from "../../../../generated/prisma/client.js";
 import type { Product, Tenant } from "../../../../generated/prisma/client.js";
 import { gerarPedidoMl } from "../../../../lib/fiscal/nfe-chave.js";
 import { FISCAL_TRANSACTION_OPTIONS, type PrismaTx } from "../../../../lib/db/prisma-tx.js";
+import { emitirCteRemessa } from "../../../../services/fiscal/remessa/cte-remessa-service.js";
 import {
   debitarSaldoRemessaPorCd,
   resolveOrigemFiscalParaAvanco,
@@ -162,8 +163,11 @@ export class EmitirAvancoMercadoriaUseCase {
       }));
 
       const remessaPrincipal = await notaFiscal.buscarRemessaPrincipal(alocacoes);
-      if (!remessaPrincipal || remessaPrincipal.tipo !== "REMESSA") {
-        throw new RemessaDomainError("Remessa inicial de referência não encontrada para o avanço");
+      if (
+        !remessaPrincipal ||
+        (remessaPrincipal.tipo !== "REMESSA" && remessaPrincipal.tipo !== "REMESSA_SIMBOLICA")
+      ) {
+        throw new RemessaDomainError("Remessa de referência não encontrada para o avanço");
       }
 
       const docRetorno = await emissorNota.prepararRetornoSimbolicoAvanco(
@@ -244,7 +248,7 @@ export class EmitirAvancoMercadoriaUseCase {
         data: {
           tenantId: command.tenantId,
           nfeId: remessaSimbPersistida.id,
-          productId: resolved.product.id,
+          productId: saldoProductId,
           numeroItem: 1,
           quantidade: command.quantidade,
           valor: docRemessaSimb.valor,
@@ -255,11 +259,17 @@ export class EmitirAvancoMercadoriaUseCase {
         },
       });
 
+      const remessaSimbNfe = await tx.nFe.findUniqueOrThrow({
+        where: { id: remessaSimbPersistida.id },
+      });
+      const cte = await emitirCteRemessa(tx, tenant, remessaSimbNfe);
+
       return {
         remessaPrincipal,
         retornoPersistido,
         remessaSimbPersistida,
         alocacoes,
+        cte,
       };
     }, FISCAL_TRANSACTION_OPTIONS);
 
@@ -286,6 +296,7 @@ export class EmitirAvancoMercadoriaUseCase {
         id: resultado.remessaSimbPersistida.id,
         chave: resultado.remessaSimbPersistida.chave,
       },
+      cte: resultado.cte,
       alocacoesFifo: resultado.alocacoes.map((a) => ({
         remessaNfeId: a.remessaNfeId,
         nfeItemId: a.nfeItemId,

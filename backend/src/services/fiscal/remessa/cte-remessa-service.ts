@@ -3,8 +3,9 @@
  *
  * ## Quando é emitido
  *
- * Dentro da mesma transação de `remessa-service.ts`, logo após criar a NF-e de
- * remessa (CFOP 5949/6949 conforme UF). Não é chamado isoladamente pela API.
+ * Dentro da mesma transação de `remessa-service.ts` ou do avanço entre CDs
+ * (`emitir-avanco-mercadoria.ts`), logo após criar a NF-e de remessa física ou
+ * simbólica (CFOP 5949/6949 conforme UF).
  *
  * @see docs/remessa-fisica.md — Fase 9
  *
@@ -132,7 +133,7 @@ function dadosCreateCteRemessa(params: {
  * Cria CT-e de remessa vinculado à NF-e recém-emitida.
  *
  * @param prisma — client da transação Prisma (mesma de `emitirNFeRemessa`).
- * @param nfeRemessa — linha `nfes` com `tipo === REMESSA` já persistida.
+ * @param nfeRemessa — linha `nfes` de remessa (física ou simbólica) já persistida.
  * @returns DTO do CT-e com `nfeChaveRef` = chave da remessa.
  */
 export async function emitirCteRemessa(prisma: PrismaTx, tenant: Tenant, nfeRemessa: NFe) {

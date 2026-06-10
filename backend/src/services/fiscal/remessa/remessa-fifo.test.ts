@@ -4,6 +4,7 @@ import { NFeTipo } from "../../../generated/prisma/client.js";
 import type { PrismaClient } from "../../../generated/prisma/client.js";
 import {
   consumirSaldoRemessaFifo,
+  consumirSaldoRemessaFifoParaVenda,
   debitarSaldoRemessaPorCd,
   estornarConsumosRemessa,
   listarSaldoRemessaPorCd,
@@ -18,6 +19,7 @@ type ItemRow = {
   nfeId: string;
   productId: string;
   numeroItem: number;
+  quantidade: number;
   saldoDisponivel: number;
   nfe: {
     tenantId: string;
@@ -26,6 +28,8 @@ type ItemRow = {
     numero: number;
     deletedAt: null;
     unidadeDestinoId: string | null;
+    destUf?: string;
+    unidadeDestino?: { uf: string; codigo: string } | null;
   };
 };
 
@@ -50,15 +54,31 @@ function createFifoMock(initial: ItemRow[]) {
   const items = new Map(initial.map((r) => [r.id, structuredClone(r)]));
   const consumos: ConsumoRow[] = [];
 
+  const fifoStubs = {
+    product: {
+      findFirst: async () => ({ id: productId, sku: "SKU1" }),
+    },
+    nFe: {
+      findMany: async () => [],
+    },
+    nfeRemessaConsumo: {
+      aggregate: async () => ({ _sum: { quantidade: 0 } }),
+    },
+  };
+
   const tx = {
+    ...fifoStubs,
     nfeItem: {
+      updateMany: async () => ({ count: 0 }),
       findMany: async ({
         where,
         orderBy,
       }: {
         where: {
           tenantId: string;
-          productId: string;
+          productId?: string | { in: string[] };
+          product?: { sku: string; tenantId?: string };
+          OR?: Array<{ productId?: string; product?: { sku: string } }>;
           saldoDisponivel?: { gt: number };
           nfe: {
             tenantId: string;
@@ -67,25 +87,48 @@ function createFifoMock(initial: ItemRow[]) {
             unidadeDestinoId?: string;
           };
         };
-        orderBy: [
+        orderBy?: [
           { nfe: { emitidaEm: "asc" | "desc" } },
           { nfe: { numero: "asc" | "desc" } },
           { numeroItem: "asc" | "desc" },
         ];
       }) => {
-        let rows = [...items.values()].filter(
-          (r) =>
-            r.tenantId === where.tenantId &&
-            r.productId === where.productId &&
-            r.nfe.tenantId === where.nfe.tenantId &&
-            matchesNfeTipoFilter(r.nfe.tipo, where.nfe.tipo) &&
-            r.nfe.deletedAt === null &&
-            (where.saldoDisponivel?.gt !== undefined
-              ? (r.saldoDisponivel ?? 0) > where.saldoDisponivel.gt
-              : true) &&
-            (where.nfe.unidadeDestinoId === undefined ||
-              r.nfe.unidadeDestinoId === where.nfe.unidadeDestinoId),
-        );
+        const productIds =
+          typeof where.productId === "string"
+            ? [where.productId]
+            : where.productId?.in ?? null;
+
+        let rows = [...items.values()].filter((r) => {
+          if (r.tenantId !== where.tenantId) return false;
+          if (where.OR?.length) {
+            const matchOr = where.OR.some((clause) => {
+              if (clause.productId) return clause.productId === r.productId;
+              if (clause.product?.sku) return false;
+              return false;
+            });
+            if (!matchOr) return false;
+          } else if (productIds && !productIds.includes(r.productId)) return false;
+          if (where.product) return false;
+          if (r.nfe.tenantId !== where.nfe.tenantId) return false;
+          if (!matchesNfeTipoFilter(r.nfe.tipo, where.nfe.tipo)) return false;
+          if (r.nfe.deletedAt !== null) return false;
+          if (
+            where.saldoDisponivel?.gt !== undefined &&
+            (r.saldoDisponivel ?? 0) <= where.saldoDisponivel.gt
+          ) {
+            return false;
+          }
+          if (
+            where.nfe.unidadeDestinoId !== undefined &&
+            r.nfe.unidadeDestinoId !== where.nfe.unidadeDestinoId
+          ) {
+            return false;
+          }
+          return true;
+        });
+
+        if (!orderBy) return rows;
+
         const emitOrder = orderBy[0]?.nfe.emitidaEm === "desc" ? -1 : 1;
         const numOrder = orderBy[1]?.nfe.numero === "desc" ? -1 : 1;
         const itemOrder = orderBy[2]?.numeroItem === "desc" ? -1 : 1;
@@ -114,8 +157,12 @@ function createFifoMock(initial: ItemRow[]) {
           row.saldoDisponivel = (row.saldoDisponivel ?? 0) + saldoPatch.increment;
         }
       },
+      create: async () => {
+        throw new Error("nfeItem.create não mockado");
+      },
     },
     nfeRemessaConsumo: {
+      ...fifoStubs.nfeRemessaConsumo,
       create: async ({ data }: { data: ConsumoRow }) => {
         consumos.push({ ...data });
       },
@@ -138,6 +185,10 @@ function item(
   numero: number,
   unidadeDestinoId: string | null = null,
   numeroItem = 1,
+  tipo: NFeTipo = NFeTipo.REMESSA,
+  uf = "SP",
+  codigo = "SP01",
+  destUf?: string,
 ): ItemRow {
   return {
     id,
@@ -145,14 +196,17 @@ function item(
     nfeId,
     productId,
     numeroItem,
+    quantidade: saldo,
     saldoDisponivel: saldo,
     nfe: {
       tenantId,
-      tipo: NFeTipo.REMESSA,
+      tipo,
       emitidaEm: new Date(emitidaEm),
       numero,
       deletedAt: null,
       unidadeDestinoId,
+      destUf: destUf ?? uf,
+      unidadeDestino: unidadeDestinoId ? { uf, codigo } : null,
     },
   };
 }
@@ -226,6 +280,42 @@ describe("remessa-fifo", () => {
     assert.equal(items.get("ib")!.saldoDisponivel, 5);
   });
 
+  it("venda full prefere saldo no CD da UF do comprador", async () => {
+    const { tx } = createFifoMock([
+      item("i-sp", "r-sp", 5, "2026-01-01", 1, "unidade-sp", 1, NFeTipo.REMESSA, "SP"),
+      item("i-mg", "r-mg", 5, "2026-02-01", 2, "unidade-mg", 1, NFeTipo.REMESSA_SIMBOLICA, "MG"),
+    ]);
+
+    const alocacoes = await consumirSaldoRemessaFifoParaVenda(
+      tx,
+      tenantId,
+      productId,
+      2,
+      "retorno-mg",
+      "MG",
+    );
+
+    assert.equal(alocacoes[0]!.remessaNfeId, "r-mg");
+    assert.equal(alocacoes[0]!.quantidade, 2);
+  });
+
+  it("venda full usa fallback global quando não há saldo na UF do comprador", async () => {
+    const { tx } = createFifoMock([
+      item("i-sp", "r-sp", 3, "2026-01-01", 1, "unidade-sp", 1, NFeTipo.REMESSA, "SP"),
+    ]);
+
+    const alocacoes = await consumirSaldoRemessaFifoParaVenda(
+      tx,
+      tenantId,
+      productId,
+      2,
+      "retorno-rj",
+      "RJ",
+    );
+
+    assert.equal(alocacoes[0]!.remessaNfeId, "r-sp");
+  });
+
   it("ignora linhas com saldo zero", async () => {
     const { tx } = createFifoMock([
       item("vazia", "r0", 0, "2026-01-01", 1),
@@ -279,7 +369,23 @@ describe("realignRemessaFifoProductIdsBySku", () => {
 describe("listarSaldoRemessaPorCd", () => {
   it("agrega saldo FIFO por CD de destino da remessa", async () => {
     const prisma = {
+      product: {
+        findFirst: async ({ where }: { where?: { id?: string; sku?: string } }) => {
+          if (where?.id === productId || where?.sku) return { id: productId, sku: "SKU1" };
+          return { id: productId };
+        },
+      },
+      nFe: { findMany: async () => [] },
+      nfeRemessaConsumo: { aggregate: async () => ({ _sum: { quantidade: 0 } }) },
+      meliUnidadeLogistica: {
+        findMany: async () => [
+          { id: "cat-a", codigo: "SP01", nome: "Cajamar", uf: "SP" },
+          { id: "cat-b", codigo: "SC01", nome: "Joinville", uf: "SC" },
+        ],
+      },
       nfeItem: {
+        updateMany: async () => ({ count: 0 }),
+        update: async () => undefined,
         findMany: async () => [
           {
             productId,
@@ -312,8 +418,12 @@ describe("listarSaldoRemessaPorCd", () => {
     const rows = await listarSaldoRemessaPorCd(prisma, tenantId, productId);
 
     assert.equal(rows.length, 2);
-    assert.equal(rows.find((r) => r.unidadeDestinoId === "unidade-a")?.saldo, 8);
-    assert.equal(rows.find((r) => r.unidadeDestinoId === "unidade-b")?.saldo, 7);
+    const rowA = rows.find((r) => r.unidadeDestinoId === "cat-a");
+    const rowB = rows.find((r) => r.unidadeDestinoId === "cat-b");
+    assert.equal(rowA?.saldo, 8);
+    assert.equal(rowA?.fifoUnidadeDestinoId, "unidade-a");
+    assert.equal(rowB?.saldo, 7);
+    assert.equal(rowB?.fifoUnidadeDestinoId, "unidade-b");
     assert.equal(rows[0]!.unidade?.codigo, "SC01");
     assert.equal(rows[1]!.unidade?.codigo, "SP01");
   });
@@ -325,9 +435,18 @@ describe("resolveUnidadeFifoOrigemId", () => {
     const catalogoUnidadeId = "uuid-catalogo-sp02";
     const prisma = {
       product: {
-        findFirst: async () => ({ id: productId }),
+        findFirst: async () => ({ id: productId, sku: "SP02SKU" }),
+      },
+      nFe: { findMany: async () => [] },
+      nfeRemessaConsumo: { aggregate: async () => ({ _sum: { quantidade: 0 } }) },
+      meliUnidadeLogistica: {
+        findMany: async () => [
+          { id: catalogoUnidadeId, codigo: "SP02", nome: "Cajamar", uf: "SP" },
+        ],
       },
       nfeItem: {
+        updateMany: async () => ({ count: 0 }),
+        update: async () => undefined,
         findMany: async () => [
           {
             productId,

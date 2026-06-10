@@ -37,6 +37,7 @@ export function AvancoCdForm({ products, unidades }: Props) {
   const [quantidade, setQuantidade] = useState(1);
   const [saldos, setSaldos] = useState<SaldoRemessaCdDto[]>([]);
   const [saldoLoading, setSaldoLoading] = useState(false);
+  const [saldoErro, setSaldoErro] = useState<string | null>(null);
 
   const carregarSaldos = useCallback(async (pid: string, sku?: string) => {
     if (!pid) {
@@ -44,12 +45,14 @@ export function AvancoCdForm({ products, unidades }: Props) {
       return;
     }
     setSaldos([]);
+    setSaldoErro(null);
     setSaldoLoading(true);
     try {
       const rows = await listarSaldoCdRemessaAction(pid, sku);
       setSaldos(rows);
-    } catch {
+    } catch (e) {
       setSaldos([]);
+      setSaldoErro(e instanceof Error ? e.message : "Erro ao carregar saldo FIFO");
     } finally {
       setSaldoLoading(false);
     }
@@ -76,10 +79,22 @@ export function AvancoCdForm({ products, unidades }: Props) {
     }
   }, [state.success, remessaState.success, productId, selectedProduct?.sku, carregarSaldos]);
 
-  const saldoPorCd = new Map(saldos.map((s) => [s.unidadeDestinoId, s.saldo]));
-  const saldoOrigem = origemId
-    ? (saldos.find((s) => s.unidadeDestinoId === origemId)?.saldo ?? 0)
-    : 0;
+  function saldoDaUnidade(u: UnidadeLogisticaDto): number {
+    const direto = saldos.find((s) => s.unidadeDestinoId === u.id);
+    if (direto) return direto.saldo;
+    const codigo = u.codigo.trim().toUpperCase();
+    const porCodigo = saldos.find((s) => s.unidade?.codigo?.trim().toUpperCase() === codigo);
+    return porCodigo?.saldo ?? 0;
+  }
+
+  function saldoDoCd(cdId: string): number {
+    const direto = saldos.find((s) => s.unidadeDestinoId === cdId);
+    if (direto) return direto.saldo;
+    const unidade = unidades.find((u) => u.id === cdId);
+    return unidade ? saldoDaUnidade(unidade) : 0;
+  }
+
+  const saldoOrigem = origemId ? saldoDoCd(origemId) : 0;
   const quantidadeInvalida = origemId.length > 0 && quantidade > saldoOrigem;
 
   function buildAvancoFormData() {
@@ -119,8 +134,8 @@ export function AvancoCdForm({ products, unidades }: Props) {
         Avanço de mercadoria entre CDs (cenário 3)
       </div>
       <p className="text-sm text-muted-foreground">
-        Emite remessa simbólica no CD de origem (debita saldo FIFO) e nova remessa física no CD destino, com
-        registro de movimentação fiscal.
+        Debita o saldo FIFO no CD origem (remessa física ou simbólica), emite retorno simbólico e credita o
+        saldo na remessa simbólica do CD destino.
       </p>
 
       <label className="block space-y-1">
@@ -151,6 +166,8 @@ export function AvancoCdForm({ products, unidades }: Props) {
           </p>
           {saldoLoading ? (
             <p className="text-muted-foreground">Carregando saldos…</p>
+          ) : saldoErro ? (
+            <p className="text-destructive text-sm">{saldoErro}</p>
           ) : saldos.length === 0 ? (
             <p className="text-muted-foreground">
               Nenhum saldo neste produto. Emita uma remessa física para o CD de origem antes do avanço.
@@ -204,7 +221,7 @@ export function AvancoCdForm({ products, unidades }: Props) {
             {unidades.map((u) => (
               <option key={u.id} value={u.id} disabled={u.id === origemId}>
                 {u.codigo} — {u.endereco.uf} / {u.endereco.municipio} (
-                {saldoLabel(saldoPorCd.get(u.id))})
+                {saldoLabel(saldoDaUnidade(u))})
               </option>
             ))}
           </select>
@@ -288,6 +305,7 @@ export function AvancoCdForm({ products, unidades }: Props) {
         <p className="text-sm text-success">
           Avanço emitido. Saldo debitado no CD origem e creditado na remessa simbólica do CD destino.
           Retorno: {state.chaveRetorno?.slice(-8)} · Simbólica: {state.chaveSimbolica?.slice(-8)}
+          {state.chaveCte ? ` · CT-e …${state.chaveCte.slice(-8)}` : ""}
         </p>
       )}
     </div>

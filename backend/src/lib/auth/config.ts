@@ -33,6 +33,16 @@ export function requirePasswordPepper(): string {
   return "dev-pepper-defina-PASSWORD_PEPPER-no-env";
 }
 
+/** Chave dedicada para criptografia AES dos segredos TOTP (independente do pepper). */
+export function requireTotpEncryptionKey(): string {
+  const key = process.env.TOTP_ENCRYPTION_KEY?.trim();
+  if (key && key.length >= 32) return key;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("TOTP_ENCRYPTION_KEY deve ter ao menos 32 caracteres no .env");
+  }
+  return "dev-totp-key-defina-TOTP_ENCRYPTION_KEY-no-env";
+}
+
 export const PASSWORD_RESET_GENERIC_MESSAGE =
   "Se o e-mail estiver cadastrado, você receberá um link para redefinir a senha em instantes.";
 

@@ -26,6 +26,14 @@ export async function forgotPasswordApi(email: string): Promise<{ message: strin
   return postAuthJson<{ message: string }>("/api/auth/forgot-password", { email });
 }
 
-export async function resetPasswordApi(token: string, password: string): Promise<{ message: string }> {
-  return postAuthJson<{ message: string }>("/api/auth/reset-password", { token, password });
+export async function resetPasswordApi(
+  token: string,
+  password: string,
+  code?: string,
+): Promise<{ message: string }> {
+  return postAuthJson<{ message: string }>("/api/auth/reset-password", {
+    token,
+    password,
+    ...(code ? { code } : {}),
+  });
 }

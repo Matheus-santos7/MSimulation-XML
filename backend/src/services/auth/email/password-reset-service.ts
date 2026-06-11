@@ -4,16 +4,23 @@ import {
   PASSWORD_RESET_GENERIC_MESSAGE,
   passwordResetTtlMs,
 } from "../../../lib/auth/config.js";
-import { authFailureDelay } from "../../../lib/auth/password.js";
+import {
+  clearedLockoutState,
+  isLoginLocked,
+  lockoutMessage,
+  nextLockoutState,
+} from "../../../lib/auth/login-lockout.js";
+import { authFailureDelay, hashPassword } from "../../../lib/auth/password.js";
 import {
   generatePasswordResetToken,
   hashPasswordResetToken,
 } from "../../../lib/auth/password-reset-token.js";
-import { clearedLockoutState } from "../../../lib/auth/login-lockout.js";
-import { hashPassword } from "../../../lib/auth/password.js";
+import { decryptTotpSecret } from "../../../lib/auth/totp-crypto.js";
+import { verifyTotpCode } from "../../../lib/auth/totp.js";
 import type { resetPasswordBodySchema, forgotPasswordBodySchema } from "../../../schemas/auth/schemas.js";
 import type { z } from "zod";
-import { AuthService } from "../auth-service.js";
+import { AuthService, AuthTooManyRequestsError } from "../auth-service.js";
+import { TwoFactorRequiredError } from "../mfa/two-factor-service.js";
 import { EmailDeliveryError, EmailService } from "./email-service.js";
 
 type ForgotInput = z.infer<typeof forgotPasswordBodySchema>;
@@ -98,6 +105,30 @@ export class PasswordResetService {
       throw new PasswordResetInvalidError();
     }
 
+    const user = row.user;
+
+    if (isLoginLocked(user.lockedUntil)) {
+      await authFailureDelay();
+      throw new AuthTooManyRequestsError(lockoutMessage(user.lockedUntil!));
+    }
+
+    if (user.totpEnabledAt) {
+      if (!input.code) {
+        throw new TwoFactorRequiredError(
+          "Informe o código do autenticador para redefinir a senha.",
+        );
+      }
+
+      const secret = user.totpSecretEnc ? decryptTotpSecret(user.totpSecretEnc) : null;
+      if (!secret || !(await verifyTotpCode(secret, input.code))) {
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: nextLockoutState(user.failedLoginAttempts),
+        });
+        throw new TwoFactorRequiredError();
+      }
+    }
+
     const passwordHash = await hashPassword(input.password);
 
     await this.prisma.$transaction(async (tx) => {
@@ -114,8 +145,6 @@ export class PasswordResetService {
         data: {
           password: passwordHash,
           ...clearedLockoutState(),
-          totpSecretEnc: null,
-          totpEnabledAt: null,
         },
       });
     });

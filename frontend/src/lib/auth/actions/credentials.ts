@@ -136,6 +136,7 @@ export async function resetPasswordAction(
   const token = String(formData.get("token") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const passwordConfirm = String(formData.get("passwordConfirm") ?? "");
+  const code = String(formData.get("code") ?? "").trim();
 
   if (!token) {
     return { error: "Link inválido. Solicite um novo e-mail de redefinição." };
@@ -148,7 +149,7 @@ export async function resetPasswordAction(
   }
 
   try {
-    const result = await resetPasswordApi(token, password);
+    const result = await resetPasswordApi(token, password, code || undefined);
     return { success: result.message };
   } catch (e) {
     return formatAuthError(e);

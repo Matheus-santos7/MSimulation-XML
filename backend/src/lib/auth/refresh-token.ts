@@ -5,5 +5,5 @@ export function generateRefreshToken(): string {
 }
 
 export function hashRefreshToken(token: string): string {
-  return hashOpaqueToken(token);
+  return hashOpaqueToken(token, "refresh");
 }

@@ -1,11 +1,11 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
-import { requirePasswordPepper } from "./config.js";
+import { requireTotpEncryptionKey } from "./config.js";
 
 const ALGO = "aes-256-gcm";
 const IV_BYTES = 12;
 
 function encryptionKey(): Buffer {
-  return createHash("sha256").update(`totp:${requirePasswordPepper()}`).digest();
+  return createHash("sha256").update(requireTotpEncryptionKey()).digest();
 }
 
 export function encryptTotpSecret(plain: string): string {

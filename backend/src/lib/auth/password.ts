@@ -13,7 +13,10 @@ function scryptDerive(password: string, salt: Buffer): Promise<Buffer> {
 const ALGORITHM = "scrypt";
 const SALT_BYTES = 16;
 const KEY_BYTES = 64;
-const SCRYPT_COST = { N: 16384, r: 8, p: 1 } as const;
+const SCRYPT_COST =
+  process.env.NODE_ENV === "production"
+    ? ({ N: 32768, r: 8, p: 1 } as const)
+    : ({ N: 16384, r: 8, p: 1 } as const);
 
 /** Hash inválido usado para equalizar tempo de resposta quando o e-mail não existe. */
 export const DUMMY_PASSWORD_HASH =

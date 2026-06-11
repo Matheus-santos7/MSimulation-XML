@@ -58,6 +58,25 @@ export function ResetPasswordForm({ token }: { token: string }) {
           className="w-full rounded-md border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
         />
       </div>
+      <div className="space-y-1.5">
+        <label htmlFor="totp-code" className="text-sm font-medium">
+          Código do autenticador
+        </label>
+        <input
+          id="totp-code"
+          name="code"
+          type="text"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          pattern="\d{6}"
+          maxLength={6}
+          placeholder="000000"
+          className="w-full rounded-md border border-border bg-background px-3 py-2.5 text-sm tracking-[0.3em] text-center font-mono focus:outline-none focus:ring-2 focus:ring-accent/40"
+        />
+        <p className="text-xs text-muted-foreground">
+          Obrigatório se a autenticação em duas etapas estiver ativa na sua conta.
+        </p>
+      </div>
       {state.error ? (
         <p className="text-sm text-destructive" role="alert">
           {state.error}

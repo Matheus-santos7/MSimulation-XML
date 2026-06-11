@@ -1,4 +1,5 @@
 import { BRAND_FULL_NAME } from "../../lib/brand.js";
+import { escapeHtml } from "../utils.js";
 
 export function buildPasswordResetEmailHtml(params: {
   resetUrl: string;
@@ -55,12 +56,4 @@ export function buildPasswordResetEmailHtml(params: {
   </table>
 </body>
 </html>`;
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }

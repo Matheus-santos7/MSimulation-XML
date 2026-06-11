@@ -7,11 +7,10 @@ export function generateOpaqueToken(bytes: number): string {
 }
 
 /**
- * Hash SHA-256 do token com pepper.
- * @param namespace Quando informado, usa formato `namespace:token:pepper` (ex.: password-reset).
+ * Hash SHA-256 do token com pepper e namespace.
+ * Formato: `namespace:token:pepper`
  */
-export function hashOpaqueToken(token: string, namespace?: string): string {
+export function hashOpaqueToken(token: string, namespace: string): string {
   const pepper = requirePasswordPepper();
-  const input = namespace ? `${namespace}:${token}:${pepper}` : token + pepper;
-  return createHash("sha256").update(input).digest("hex");
+  return createHash("sha256").update(`${namespace}:${token}:${pepper}`).digest("hex");
 }

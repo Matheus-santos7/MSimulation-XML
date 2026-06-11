@@ -5,5 +5,5 @@ export function generateEmailVerificationToken(): string {
 }
 
 export function hashEmailVerificationToken(token: string): string {
-  return hashOpaqueToken(token);
+  return hashOpaqueToken(token, "email-verify");
 }

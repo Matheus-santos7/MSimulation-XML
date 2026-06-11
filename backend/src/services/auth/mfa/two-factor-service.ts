@@ -1,5 +1,11 @@
 import type { PrismaClient } from "../../../generated/prisma/client.js";
 import { TOTP_ISSUER, twoFactorPendingTtl } from "../../../lib/auth/config.js";
+import {
+  clearedLockoutState,
+  isLoginLocked,
+  lockoutMessage,
+  nextLockoutState,
+} from "../../../lib/auth/login-lockout.js";
 import { buildTwoFactorPendingPayload, twoFactorPendingResponse } from "../../../lib/auth/session.js";
 import type { AccessTokenPayload, TwoFactorPendingPayload } from "../../../lib/auth/types/index.js";
 import { decryptTotpSecret, encryptTotpSecret } from "../../../lib/auth/totp-crypto.js";
@@ -8,6 +14,7 @@ import { verifyPassword } from "../../../lib/auth/password.js";
 import {
   AuthService,
   AuthStateError,
+  AuthTooManyRequestsError,
   AuthUnauthorizedError,
   type AuthMeta,
 } from "../auth-service.js";
@@ -57,10 +64,23 @@ export class TwoFactorService {
       throw new TwoFactorRequiredError("Sessão de verificação expirada. Entre novamente.");
     }
 
+    if (isLoginLocked(user.lockedUntil)) {
+      throw new AuthTooManyRequestsError(lockoutMessage(user.lockedUntil!));
+    }
+
     const secret = user.totpSecretEnc ? decryptTotpSecret(user.totpSecretEnc) : null;
     if (!secret || !(await verifyTotpCode(secret, code))) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: nextLockoutState(user.failedLoginAttempts),
+      });
       throw new TwoFactorRequiredError();
     }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: clearedLockoutState(),
+    });
 
     return this.auth.finishLogin(user.id, meta, this.signAccess);
   }

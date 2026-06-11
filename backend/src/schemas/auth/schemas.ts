@@ -65,15 +65,16 @@ export const forgotPasswordBodySchema = z.object({
   email: emailField,
 });
 
-export const resetPasswordBodySchema = z.object({
-  token: z.string().min(32, "Link inválido ou expirado"),
-  password: passwordField,
-});
-
 export const totpCodeField = z
   .string()
   .trim()
   .regex(/^\d{6}$/, "Informe o código de 6 dígitos do autenticador");
+
+export const resetPasswordBodySchema = z.object({
+  token: z.string().min(32, "Link inválido ou expirado"),
+  password: passwordField,
+  code: totpCodeField.optional(),
+});
 
 export const verify2faBodySchema = z.object({
   twoFactorToken: z.string().min(20, "Sessão de verificação inválida"),

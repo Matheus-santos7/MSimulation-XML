@@ -1,50 +1,11 @@
 import { isEmailVerified } from "./config.js";
 import type { mapTenant } from "../org/tenant-mapper.js";
-
-export type AccessTokenPayload = {
-  userId: string;
-  tenantId: string | null;
-  tokenVersion: number;
-  typ: "access";
-};
-
-export type TwoFactorPendingPayload = {
-  userId: string;
-  tokenVersion: number;
-  typ: "2fa_pending";
-};
-
-export type AuthTokens = {
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: string;
-};
-
-export type AuthUserResponse = {
-  userId: string;
-  tenantId: string | null;
-  email: string;
-  name?: string;
-  tenant: ReturnType<typeof mapTenant> | null;
-  needsOnboarding: boolean;
-  twoFactorEnabled: boolean;
-  emailVerified: boolean;
-  role?: "ADMIN" | "MEMBER";
-};
-
-export type AuthSessionResponse = AuthUserResponse & {
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: string;
-};
-
-export type TwoFactorPendingResponse = {
-  requiresTwoFactor: true;
-  twoFactorToken: string;
-  expiresIn: string;
-};
-
-export type LoginResponse = AuthSessionResponse | TwoFactorPendingResponse;
+import type {
+  AccessTokenPayload,
+  AuthSessionResponse,
+  TwoFactorPendingPayload,
+  TwoFactorPendingResponse,
+} from "./types/index.js";
 
 export function buildAccessPayload(user: {
   id: string;

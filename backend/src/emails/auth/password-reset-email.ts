@@ -1,4 +1,4 @@
-import { BRAND_FULL_NAME } from "../../lib/auth/brand.js";
+import { BRAND_FULL_NAME } from "../../lib/brand.js";
 
 export function buildPasswordResetEmailHtml(params: {
   resetUrl: string;

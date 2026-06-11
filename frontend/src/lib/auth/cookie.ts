@@ -10,3 +10,25 @@ export const REFRESH_COOKIE_MAX_AGE = 7 * 24 * 60 * 60;
 
 /** 5 min — token pendente de 2FA após login */
 export const TWO_FACTOR_PENDING_MAX_AGE = 5 * 60;
+
+/** Usado em session.ts (cookies API) e edge-cookies.ts (middleware). */
+export function isCookieSecure(): boolean {
+  return (
+    process.env.NODE_ENV === "production" ||
+    process.env.VERCEL === "1" ||
+    process.env.COOKIE_SECURE === "true"
+  );
+}
+
+export function authCookieBaseOptions() {
+  return {
+    httpOnly: true,
+    secure: isCookieSecure(),
+    sameSite: "strict" as const,
+    path: "/",
+  };
+}
+
+export function authCookieOptions(maxAge: number) {
+  return { ...authCookieBaseOptions(), maxAge };
+}

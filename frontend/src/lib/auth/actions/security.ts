@@ -1,13 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import {
-  AuthApiError,
-  disable2faApi,
-  enable2faApi,
-  resendVerificationApi,
-  setup2faApi,
-} from "@/lib/auth/api";
+import { AuthApiError } from "@/lib/auth/api/client";
+import { resendVerificationApi } from "@/lib/auth/api/session";
+import { disable2faApi, enable2faApi, setup2faApi } from "@/lib/auth/api/two-factor";
 import { resolveAccessToken } from "@/lib/auth/session";
 import { toUserFacingError } from "@/lib/user-facing-error";
 import type { ResendVerificationState, SecurityActionState } from "./types";

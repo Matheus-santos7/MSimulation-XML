@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { AuthApiError, onboardingTenantApi } from "@/lib/auth/api";
+import { AuthApiError } from "@/lib/auth/api/client";
+import { onboardingTenantApi } from "@/lib/onboarding/api";
 import { getAccessToken, setAuthSession } from "@/lib/auth/session";
 import { enrichEmpresaFromCep } from "@/lib/enrich-empresa-cep";
 import {

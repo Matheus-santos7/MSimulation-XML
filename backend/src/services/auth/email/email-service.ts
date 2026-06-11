@@ -1,7 +1,7 @@
 import { Resend } from "resend";
 import { buildPasswordResetEmailHtml } from "../../../emails/auth/password-reset-email.js";
 import { buildEmailVerificationEmailHtml } from "../../../emails/auth/email-verification-email.js";
-import { BRAND_FULL_NAME } from "../../../lib/auth/brand.js";
+import { BRAND_FULL_NAME } from "../../../lib/brand.js";
 import { resendApiKey, resendFromEmail } from "../../../lib/auth/config.js";
 
 export type SendPasswordResetParams = {

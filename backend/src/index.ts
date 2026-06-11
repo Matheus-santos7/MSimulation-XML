@@ -1,5 +1,4 @@
 /**
- * Ponto de entrada da API Fastify (porta padrão 3001).
  *
  * Rotas públicas: `/api/health`, `/api/auth/*`
  * Lookup autenticado (sem tenant): `authenticated-lookup` — onboarding.

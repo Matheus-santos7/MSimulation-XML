@@ -1,12 +1,9 @@
-import { createHash, randomBytes } from "node:crypto";
-import { requirePasswordPepper } from "./config.js";
+import { generateOpaqueToken, hashOpaqueToken } from "./token.js";
 
 export function generateEmailVerificationToken(): string {
-  return randomBytes(32).toString("base64url");
+  return generateOpaqueToken(32);
 }
 
 export function hashEmailVerificationToken(token: string): string {
-  return createHash("sha256")
-    .update(token + requirePasswordPepper())
-    .digest("hex");
+  return hashOpaqueToken(token);
 }

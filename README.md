@@ -29,6 +29,7 @@
 
 ## Índice
 
+- [Documentação de login (`docs/login.md`)](./docs/login.md)
 - [Visão geral](#visão-geral)
 - [Fluxo operacional (fulfillment)](#fluxo-operacional-fulfillment)
 - [Arquitetura do sistema](#arquitetura-do-sistema)

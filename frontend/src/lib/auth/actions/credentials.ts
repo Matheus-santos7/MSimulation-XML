@@ -1,15 +1,16 @@
 "use server";
 
 import {
-  AuthApiError,
   forgotPasswordApi,
-  isTwoFactorPending,
   loginApi,
-  logoutApi,
   registerApi,
   resetPasswordApi,
   verify2faApi,
-} from "@/lib/auth/api";
+  verifyEmailApi,
+} from "@/lib/auth/api/credentials";
+import { logoutApi } from "@/lib/auth/api/session";
+import { AuthApiError } from "@/lib/auth/api/client";
+import { isTwoFactorPending } from "@/lib/auth/types";
 import {
   clearAuthSession,
   clearTwoFactorPending,
@@ -151,6 +152,21 @@ export async function resetPasswordAction(
     return { success: result.message };
   } catch (e) {
     return formatAuthError(e);
+  }
+}
+
+export async function verifyEmailAction(
+  token: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!token.trim()) {
+    return { ok: false, error: "Link inválido. Solicite um novo e-mail de confirmação." };
+  }
+  try {
+    await verifyEmailApi(token);
+    return { ok: true };
+  } catch (e) {
+    const { error } = formatAuthError(e);
+    return { ok: false, error };
   }
 }
 

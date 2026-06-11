@@ -6,20 +6,8 @@ import {
   REFRESH_COOKIE_MAX_AGE,
   REFRESH_TOKEN_COOKIE,
   TWO_FACTOR_PENDING_COOKIE,
+  authCookieBaseOptions,
 } from "@/lib/auth/cookie";
-
-function cookieBase() {
-  const secure =
-    process.env.NODE_ENV === "production" ||
-    process.env.VERCEL === "1" ||
-    process.env.COOKIE_SECURE === "true";
-  return {
-    httpOnly: true,
-    secure,
-    sameSite: "strict" as const,
-    path: "/",
-  };
-}
 
 export function clearAuthCookiesOn(response: NextResponse): void {
   response.cookies.delete(ACCESS_TOKEN_COOKIE);
@@ -33,11 +21,11 @@ export function setSessionCookiesOn(
   refreshToken: string,
 ): void {
   response.cookies.set(ACCESS_TOKEN_COOKIE, accessToken, {
-    ...cookieBase(),
+    ...authCookieBaseOptions(),
     maxAge: ACCESS_COOKIE_MAX_AGE,
   });
   response.cookies.set(REFRESH_TOKEN_COOKIE, refreshToken, {
-    ...cookieBase(),
+    ...authCookieBaseOptions(),
     maxAge: REFRESH_COOKIE_MAX_AGE,
   });
 }

@@ -1,8 +1,7 @@
-import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyPluginAsync, FastifyRequest } from "fastify";
 import rateLimit from "@fastify/rate-limit";
-import { ZodError } from "zod";
 import { isEmailVerified, twoFactorPendingTtl } from "../../lib/auth/config.js";
-import type { AccessTokenPayload, TwoFactorPendingPayload } from "../../lib/auth/jwt-payload.js";
+import type { AccessTokenPayload, TwoFactorPendingPayload } from "../../lib/auth/types/index.js";
 import {
   disable2faBodySchema,
   enable2faBodySchema,
@@ -17,26 +16,14 @@ import {
 } from "../../schemas/auth/schemas.js";
 import { tenantCreateBody } from "../../schemas/org/tenant.js";
 import {
-  AuthConflictError,
   AuthService,
-  AuthStateError,
-  AuthTooManyRequestsError,
-  AuthUnauthorizedError,
-  EmailDeliveryError,
-  EmailVerificationInvalidError,
   EmailVerificationService,
-  PasswordResetInvalidError,
   PasswordResetService,
-  TwoFactorRequiredError,
   TwoFactorService,
 } from "../../services/auth/index.js";
-import { TenantConflictError } from "../../services/org/tenant-service.js";
-import {
-  DATABASE_UNAVAILABLE_MESSAGE,
-  isDatabaseUnavailableError,
-} from "../../lib/db/errors.js";
 import { userIdFromRequest } from "../../lib/auth/request-context.js";
-import { CaptchaVerificationError, verifyTurnstileToken } from "../../lib/auth/turnstile.js";
+import { verifyTurnstileToken } from "../../lib/auth/turnstile.js";
+import { handleAuthError } from "./auth-errors.js";
 function authMeta(req: FastifyRequest) {
   return {
     userAgent: req.headers["user-agent"],
@@ -326,50 +313,3 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     },
   );
 };
-
-function handleAuthError(e: unknown, reply: { status: (code: number) => { send: (body: unknown) => unknown } }) {
-  if (e instanceof ZodError) {
-    const fieldErrors = e.flatten().fieldErrors as Record<string, string[]>;
-    const first = Object.values(fieldErrors).flat()[0];
-    return reply.status(400).send({
-      error: first ?? "Dados inválidos",
-      details: fieldErrors,
-    });
-  }
-  if (e instanceof AuthUnauthorizedError) {
-    return reply.status(401).send({ error: e.message });
-  }
-  if (e instanceof AuthTooManyRequestsError) {
-    return reply.status(429).send({ error: e.message });
-  }
-  if (e instanceof TwoFactorRequiredError) {
-    return reply.status(401).send({ error: e.message });
-  }
-  if (e instanceof AuthConflictError) {
-    return reply.status(409).send({ error: e.message });
-  }
-  if (e instanceof AuthStateError) {
-    return reply.status(400).send({ error: e.message });
-  }
-  if (e instanceof TenantConflictError) {
-    return reply.status(409).send({ error: e.message });
-  }
-  if (e instanceof PasswordResetInvalidError) {
-    return reply.status(400).send({ error: e.message });
-  }
-  if (e instanceof EmailDeliveryError) {
-    return reply.status(503).send({ error: "Não foi possível enviar o e-mail. Tente novamente em instantes." });
-  }
-  if (e instanceof CaptchaVerificationError) {
-    return reply.status(400).send({ error: e.message });
-  }
-  if (e instanceof EmailVerificationInvalidError) {
-    return reply.status(400).send({ error: e.message });
-  }
-  if (isDatabaseUnavailableError(e)) {
-    return reply.status(503).send({ error: DATABASE_UNAVAILABLE_MESSAGE });
-  }
-  return reply.status(500).send({
-    error: "Não foi possível completar a operação. Tente novamente em instantes.",
-  });
-}

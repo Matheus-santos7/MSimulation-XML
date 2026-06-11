@@ -1,12 +1,11 @@
-import { createHash, randomBytes } from "node:crypto";
-import { requirePasswordPepper } from "./config.js";
+import { generateOpaqueToken, hashOpaqueToken } from "./token.js";
+
+const NAMESPACE = "password-reset";
 
 export function generatePasswordResetToken(): string {
-  return randomBytes(32).toString("base64url");
+  return generateOpaqueToken(32);
 }
 
 export function hashPasswordResetToken(token: string): string {
-  return createHash("sha256")
-    .update(`password-reset:${token}:${requirePasswordPepper()}`)
-    .digest("hex");
+  return hashOpaqueToken(token, NAMESPACE);
 }

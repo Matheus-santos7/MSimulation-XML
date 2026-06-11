@@ -1,12 +1,9 @@
-import { createHash, randomBytes } from "node:crypto";
-import { requirePasswordPepper } from "./config.js";
+import { generateOpaqueToken, hashOpaqueToken } from "./token.js";
 
 export function generateRefreshToken(): string {
-  return randomBytes(48).toString("base64url");
+  return generateOpaqueToken(48);
 }
 
 export function hashRefreshToken(token: string): string {
-  return createHash("sha256")
-    .update(token + requirePasswordPepper())
-    .digest("hex");
+  return hashOpaqueToken(token);
 }

@@ -8,10 +8,10 @@ import {
   REFRESH_TOKEN_COOKIE,
   TWO_FACTOR_PENDING_COOKIE,
   TWO_FACTOR_PENDING_MAX_AGE,
+  authCookieOptions,
 } from "@/lib/auth/cookie";
-import type { AuthSessionDto } from "@/lib/auth/api";
-import { fetchAuthMe, refreshSessionApi } from "@/lib/auth/api";
-import type { AuthMeDto } from "@/lib/auth/api";
+import { fetchAuthMe, refreshSessionApi } from "@/lib/auth/api/session";
+import type { AuthMeDto, AuthSessionDto } from "@/lib/auth/types";
 
 export type AuthSessionPayload = {
   accessToken: string;
@@ -20,24 +20,6 @@ export type AuthSessionPayload = {
   needsOnboarding?: boolean;
   emailVerified?: boolean;
 };
-
-function cookieSecure(): boolean {
-  return (
-    process.env.NODE_ENV === "production" ||
-    process.env.VERCEL === "1" ||
-    process.env.COOKIE_SECURE === "true"
-  );
-}
-
-function cookieOptions(maxAge: number) {
-  return {
-    httpOnly: true,
-    secure: cookieSecure(),
-    sameSite: "strict" as const,
-    path: "/",
-    maxAge,
-  };
-}
 
 /** Apenas em Server Actions / Route Handlers — não chame em Server Components. */
 export async function clearAuthSession(): Promise<void> {
@@ -49,7 +31,7 @@ export async function clearAuthSession(): Promise<void> {
 
 export async function setTwoFactorPending(twoFactorToken: string): Promise<void> {
   const store = await cookies();
-  store.set(TWO_FACTOR_PENDING_COOKIE, twoFactorToken, cookieOptions(TWO_FACTOR_PENDING_MAX_AGE));
+  store.set(TWO_FACTOR_PENDING_COOKIE, twoFactorToken, authCookieOptions(TWO_FACTOR_PENDING_MAX_AGE));
 }
 
 export async function getTwoFactorPending(): Promise<string | undefined> {
@@ -64,8 +46,8 @@ export async function clearTwoFactorPending(): Promise<void> {
 
 export async function setAuthSession(session: AuthSessionDto): Promise<void> {
   const store = await cookies();
-  store.set(ACCESS_TOKEN_COOKIE, session.accessToken, cookieOptions(ACCESS_COOKIE_MAX_AGE));
-  store.set(REFRESH_TOKEN_COOKIE, session.refreshToken, cookieOptions(REFRESH_COOKIE_MAX_AGE));
+  store.set(ACCESS_TOKEN_COOKIE, session.accessToken, authCookieOptions(ACCESS_COOKIE_MAX_AGE));
+  store.set(REFRESH_TOKEN_COOKIE, session.refreshToken, authCookieOptions(REFRESH_COOKIE_MAX_AGE));
 }
 
 export async function getAccessToken(): Promise<string | undefined> {

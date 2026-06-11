@@ -1,10 +1,7 @@
 import type { PrismaClient } from "../../../generated/prisma/client.js";
 import { TOTP_ISSUER, twoFactorPendingTtl } from "../../../lib/auth/config.js";
-import {
-  buildTwoFactorPendingPayload,
-  twoFactorPendingResponse,
-  type TwoFactorPendingPayload,
-} from "../../../lib/auth/jwt-payload.js";
+import { buildTwoFactorPendingPayload, twoFactorPendingResponse } from "../../../lib/auth/session.js";
+import type { AccessTokenPayload, TwoFactorPendingPayload } from "../../../lib/auth/types/index.js";
 import { decryptTotpSecret, encryptTotpSecret } from "../../../lib/auth/totp-crypto.js";
 import { buildTotpUri, generateTotpSecret, verifyTotpCode } from "../../../lib/auth/totp.js";
 import { verifyPassword } from "../../../lib/auth/password.js";
@@ -26,7 +23,7 @@ export class TwoFactorService {
   constructor(
     private readonly prisma: PrismaClient,
     private readonly auth: AuthService,
-    private readonly signAccess: (payload: import("../../../lib/auth/jwt-payload.js").AccessTokenPayload) => string,
+    private readonly signAccess: (payload: AccessTokenPayload) => string,
     private readonly signTwoFactorPending: (payload: TwoFactorPendingPayload) => string,
   ) {}
 

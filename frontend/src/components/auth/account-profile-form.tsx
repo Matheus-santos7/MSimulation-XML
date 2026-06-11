@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { updateMyAccountAction } from "@/lib/auth/actions";
+import { updateMyAccountAction } from "@/lib/account/actions";
 import type { UsuarioFormState } from "@/lib/usuario-form";
 import { PASSWORD_POLICY_HINT } from "@/lib/auth/password-policy";
 

@@ -1,3 +1,5 @@
+import { BRAND_FULL_NAME } from "../brand.js";
+
 /** Configuração central de autenticação (variáveis de ambiente). */
 
 export const AUTH_GENERIC_LOGIN_ERROR = "E-mail ou senha inválidos";
@@ -59,7 +61,7 @@ export function resendApiKey(): string | undefined {
 export function resendFromEmail(): string {
   return (
     process.env.RESEND_FROM_EMAIL?.trim() ??
-    "MSimulation XML <onboarding@resend.dev>"
+    `${BRAND_FULL_NAME} <onboarding@resend.dev>`
   );
 }
 
@@ -106,4 +108,4 @@ export function emailVerificationTtlMs(): number {
 export const EMAIL_VERIFICATION_GENERIC_MESSAGE =
   "Se o e-mail estiver cadastrado, você receberá um link de verificação em instantes.";
 
-export const TOTP_ISSUER = "MSimulation XML";
+export const TOTP_ISSUER = BRAND_FULL_NAME;

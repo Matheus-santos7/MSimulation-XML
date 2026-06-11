@@ -10,6 +10,7 @@ import { ApiValidationError, updateUser } from "@/lib/fiscal-api";
 import { getAuthMe } from "@/lib/auth/session";
 import { rethrowNavigationError } from "@/lib/auth/navigation";
 
+/** Atualiza nome/senha do usuário logado — domínio conta, não login. */
 export async function updateMyAccountAction(
   _prev: UsuarioFormState,
   formData: FormData,

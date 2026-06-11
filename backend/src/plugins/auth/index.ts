@@ -2,7 +2,7 @@ import fp from "fastify-plugin";
 import fastifyJwt from "@fastify/jwt";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { accessTokenTtl, isEmailVerified, requireJwtSecret } from "../../lib/auth/config.js";
-import type { AccessTokenPayload } from "../../lib/auth/jwt-payload.js";
+import type { AccessTokenPayload } from "../../lib/auth/types/index.js";
 import type { AuthenticatedUser } from "../contexts/guards.js";
 
 export const authPlugin = fp(async (app) => {

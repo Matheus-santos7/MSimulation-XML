@@ -11,9 +11,8 @@ import {
   buildAccessPayload,
   buildTwoFactorPendingPayload,
   twoFactorPendingResponse,
-  type LoginResponse,
-  type TwoFactorPendingPayload,
-} from "../../lib/auth/jwt-payload.js";
+} from "../../lib/auth/session.js";
+import type { LoginResponse, TwoFactorPendingPayload } from "../../lib/auth/types/index.js";
 import {
   clearedLockoutState,
   isLoginLocked,

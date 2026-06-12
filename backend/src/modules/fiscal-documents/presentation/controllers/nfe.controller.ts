@@ -15,16 +15,20 @@ export const nfeController: FastifyPluginAsync = async (app) => {
   app.get("/nfes/:chave/xml", async (req, reply) => {
     const tenantId = tenantIdFromRequest(req);
     const { chave } = nfeAccessKeyParamSchema.parse(req.params);
-    const result = await fiscalDocuments.getNfeXml.execute(tenantId, chave);
+    const query = req.query as { download?: string; doc?: string };
+    const doc = query.doc === "evento" || query.doc === "cancelamento" ? "evento" : undefined;
+    const result = await fiscalDocuments.getNfeXml.execute(tenantId, chave, { doc });
     if (!result) {
+      if (doc === "evento") {
+        return reply.status(404).send({ error: "Evento de cancelamento não encontrado para esta NF-e" });
+      }
       const tipo = await fiscalDocuments.getNfeXml.getTipoWhenMissing(tenantId, chave);
       if (!tipo) return reply.status(404).send({ error: "NF-e não encontrada" });
       return reply.status(409).send({
-        error: `XML persistido indisponível para NF-e tipo ${tipo}. Migração pendente.`,
+        error: `XML indisponível para NF-e tipo ${tipo}.`,
       });
     }
 
-    const query = req.query as { download?: string };
     const headers: Record<string, string> = {
       "Content-Type": "application/xml; charset=utf-8",
       "Cache-Control": "private, max-age=3600",

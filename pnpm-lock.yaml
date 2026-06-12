@@ -90,12 +90,6 @@ importers:
       '@hookform/resolvers':
         specifier: ^5.4.0
         version: 5.4.0(react-hook-form@7.76.1(react@19.2.6))
-      '@msimulation-xml/fiscal-core':
-        specifier: workspace:*
-        version: link:../packages/fiscal-core
-      '@msimulation-xml/nfe-xml':
-        specifier: workspace:*
-        version: link:../packages/nfe-xml
       '@radix-ui/react-accordion':
         specifier: ^1.2.12
         version: 1.2.12(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)

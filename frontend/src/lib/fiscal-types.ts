@@ -182,7 +182,7 @@ export type NFeItemDto = {
   product?: ProductDto;
 };
 
-/** Dados de NF-e para UI e para `buildNFeXML` */
+/** Dados de NF-e para UI (XML é gerado exclusivamente no backend). */
 export type NFeDto = {
   id: string;
   tenantId: string;

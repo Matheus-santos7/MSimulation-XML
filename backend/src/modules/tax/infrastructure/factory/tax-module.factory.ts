@@ -1,6 +1,7 @@
 import type { PrismaClient } from "../../../../generated/prisma/client.js";
 import { AssertProductTaxRuleBaseIdUseCase } from "../../application/use-cases/assert-product-tax-rule-base-id.use-case.js";
 import { BulkUpsertTaxRulesUseCase } from "../../application/use-cases/bulk-upsert-tax-rules.use-case.js";
+import { ImportTaxRulesSpreadsheetUseCase } from "../../application/use-cases/import-tax-rules-spreadsheet.use-case.js";
 import { CalculateInboundTaxesUseCase } from "../../application/use-cases/calculate-inbound-taxes.use-case.js";
 import { CalculateTaxesUseCase } from "../../application/use-cases/calculate-taxes.use-case.js";
 import { DeleteAllTaxRulesUseCase } from "../../application/use-cases/delete-all-tax-rules.use-case.js";
@@ -18,6 +19,7 @@ export function createTaxModule(prisma: PrismaClient) {
     getTaxRules: new GetTaxRulesUseCase(taxRuleRepository),
     getTaxRuleCatalog: new GetTaxRuleCatalogUseCase(taxRuleRepository),
     bulkUpsertTaxRules: new BulkUpsertTaxRulesUseCase(taxRuleRepository),
+    importTaxRulesSpreadsheet: new ImportTaxRulesSpreadsheetUseCase(taxRuleRepository),
     deleteAllTaxRules: new DeleteAllTaxRulesUseCase(taxRuleRepository),
     deleteTaxRuleGroup: new DeleteTaxRuleGroupUseCase(taxRuleRepository),
     resolveTaxRule: new ResolveTaxRuleUseCase(taxRuleRepository),

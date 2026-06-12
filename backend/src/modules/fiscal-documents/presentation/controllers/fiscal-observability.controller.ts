@@ -1,7 +1,14 @@
+import { fiscalXmlDownloadFilename, prepareFiscalXmlForDownload } from "@msimulation-xml/fiscal-core";
 import type { FastifyPluginAsync } from "fastify";
+import { z } from "zod";
 import { tenantIdFromRequest } from "../../../../lib/auth/request-context.js";
+import { buildProcInutNFeXML, infInutId } from "../../../../lib/fiscal/inutilizacao-xml.js";
 import { mapTimeline } from "../../../../lib/fiscal/fiscal-mappers.js";
+import { ufToCodigo } from "../../../../lib/fiscal/nfe-chave.js";
+import { mapEmitente } from "../../../../lib/org/tenant-mapper.js";
 import { listTimelineChains } from "../../infrastructure/observability/timeline-service.js";
+
+const fiscalEventIdParam = z.object({ id: z.string().min(1) });
 
 async function listFiscalEventsForTenant(
   prisma: Parameters<typeof listTimelineChains>[0],
@@ -50,6 +57,51 @@ export const fiscalObservabilityController: FastifyPluginAsync = async (app) => 
   app.get("/fiscal-events", async (req) => {
     const tenantId = tenantIdFromRequest(req);
     return listFiscalEventsForTenant(app.prisma, tenantId);
+  });
+
+  app.get("/fiscal-events/:id/xml", async (req, reply) => {
+    const tenantId = tenantIdFromRequest(req);
+    const { id } = fiscalEventIdParam.parse(req.params);
+    const query = req.query as { download?: string };
+
+    const inut = await app.prisma.nfeInutilizacao.findFirst({
+      where: { id, tenantId },
+    });
+    if (!inut) {
+      return reply.status(404).send({ error: "Inutilização não encontrada" });
+    }
+
+    const tenant = await app.prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } });
+    const emit = mapEmitente(tenant);
+    const xml = buildProcInutNFeXML(
+      { emitenteUf: emit.uf, emitenteCnpj: emit.cnpj },
+      {
+        emitenteUf: emit.uf,
+        emitenteCnpj: emit.cnpj,
+        serie: inut.serie,
+        numeroIni: inut.numeroIni,
+        numeroFim: inut.numeroFim,
+        protocolo: inut.protocolo,
+        ocorridoEm: inut.ocorridoEm.toISOString(),
+        xJust: inut.xJust,
+      },
+    );
+
+    const cUfCode = String(ufToCodigo(emit.uf)).padStart(2, "0");
+    const ano = String(inut.ocorridoEm.getFullYear()).slice(-2);
+    const cnpj = emit.cnpj.replace(/\D/g, "");
+    const chave = infInutId(cUfCode, ano, cnpj, inut.serie, inut.numeroIni, inut.numeroFim);
+    const filename = fiscalXmlDownloadFilename("Inut", chave);
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/xml; charset=utf-8",
+      "Cache-Control": "private, max-age=3600",
+    };
+    const body = query.download === "1" ? prepareFiscalXmlForDownload(xml) : xml;
+    if (query.download === "1") {
+      headers["Content-Disposition"] = `attachment; filename="${filename}"`;
+    }
+    return reply.headers(headers).send(body);
   });
 
   app.get("/audit-logs", async (req) => {

@@ -1,16 +1,25 @@
-import { resolveInutilizacaoXml } from "@/lib/resolve-inutilizacao-xml";
-import { buildXmlRouteResponse } from "@/lib/xml-download-response";
+import { getFiscalEventXml } from "@/lib/fiscal-api";
+import { sanitizeDownloadFilename } from "@/lib/xml-download-response";
 
 type Props = { params: Promise<{ id: string }> };
 
 export async function GET(req: Request, { params }: Props) {
   const { id } = await params;
-  const resolved = await resolveInutilizacaoXml(id);
-  if (!resolved) {
-    return new Response("Inutilização não encontrada", { status: 404 });
-  }
-
   const download = new URL(req.url).searchParams.get("download") === "1";
-  const { body, headers } = buildXmlRouteResponse(resolved.xml, resolved.filename, download);
-  return new Response(body, { headers });
+
+  try {
+    const { xml, filename } = await getFiscalEventXml(id, { download });
+    const headers: HeadersInit = {
+      "Content-Type": "application/xml; charset=utf-8",
+      "Cache-Control": "no-store",
+    };
+    if (download) {
+      headers["Content-Disposition"] = `attachment; filename="${sanitizeDownloadFilename(filename)}"`;
+    }
+    return new Response(xml, { headers });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Falha ao carregar XML";
+    const status = message.toLowerCase().includes("não encontrad") ? 404 : 502;
+    return new Response(message, { status });
+  }
 }

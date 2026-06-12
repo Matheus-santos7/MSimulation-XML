@@ -1,7 +1,7 @@
 import { NFeTipo, type PrismaClient } from "../../../../generated/prisma/client.js";
 import { mapNfe } from "../../../../lib/fiscal/fiscal-mappers.js";
 import { fiscalNotDeleted } from "../../domain/constants/fiscal-not-deleted.js";
-import { resolveNfeXml } from "../xml/nfe-xml-service.js";
+import { resolveNfeCancelamentoEventoXml, resolveNfeXml } from "../xml/nfe-xml-service.js";
 import {
   atualizarItensSaldoFifoParaNfes,
   saldoLiquidoRemessaNfe,
@@ -77,6 +77,10 @@ export class PrismaNfeQueryRepository implements NfeQueryPort {
 
   async resolveXml(tenantId: string, accessKey: string) {
     return resolveNfeXml(this.prisma, tenantId, accessKey);
+  }
+
+  async resolveCancelamentoEventoXml(tenantId: string, accessKey: string) {
+    return resolveNfeCancelamentoEventoXml(this.prisma, tenantId, accessKey);
   }
 
   async getTipoWhenXmlMissing(tenantId: string, accessKey: string) {

@@ -1,16 +1,25 @@
-import { resolveCteXml } from "@/lib/resolve-cte-xml";
-import { buildXmlRouteResponse } from "@/lib/xml-download-response";
+import { getCteXml } from "@/lib/fiscal-api";
+import { sanitizeDownloadFilename } from "@/lib/xml-download-response";
 
 type Props = { params: Promise<{ chave: string }> };
 
 export async function GET(req: Request, { params }: Props) {
   const { chave } = await params;
-  const resolved = await resolveCteXml(chave);
-  if (!resolved) {
-    return new Response("CT-e não encontrado", { status: 404 });
-  }
-
   const download = new URL(req.url).searchParams.get("download") === "1";
-  const { body, headers } = buildXmlRouteResponse(resolved.xml, resolved.filename, download);
-  return new Response(body, { headers });
+
+  try {
+    const { xml, filename } = await getCteXml(chave, { download });
+    const headers: HeadersInit = {
+      "Content-Type": "application/xml; charset=utf-8",
+      "Cache-Control": "no-store",
+    };
+    if (download) {
+      headers["Content-Disposition"] = `attachment; filename="${sanitizeDownloadFilename(filename)}"`;
+    }
+    return new Response(xml, { headers });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Falha ao carregar XML";
+    const status = message.toLowerCase().includes("não encontrad") ? 404 : 502;
+    return new Response(message, { status });
+  }
 }

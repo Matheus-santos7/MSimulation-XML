@@ -22,6 +22,7 @@ export { InutilizeNumberUseCase } from "./application/use-cases/inutilize-number
 export { fiscalNotDeleted } from "./domain/constants/fiscal-not-deleted.js";
 export {
   resolveNfeXml,
+  resolveNfeCancelamentoEventoXml,
   persistNfeXmlAutorizado,
   persistNfeXmlFromEmission,
   buildNfeXmlAutorizado,

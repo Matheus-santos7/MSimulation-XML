@@ -1,5 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "cd .. && pnpm install --frozen-lockfile",
-  "buildCommand": "cd .. && pnpm --filter @msimulation-xml/fiscal-core build && pnpm --filter @msimulation-xml/nfe-xml build && pnpm --filter @msimulation-xml/frontend build"
+  "buildCommand": "cd .. && pnpm --filter @msimulation-xml/frontend build"
 }

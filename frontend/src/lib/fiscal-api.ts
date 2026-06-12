@@ -214,14 +214,16 @@ export async function getNfeByChave(chave: string): Promise<NFeDto | null> {
   return res.json() as Promise<NFeDto>;
 }
 
-/** XML persistido na emissão (REMESSA). Retorna null se 404 ou 409 (tipo sem migração). */
+/** XML da NF-e ou do evento de cancelamento — sempre via backend. */
 export async function getNfeXml(
   chave: string,
-  options?: { download?: boolean },
-): Promise<{ xml: string; filename: string } | null> {
-  const href = url(`/api/nfes/${chave}/xml`, options?.download ? { download: "1" } : undefined);
+  options?: { download?: boolean; doc?: "evento" },
+): Promise<{ xml: string; filename: string }> {
+  const href = url(`/api/nfes/${chave}/xml`, {
+    ...(options?.download ? { download: "1" } : {}),
+    ...(options?.doc === "evento" ? { doc: "evento" } : {}),
+  });
   const res = await fetch(href, { cache: "no-store", headers: await authHeaders() });
-  if (res.status === 404 || res.status === 409) return null;
   if (!res.ok) {
     throw new Error(await readApiError(res));
   }
@@ -298,14 +300,13 @@ export async function getCteByChave(chave: string): Promise<CTeDto | null> {
   return res.json() as Promise<CTeDto>;
 }
 
-/** XML persistido na emissão. Retorna null se 404 ou 409. */
+/** XML persistido ou regerado no backend. */
 export async function getCteXml(
   chave: string,
   options?: { download?: boolean },
-): Promise<{ xml: string; filename: string } | null> {
+): Promise<{ xml: string; filename: string }> {
   const href = url(`/api/ctes/${chave}/xml`, options?.download ? { download: "1" } : undefined);
   const res = await fetch(href, { cache: "no-store", headers: await authHeaders() });
-  if (res.status === 404 || res.status === 409) return null;
   if (!res.ok) {
     throw new Error(await readApiError(res));
   }
@@ -313,6 +314,23 @@ export async function getCteXml(
   const disp = res.headers.get("Content-Disposition");
   const match = disp?.match(/filename="([^"]+)"/);
   const filename = match?.[1] ?? `CTe_${chave}.xml`;
+  return { xml, filename };
+}
+
+/** XML de inutilização de numeração (procInutNFe). */
+export async function getFiscalEventXml(
+  id: string,
+  options?: { download?: boolean },
+): Promise<{ xml: string; filename: string }> {
+  const href = url(`/api/fiscal-events/${id}/xml`, options?.download ? { download: "1" } : undefined);
+  const res = await fetch(href, { cache: "no-store", headers: await authHeaders() });
+  if (!res.ok) {
+    throw new Error(await readApiError(res));
+  }
+  const xml = await res.text();
+  const disp = res.headers.get("Content-Disposition");
+  const match = disp?.match(/filename="([^"]+)"/);
+  const filename = match?.[1] ?? `Inut_${id}.xml`;
   return { xml, filename };
 }
 
@@ -384,17 +402,56 @@ export async function deleteProduct(id: string): Promise<void> {
   await mutateJson(url(`/api/products/${id}`), "DELETE");
 }
 
+/** Linha bruta da planilha — validação fiscal no backend. */
+export type ProductImportRawRow = {
+  line: number;
+  sku: string;
+  ean?: string;
+  nome: string;
+  ncm: string;
+  cest: string;
+  exTipi?: string;
+  origem?: string | number;
+  unidade?: string;
+  preco: string | number;
+  precoCusto: string | number;
+  estoque?: string | number;
+  taxRuleBaseId?: string;
+};
+
 export type ProductBulkUpsertResult = {
   created: number;
   updated: number;
   failed: { line: number; sku: string; error: string }[];
+  parseErrors?: { line: number; message: string }[];
   total: number;
 };
 
-export async function bulkUpsertProducts(rows: ProductInput[]): Promise<ProductBulkUpsertResult> {
+export async function bulkUpsertProducts(rows: ProductImportRawRow[]): Promise<ProductBulkUpsertResult> {
   return mutateJson<ProductBulkUpsertResult>(url("/api/products/bulk-upsert"), "POST", {
     rows,
   }) as Promise<ProductBulkUpsertResult>;
+}
+
+/** Envia planilha CSV/XLSX para parse e importação no backend. */
+export async function importProductsSpreadsheet(file: File): Promise<ProductBulkUpsertResult> {
+  const body = new FormData();
+  body.append("file", file);
+
+  const href = url("/api/products/import-spreadsheet");
+  const res = await fetch(href, {
+    method: "POST",
+    headers: await authHeaders(),
+    body,
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const payload = await readApiErrorPayload(res);
+    throw new Error(payload.error);
+  }
+
+  return res.json() as Promise<ProductBulkUpsertResult>;
 }
 
 export async function listTaxRules(): Promise<TaxRuleDto[]> {
@@ -424,10 +481,35 @@ export type TaxRuleBulkUpsertResult = {
   total: number;
 };
 
+export type TaxRuleSpreadsheetImportResult = TaxRuleBulkUpsertResult & {
+  parseErrors?: { line: number; message: string }[];
+};
+
 export async function bulkUpsertTaxRules(rows: TaxRuleImportRow[]): Promise<TaxRuleBulkUpsertResult> {
   return mutateJson<TaxRuleBulkUpsertResult>(url("/api/tax-rules/bulk-upsert"), "POST", {
     rows,
   }) as Promise<TaxRuleBulkUpsertResult>;
+}
+
+/** Envia a planilha ML (.xlsx) para interpretação e persistência no backend. */
+export async function importTaxRulesSpreadsheet(file: File): Promise<TaxRuleSpreadsheetImportResult> {
+  const body = new FormData();
+  body.append("file", file);
+
+  const href = url("/api/tax-rules/import-spreadsheet");
+  const res = await fetch(href, {
+    method: "POST",
+    headers: await authHeaders(),
+    body,
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const payload = await readApiErrorPayload(res);
+    throw new Error(payload.error);
+  }
+
+  return res.json() as Promise<TaxRuleSpreadsheetImportResult>;
 }
 
 export type TaxRuleDeleteResult = {

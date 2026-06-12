@@ -53,7 +53,6 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname, ".."),
-  transpilePackages: ["@msimulation-xml/fiscal-core", "@msimulation-xml/nfe-xml"],
   async headers() {
     return [
       {

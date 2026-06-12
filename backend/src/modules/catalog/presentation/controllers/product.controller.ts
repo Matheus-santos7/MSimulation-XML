@@ -1,5 +1,9 @@
 import type { FastifyPluginAsync } from "fastify";
 import { tenantIdFromRequest } from "../../../../lib/auth/request-context.js";
+import {
+  buildProductSpreadsheetTemplateXlsx,
+  buildProductSpreadsheetXlsx,
+} from "../../../../lib/catalog/product-spreadsheet.export.js";
 import { handleRouteError } from "../../../../lib/http/domain-errors.js";
 import {
   productBulkUpsertBody,
@@ -9,10 +13,13 @@ import {
 } from "../schemas/product.schemas.js";
 import { TaxRuleCatalogError } from "../../../tax/index.js";
 import { ProductConflictError } from "../../domain/errors/product-conflict.error.js";
+import { ProductValidationError } from "../../domain/errors/product-validation.error.js";
 import { createCatalogModule } from "../../infrastructure/factory/catalog-module.factory.js";
+import { resolveProductSpreadsheetUpload } from "../helpers/product-import.helper.js";
 
 const PRODUCT_ERROR_MAPPINGS = [
   { type: ProductConflictError, status: 409 },
+  { type: ProductValidationError, status: 400 },
   { type: TaxRuleCatalogError, status: 400 },
 ] as const;
 
@@ -44,6 +51,56 @@ export const productController: FastifyPluginAsync = async (app) => {
     }
   });
 
+  app.get("/products/spreadsheet/template", async (_request, reply) => {
+    const buffer = buildProductSpreadsheetTemplateXlsx();
+    return reply
+      .header(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      )
+      .header("Content-Disposition", 'attachment; filename="produtos-modelo.xlsx"')
+      .send(buffer);
+  });
+
+  app.get("/products/spreadsheet/export", async (request, reply) => {
+    const tenantId = tenantIdFromRequest(request);
+    const products = await catalog.listProducts.execute(tenantId);
+    const buffer = buildProductSpreadsheetXlsx(products);
+    return reply
+      .header(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      )
+      .header("Content-Disposition", 'attachment; filename="produtos-catalogo.xlsx"')
+      .send(buffer);
+  });
+
+  app.post("/products/import-spreadsheet", async (request, reply) => {
+    const tenantId = tenantIdFromRequest(request);
+    const payload = await resolveProductSpreadsheetUpload(request);
+    if (!payload.ok) {
+      return reply.status(payload.status).send({
+        error: payload.error,
+        ...(payload.details ? { details: payload.details } : {}),
+      });
+    }
+
+    try {
+      const result = await catalog.importProductsSpreadsheet.execute(
+        tenantId,
+        payload.buffer,
+        payload.fileName,
+      );
+      return reply.status(200).send(result);
+    } catch (error) {
+      if (error instanceof ProductValidationError) {
+        return reply.status(400).send({ error: error.message });
+      }
+      if (handleRouteError(reply, error, { mappings: [...PRODUCT_ERROR_MAPPINGS] })) return;
+      throw error;
+    }
+  });
+
   app.post("/products/bulk-upsert", async (request, reply) => {
     try {
       const tenantId = tenantIdFromRequest(request);
@@ -51,6 +108,9 @@ export const productController: FastifyPluginAsync = async (app) => {
       const result = await catalog.bulkUpsertProducts.execute({ tenantId, rows });
       return reply.status(200).send(result);
     } catch (error) {
+      if (error instanceof ProductValidationError) {
+        return reply.status(400).send({ error: error.message });
+      }
       if (handleRouteError(reply, error, { mappings: [...PRODUCT_ERROR_MAPPINGS] })) return;
       throw error;
     }

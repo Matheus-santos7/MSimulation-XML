@@ -8,9 +8,7 @@ import {
   parseProductForm,
   type ProdutoFormState,
 } from "@/lib/produto-form";
-import { ApiValidationError, bulkUpsertProducts, createProduct, deleteProduct, updateProduct } from "@/lib/fiscal-api";
-import { parseProdutoPlanilhaCsv, parseProdutoPlanilhaXlsx } from "@/lib/produto-planilha";
-import { validateSpreadsheetFile } from "@/lib/spreadsheet-upload";
+import { ApiValidationError, createProduct, deleteProduct, importProductsSpreadsheet, updateProduct } from "@/lib/fiscal-api";
 
 const MAX_PLANILHA_BYTES = 15 * 1024 * 1024;
 
@@ -89,51 +87,20 @@ export async function importProdutosPlanilhaAction(formData: FormData): Promise<
   }
 
   const fileName = file.name.toLowerCase();
-  const isCsv = fileName.endsWith(".csv");
-  const isXlsx = fileName.endsWith(".xlsx");
-  if (!isCsv && !isXlsx) {
+  if (!fileName.endsWith(".csv") && !fileName.endsWith(".xlsx")) {
     return { error: "Formato inválido. Envie um arquivo .xlsx ou .csv" };
   }
 
-  let rows: Awaited<ReturnType<typeof parseProdutoPlanilhaCsv>>["rows"] = [];
-  let parseErrors: Awaited<ReturnType<typeof parseProdutoPlanilhaCsv>>["errors"] = [];
-
-  if (isXlsx) {
-    const validation = await validateSpreadsheetFile(file, { maxBytes: MAX_PLANILHA_BYTES });
-    if (!validation.ok) {
-      return { error: validation.error };
-    }
-
-    const parsed = parseProdutoPlanilhaXlsx(await file.arrayBuffer());
-    rows = parsed.rows;
-    parseErrors = parsed.errors;
-  } else {
-    const parsed = parseProdutoPlanilhaCsv(await file.text());
-    rows = parsed.rows;
-    parseErrors = parsed.errors;
-  }
-
-  if (rows.length === 0) {
-    return {
-      error: parseErrors[0]?.message ?? "Nenhum produto válido na planilha",
-      parseErrors,
-    };
-  }
-
   try {
-    const result = await bulkUpsertProducts(rows);
+    const result = await importProductsSpreadsheet(file);
     revalidatePath("/produtos");
     revalidatePath("/nfe");
     revalidatePath("/cte");
     revalidatePath("/");
-    return {
-      ...result,
-      parseErrors: parseErrors.length > 0 ? parseErrors : undefined,
-    };
+    return result;
   } catch (e) {
-    if (e instanceof ApiValidationError) {
-      return { error: e.message, parseErrors };
-    }
-    return { error: e instanceof Error ? e.message : "Erro ao importar planilha", parseErrors };
+    return {
+      error: e instanceof Error ? e.message : "Erro ao importar planilha",
+    };
   }
 }

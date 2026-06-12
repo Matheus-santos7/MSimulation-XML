@@ -1,9 +1,19 @@
 import { ensureNProt, injectSimulationSignature, INUT_SIGNATURE_CONFIG } from "@msimulation-xml/fiscal-core";
-import type { EmitenteDto, FiscalEventDto } from "./fiscal-types";
-import { ufToCodigo } from "./nfe-uf";
+import { ufToCodigo } from "./nfe-chave.js";
 
 const xmlEscape = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+export type InutilizacaoXmlInput = {
+  emitenteUf: string;
+  emitenteCnpj: string;
+  serie: number;
+  numeroIni: number;
+  numeroFim: number;
+  protocolo: string;
+  ocorridoEm: string;
+  xJust?: string;
+};
 
 export function infInutId(
   cUF: string,
@@ -17,16 +27,13 @@ export function infInutId(
 }
 
 /** procInutNFe v4.00 — alinhado aos XMLs ML. */
-export function buildProcInutNFeXML(
-  emit: EmitenteDto,
-  inut: Pick<FiscalEventDto, "serie" | "numeroIni" | "numeroFim" | "protocolo" | "ocorridoEm" | "xJust">,
-): string {
-  const serie = inut.serie ?? 1;
-  const nNFIni = inut.numeroIni ?? 1;
-  const nNFFin = inut.numeroFim ?? nNFIni;
-  const cUF = String(ufToCodigo(emit.uf)).padStart(2, "0");
+export function buildProcInutNFeXML(emit: Pick<InutilizacaoXmlInput, "emitenteUf" | "emitenteCnpj">, inut: InutilizacaoXmlInput): string {
+  const serie = inut.serie;
+  const nNFIni = inut.numeroIni;
+  const nNFFin = inut.numeroFim;
+  const cUF = String(ufToCodigo(emit.emitenteUf)).padStart(2, "0");
   const ano = String(new Date(inut.ocorridoEm).getFullYear()).slice(-2);
-  const cnpj = emit.cnpj.replace(/\D/g, "");
+  const cnpj = emit.emitenteCnpj.replace(/\D/g, "");
   const id = infInutId(cUF, ano, cnpj, serie, nNFIni, nNFFin);
   const xJust = xmlEscape(inut.xJust?.trim() || "Numero nao utilizado dentro do prazo legal");
   const dhRecbto = inut.ocorridoEm;

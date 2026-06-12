@@ -1,6 +1,6 @@
 "use client";
 
-import { highlightXML } from "@/lib/xml-generator";
+import { highlightXML } from "@/lib/highlight-xml";
 import { useState, type ReactNode } from "react";
 
 export function XMLViewer({

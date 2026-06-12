@@ -22,5 +22,9 @@ export interface NfeQueryPort {
   list(tenantId: string): Promise<NfeListItem[]>;
   getByAccessKey(tenantId: string, accessKey: string): Promise<NfeDetail | null>;
   resolveXml(tenantId: string, accessKey: string): Promise<NfeXmlResult | null>;
+  resolveCancelamentoEventoXml(
+    tenantId: string,
+    accessKey: string,
+  ): Promise<NfeXmlResult | null>;
   getTipoWhenXmlMissing(tenantId: string, accessKey: string): Promise<string | null>;
 }

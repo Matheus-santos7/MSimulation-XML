@@ -5,14 +5,21 @@
  * `buildNFeXML` (tipo REMESSA) → `buildRemessaNFeXML` em @msimulation-xml/nfe-xml.
  * @see docs/remessa-fisica.md — Fase 8
  */
-import { fiscalXmlDownloadFilename } from "@msimulation-xml/fiscal-core";
+import { fiscalXmlDownloadFilename, simulationNProt } from "@msimulation-xml/fiscal-core";
 import {
   buildNFeXML,
+  buildProcEventoCancelamentoXML,
   isNfeXmlPersistSupported,
   UnsupportedNfeXmlTipoError,
 } from "@msimulation-xml/nfe-xml";
 import type { FiscalEmitterSettingsData } from "@msimulation-xml/fiscal-core";
-import type { NFeTipo, Prisma, PrismaClient, Product } from "../../../../generated/prisma/client.js";
+import {
+  FiscalStatus,
+  type NFeTipo,
+  type Prisma,
+  type PrismaClient,
+  type Product,
+} from "../../../../generated/prisma/client.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { mapNfe } from "../../../../lib/fiscal/fiscal-mappers.js";
 import { mapProduct, type ProductDto } from "../../../../lib/catalog/product-mapper.js";
@@ -170,6 +177,48 @@ export async function resolveNfeXml(
     products,
   );
 
+  return { xml, filename, source: "regenerated" };
+}
+
+export async function resolveNfeCancelamentoEventoXml(
+  prisma: PrismaClient,
+  tenantId: string,
+  chave: string,
+): Promise<NfeXmlResult | null> {
+  const row = await prisma.nFe.findFirst({
+    where: { chave, tenantId, deletedAt: null },
+    include: {
+      tenant: true,
+      nfeReferencia: { select: { chave: true } },
+      itens: { include: { product: true }, orderBy: { numeroItem: "asc" } },
+      fiscalEvents: {
+        where: { tipo: "110111" },
+        orderBy: { ocorridoEm: "desc" },
+        take: 1,
+      },
+    },
+  });
+  if (!row) return null;
+
+  const cancelamento = row.fiscalEvents[0];
+  if (!cancelamento && row.status !== FiscalStatus.CANCELADA) return null;
+
+  const dto = mapNfe(row, row.nfeReferencia?.chave, row.itens);
+  const emit = mapEmitente(row.tenant);
+  const evento = cancelamento
+    ? {
+        protocolo: cancelamento.protocolo,
+        ocorridoEm: cancelamento.ocorridoEm.toISOString(),
+        xJust: cancelamento.xJust ?? undefined,
+      }
+    : {
+        protocolo: simulationNProt(row.numero, "141260056230"),
+        ocorridoEm: new Date().toISOString(),
+        xJust: "Cancelamento solicitado pelo emissor",
+      };
+
+  const xml = buildProcEventoCancelamentoXML(dto, emit, evento);
+  const filename = fiscalXmlDownloadFilename("Canc", chave);
   return { xml, filename, source: "regenerated" };
 }
 

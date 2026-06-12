@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { ProdutoFormValues } from "@/lib/produto-form";
 import { taxRuleSelectValue } from "@/lib/produto-form";
-import { EX_TIPI_FIELD_HELP } from "@/lib/produto-planilha";
+import { EX_TIPI_FIELD_HELP } from "@/lib/produto-form-constants";
 import type { ProductDto, TaxRuleCatalogEntry } from "@/lib/fiscal-types";
 
 const ORIGEM_OPTIONS = [

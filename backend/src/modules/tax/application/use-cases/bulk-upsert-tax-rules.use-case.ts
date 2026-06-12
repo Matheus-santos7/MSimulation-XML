@@ -2,10 +2,12 @@ import type { TaxRuleImportRow } from "../../domain/entities/tax-rule-import-row
 import type { TaxRuleRepository } from "../../domain/ports/tax-rule.repository.js";
 
 /**
- * Importação em massa de regras fiscais (planilha ML).
+ * Upsert em massa de regras já interpretadas (JSON/API).
+ *
+ * Para importação de planilha ML, use {@link ImportTaxRulesSpreadsheetUseCase}.
  *
  * @param tenantId - Tenant destino
- * @param rows - Linhas parseadas com `ruleId`, CFOP, payload `icmsByUf`
+ * @param rows - Linhas com `ruleId`, CFOP, payload `icmsByUf`
  * @returns Contadores created/updated/total
  */
 export class BulkUpsertTaxRulesUseCase {

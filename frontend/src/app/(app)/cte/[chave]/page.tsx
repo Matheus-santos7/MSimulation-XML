@@ -4,8 +4,7 @@ import { notFound } from "next/navigation";
 import { CteXmlActions } from "@/components/fiscal-xml-actions";
 import { PageHeader, StatusBadge } from "@/components/fiscal-ui";
 import { XMLViewer } from "@/components/xml-viewer";
-import { getCteByChave, getTenant } from "@/lib/fiscal-api";
-import { buildCTeXML } from "@/lib/cte-xml-generator";
+import { getCteByChave, getCteXml } from "@/lib/fiscal-api";
 import { brl, formatChave } from "@/lib/format";
 
 type Props = { params: Promise<{ chave: string }> };
@@ -20,10 +19,12 @@ export default async function CTeDetailPage({ params }: Props) {
   const cte = await getCteByChave(chave);
   if (!cte) notFound();
 
-  const tenant = await getTenant(cte.tenantId);
-  if (!tenant) notFound();
-
-  const xml = buildCTeXML(cte, tenant);
+  let xml: string;
+  try {
+    ({ xml } = await getCteXml(chave));
+  } catch {
+    notFound();
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -80,16 +81,11 @@ export default async function CTeDetailPage({ params }: Props) {
                 mono
               />
             )}
-            <div className="border-t border-border pt-2 mt-2">
-              <Row label="Frete (vTPrest)" value={brl(cte.valor)} bold />
-            </div>
           </div>
         </div>
 
         <div className="col-span-7">
-          <div className="h-[700px]">
-            <XMLViewer xml={xml} filename={`cte_${cte.numero}_v4.00.xml`} />
-          </div>
+          <XMLViewer xml={xml} />
         </div>
       </div>
     </div>
@@ -99,17 +95,17 @@ export default async function CTeDetailPage({ params }: Props) {
 function Field({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div>
-      <div className="text-[12px] uppercase tracking-widest font-bold text-muted-foreground mb-1">{label}</div>
-      <div className={`text-base ${mono ? "font-mono" : ""}`}>{value}</div>
+      <div className="text-[11px] uppercase tracking-widest text-muted-foreground">{label}</div>
+      <div className={mono ? "font-mono text-[14px]" : "text-[14px]"}>{value}</div>
     </div>
   );
 }
 
-function Row({ label, value, mono, bold }: { label: string; value: string; mono?: boolean; bold?: boolean }) {
+function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div className="flex justify-between items-baseline text-[15px]">
+    <div className="flex justify-between text-[14px]">
       <span className="text-muted-foreground">{label}</span>
-      <span className={`${mono ? "font-mono" : ""} ${bold ? "font-bold text-lg" : ""}`}>{value}</span>
+      <span className={mono ? "font-mono" : ""}>{value}</span>
     </div>
   );
 }

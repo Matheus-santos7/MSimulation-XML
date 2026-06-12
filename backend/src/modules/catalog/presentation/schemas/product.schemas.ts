@@ -76,8 +76,29 @@ export const productIdParam = z.object({
 export type ProductCreateInput = z.infer<typeof productCreateBody>;
 export type ProductUpdateInput = z.infer<typeof productUpdateBody>;
 
+/** Linha bruta da planilha — validação fiscal ocorre no BulkUpsertProductsUseCase. */
+export const productImportRawRowSchema = z.object({
+  line: z.number().int().positive(),
+  sku: z.string(),
+  ean: z.string().optional(),
+  nome: z.string(),
+  ncm: z.string(),
+  cest: z.string(),
+  exTipi: z.string().optional(),
+  origem: z.union([z.string(), z.number()]).optional(),
+  unidade: z.string().optional(),
+  preco: z.union([z.string(), z.number()]),
+  precoCusto: z.union([z.string(), z.number()]),
+  estoque: z.union([z.string(), z.number()]).optional(),
+  taxRuleBaseId: z.string().optional(),
+});
+
 export const productBulkUpsertBody = z.object({
-  rows: z.array(productCreateBody).min(1, "Planilha vazia").max(500, "Máximo de 500 linhas por importação"),
+  rows: z
+    .array(productImportRawRowSchema)
+    .min(1, "Planilha vazia")
+    .max(500, "Máximo de 500 linhas por importação"),
 });
 
 export type ProductBulkUpsertInput = z.infer<typeof productBulkUpsertBody>;
+export type ProductImportRawRowInput = z.infer<typeof productImportRawRowSchema>;

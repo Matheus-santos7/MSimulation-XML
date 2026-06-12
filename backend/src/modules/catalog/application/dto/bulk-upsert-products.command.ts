@@ -1,11 +1,11 @@
-import type { CreateProductCommand } from "./create-product.command.js";
+import type { ProductImportRawRow } from "../../domain/entities/product-import-raw-row.entity.js";
 
 /**
- * Comando de importação em massa: lista de produtos para create ou update por SKU.
+ * Comando de importação em massa: linhas brutas da planilha (validação no use case).
  */
 export type BulkUpsertProductsCommand = {
   tenantId: string;
-  rows: CreateProductCommand[];
+  rows: ProductImportRawRow[];
 };
 
 /** Linha que falhou no bulk upsert (processamento continua nas demais). */
@@ -20,9 +20,15 @@ export type BulkUpsertFailedRow = {
  * Resultado agregado do bulk upsert.
  * `total` reflete linhas após deduplicação por SKU, não o tamanho bruto do array.
  */
+export type BulkUpsertParseError = {
+  line: number;
+  message: string;
+};
+
 export type BulkUpsertProductsResult = {
   created: number;
   updated: number;
   failed: BulkUpsertFailedRow[];
+  parseErrors?: BulkUpsertParseError[];
   total: number;
 };

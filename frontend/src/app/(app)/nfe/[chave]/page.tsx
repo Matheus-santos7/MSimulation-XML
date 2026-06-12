@@ -4,16 +4,8 @@ import { notFound } from "next/navigation";
 import { PageHeader, StatusBadge } from "@/components/fiscal-ui";
 import { NfeXmlActions } from "@/components/fiscal-xml-actions";
 import { XMLViewer } from "@/components/xml-viewer";
-import {
-  getEmitente,
-  getFiscalEmitterSettings,
-  getNfeByChave,
-  listFiscalEvents,
-  listProducts,
-} from "@/lib/fiscal-api";
-import { simulationNProt } from "@msimulation-xml/fiscal-core";
+import { getNfeByChave, getNfeXml, listFiscalEvents } from "@/lib/fiscal-api";
 import { brl, formatChave } from "@/lib/format";
-import { buildNFeXML, buildProcEventoCancelamentoXML } from "@/lib/xml-generator";
 
 type Props = { params: Promise<{ chave: string }> };
 
@@ -27,29 +19,31 @@ export default async function NFeDetailPage({ params }: Props) {
   const nfe = await getNfeByChave(chave);
   if (!nfe) notFound();
 
-  const [emit, fiscalCfg, eventos] = await Promise.all([
-    getEmitente(),
-    getFiscalEmitterSettings(),
-    listFiscalEvents(),
-  ]);
+  const eventos = await listFiscalEvents();
   const cancelamentoEvent = eventos.find((e) => e.tipo === "110111" && e.chaveRef === chave);
-  let product = undefined;
-  if (nfe.productId) {
-    product = (await listProducts()).find((p) => p.id === nfe.productId);
+
+  let xml: string;
+  let xmlFilename: string;
+  try {
+    const resolved = await getNfeXml(chave);
+    xml = resolved.xml;
+    xmlFilename = resolved.filename;
+  } catch {
+    xml = "";
+    xmlFilename = `nfe_${nfe.numero}_serie${nfe.serie}_v4.00.xml`;
   }
-  if (!product) {
-    const produtos = await listProducts();
-    product = produtos.find((p) => p.ncm === nfe.ncm) ?? produtos[0];
+
+  let xmlCancelamento: string | null = null;
+  let xmlCancelamentoFilename: string | null = null;
+  if (nfe.status === "CANCELADA") {
+    try {
+      const resolved = await getNfeXml(chave, { doc: "evento" });
+      xmlCancelamento = resolved.xml;
+      xmlCancelamentoFilename = resolved.filename;
+    } catch {
+      xmlCancelamento = null;
+    }
   }
-  const xml = buildNFeXML(nfe, emit, product, fiscalCfg?.settings ?? null);
-  const xmlCancelamento =
-    nfe.status === "CANCELADA"
-      ? buildProcEventoCancelamentoXML(nfe, emit, cancelamentoEvent ?? {
-          protocolo: simulationNProt(nfe.numero, "141260056230"),
-          ocorridoEm: new Date().toISOString(),
-          xJust: "Cancelamento solicitado pelo emissor",
-        })
-      : null;
 
   return (
     <div className="p-6 space-y-6">
@@ -158,14 +152,17 @@ export default async function NFeDetailPage({ params }: Props) {
 
         <div className="col-span-7 space-y-4">
           <div className="h-[520px]">
-            <XMLViewer xml={xml} filename={`nfe_${nfe.numero}_serie${nfe.serie}_v4.00.xml`} />
+            {xml ? (
+              <XMLViewer xml={xml} filename={xmlFilename} />
+            ) : (
+              <div className="border border-border rounded-lg bg-card p-6 text-muted-foreground">
+                Não foi possível carregar o XML desta NF-e. Tente novamente pelo link de download.
+              </div>
+            )}
           </div>
-          {xmlCancelamento && (
+          {xmlCancelamento && xmlCancelamentoFilename && (
             <div className="h-[320px]">
-              <XMLViewer
-                xml={xmlCancelamento}
-                filename={`${nfe.numero}_serie${nfe.serie}-110111-procEventoNFe.xml`}
-              />
+              <XMLViewer xml={xmlCancelamento} filename={xmlCancelamentoFilename} />
             </div>
           )}
         </div>

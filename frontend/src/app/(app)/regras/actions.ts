@@ -1,8 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { bulkUpsertTaxRules, deleteAllTaxRules, deleteTaxRuleGroup } from "@/lib/fiscal-api";
-import { parseTaxRuleXlsx } from "@/lib/tax-rule-planilha";
+import { deleteAllTaxRules, deleteTaxRuleGroup, importTaxRulesSpreadsheet } from "@/lib/fiscal-api";
 import { validateSpreadsheetFile } from "@/lib/spreadsheet-upload";
 
 export type TaxRuleImportState = {
@@ -23,20 +22,15 @@ export async function importarRegrasTributariasAction(
   const validation = await validateSpreadsheetFile(file);
   if (!validation.ok) return { error: validation.error };
 
-  const parsed = parseTaxRuleXlsx(await file.arrayBuffer());
-  if (parsed.rows.length === 0) {
-    return { error: parsed.errors[0]?.message ?? "Nenhuma regra válida na planilha", parseErrors: parsed.errors };
-  }
-
   try {
-    const result = await bulkUpsertTaxRules(parsed.rows);
+    const result = await importTaxRulesSpreadsheet(file);
     revalidatePath("/regras");
     return {
       success: true,
       created: result.created,
       updated: result.updated,
       total: result.total,
-      parseErrors: parsed.errors.length > 0 ? parsed.errors : undefined,
+      parseErrors: result.parseErrors,
     };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Erro ao importar regras" };

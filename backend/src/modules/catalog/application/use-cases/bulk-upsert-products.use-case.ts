@@ -1,4 +1,5 @@
 import { ProductConflictError } from "../../domain/errors/product-conflict.error.js";
+import { ProductValidationError } from "../../domain/errors/product-validation.error.js";
 import type { ProductRepository } from "../../domain/ports/product.repository.js";
 import type { TaxRuleValidatorPort } from "../../domain/ports/tax-rule-validator.port.js";
 import { dedupeBulkRowsBySku } from "../../domain/services/dedupe-bulk-rows-by-sku.service.js";
@@ -6,18 +7,18 @@ import type {
   BulkUpsertProductsCommand,
   BulkUpsertProductsResult,
 } from "../dto/bulk-upsert-products.command.js";
+import type { CreateProductCommand } from "../dto/create-product.command.js";
+import { validateProductImportRow } from "../services/validate-product-import-row.service.js";
 
 /**
  * Importação em massa (bulk upsert): cria ou atualiza produtos por SKU.
  *
  * Fluxo:
- * 1. Deduplica linhas repetidas (última ocorrência do SKU vence)
- * 2. Carrega índice SKU existente numa única query
- * 3. Por linha: valida regra fiscal → update se SKU existe, senão create
- * 4. Falhas por linha são capturadas; o lote continua (resposta parcial)
- *
- * @param command - `tenantId` e array `rows` do payload HTTP
- * @returns Contadores `created`, `updated`, `failed` e `total` pós-dedupe
+ * 1. Valida cada linha bruta (NCM, CEST, preços, etc.)
+ * 2. Deduplica por SKU (última ocorrência vence) com avisos
+ * 3. Carrega índice SKU existente numa única query
+ * 4. Por linha válida: valida regra fiscal → update se SKU existe, senão create
+ * 5. Falhas por linha são capturadas; o lote continua (resposta parcial)
  */
 export class BulkUpsertProductsUseCase {
   constructor(
@@ -28,7 +29,30 @@ export class BulkUpsertProductsUseCase {
   async execute(command: BulkUpsertProductsCommand): Promise<BulkUpsertProductsResult> {
     const { tenantId, rows } = command;
     const tenantUf = await this.productRepository.getTenantUf(tenantId);
-    const dedupedRows = dedupeBulkRowsBySku(rows);
+
+    const parseErrors: BulkUpsertProductsResult["parseErrors"] = [];
+    const validRows: { row: CreateProductCommand; line: number }[] = [];
+
+    for (const raw of rows) {
+      const validation = validateProductImportRow(raw);
+      if (!validation.ok) {
+        parseErrors.push({ line: raw.line, message: validation.message });
+        continue;
+      }
+      validRows.push({ row: validation.row, line: raw.line });
+    }
+
+    if (validRows.length === 0) {
+      throw new ProductValidationError(
+        parseErrors[0]?.message ?? "Nenhum produto válido na planilha",
+      );
+    }
+
+    const { rows: dedupedRows, warnings } = dedupeBulkRowsBySku(validRows);
+    if (warnings.length > 0) {
+      parseErrors.push(...warnings);
+    }
+
     const skuIndex = await this.productRepository.listSkuIndex(tenantId);
 
     let created = 0;
@@ -88,7 +112,13 @@ export class BulkUpsertProductsUseCase {
       }
     }
 
-    return { created, updated, failed, total: dedupedRows.length };
+    return {
+      created,
+      updated,
+      failed,
+      parseErrors: parseErrors.length > 0 ? parseErrors : undefined,
+      total: dedupedRows.length,
+    };
   }
 }
 

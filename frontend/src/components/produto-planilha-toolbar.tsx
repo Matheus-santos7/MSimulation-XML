@@ -6,11 +6,6 @@ import { useRef, useState, useTransition } from "react";
 import { importProdutosPlanilhaAction, type ProdutoPlanilhaImportResult } from "@/app/(app)/produtos/actions";
 import { Button } from "@/components/ui/button";
 import type { ProductDto } from "@/lib/fiscal-types";
-import {
-  buildProdutoPlanilhaTemplateXlsx,
-  buildProdutoPlanilhaXlsx,
-  downloadXlsxFile,
-} from "@/lib/produto-planilha";
 
 type Props = {
   products: ProductDto[];
@@ -20,16 +15,25 @@ export function ProdutoPlanilhaToolbar({ products }: Props) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
+  const [downloadPending, setDownloadPending] = useState(false);
   const [result, setResult] = useState<ProdutoPlanilhaImportResult | null>(null);
 
-  const disabled = pending;
+  const disabled = pending || downloadPending;
+
+  function triggerDownload(path: string) {
+    setDownloadPending(true);
+    const a = document.createElement("a");
+    a.href = path;
+    a.click();
+    window.setTimeout(() => setDownloadPending(false), 500);
+  }
 
   function handleDownloadTemplate() {
-    downloadXlsxFile("produtos-modelo.xlsx", buildProdutoPlanilhaTemplateXlsx());
+    triggerDownload("/produtos/spreadsheet/template");
   }
 
   function handleDownloadCatalog() {
-    downloadXlsxFile("produtos-catalogo.xlsx", buildProdutoPlanilhaXlsx(products));
+    triggerDownload("/produtos/spreadsheet/export");
   }
 
   function handleImport(file: File) {
@@ -51,7 +55,14 @@ export function ProdutoPlanilhaToolbar({ products }: Props) {
         <span className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground mr-1">
           Planilha
         </span>
-        <Button type="button" variant="outline" size="sm" onClick={handleDownloadTemplate} className="gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleDownloadTemplate}
+          disabled={disabled}
+          className="gap-2"
+        >
           <Download className="size-3.5" />
           Baixar modelo
         </Button>
@@ -60,7 +71,7 @@ export function ProdutoPlanilhaToolbar({ products }: Props) {
           variant="outline"
           size="sm"
           onClick={handleDownloadCatalog}
-          disabled={products.length === 0}
+          disabled={disabled || products.length === 0}
           className="gap-2"
         >
           <FileSpreadsheet className="size-3.5" />

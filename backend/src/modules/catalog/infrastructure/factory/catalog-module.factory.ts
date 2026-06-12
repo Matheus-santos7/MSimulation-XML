@@ -1,5 +1,6 @@
 import type { PrismaClient } from "../../../../generated/prisma/client.js";
 import { BulkUpsertProductsUseCase } from "../../application/use-cases/bulk-upsert-products.use-case.js";
+import { ImportProductsSpreadsheetUseCase } from "../../application/use-cases/import-products-spreadsheet.use-case.js";
 import { CreateProductUseCase } from "../../application/use-cases/create-product.use-case.js";
 import { DeleteProductUseCase } from "../../application/use-cases/delete-product.use-case.js";
 import { GetProductByIdUseCase } from "../../application/use-cases/get-product-by-id.use-case.js";
@@ -12,6 +13,7 @@ import { PrismaProductRepository } from "../prisma/prisma-product.repository.js"
 export function createCatalogModule(prisma: PrismaClient) {
   const productRepository = new PrismaProductRepository(prisma);
   const taxRuleValidator = new TaxRuleValidatorAdapter(prisma);
+  const bulkUpsertProducts = new BulkUpsertProductsUseCase(productRepository, taxRuleValidator);
 
   return {
     listProducts: new ListProductsUseCase(productRepository),
@@ -19,7 +21,8 @@ export function createCatalogModule(prisma: PrismaClient) {
     createProduct: new CreateProductUseCase(productRepository, taxRuleValidator),
     updateProduct: new UpdateProductUseCase(productRepository, taxRuleValidator),
     deleteProduct: new DeleteProductUseCase(productRepository),
-    bulkUpsertProducts: new BulkUpsertProductsUseCase(productRepository, taxRuleValidator),
+    bulkUpsertProducts,
+    importProductsSpreadsheet: new ImportProductsSpreadsheetUseCase(bulkUpsertProducts),
     productRepository,
   };
 }

@@ -18,8 +18,8 @@ import {
   linhaPedidoFromProduto,
   type ProdutoLinhaFiscal,
   type ResultadoNotaInbound,
-} from "../tax/tax-calculation-service.js";
-import { resolveTaxRule } from "../tax/tax-rule-service.js";
+} from "../../../modules/tax/index.js";
+import { resolveTaxRule } from "../../../modules/tax/index.js";
 
 type ProductPrices = {
   preco: { toString(): string } | number;

@@ -1,0 +1,47 @@
+import { z } from "zod";
+import { passwordField } from "../../../auth/presentation/schemas/auth.schemas.js";
+
+const emailField = z
+  .string()
+  .trim()
+  .min(1, "E-mail obrigatório")
+  .email("E-mail inválido")
+  .transform((v) => v.toLowerCase());
+
+const nameField = z
+  .string()
+  .trim()
+  .optional()
+  .transform((v) => (v && v.length > 0 ? v : undefined));
+
+export const userIdParam = z.object({
+  id: z.string().uuid("ID inválido"),
+});
+
+export const userCreateBody = z.object({
+  email: emailField,
+  name: nameField,
+  password: passwordField,
+});
+
+export const userUpdateBody = z
+  .object({
+    email: emailField.optional(),
+    name: nameField,
+    password: z
+      .string()
+      .optional()
+      .transform((v) => (v && v.trim().length > 0 ? v : undefined)),
+  })
+  .refine((data) => data.email !== undefined || data.name !== undefined || data.password !== undefined, {
+    message: "Informe ao menos um campo para atualizar",
+  })
+  .superRefine((data, ctx) => {
+    if (data.password === undefined) return;
+    const result = passwordField.safeParse(data.password);
+    if (!result.success) {
+      for (const issue of result.error.issues) {
+        ctx.addIssue({ ...issue, path: ["password"] });
+      }
+    }
+  });

@@ -35,12 +35,13 @@ import {
   calcularImpostosNota,
   inferAliqIcmsRemessa,
   linhaPedidoFromProduto,
-} from "../tax/tax-calculation-service.js";
-import { resolveTaxRule } from "../tax/tax-rule-service.js";
-import { UnidadeLogisticaService } from "../../logistics/unidade-logistica-service.js";
-import { registrarMovimentacaoProduto } from "../../logistics/movimentacao-produto-service.js";
+} from "../../../modules/tax/index.js";
+import { resolveTaxRule } from "../../../modules/tax/index.js";
+import {
+  createLogisticsModule,
+  findProductInTenant,
+} from "../../../modules/logistics/index.js";
 import { persistNfeXmlAutorizado } from "../shared/nfe-xml-service.js";
-import { findProductInTenant } from "../../logistics/avanco-product-resolve.js";
 import { realignRemessaFifoProductIdsBySku } from "./remessa-fifo.js";
 
 export type EmitirRemessaOptions = {
@@ -83,11 +84,17 @@ async function emitirNFeRemessaComItens(
   }
 
   // --- Fase 2: destinatário (CD ML) — define UF destino para regra e CFOP ---
-  const unidadeService = new UnidadeLogisticaService(prisma);
-  const { unidade, destino } = await unidadeService.resolveDestinoRemessa(
+  const logistics = createLogisticsModule(prisma);
+  const destination = await logistics.resolveShipmentDestination.execute(
     tenant.id,
     options?.unidadeDestinoId,
   );
+  const destino: UnidadeDestinoFiscal = destination.destinatarioFiscal;
+  const unidade = {
+    id: destination.unitId,
+    codigo: destination.codigo,
+    idCadIntTran: destination.idCadIntTran ?? null,
+  };
 
   const aliqFallback = inferAliqIcmsRemessa(tenant.uf, destino.uf);
   const pedidoMl = options?.pedidoMl ?? gerarPedidoMl();
@@ -247,17 +254,20 @@ async function emitirNFeRemessaComItens(
       });
       itemRows.push(itemRow);
 
-      await registrarMovimentacaoProduto(tx, {
-        tenantId: tenant.id,
-        productId: linha.product.id,
-        tipoOperacao: OperacaoFiscalTipo.REMESSA,
-        quantidade: linha.quantidade,
-        unidadeDestinoId: unidade?.id ?? undefined,
-        nfeId: nfeRow.id,
-        observacao:
-          options?.observacaoAvanco ??
-          (unidade ? `Remessa item ${index + 1} para ${unidade.codigo}` : undefined),
-      });
+      await logistics.registerProductMovement.execute(
+        {
+          tenantId: tenant.id,
+          productId: linha.product.id,
+          tipoOperacao: OperacaoFiscalTipo.REMESSA,
+          quantidade: linha.quantidade,
+          unidadeDestinoId: unidade?.id ?? undefined,
+          nfeId: nfeRow.id,
+          observacao:
+            options?.observacaoAvanco ??
+            (unidade ? `Remessa item ${index + 1} para ${unidade.codigo}` : undefined),
+        },
+        tx,
+      );
     }
 
     // Fase 8: XML autorizado (buildRemessaNFeXML via nfe-xml).

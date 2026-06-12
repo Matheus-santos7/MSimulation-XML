@@ -1,9 +1,6 @@
 import type { PrismaClient } from "../../../../generated/prisma/client.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
-import {
-  getUnidadeAtivaDoTenant,
-  UnidadeLogisticaService,
-} from "../../../../services/logistics/unidade-logistica-service.js";
+import { createLogisticsModule } from "../../../logistics/index.js";
 import type {
   UnidadeLogisticaAtiva,
   UnidadeLogisticaPort,
@@ -26,20 +23,24 @@ function mapUnidade(row: {
 }
 
 export class UnidadeLogisticaAdapter implements UnidadeLogisticaPort {
-  constructor(private readonly db: Db) {}
+  private readonly logistics;
+
+  constructor(private readonly db: Db) {
+    this.logistics = createLogisticsModule(this.db as PrismaClient);
+  }
 
   async obterAtiva(tenantId: string, unidadeId: string): Promise<UnidadeLogisticaAtiva | null> {
-    const row = await getUnidadeAtivaDoTenant(
-      this.db as PrismaClient,
-      tenantId,
-      unidadeId,
-    );
+    const row = await this.logistics.getActiveLogisticsUnit.execute(unidadeId);
     return row ? mapUnidade(row) : null;
   }
 
   async obterPadrao(tenantId: string): Promise<UnidadeLogisticaAtiva | null> {
-    const service = new UnidadeLogisticaService(this.db as PrismaClient);
-    const { unidade } = await service.resolveDestinoRemessa(tenantId);
-    return unidade ? mapUnidade(unidade) : null;
+    const destination = await this.logistics.resolveShipmentDestination.execute(tenantId);
+    return mapUnidade({
+      id: destination.unitId,
+      codigo: destination.codigo,
+      uf: destination.uf,
+      nome: destination.nome,
+    });
   }
 }

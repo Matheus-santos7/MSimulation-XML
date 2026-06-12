@@ -1,0 +1,36 @@
+import type { PrismaClient } from "../../../../generated/prisma/client.js";
+import { CreateTenantUseCase } from "../../application/use-cases/create-tenant.use-case.js";
+import { CreateUserUseCase } from "../../application/use-cases/create-user.use-case.js";
+import { DeleteTenantUseCase } from "../../application/use-cases/delete-tenant.use-case.js";
+import { DeleteUserUseCase } from "../../application/use-cases/delete-user.use-case.js";
+import { GetTenantByIdUseCase } from "../../application/use-cases/get-tenant-by-id.use-case.js";
+import { GetUserByIdUseCase } from "../../application/use-cases/get-user-by-id.use-case.js";
+import { ListTenantsUseCase } from "../../application/use-cases/list-tenants.use-case.js";
+import { ListUsersByTenantUseCase } from "../../application/use-cases/list-users-by-tenant.use-case.js";
+import { UpdateTenantUseCase } from "../../application/use-cases/update-tenant.use-case.js";
+import { UpdateUserUseCase } from "../../application/use-cases/update-user.use-case.js";
+import { PasswordHasherAdapter } from "../external/password-hasher.adapter.js";
+import { PrismaOrgUserRepository } from "../prisma/prisma-org-user.repository.js";
+import { PrismaTenantRepository } from "../prisma/prisma-tenant.repository.js";
+
+/** Composition root for the Org module. */
+export function createOrgModule(prisma: PrismaClient) {
+  const tenantRepository = new PrismaTenantRepository(prisma);
+  const orgUserRepository = new PrismaOrgUserRepository(prisma);
+  const passwordHasher = new PasswordHasherAdapter();
+
+  return {
+    listTenants: new ListTenantsUseCase(tenantRepository),
+    getTenantById: new GetTenantByIdUseCase(tenantRepository),
+    createTenant: new CreateTenantUseCase(tenantRepository),
+    updateTenant: new UpdateTenantUseCase(tenantRepository),
+    deleteTenant: new DeleteTenantUseCase(tenantRepository),
+    listUsersByTenant: new ListUsersByTenantUseCase(orgUserRepository),
+    getUserById: new GetUserByIdUseCase(orgUserRepository),
+    createUser: new CreateUserUseCase(orgUserRepository, passwordHasher),
+    updateUser: new UpdateUserUseCase(orgUserRepository, passwordHasher),
+    deleteUser: new DeleteUserUseCase(orgUserRepository),
+    tenantRepository,
+    orgUserRepository,
+  };
+}

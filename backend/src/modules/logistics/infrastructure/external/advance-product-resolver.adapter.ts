@@ -1,0 +1,100 @@
+import type { PrismaClient } from "../../../../generated/prisma/client.js";
+import {
+  collectRemessaSaldoProductIds,
+  remessaItemSaldoWhere,
+} from "../../../../services/fiscal/remessa/remessa-fifo.js";
+import type { AdvanceProductResolved } from "../../domain/entities/advance-product.entity.js";
+import type { AdvanceProductResolverPort } from "../../domain/ports/advance-product-resolver.port.js";
+
+export class AdvanceProductResolverAdapter implements AdvanceProductResolverPort {
+  constructor(private readonly prisma: PrismaClient) {}
+
+  async resolveForAdvance(
+    tenantId: string,
+    productId: string,
+    productSku?: string,
+  ): Promise<AdvanceProductResolved | null> {
+    const sku = productSku?.trim();
+    let product = await this.findProductInTenant(tenantId, { productId, sku });
+
+    const fifoIds = await collectRemessaSaldoProductIds(this.prisma, tenantId, productId, sku);
+    const fifoProductId =
+      (await this.findFifoProductIdWithSaldo(tenantId, fifoIds)) ?? productId;
+
+    if (!product && fifoProductId) {
+      const linha = await this.prisma.nfeItem.findFirst({
+        where: remessaItemSaldoWhere(tenantId, fifoProductId),
+        include: { product: true },
+      });
+      const legacy = linha?.product;
+      if (legacy) {
+        product =
+          legacy.tenantId === tenantId
+            ? legacy
+            : await this.findProductInTenant(tenantId, { sku: legacy.sku });
+      }
+    }
+
+    if (!product) return null;
+
+    return {
+      productId: product.id,
+      fifoProductId,
+      sku: product.sku,
+      tenantId: product.tenantId,
+    };
+  }
+
+  async hasStockForAdvance(
+    tenantId: string,
+    productId: string,
+    productSku?: string,
+  ): Promise<boolean> {
+    const fifoIds = await collectRemessaSaldoProductIds(
+      this.prisma,
+      tenantId,
+      productId,
+      productSku,
+    );
+    for (const fid of fifoIds) {
+      const linha = await this.prisma.nfeItem.findFirst({
+        where: remessaItemSaldoWhere(tenantId, fid),
+        select: { id: true },
+      });
+      if (linha) return true;
+    }
+    return false;
+  }
+
+  private async findProductInTenant(
+    tenantId: string,
+    opts: { productId?: string; sku?: string },
+  ) {
+    const sku = opts.sku?.trim();
+    if (sku) {
+      const bySku = await this.prisma.product.findFirst({ where: { tenantId, sku } });
+      if (bySku) return bySku;
+    }
+    if (opts.productId) {
+      return this.prisma.product.findFirst({
+        where: { id: opts.productId, tenantId },
+      });
+    }
+    return null;
+  }
+
+  private async findFifoProductIdWithSaldo(
+    tenantId: string,
+    productIds: string[],
+  ): Promise<string | null> {
+    for (const fid of productIds) {
+      const linha = await this.prisma.nfeItem.findFirst({
+        where: remessaItemSaldoWhere(tenantId, fid),
+        select: { productId: true },
+        orderBy: [{ nfe: { emitidaEm: "asc" } }, { numeroItem: "asc" }],
+      });
+      if (linha) return linha.productId;
+    }
+    return null;
+  }
+}

@@ -1,17 +1,25 @@
 ---
 alwaysApply: true
+description: Regras de Migração e Refatoração para Clean Architecture e DDD no Backend
+globs: ["backend/src/**/*.ts"]
 ---
+# Diretrizes de Arquitetura do Backend (Clean Architecture + DDD)
+
+Você atua como um Arquiteto de Software sênior. O objetivo principal no backend é migrar o padrão antigo de "Rotas e Serviços" (`src/routes` e `src/services`) para uma abordagem modular e orientada ao domínio (`src/modules`), baseada em Clean Architecture e DDD.
+
+Nunca altere a lógica de negócio ou as respostas da API durante a refatoração. O objetivo é apenas reorganizar o código.
+
 ## 1. Estrutura de Pastas Obrigatória por Módulo
-Cada novo módulo dentro de `src/modules/<nome-do-modulo>/` DEVE conter a seguinte estrutura de pastas concêntricas:
+Cada novo módulo dentro de `src/modules/<module-name>/` DEVE conter a seguinte estrutura de pastas concêntricas:
 
 - **`domain/`**: O coração do negócio. Não depende de NENHUMA outra camada ou biblioteca externa (nem Fastify, nem Prisma).
   - `entities/`: Classes ou tipos puros de TypeScript que representam os dados do negócio.
   - `value-objects/`: Tipos imutáveis (ex: CNPJ, Email).
-  - `ports/` ou `repositories/`: Interfaces (contratos) que definem como os dados são guardados ou obtidos (ex: `IUserRepository`).
+  - `ports/` ou `repositories/`: Interfaces (contratos) que definem como os dados são guardados ou obtidos.
   - `errors/`: Classes de erro específicas do domínio.
 
 - **`application/`**: Onde vivem os Casos de Uso (Use Cases).
-  - `use-cases/`: Classes ou funções que orquestram o domínio para executar uma ação específica (ex: `CreateUserUseCase`). Devem receber dependências (injeção de dependência) através de construtores ou parâmetros.
+  - `use-cases/`: Classes ou funções que orquestram o domínio para executar uma ação específica. Devem receber dependências (injeção de dependência) através de construtores ou parâmetros.
   - `dto/`: Interfaces de transferência de dados de entrada/saída do caso de uso.
 
 - **`infrastructure/`**: Onde o código interage com o mundo exterior.
@@ -28,17 +36,25 @@ Cada novo módulo dentro de `src/modules/<nome-do-modulo>/` DEVE conter a seguin
 - As camadas `infrastructure` e `presentation` importam de `application` e `domain`.
 - NUNCA importe o Prisma (`lib/db/prisma`) diretamente dentro de `domain` ou `application`. O Prisma só pode existir em `infrastructure`.
 
-## 3. Nomenclatura e Tipagem
-- Use `kebab-case` para nomes de ficheiros.
-- Nomes de Use Cases devem ser verbos no infinitivo ou ação clara (ex: `emitir-nota-fiscal.ts`).
-- Nenhuma função deve retornar `any`. Tipagem estrita é obrigatória.
+## 3. Nomenclatura e Tipagem (Padrão em Inglês)
+Todo o código (nomes de ficheiros, pastas, variáveis, funções, classes e interfaces) DEVE ser escrito em **Inglês**. A única exceção permitida são siglas/termos fiscais brasileiros estritos (ex: `Nfe`, `Cte`, `Difal`, `Cnpj`) que perderiam o sentido se traduzidos.
+
+- **Ficheiros:** Use `kebab-case` e SEMPRE inclua o sufixo correspondente à camada/responsabilidade do ficheiro.
+  - *Exemplos:* `user.entity.ts`, `create-user.use-case.ts`, `user.controller.ts`, `prisma-user.repository.ts`.
+- **Classes e Interfaces:** Use `PascalCase`. Interfaces devem indicar claramente que são contratos.
+  - *Exemplos:* `UserRepository` (Classe), `IUserRepository` (Interface) ou `CreateUserUseCase`.
+- **Funções e Métodos:** Use `camelCase`. Devem SEMPRE começar com um verbo de ação em inglês que descreva o que fazem.
+  - *Exemplos:* `getUserById`, `calculateTotalTaxes`, `generateNfeXml`, `validatePayload`.
+- **Variáveis:** Use `camelCase` com nomes descritivos. Evite abreviações não claras. Booleans devem fazer perguntas (ex: `isActive`, `hasError`).
+- **Tipagem:** Nenhuma função deve retornar `any`. Tipagem estrita é obrigatória.
 
 ## Processo de Execução do Cursor:
-Quando for instruído a refatorar um domínio (ex: "Catálogo"):
-1. Crie a pasta do módulo em `src/modules/<dominio>/`.
-2. Analise o código existente em `src/schemas`, `src/routes` e `src/services` desse domínio.
+Quando for instruído a refatorar um domínio (ex: "Catalog"):
+1. Crie a pasta do módulo em `src/modules/<domain>/`.
+2. Analise o código existente em `src/schemas`, `src/routes` e `src/services` desse domínio e traduza os conceitos para o inglês.
 3. Extraia as entidades e interfaces para `domain/`.
 4. Mova a lógica de negócio para `application/use-cases/`.
 5. Mova a lógica do Prisma para `infrastructure/prisma/`.
 6. Mova a lógica do Fastify para `presentation/controllers/`.
-7. Atualize a injeção de dependências.
+7. Atualize a injeção de dependências e garanta que todos os nomes seguem o padrão em Inglês estabelecido na secção 3.
+8. IMPORTANTE: Após migrar o código para a nova estrutura com sucesso, APAGUE os ficheiros originais correspondentes em `src/routes`, `src/services` e `src/schemas` para evitar código duplicado.

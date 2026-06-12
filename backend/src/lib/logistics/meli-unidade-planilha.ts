@@ -1,13 +1,13 @@
 import * as XLSX from "xlsx";
 import { normalizeIdCadIntTran } from "./meli-unidade.js";
-import type { UnidadeLogisticaImportRow } from "../../services/logistics/unidade-logistica-service.js";
+import type { LogisticsUnitImportRow } from "../../modules/logistics/index.js";
 
 export type MeliUnidadePlanilhaParseResult = {
-  rows: UnidadeLogisticaImportRow[];
+  rows: LogisticsUnitImportRow[];
   errors: { line: number; message: string }[];
 };
 
-const HEADER_MAP: Record<string, keyof UnidadeLogisticaImportRow | "_skip"> = {
+const HEADER_MAP: Record<string, keyof LogisticsUnitImportRow | "_skip"> = {
   unidade: "unidade",
   cnpj: "cnpj",
   "inscrição estadual": "inscricaoEstadual",
@@ -48,7 +48,7 @@ export function parseMeliUnidadesXlsx(buffer: Buffer | ArrayBuffer): MeliUnidade
   }
 
   const headers = matrix[0]!.map((c) => normalizeHeader(String(c ?? "")));
-  const colIndex: Partial<Record<keyof UnidadeLogisticaImportRow, number>> = {};
+  const colIndex: Partial<Record<keyof LogisticsUnitImportRow, number>> = {};
   headers.forEach((h, i) => {
     const key = HEADER_MAP[h];
     if (key && key !== "_skip") colIndex[key] = i;
@@ -62,12 +62,12 @@ export function parseMeliUnidadesXlsx(buffer: Buffer | ArrayBuffer): MeliUnidade
   }
 
   const errors: { line: number; message: string }[] = [];
-  const rows: UnidadeLogisticaImportRow[] = [];
+  const rows: LogisticsUnitImportRow[] = [];
 
   for (let i = 1; i < matrix.length; i++) {
     const line = i + 1;
     const row = matrix[i]!;
-    const cell = (key: keyof UnidadeLogisticaImportRow) => {
+    const cell = (key: keyof LogisticsUnitImportRow) => {
       const idx = colIndex[key];
       if (idx === undefined) return "";
       const v = row[idx];

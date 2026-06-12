@@ -10,10 +10,7 @@ import {
   saldoRemessaDisponivel,
   SaldoRemessaInsuficienteError,
 } from "../../../../services/fiscal/remessa/remessa-fifo.js";
-import {
-  getUnidadeAtivaDoTenant,
-  getUnidadeAtivaPorCodigo,
-} from "../../../../services/logistics/unidade-logistica-service.js";
+import { createLogisticsModule } from "../../../logistics/index.js";
 import { quantidadeSaldo } from "../../domain/value-objects/quantidade-saldo.js";
 import { RemessaDomainError } from "../../domain/errors.js";
 import type { EstoqueFifoRepository } from "../../domain/ports/estoque-fifo-repository.js";
@@ -74,6 +71,7 @@ export class EmitirAvancoMercadoriaUseCase {
     const saldoProductId = command.productId.trim() || resolved.product.id;
 
     const prisma = this.deps.prisma;
+    const logistics = createLogisticsModule(prisma);
     const origemResolvida = await resolveOrigemFiscalParaAvanco(
       prisma,
       command.tenantId,
@@ -81,11 +79,11 @@ export class EmitirAvancoMercadoriaUseCase {
       command.unidadeOrigemId,
       productSku,
       async (id) => {
-        const row = await getUnidadeAtivaDoTenant(prisma, command.tenantId, id);
+        const row = await logistics.getActiveLogisticsUnit.execute(id);
         return row ? mapUnidade(row) : null;
       },
       async (codigo) => {
-        const row = await getUnidadeAtivaPorCodigo(prisma, codigo);
+        const row = await logistics.getActiveLogisticsUnitByCode.execute(codigo);
         return row ? mapUnidade(row) : null;
       },
     );

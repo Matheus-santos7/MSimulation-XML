@@ -16,7 +16,7 @@ import { prismaPlugin } from "./plugins/prisma.js";
 import { authenticatedLookupPlugin } from "./plugins/authenticated-lookup.js";
 import { protectedApiPlugin } from "./plugins/protected-api.js";
 import { healthRoutes } from "./routes/health/index.js";
-import { authRoutes } from "./routes/auth/index.js";
+import { authController } from "./modules/auth/index.js";
 const trustProxy = process.env.TRUST_PROXY === "true" || process.env.NODE_ENV === "production";
 const app = Fastify({ logger: true, trustProxy });
 
@@ -28,7 +28,7 @@ await app.register(prismaPlugin);
 await app.register(authPlugin);
 
 await app.register(healthRoutes, { prefix: "/api" });
-await app.register(authRoutes, { prefix: "/api" });
+await app.register(authController, { prefix: "/api" });
 await app.register(authenticatedLookupPlugin, { prefix: "/api" });
 await app.register(protectedApiPlugin, { prefix: "/api" });
 

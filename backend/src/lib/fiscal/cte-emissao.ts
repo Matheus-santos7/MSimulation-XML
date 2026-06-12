@@ -20,7 +20,7 @@ import {
 } from "@msimulation-xml/fiscal-core";
 import type { PrismaTx } from "../db/prisma-tx.js";
 import { buildChaveCTe } from "./cte-chave.js";
-import { resolveTaxRule } from "../../services/fiscal/tax/tax-rule-service.js";
+import { resolveTaxRule } from "../../modules/tax/index.js";
 
 export type { CteVinculo };
 

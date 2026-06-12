@@ -1,0 +1,13 @@
+import type { CteQueryPort } from "../../domain/ports/cte-query.port.js";
+
+export class GetCteXmlUseCase {
+  constructor(private readonly cteQuery: CteQueryPort) {}
+
+  execute(tenantId: string, accessKey: string) {
+    return this.cteQuery.resolveXml(tenantId, accessKey);
+  }
+
+  cteExists(tenantId: string, accessKey: string) {
+    return this.cteQuery.exists(tenantId, accessKey);
+  }
+}

@@ -1,39 +1,11 @@
-import type { Product } from "../../generated/prisma/client.js";
+import type { Product as PrismaProduct } from "../../generated/prisma/client.js";
+import type { Product } from "../../modules/catalog/domain/entities/product.entity.js";
+import { mapProductFromPrisma } from "../../modules/catalog/infrastructure/prisma/product-prisma.mapper.js";
 
-export type ProductDto = {
-  id: string;
-  tenantId: string;
-  sku: string;
-  ean?: string;
-  nome: string;
-  ncm: string;
-  cest: string;
-  exTipi?: string;
-  origem: number;
-  unidade: string;
-  preco: number;
-  precoCusto: number;
-  estoque: number;
-  taxRuleBaseId?: string;
-};
+export type ProductDto = Product;
 
-export function mapProduct(row: Product): ProductDto {
-  return {
-    id: row.id,
-    tenantId: row.tenantId,
-    sku: row.sku,
-    ean: row.ean ?? undefined,
-    nome: row.nome,
-    ncm: row.ncm,
-    cest: row.cest,
-    exTipi: row.exTipi ?? undefined,
-    origem: row.origem,
-    unidade: row.unidade,
-    preco: Number(row.preco),
-    precoCusto: Number(row.precoCusto),
-    estoque: row.estoque,
-    taxRuleBaseId: row.taxRuleBaseId ?? undefined,
-  };
+export function mapProduct(row: PrismaProduct): ProductDto {
+  return mapProductFromPrisma(row);
 }
 
 /** Valor para tag cEAN / cEANTrib na NF-e */

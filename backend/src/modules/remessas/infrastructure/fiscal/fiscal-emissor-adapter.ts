@@ -19,10 +19,10 @@ import {
   calcularNotaInbound,
   inferAliqIcmsIntraestadual,
   linhaPedidoFromProduto,
-} from "../../../../services/fiscal/tax/tax-calculation-service.js";
-import { resolveTaxRule } from "../../../../services/fiscal/tax/tax-rule-service.js";
+} from "../../../tax/index.js";
+import { resolveTaxRule } from "../../../tax/index.js";
 import { prepararRemessaSimbolicaFiscal } from "../../../../services/fiscal/remessa/remessa-simbolica-fiscal.js";
-import { getUnidadeAtivaDoTenant } from "../../../../services/logistics/unidade-logistica-service.js";
+import { findActiveLogisticsUnitRecord } from "../../../logistics/index.js";
 import type { CamposDestinoNfe } from "../../domain/types/destino-nfe.js";
 import type {
   ContextoFiscalEmissao,
@@ -84,7 +84,7 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
       );
     }
 
-    const unidadeDestino = await getUnidadeAtivaDoTenant(
+    const unidadeDestino = await findActiveLogisticsUnitRecord(
       tx as unknown as PrismaClient,
       tenant.id,
       unidadeDestinoId,
@@ -208,7 +208,7 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
     unidadeOrigemId: string,
     unidadeDestinoId: string,
   ): Promise<DocumentoFiscalPreparado> {
-    const unidade = await getUnidadeAtivaDoTenant(
+    const unidade = await findActiveLogisticsUnitRecord(
       tx as unknown as PrismaClient,
       ctx.tenant.id,
       unidadeDestinoId,

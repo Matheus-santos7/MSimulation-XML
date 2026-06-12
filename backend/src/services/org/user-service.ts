@@ -1,4 +1,5 @@
 import type { PrismaClient } from "../../generated/prisma/client.js";
+import { isPrismaUniqueError } from "../../lib/org/db-errors.js";
 import { mapUser } from "../../lib/org/user-mapper.js";
 import { hashPassword } from "../../lib/auth/password.js";
 import type { userCreateBody, userUpdateBody } from "../../schemas/org/user.js";
@@ -116,6 +117,3 @@ export class UserService {
   }
 }
 
-function isPrismaUniqueError(e: unknown): boolean {
-  return typeof e === "object" && e !== null && "code" in e && (e as { code: string }).code === "P2002";
-}

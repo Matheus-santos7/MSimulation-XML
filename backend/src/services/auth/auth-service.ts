@@ -1,4 +1,4 @@
-import type { Prisma, PrismaClient } from "../../generated/prisma/client.js";
+import type { PrismaClient } from "../../generated/prisma/client.js";
 import {
   accessTokenTtl,
   AUTH_GENERIC_LOGIN_ERROR,
@@ -28,13 +28,10 @@ import {
 } from "../../lib/auth/password.js";
 import { generateRefreshToken, hashRefreshToken } from "../../lib/auth/refresh-token.js";
 import type { registerBodySchema } from "../../schemas/auth/schemas.js";
-import type { tenantCreateBody } from "../../schemas/org/tenant.js";
-import { TenantConflictError, TenantService } from "../org/tenant-service.js";
 import { EmailVerificationService } from "./email/email-verification-service.js";
 import type { z } from "zod";
 
 type RegisterInput = z.infer<typeof registerBodySchema>;
-type TenantCreateInput = z.infer<typeof tenantCreateBody>;
 
 export type AuthMeta = { userAgent?: string; ipAddress?: string };
 
@@ -67,11 +64,9 @@ export class AuthTooManyRequestsError extends Error {
 }
 
 export class AuthService {
-  private readonly tenants: TenantService;
   private readonly emailVerification: EmailVerificationService;
 
   constructor(private readonly prisma: PrismaClient) {
-    this.tenants = new TenantService(prisma);
     this.emailVerification = new EmailVerificationService(prisma);
   }
 
@@ -247,50 +242,6 @@ export class AuthService {
     };
   }
 
-  async attachTenant(
-    userId: string,
-    data: TenantCreateInput,
-    signAccess: (payload: ReturnType<typeof buildAccessPayload>) => string,
-    meta: AuthMeta = {},
-  ) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new AuthStateError("Usuário não encontrado");
-    if (user.tenantId) throw new AuthStateError("Empresa já vinculada à conta");
-    if (requireEmailVerification() && !user.emailVerifiedAt) {
-      throw new AuthStateError("Confirme seu e-mail antes de cadastrar a empresa");
-    }
-
-    try {
-      const result = await this.prisma.$transaction(async (tx) => {
-        const tenantRow = await tx.tenant.create({
-          data: data as Prisma.TenantCreateInput,
-        });
-        const userRow = await tx.user.update({
-          where: { id: userId },
-          data: { tenantId: tenantRow.id, role: "ADMIN" },
-          include: { tenant: true },
-        });
-        return { user: userRow, tenant: mapTenant(tenantRow) };
-      });
-
-      const refreshToken = await this.createSession(result.user.id, meta);
-      return authSessionResponse(
-        signAccess,
-        accessTokenTtl(),
-        refreshToken,
-        result.user,
-        result.tenant,
-        result.user.tokenVersion,
-      );
-    } catch (e) {
-      if (e instanceof TenantConflictError) throw e;
-      if (isPrismaUniqueError(e)) {
-        throw new TenantConflictError("CNPJ já cadastrado");
-      }
-      throw e;
-    }
-  }
-
   async invalidateAllSessions(userId: string) {
     await this.prisma.userSession.updateMany({
       where: { userId, revokedAt: null },
@@ -359,6 +310,3 @@ export class AuthService {
   }
 }
 
-function isPrismaUniqueError(e: unknown): boolean {
-  return typeof e === "object" && e !== null && "code" in e && (e as { code: string }).code === "P2002";
-}

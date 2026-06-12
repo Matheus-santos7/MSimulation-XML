@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { onboardingEmpresaAction } from "./actions";
+import { onboardingEmpresaAction } from "@/lib/onboarding/actions";
 import { PageHeader } from "@/components/fiscal-ui";
 import { TenantForm } from "@/components/tenant-form";
 

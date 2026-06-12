@@ -1,4 +1,4 @@
-import type { FastifyPluginAsync, FastifyRequest } from "fastify";
+import type { FastifyPluginAsync } from "fastify";
 import rateLimit from "@fastify/rate-limit";
 import { isEmailVerified, twoFactorPendingTtl } from "../../lib/auth/config.js";
 import type { AccessTokenPayload, TwoFactorPendingPayload } from "../../lib/auth/types/index.js";
@@ -14,26 +14,17 @@ import {
   verify2faBodySchema,
   verifyEmailBodySchema,
 } from "../../schemas/auth/schemas.js";
-import { tenantCreateBody } from "../../schemas/org/tenant.js";
 import {
   AuthService,
   EmailVerificationService,
+  OnboardingService,
   PasswordResetService,
   TwoFactorService,
 } from "../../services/auth/index.js";
-import { userIdFromRequest } from "../../lib/auth/request-context.js";
 import { verifyTurnstileToken } from "../../lib/auth/turnstile.js";
 import { handleAuthError } from "./auth-errors.js";
-function authMeta(req: FastifyRequest) {
-  return {
-    userAgent: req.headers["user-agent"],
-    ipAddress: req.ip,
-  };
-}
-
-function signAccess(app: { jwt: { sign: (p: AccessTokenPayload, o?: { expiresIn: string }) => string } }) {
-  return (payload: AccessTokenPayload) => app.jwt.sign(payload);
-}
+import { authMeta, signAccess } from "./helpers.js";
+import { onboardingRoutes } from "./onboarding.routes.js";
 
 function signTwoFactorPending(
   signJwt: (payload: TwoFactorPendingPayload, options: { expiresIn: string }) => string,
@@ -49,6 +40,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
   });
 
   const service = new AuthService(app.prisma);
+  const onboarding = new OnboardingService(app.prisma, service);
   const passwordReset = new PasswordResetService(app.prisma);
   const sign = signAccess(app);
   const sign2fa = signTwoFactorPending((payload, options) =>
@@ -59,6 +51,8 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
   );
   const twoFactor = new TwoFactorService(app.prisma, service, sign, sign2fa);
   const emailVerification = new EmailVerificationService(app.prisma);
+
+  await app.register(onboardingRoutes, { onboarding, sign });
 
   const twoFaRateLimit = { max: 5, timeWindow: "15 minutes" } as const;
 
@@ -289,24 +283,6 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       try {
         const result = await emailVerification.resendForUser(req.user.userId);
         return reply.status(200).send(result);
-      } catch (e) {
-        return handleAuthError(e, reply);
-      }
-    },
-  );
-
-  app.post(
-    "/auth/onboarding/tenant",
-    { onRequest: [app.authenticate] },
-    async (req, reply) => {
-      try {
-        if (req.user.tenantId) {
-          return reply.status(400).send({ error: "Empresa já cadastrada nesta conta" });
-        }
-        const body = tenantCreateBody.parse(req.body);
-        const userId = userIdFromRequest(req);
-        const session = await service.attachTenant(userId, body, sign, authMeta(req));
-        return session;
       } catch (e) {
         return handleAuthError(e, reply);
       }

@@ -1,4 +1,5 @@
 import type { Prisma, PrismaClient } from "../../generated/prisma/client.js";
+import { isPrismaUniqueError } from "../../lib/org/db-errors.js";
 import { mapTenant } from "../../lib/org/tenant-mapper.js";
 import type { tenantCreateBody, tenantUpdateBody } from "../../schemas/org/tenant.js";
 import type { z } from "zod";
@@ -64,6 +65,3 @@ export class TenantConflictError extends Error {
   }
 }
 
-function isPrismaUniqueError(e: unknown): boolean {
-  return typeof e === "object" && e !== null && "code" in e && (e as { code: string }).code === "P2002";
-}

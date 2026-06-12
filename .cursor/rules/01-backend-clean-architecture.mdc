@@ -1,0 +1,44 @@
+---
+alwaysApply: true
+---
+## 1. Estrutura de Pastas Obrigatória por Módulo
+Cada novo módulo dentro de `src/modules/<nome-do-modulo>/` DEVE conter a seguinte estrutura de pastas concêntricas:
+
+- **`domain/`**: O coração do negócio. Não depende de NENHUMA outra camada ou biblioteca externa (nem Fastify, nem Prisma).
+  - `entities/`: Classes ou tipos puros de TypeScript que representam os dados do negócio.
+  - `value-objects/`: Tipos imutáveis (ex: CNPJ, Email).
+  - `ports/` ou `repositories/`: Interfaces (contratos) que definem como os dados são guardados ou obtidos (ex: `IUserRepository`).
+  - `errors/`: Classes de erro específicas do domínio.
+
+- **`application/`**: Onde vivem os Casos de Uso (Use Cases).
+  - `use-cases/`: Classes ou funções que orquestram o domínio para executar uma ação específica (ex: `CreateUserUseCase`). Devem receber dependências (injeção de dependência) através de construtores ou parâmetros.
+  - `dto/`: Interfaces de transferência de dados de entrada/saída do caso de uso.
+
+- **`infrastructure/`**: Onde o código interage com o mundo exterior.
+  - `prisma/`: Implementações concretas das interfaces definidas em `domain/ports/` usando o Prisma ORM.
+  - `http/` ou `external/`: Chamadas a APIs externas.
+
+- **`presentation/`**: Onde mapeamos os dados para a web.
+  - `controllers/`: Recebem a requisição do Fastify, chamam o Caso de Uso na camada de `application/`, e formatam a resposta HTTP. Não devem ter lógica de negócio.
+  - `mappers/`: Funções para converter de Entidades de Domínio para JSON da API, ou do Prisma para Entidades de Domínio.
+
+## 2. Regra de Dependências (A Regra de Ouro)
+- A camada `domain` NÃO importa nada de fora.
+- A camada `application` SÓ pode importar de `domain`.
+- As camadas `infrastructure` e `presentation` importam de `application` e `domain`.
+- NUNCA importe o Prisma (`lib/db/prisma`) diretamente dentro de `domain` ou `application`. O Prisma só pode existir em `infrastructure`.
+
+## 3. Nomenclatura e Tipagem
+- Use `kebab-case` para nomes de ficheiros.
+- Nomes de Use Cases devem ser verbos no infinitivo ou ação clara (ex: `emitir-nota-fiscal.ts`).
+- Nenhuma função deve retornar `any`. Tipagem estrita é obrigatória.
+
+## Processo de Execução do Cursor:
+Quando for instruído a refatorar um domínio (ex: "Catálogo"):
+1. Crie a pasta do módulo em `src/modules/<dominio>/`.
+2. Analise o código existente em `src/schemas`, `src/routes` e `src/services` desse domínio.
+3. Extraia as entidades e interfaces para `domain/`.
+4. Mova a lógica de negócio para `application/use-cases/`.
+5. Mova a lógica do Prisma para `infrastructure/prisma/`.
+6. Mova a lógica do Fastify para `presentation/controllers/`.
+7. Atualize a injeção de dependências.

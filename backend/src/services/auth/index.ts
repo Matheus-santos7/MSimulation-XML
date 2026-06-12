@@ -16,3 +16,4 @@ export {
   PasswordResetService,
 } from "./email/password-reset-service.js";
 export { TwoFactorRequiredError, TwoFactorService } from "./mfa/two-factor-service.js";
+export { OnboardingService } from "./onboarding/onboarding-service.js";

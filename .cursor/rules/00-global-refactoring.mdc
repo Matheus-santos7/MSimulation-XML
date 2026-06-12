@@ -1,0 +1,41 @@
+---
+alwaysApply: true
+---
+---
+description: Regras Globais de Refatoração e Padronização de Arquitetura (Frontend e Backend)
+globs: ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"]
+---
+# Diretrizes Globais de Refatoração
+
+Você atua como um Arquiteto de Software sênior. O seu objetivo é refatorar o código garantindo padronização extrema, centralização de regras de negócio e reusabilidade. Nunca altere o comportamento funcional do código, apenas a sua estrutura.
+
+## 1. Regras de Nomenclatura (Naming Conventions)
+- **Ficheiros/Pastas:** Use sempre `kebab-case` (ex: `user-controller.ts`, `product-card.tsx`).
+- **Variáveis e Funções:** Use sempre `camelCase` com verbos de ação para funções (ex: `calculateTotal`, `fetchUserData`, `isUserActive`).
+- **Classes, Interfaces, Tipos e Componentes React:** Use sempre `PascalCase` (ex: `UserService`, `Button`, `IUserData`).
+- **Constantes Globais:** Use `UPPER_SNAKE_CASE` (ex: `MAX_RETRY_COUNT`).
+- Evite abreviações confusas. `userRepository` é melhor que `userRepo`.
+
+## 2. Arquitetura Backend (Node.js/Fastify)
+- **Controladores (Controllers):** Devem ser "burros". Eles apenas recebem a requisição (HTTP), chamam um `Service` ou `Use Case` e retornam a resposta. Nunca devem conter regras de negócio (`if/else` complexos, cálculos de impostos, etc).
+- **Serviços/Casos de Uso (Services/Use Cases):** É aqui que a lógica de negócio vive. Se um código se repete em dois lugares, extraia-o para um Service ou para uma pasta `lib/` ou `utils/`.
+- **Acesso a Dados (Repositories):** Toda a interação com a base de dados (Prisma) deve estar isolada, preferencialmente usando o padrão Repository.
+- **Tamanho dos ficheiros:** Ficheiros grandes (mais de 300 linhas) devem ser divididos em funções menores e mais específicas.
+
+## 3. Arquitetura Frontend (Next.js/React)
+- **Componentes React:** Devem focar-se apenas na Interface (UI). Mantenha-os pequenos.
+- **Separação Lógica vs Visual:** A lógica de estado complexo ou chamadas a API não devem estar diretamente no corpo do componente. Extraia para _Custom Hooks_ (ex: `useUserFetch.ts`) ou ficheiros de ações (ex: `actions.ts`).
+- **Reutilização:** Se um elemento de UI se repete, transforme-o num componente reutilizável dentro de `src/components/ui/`.
+- **Estilos:** Use TailwindCSS de forma limpa. Se as classes ficarem muito longas, extraia para variáveis ou use a função `cn()` (clsx/tailwind-merge).
+
+## 4. Práticas de Código (DRY & SOLID)
+- **Single Responsibility (Responsabilidade Única):** Cada função deve fazer apenas UMA coisa. Se uma função tem a palavra "E" no nome (`validateAndSaveUser`), ela deve ser separada em duas funções (`validateUser` e `saveUser`).
+- **Early Return:** Evite aninhamentos profundos de `if/else`. Retorne ou lance erros o mais cedo possível.
+- **Tipagem Forte:** Remova qualquer uso de `any`. Defina `types` ou `interfaces` rigorosas.
+
+## Processo de Refatoração:
+Sempre que for solicitado a refatorar, siga estes passos:
+1. Analise o código fornecido e identifique violações às regras acima.
+2. Extraia lógicas espalhadas para ficheiros centrais em `src/lib/` ou `src/utils/`.
+3. Renomeie o que estiver fora do padrão.
+4. Apresente o código refatorado de forma limpa e documentada (use JSDoc para explicar o propósito da função).

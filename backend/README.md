@@ -323,7 +323,7 @@ modules/<context>/
 - **Adapters:** quando um contexto precisa de capacidade externa (ex.: logistics → lookup CEP), usa-se um adapter em `infrastructure/external/` que implementa um **port** do próprio módulo.
 - **lib/fiscal:** motor de cálculo (`tax-engine`), snapshots e chaves são bibliotecas compartilhadas; a resolução de regras fica no módulo **tax**.
 - **remessas** é o núcleo FIFO e emissão de remessa; **sales** e **fiscal-documents** delegam consumo/estorno de saldo a ele.
-- **services/fiscal/index.ts** é apenas uma **fachada de re-export** legada para imports antigos — a lógica vive nos módulos.
+- Imports cross-module devem apontar para o `index.ts` do módulo alvo (ex.: `modules/remessas`), não para pastas legadas em `src/services/`.
 
 ---
 

@@ -13,17 +13,15 @@
  */
 import type { FastifyPluginAsync } from "fastify";
 import { tenantIdFromRequest } from "../../../../lib/auth/request-context.js";
-import {
-  listarSaldoRemessaPorCd,
-  realignRemessaFifoProductIdsBySku,
-  RemessaError,
-  SaldoRemessaInsuficienteError,
-} from "../../../../services/fiscal/index.js";
 import { RemessaSimbolicaFiscalError } from "../../../remessas/infrastructure/fiscal/remessa-simbolica-fiscal.js";
 import {
   RemessaDomainError,
+  RemessaError,
   SaldoFifoInsuficienteError,
+  SaldoRemessaInsuficienteError,
   createRemessasModule,
+  listarSaldoRemessaPorCd,
+  realignRemessaFifoProductIdsBySku,
 } from "../../../remessas/index.js";
 import { mapAvancoMercadoriaParaApi } from "../../../remessas/presentation/avanco-api.mapper.js";
 import { LogisticsUnitError } from "../../domain/errors/logistics-unit.error.js";

@@ -1,7 +1,7 @@
 /**
  * Orquestrador da NF-e de remessa física (depósito temporário / Full ML).
  *
- * Fluxo completo: docs/remessa-fisica.md | Estrutura: services/fiscal/README.md
+ * Fluxo completo: docs/remessa-fisica.md | Módulo: modules/remessas/README.md
  *
  * Entrada pública:
  *  - `emitirRemessaManual` — módulo dedicado (POST /movimentacoes/remessa)

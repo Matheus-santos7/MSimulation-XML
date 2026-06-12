@@ -1,6 +1,6 @@
 import { Resend } from "resend";
-import { buildEmailVerificationEmailHtml } from "../../../../emails/auth/email-verification-email.js";
-import { buildPasswordResetEmailHtml } from "../../../../emails/auth/password-reset-email.js";
+import { buildEmailVerificationEmailHtml } from "../../../../emails/templates/email-verification-email.js";
+import { buildPasswordResetEmailHtml } from "../../../../emails/templates/password-reset-email.js";
 import { resendApiKey, resendFromEmail } from "../../../../lib/auth/config.js";
 import { BRAND_FULL_NAME } from "../../../../lib/brand.js";
 import { EmailDeliveryError } from "../../domain/errors/email-delivery.error.js";

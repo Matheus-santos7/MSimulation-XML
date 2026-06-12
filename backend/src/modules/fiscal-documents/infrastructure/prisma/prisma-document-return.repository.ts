@@ -18,12 +18,12 @@ import {
   type PrismaClient,
 } from "../../../../generated/prisma/client.js";
 import { mapNfe, num } from "../../../../lib/fiscal/fiscal-mappers.js";
-import { buildChaveNFe } from "../../../../lib/fiscal/nfe-chave.js";
-import { proximoNumeroNfe } from "../../../../lib/fiscal/nfe-sequencia.js";
+import { buildChaveNFe } from "../../domain/services/nfe-chave.js";
+import { proximoNumeroNfe } from "../../domain/services/nfe-sequencia.js";
 import { enrichTaxSnapshot, loadEmitterSettings } from "../../../../lib/fiscal/fiscal-emitter-runtime.js";
 import { enrichFiscalPayloadWithXTexto } from "@msimulation-xml/fiscal-core";
 import { taxSnapshotFromRule } from "../../../../lib/fiscal/tax-snapshot.js";
-import { calcularNotaFiscal } from "../../../../lib/fiscal/tax-engine.js";
+import { calcularNotaFiscal } from "../../../tax/domain/services/tax-engine.js";
 import { montarItemFiscal, resolveTaxRule, type CustomerType } from "../../../tax/index.js";
 import { persistNfeXmlFromEmission } from "../xml/nfe-xml-service.js";
 import { estornarConsumosRemessa } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";

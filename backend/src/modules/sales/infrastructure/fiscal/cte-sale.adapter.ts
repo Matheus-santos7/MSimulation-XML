@@ -1,6 +1,6 @@
 import type { NFe, Tenant } from "../../../../generated/prisma/client.js";
-import { dadosCteToPrismaCreate, montarDadosCteFromNfe } from "../../../../lib/fiscal/cte-emissao.js";
-import { proximoNumeroCte } from "../../../../lib/fiscal/cte-sequencia.js";
+import { dadosCteToPrismaCreate, montarDadosCteFromNfe } from "../../../fiscal-documents/domain/services/cte-emissao.js";
+import { proximoNumeroCte } from "../../../fiscal-documents/domain/services/cte-sequencia.js";
 import { mapCte } from "../../../../lib/fiscal/fiscal-mappers.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { buildCteXmlAutorizado } from "../../../fiscal-documents/infrastructure/xml/cte-xml-service.js";

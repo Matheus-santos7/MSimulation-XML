@@ -8,7 +8,7 @@ import {
   type NFe,
   type Prisma,
   type Tenant,
-} from "../../generated/prisma/client.js";
+} from "../../../../generated/prisma/client.js";
 import {
   buildCteFiscalPayload,
   calcularPesoCarga,
@@ -18,9 +18,9 @@ import {
   type CteFiscalPayload,
   type CteVinculo,
 } from "@msimulation-xml/fiscal-core";
-import type { PrismaTx } from "../db/prisma-tx.js";
+import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { buildChaveCTe } from "./cte-chave.js";
-import { resolveTaxRule } from "../../modules/tax/index.js";
+import { resolveTaxRule } from "../../../tax/index.js";
 
 export type { CteVinculo };
 

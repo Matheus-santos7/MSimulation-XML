@@ -19,8 +19,8 @@ import {
   type Tenant,
 } from "../../../../generated/prisma/client.js";
 import { mapNfe } from "../../../../lib/fiscal/fiscal-mappers.js";
-import { buildChaveNFe, gerarPedidoMl } from "../../../../lib/fiscal/nfe-chave.js";
-import { proximoNumeroNfe } from "../../../../lib/fiscal/nfe-sequencia.js";
+import { buildChaveNFe, gerarPedidoMl } from "../../../fiscal-documents/domain/services/nfe-chave.js";
+import { proximoNumeroNfe } from "../../../fiscal-documents/domain/services/nfe-sequencia.js";
 import { REMESSA_NAT_OP, resolveRemessaCfop } from "./helpers/remessa-dest.js";
 import type { UnidadeDestinoFiscal } from "../../../../lib/logistics/meli-unidade.js";
 import { enrichTaxSnapshot, loadEmitterSettings } from "../../../../lib/fiscal/fiscal-emitter-runtime.js";

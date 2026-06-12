@@ -1,5 +1,5 @@
 import { lineTotal } from "@msimulation-xml/fiscal-core";
-import { gerarPedidoMl } from "../../../../lib/fiscal/nfe-chave.js";
+import { gerarPedidoMl } from "../../../fiscal-documents/domain/services/nfe-chave.js";
 import type { ResolvedTaxRule } from "../../../tax/domain/entities/resolved-tax-rule.entity.js";
 import type { CustomerType } from "../../../tax/domain/entities/tax-types.entity.js";
 import type { EmissionContext } from "../entities/emission-context.entity.js";

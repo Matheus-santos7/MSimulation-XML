@@ -14,7 +14,7 @@ import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import {
   montarDadosCteFromNfe,
   type DadosCteEmissao,
-} from "../../../../lib/fiscal/cte-emissao.js";
+} from "../../domain/services/cte-emissao.js";
 
 export type CteXmlPersistTx = PrismaTx;
 

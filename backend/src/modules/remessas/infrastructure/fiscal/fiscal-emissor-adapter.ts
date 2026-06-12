@@ -4,7 +4,7 @@ import {
   productUnitPrice,
 } from "@msimulation-xml/fiscal-core";
 import { NFeTipo, type PrismaClient } from "../../../../generated/prisma/client.js";
-import { buildChaveNFe } from "../../../../lib/fiscal/nfe-chave.js";
+import { buildChaveNFe } from "../../../fiscal-documents/domain/services/nfe-chave.js";
 import { enrichTaxSnapshot, loadEmitterSettings } from "../../../../lib/fiscal/fiscal-emitter-runtime.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import {
@@ -13,7 +13,7 @@ import {
 } from "../../../../lib/fiscal/retorno-simbolico-dest.js";
 import { unidadeParaDestinoFiscal } from "../../../../lib/logistics/meli-unidade.js";
 import { taxSnapshotFromRule } from "../../../../lib/fiscal/tax-snapshot.js";
-import { proximoNumeroNfe } from "../../../../lib/fiscal/nfe-sequencia.js";
+import { proximoNumeroNfe } from "../../../fiscal-documents/domain/services/nfe-sequencia.js";
 import { loadRemessaDestinoRetorno } from "../fifo/remessa-fifo.js";
 import {
   calcularNotaInbound,

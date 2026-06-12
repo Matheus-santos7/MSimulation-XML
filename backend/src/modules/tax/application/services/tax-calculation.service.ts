@@ -4,7 +4,7 @@
  * Responsabilidades deste serviço (camada application do módulo tax):
  * - Resolver alíquotas ICMS intra/interestadual a partir da {@link ResolvedTaxRule}
  * - Montar {@link ItemFiscalInput} com ICMS, IPI, PIS/COFINS e DIFAL
- * - Delegar aritmética de item e totais ao `lib/fiscal/tax-engine` (sem Prisma)
+ * - Delegar aritmética de item e totais ao `tax-engine` de domínio (sem Prisma)
  *
  * Consumidores: **sales** (venda), **remessas** (remessa/inbound), testes e API interna.
  */
@@ -13,7 +13,7 @@ import {
   calcularNotaFiscal,
   type ItemFiscalInput,
   type NotaFiscalResult,
-} from "../../../../lib/fiscal/tax-engine.js";
+} from "../../domain/services/tax-engine.js";
 import { taxSnapshotFromRule } from "../../../../lib/fiscal/tax-snapshot.js";
 import type { FiscalContext } from "../../domain/entities/fiscal-context.entity.js";
 import type { OrderLine } from "../../domain/entities/order-line.entity.js";

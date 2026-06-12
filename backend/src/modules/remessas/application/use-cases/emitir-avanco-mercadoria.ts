@@ -1,7 +1,7 @@
 import { OperacaoFiscalTipo } from "../../../../generated/prisma/client.js";
 import type { PrismaClient } from "../../../../generated/prisma/client.js";
 import type { Product, Tenant } from "../../../../generated/prisma/client.js";
-import { gerarPedidoMl } from "../../../../lib/fiscal/nfe-chave.js";
+import { gerarPedidoMl } from "../../../fiscal-documents/domain/services/nfe-chave.js";
 import { FISCAL_TRANSACTION_OPTIONS, type PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { emitirCteRemessa } from "../../infrastructure/fiscal/cte-remessa-service.js";
 import {

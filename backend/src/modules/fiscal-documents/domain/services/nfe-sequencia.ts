@@ -1,5 +1,5 @@
-import type { PrismaTx } from "../db/prisma-tx.js";
-import { fiscalNotDeleted } from "../../modules/fiscal-documents/domain/constants/fiscal-not-deleted.js";
+import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
+import { fiscalNotDeleted } from "../constants/fiscal-not-deleted.js";
 
 /** Próximo número da NF-e para a série informada (por tenant). */
 export async function proximoNumeroNfe(

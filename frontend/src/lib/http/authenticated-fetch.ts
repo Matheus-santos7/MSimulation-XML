@@ -1,7 +1,7 @@
 "use client";
 
+import { apiUrl } from "@/lib/api-base";
 import { getAccessTokenForClient } from "@/lib/auth/actions/access-token";
-import { publicApiUrl } from "@/lib/http/public-api-base";
 
 export function parseContentDispositionFilename(header: string | null): string | undefined {
   const match = header?.match(/filename="([^"]+)"/);
@@ -15,7 +15,7 @@ export function sanitizeDownloadFilename(name: string): string {
 /** Fetch autenticado direto ao backend (Bearer via server action). */
 export async function authenticatedFetch(path: string, init?: RequestInit): Promise<Response> {
   const token = await getAccessTokenForClient();
-  const res = await fetch(publicApiUrl(path), {
+  const res = await fetch(apiUrl(path), {
     ...init,
     cache: "no-store",
     headers: {

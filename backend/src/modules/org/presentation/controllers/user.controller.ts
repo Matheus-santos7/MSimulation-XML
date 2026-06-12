@@ -7,11 +7,27 @@ import { UserForbiddenError } from "../../domain/errors/user-forbidden.error.js"
 import { createOrgModule } from "../../infrastructure/factory/org-module.factory.js";
 import { userCreateBody, userIdParam, userUpdateBody } from "../schemas/user.schemas.js";
 
+/** Mapeamento de erros de utilizador para HTTP. */
 const USER_ERROR_MAPPINGS = [
   { type: UserConflictError, status: 409 },
   { type: UserForbiddenError, status: 403 },
 ] as const;
 
+/**
+ * Controller HTTP de gestão de utilizadores do tenant.
+ *
+ * Listagem e leitura: qualquer membro autenticado.
+ * Criação, edição e exclusão: exige `requireAdminHook` (role ADMIN no JWT).
+ * Todas as queries filtram por `tenantId` do JWT (isolamento multi-tenant).
+ *
+ * | Método | Rota | Use case |
+ * |--------|------|----------|
+ * | GET | `/users` | ListUsersByTenantUseCase |
+ * | GET | `/users/:id` | GetUserByIdUseCase |
+ * | POST | `/users` | CreateUserUseCase (ADMIN) |
+ * | PATCH | `/users/:id` | UpdateUserUseCase (ADMIN) |
+ * | DELETE | `/users/:id` | DeleteUserUseCase (ADMIN) |
+ */
 export const userController: FastifyPluginAsync = async (app) => {
   const org = createOrgModule(app.prisma);
 

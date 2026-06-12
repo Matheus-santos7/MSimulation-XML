@@ -37,6 +37,12 @@ function unitCnpjFilter(cnpj: string): Prisma.MeliUnidadeLogisticaWhereInput | u
   return digits.length === 14 ? { cnpj: digits } : { cnpj: { contains: digits } };
 }
 
+/**
+ * Implementação Prisma do port {@link LogisticsUnitRepository}.
+ *
+ * Unidades ML são globais (`meli_unidade_logistica`); vínculo e CD padrão
+ * ficam em `tenant_unidade_logistica`.
+ */
 export class PrismaLogisticsUnitRepository implements LogisticsUnitRepository {
   constructor(
     private readonly prisma: PrismaClient,

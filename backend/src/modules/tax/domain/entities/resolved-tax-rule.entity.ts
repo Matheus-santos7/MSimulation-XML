@@ -1,3 +1,11 @@
+/**
+ * Regra fiscal **resolvida** para um par origem×destino e tipo de operação.
+ *
+ * Produzida por `mapResolvedTaxRule` a partir do `payload` importado (planilha XLSX).
+ * Campos `ICMS_{UF}_*` no payload são extraídos usando a UF de **destino** da operação.
+ *
+ * Usada por `buildFiscalItem` para montar CST, alíquotas, reduções e benefícios.
+ */
 export type ResolvedTaxRule = {
   ruleId: string;
   aliquotaIcmsInterna?: number;

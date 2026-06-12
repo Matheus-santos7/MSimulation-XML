@@ -1,3 +1,8 @@
+/**
+ * Linha comercial de um item fiscal (produto × quantidade × valor unitário).
+ *
+ * Entrada do tax-calculation.service antes de virar {@link ItemFiscalInput}.
+ */
 export type OrderLine = {
   numeroItem?: number;
   codigo: string;

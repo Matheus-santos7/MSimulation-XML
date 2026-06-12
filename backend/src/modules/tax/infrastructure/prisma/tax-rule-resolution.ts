@@ -91,6 +91,11 @@ async function findTaxRuleRow(
   });
 }
 
+/**
+ * Mapeia linha Prisma + UF destino para {@link ResolvedTaxRule}.
+ *
+ * Lê chaves `ICMS_{destinationUf}_*` do `payload.icmsByUf` (planilha ML).
+ */
 export function mapResolvedTaxRule(
   rule: TaxRuleRow,
   destinationUf: string,
@@ -139,6 +144,17 @@ export function mapResolvedTaxRule(
   };
 }
 
+/**
+ * Resolve regra fiscal no banco para origem × destino × transação × cliente.
+ *
+ * Algoritmo de busca (`findTaxRuleRow`):
+ * 1. Monta candidatos `buildTaxRuleRowId(baseId, customer, transaction, originUf?)`
+ * 2. `findUnique` por `tenantId_ruleId`
+ * 3. Fallback `startsWith` + match de UF/origem
+ * 4. Sem `ruleBaseId`: primeira regra XLSX compatível
+ *
+ * @returns Regra mapeada ou `null` se não houver linha aplicável
+ */
 export async function resolveTaxRuleFromDb(
   prisma: PrismaTx,
   tenantId: string,

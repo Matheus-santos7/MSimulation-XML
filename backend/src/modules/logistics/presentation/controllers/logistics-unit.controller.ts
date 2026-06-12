@@ -7,8 +7,19 @@ import { createLogisticsModule } from "../../infrastructure/factory/logistics-mo
 import { resolveBulkImportPayload } from "../helpers/bulk-import.helper.js";
 import { logisticsUnitIdParam, logisticsUnitsListQuery } from "../schemas/logistics.schemas.js";
 
+/** Mapeamento de erros de unidade logística para HTTP. */
 const LOGISTICS_UNIT_ERROR_MAPPINGS = [{ type: LogisticsUnitError, status: 400 }] as const;
 
+/**
+ * Controller HTTP de unidades logísticas Meli Full.
+ *
+ * | Método | Rota | Use case |
+ * |--------|------|----------|
+ * | GET | `/unidades-logisticas` | ListLogisticsUnitsUseCase |
+ * | GET | `/unidades-logisticas/:id` | GetLogisticsUnitByIdUseCase |
+ * | POST | `/unidades-logisticas/bulk-import` | BulkImportLogisticsUnitsUseCase (ADMIN) |
+ * | PATCH | `/unidades-logisticas/:id/padrao` | SetDefaultLogisticsUnitUseCase |
+ */
 export const logisticsUnitController: FastifyPluginAsync = async (app) => {
   const logistics = createLogisticsModule(app.prisma);
 

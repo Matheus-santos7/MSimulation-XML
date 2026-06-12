@@ -1,7 +1,12 @@
 import type { ReferenciaFiscal } from "../value-objects/referencia-fiscal.js";
 import type { TipoNota } from "../value-objects/tipo-nota.js";
 
-/** Entidade de domínio: nota fiscal do contexto Remessas (leitura/criação). */
+/**
+ * Nota fiscal no contexto Remessas — visão de domínio desacoplada do Prisma.
+ *
+ * Representa NF-e de remessa física, retorno simbólico ou remessa simbólica,
+ * com vínculo ascendente (`referencia`) quando a nota não é raiz da cadeia.
+ */
 export type NotaFiscal = {
   id: string;
   tenantId: string;
@@ -11,17 +16,27 @@ export type NotaFiscal = {
   numero: number;
   serie: number;
   quantidade: number;
+  /** CD de origem logística (avanço); `null` na remessa inicial do seller. */
   unidadeOrigemId: string | null;
+  /** CD onde o saldo FIFO fica disponível após a emissão. */
   unidadeDestinoId: string | null;
+  /** Ligação filha → nota pai (chave + tipo para validação fiscal). */
   referencia: ReferenciaFiscal | null;
 };
 
+/**
+ * Rascunho antes da persistência e autorização SEFAZ.
+ * `chave` e `numero` podem ser atribuídos pelo emissor fiscal.
+ */
 export type NotaFiscalRascunho = Omit<NotaFiscal, "id" | "chave" | "numero"> & {
   numero?: number;
   chave?: string;
 };
 
-/** Remessa inicial: primeira nota, sem referência ascendente. */
+/**
+ * Primeira nota da cadeia: envio físico do seller ao CD padrão.
+ * Sem referência ascendente — origina saldo FIFO no CD destino.
+ */
 export function criarRemessaInicial(
   base: Omit<NotaFiscalRascunho, "tipo" | "referencia">,
 ): NotaFiscalRascunho {
@@ -32,7 +47,10 @@ export function criarRemessaInicial(
   };
 }
 
-/** Retorno simbólico do avanço: referencia a remessa inicial (ou remessa FIFO debitada). */
+/**
+ * Retorno simbólico do avanço entre CDs.
+ * Referencia a remessa cuja linha FIFO foi debitada (física ou simbólica anterior).
+ */
 export function criarRetornoSimbolicoAvanco(
   base: Omit<NotaFiscalRascunho, "tipo" | "referencia">,
   remessaReferencia: Pick<NotaFiscal, "id" | "chave" | "tipo">,
@@ -48,7 +66,10 @@ export function criarRetornoSimbolicoAvanco(
   };
 }
 
-/** Remessa simbólica do avanço: referencia o retorno simbólico imediatamente anterior. */
+/**
+ * Remessa simbólica do avanço: mercadoria “chega” ao CD destino sem NF-e física nova.
+ * Referencia o retorno simbólico imediatamente anterior e **cria novo saldo FIFO** no destino.
+ */
 export function criarRemessaSimbolicaAvanco(
   base: Omit<NotaFiscalRascunho, "tipo" | "referencia">,
   retornoReferencia: Pick<NotaFiscal, "id" | "chave" | "tipo">,

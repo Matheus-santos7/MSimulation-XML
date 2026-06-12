@@ -7,6 +7,9 @@ import type {
 } from "../../domain/ports/product-movement.repository.js";
 import { mapProductMovementFromPrisma } from "./product-movement-prisma.mapper.js";
 
+/**
+ * Implementação Prisma de movimentações de produto (`movimentacao_produto`).
+ */
 export class PrismaProductMovementRepository implements ProductMovementRepository {
   constructor(private readonly prisma: PrismaClient) {}
 

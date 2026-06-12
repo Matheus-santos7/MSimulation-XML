@@ -3,6 +3,18 @@ import type { ProductRepository } from "../../domain/ports/product.repository.js
 import type { TaxRuleValidatorPort } from "../../domain/ports/tax-rule-validator.port.js";
 import type { CreateProductCommand } from "../dto/create-product.command.js";
 
+/**
+ * Cria um produto no catálogo do tenant.
+ *
+ * Valida `taxRuleBaseId` contra o módulo tax (quando informado) antes de persistir.
+ * Estoque padrão é `0` se omitido.
+ *
+ * @param tenantId - Tenant emitente (extraído do JWT)
+ * @param command - Dados fiscais e comerciais do produto
+ * @returns Produto criado
+ * @throws {TaxRuleCatalogError} Regra fiscal inválida para a UF do tenant
+ * @throws {ProductConflictError} SKU já existente no tenant
+ */
 export class CreateProductUseCase {
   constructor(
     private readonly productRepository: ProductRepository,

@@ -14,6 +14,22 @@ import { emitSaleNote } from "./emit-sale-note.js";
 import { emitSaleCte } from "./cte-sale.adapter.js";
 import { resolveSalesChainRules } from "./resolve-sales-chain-rules.js";
 
+/**
+ * Orquestrador da **Cadeia de Vendas** (Sales Chain).
+ *
+ * Ponto único de emissão fiscal para checkout direto e faturamento de pedido.
+ * Executa, dentro de `prisma.$transaction`:
+ *
+ * 1. Valida produto/regra fiscal e monta {@link EmissionContext}
+ * 2. **FIFO** — `previewRemessaPrincipalFifoParaVenda` (remessa mais antiga com saldo)
+ * 3. **Regras** — resolve CFOP/impostos venda + inbound (módulo tax)
+ * 4. **RETORNO_SIMBOLICO** — referencia remessa FIFO; base de custo
+ * 5. **Consumo FIFO** — debita `nfe_item.saldo_disponivel`; liga retorno ↔ remessa
+ * 6. **VENDA** — NF-e ao comprador final; referencia retorno
+ * 7. **CT-e** — transporte da venda (CD → consumidor)
+ *
+ * Rollback atómico em qualquer falha (`FISCAL_TRANSACTION_OPTIONS`).
+ */
 export class SalesChainOrchestrator implements SalesChainPort {
   async emit(prisma: PrismaClient, order: OrderForEmit): Promise<SalesChainResult> {
     const ruleBaseId = assertProductWithTaxRule(order);
@@ -56,6 +72,7 @@ export class SalesChainOrchestrator implements SalesChainPort {
   }
 }
 
+/** Fachada funcional legada para `emitSalesChain`. */
 export async function emitSalesChain(prisma: PrismaClient, order: OrderForEmit) {
   return new SalesChainOrchestrator().emit(prisma, order);
 }

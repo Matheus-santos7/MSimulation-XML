@@ -37,6 +37,11 @@ function autXmlCpfsFromSettings(
   return cpfs?.length ? cpfs : undefined;
 }
 
+/**
+ * Emite NF-e **RETORNO_SIMBOLICO** referenciando a remessa física FIFO.
+ *
+ * Usa `valorTotalCusto` do contexto e regra inbound; persiste XML autorizado.
+ */
 export async function emitReturnNote(
   tx: PrismaTx,
   order: OrderForEmit,
@@ -131,6 +136,11 @@ export async function emitReturnNote(
   return { id: row.id, chave: row.chave, remessaChave: fifoPreview.remessaChave };
 }
 
+/**
+ * Debita saldo FIFO da remessa e associa consumos ao retorno simbólico emitido.
+ *
+ * @returns Alocações `{ remessaNfeId, nfeItemId, quantidade }` para auditoria
+ */
 export async function consumeShipmentAndLinkReturn(
   tx: PrismaTx,
   order: OrderForEmit,

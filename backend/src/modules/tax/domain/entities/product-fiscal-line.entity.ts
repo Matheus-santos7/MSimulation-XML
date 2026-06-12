@@ -1,3 +1,6 @@
+/**
+ * Subconjunto do produto do catálogo necessário para montar {@link OrderLine}.
+ */
 export type ProductFiscalLine = {
   id: string;
   sku?: string | null;

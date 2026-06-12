@@ -1,5 +1,16 @@
+/** Ambiente fiscal do emitente (homologação ou produção SEFAZ). */
 export type EnvironmentKind = "HOMOLOGACAO" | "PRODUCAO";
 
+/**
+ * Empresa emitente (tenant) persistida em `tenant`.
+ *
+ * Representa o seller no simulador fiscal ML Full: dados cadastrais, endereço,
+ * IE/CRT e ambiente de emissão. É a **raiz de isolamento** de dados — produtos,
+ * pedidos, NF-e e utilizadores referenciam `tenantId`.
+ *
+ * CNPJ é único globalmente; criação inicial ocorre via onboarding (`auth` module),
+ * não via `POST /tenants` da API protegida.
+ */
 export type Tenant = {
   id: string;
   razaoSocial: string;

@@ -1,4 +1,13 @@
-/** Keeps the last occurrence of each SKU in the batch (spreadsheets often repeat rows). */
+/**
+ * Deduplica linhas de importação em massa mantendo a **última ocorrência** de cada SKU.
+ *
+ * Planilhas de marketplace frequentemente repetem o mesmo SKU; a linha mais abaixo
+ * prevalece. O número de linha reportado em erros considera cabeçalho (linha 1 = header,
+ * primeira linha de dados = 2).
+ *
+ * @param rows - Linhas do payload bulk (cada uma com `sku`)
+ * @returns Pares `{ row, line }` únicos por SKU, com `line` para mensagens de erro
+ */
 export function dedupeBulkRowsBySku<T extends { sku: string }>(
   rows: T[],
 ): { row: T; line: number }[] {

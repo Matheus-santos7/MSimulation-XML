@@ -1,6 +1,12 @@
 /**
- * Tax calculation bridge between stored fiscal rules and the pure tax engine.
- * No Prisma dependency — arithmetic is delegated to `tax-engine`.
+ * Ponte entre regras fiscais persistidas e o motor puro {@link calcularNotaFiscal}.
+ *
+ * Responsabilidades deste serviço (camada application do módulo tax):
+ * - Resolver alíquotas ICMS intra/interestadual a partir da {@link ResolvedTaxRule}
+ * - Montar {@link ItemFiscalInput} com ICMS, IPI, PIS/COFINS e DIFAL
+ * - Delegar aritmética de item e totais ao `lib/fiscal/tax-engine` (sem Prisma)
+ *
+ * Consumidores: **sales** (venda), **remessas** (remessa/inbound), testes e API interna.
  */
 
 import {
@@ -14,6 +20,7 @@ import type { OrderLine } from "../../domain/entities/order-line.entity.js";
 import type { ProductFiscalLine } from "../../domain/entities/product-fiscal-line.entity.js";
 import type { ResolvedTaxRule } from "../../domain/entities/resolved-tax-rule.entity.js";
 
+/** Resultado simplificado de nota inbound (retorno simbólico / remessa). */
 export type InboundInvoiceResult = {
   nota: NotaFiscalResult;
   valor: number;
@@ -22,16 +29,33 @@ export type InboundInvoiceResult = {
   cfop: string;
 };
 
+/**
+ * Alíquota ICMS fallback para **remessas** interestaduais (4%) vs intra (18%).
+ *
+ * @param emitUf - UF do emitente
+ * @param destUf - UF do destinatário (CD)
+ */
 export function inferIcmsRateForShipment(emitUf: string, destUf: string): number {
   if (emitUf.toUpperCase() === destUf.toUpperCase()) return 18;
   return 4;
 }
 
+/**
+ * Alíquota ICMS fallback para operações com tabela interestadual padrão (7/12/18).
+ *
+ * @see defaultInterstateIcmsRate
+ */
 export function inferIntraStateIcmsRate(emitUf: string, destUf: string): number {
   if (emitUf.toUpperCase() === destUf.toUpperCase()) return 18;
   return defaultInterstateIcmsRate(emitUf, destUf);
 }
 
+/**
+ * Converte produto do catálogo em linha fiscal para cálculo.
+ *
+ * @param product - SKU, NCM, CEST, origem, etc.
+ * @param opts - CFOP resolvido, quantidade e valor unitário da operação
+ */
 export function orderLineFromProduct(
   product: ProductFiscalLine,
   opts: { cfop: string; quantidade: number; valorUnitario: number },
@@ -51,6 +75,17 @@ export function orderLineFromProduct(
   };
 }
 
+/**
+ * Calcula impostos de uma nota **inbound** (retorno simbólico, remessa simbólica).
+ *
+ * Força `customerType: taxpayer` no contexto fiscal (B2B para CD).
+ *
+ * @param line - Item com CFOP e valores
+ * @param rule - Regra resolvida (inbound)
+ * @param originUf - UF origem da operação
+ * @param destinationUf - UF destino (CD)
+ * @param fallbackIcmsRate - Alíquota se a regra não especificar
+ */
 export function calculateInboundInvoice(
   line: OrderLine,
   rule: ResolvedTaxRule,
@@ -74,6 +109,11 @@ export function calculateInboundInvoice(
   };
 }
 
+/**
+ * Escolhe alíquota ICMS interestadual efetiva a aplicar no item.
+ *
+ * Prioridade: `pIcmsInterstate` → `aliquotaIcmsInterna` → fallback → snapshot.
+ */
 function resolveInterstateIcmsRate(
   rule: ResolvedTaxRule | null,
   snapshot: ReturnType<typeof taxSnapshotFromRule>,
@@ -93,6 +133,13 @@ function resolveInterstateIcmsRate(
   );
 }
 
+/**
+ * Tabela simplificada de alíquota interestadual (Convênio ICMS).
+ *
+ * - Mesma UF → 0 (caller trata intra separadamente)
+ * - Sul/Sudeste → N/NE/CO/ES → 7%
+ * - Demais → 12%
+ */
 function defaultInterstateIcmsRate(originUf: string, destinationUf: string): number {
   const o = originUf.toUpperCase();
   const d = destinationUf.toUpperCase();
@@ -106,6 +153,21 @@ function defaultInterstateIcmsRate(originUf: string, destinationUf: string): num
   return 12;
 }
 
+/**
+ * Monta um {@link ItemFiscalInput} pronto para o tax-engine.
+ *
+ * Algoritmo de decisão:
+ * 1. `taxSnapshotFromRule` extrai CST, PIS, COFINS, IPI do payload
+ * 2. Detecta interestadual e consumidor final (`non_taxpayer`)
+ * 3. Escolhe `pICMS` intra vs interestadual
+ * 4. Ativa bloco DIFAL se interestadual + consumidor final
+ * 5. `incluirIpiNaBaseIcms` quando consumidor final (regra ML Full)
+ *
+ * @param line - Linha comercial (produto × quantidade × valor)
+ * @param rule - Regra resolvida ou `null` (usa só snapshot/fallback)
+ * @param ctx - UF origem/destino e tipo de cliente
+ * @param fallbackIcmsRate - Alíquota ICMS de reserva
+ */
 export function buildFiscalItem(
   line: OrderLine,
   rule: ResolvedTaxRule | null,
@@ -175,6 +237,14 @@ export function buildFiscalItem(
   };
 }
 
+/**
+ * Calcula impostos de nota com múltiplos itens (venda ao consumidor).
+ *
+ * @param lines - Pares linha + regra resolvida por item
+ * @param ctx - Contexto fiscal (UFs e tipo de cliente)
+ * @param fallbackIcmsRate - Alíquota ICMS de reserva
+ * @returns Totais e itens calculados pelo tax-engine
+ */
 export function calculateInvoiceTaxes(
   lines: { line: OrderLine; rule: ResolvedTaxRule | null }[],
   ctx: FiscalContext,

@@ -6,9 +6,17 @@ import {
 import type { AdvanceProductResolved } from "../../domain/entities/advance-product.entity.js";
 import type { AdvanceProductResolverPort } from "../../domain/ports/advance-product-resolver.port.js";
 
+/**
+ * Resolve produto do catálogo e ID FIFO para avanço entre CDs.
+ *
+ * Alinha `productId` do UI com IDs legados em `nfe_item` via SKU e saldo remessa.
+ */
 export class AdvanceProductResolverAdapter implements AdvanceProductResolverPort {
   constructor(private readonly prisma: PrismaClient) {}
 
+  /**
+   * @inheritdoc
+   */
   async resolveForAdvance(
     tenantId: string,
     productId: string,
@@ -45,6 +53,9 @@ export class AdvanceProductResolverAdapter implements AdvanceProductResolverPort
     };
   }
 
+  /**
+   * @inheritdoc
+   */
   async hasStockForAdvance(
     tenantId: string,
     productId: string,
@@ -66,6 +77,7 @@ export class AdvanceProductResolverAdapter implements AdvanceProductResolverPort
     return false;
   }
 
+  /** Busca produto no tenant por SKU (prioritário) ou por ID. */
   private async findProductInTenant(
     tenantId: string,
     opts: { productId?: string; sku?: string },
@@ -83,6 +95,7 @@ export class AdvanceProductResolverAdapter implements AdvanceProductResolverPort
     return null;
   }
 
+  /** Primeiro productId na lista FIFO que ainda tem saldo em `nfe_item`. */
   private async findFifoProductIdWithSaldo(
     tenantId: string,
     productIds: string[],

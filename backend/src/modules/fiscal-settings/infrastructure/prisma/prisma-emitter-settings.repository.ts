@@ -10,9 +10,15 @@ import {
   mergeEmitterSettingsPatch,
 } from "../../application/services/merge-emitter-settings-patch.service.js";
 
+/**
+ * Implementação Prisma do port {@link EmitterSettingsRepository}.
+ *
+ * Persiste JSON em `fiscal_emitter_settings.settings`; séries em `tenant`.
+ */
 export class PrismaEmitterSettingsRepository implements EmitterSettingsRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
+  /** @inheritdoc */
   async getByTenantId(tenantId: string): Promise<EmitterSettingsView | null> {
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
@@ -34,6 +40,7 @@ export class PrismaEmitterSettingsRepository implements EmitterSettingsRepositor
     };
   }
 
+  /** @inheritdoc */
   async update(
     tenantId: string,
     input: UpdateEmitterSettingsInput,
@@ -72,6 +79,7 @@ export class PrismaEmitterSettingsRepository implements EmitterSettingsRepositor
     return this.getByTenantId(tenantId);
   }
 
+  /** Conta grupos de regra por nome normalizado (sem sufixo UF). */
   private async countDistinctTaxRuleGroups(tenantId: string): Promise<number> {
     const ruleRows = await this.prisma.taxRule.findMany({
       where: { tenantId },

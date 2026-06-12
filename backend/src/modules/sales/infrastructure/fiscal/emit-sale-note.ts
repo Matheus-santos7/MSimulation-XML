@@ -17,6 +17,11 @@ import {
   saleDestinationAddress,
 } from "../../domain/services/sales-chain.service.js";
 
+/**
+ * Emite NF-e **VENDA** ao comprador final, referenciando o retorno simbólico.
+ *
+ * Usa `valorTotalVenda`, regra sale e endereço do destinatário (`saleDestinationAddress`).
+ */
 export async function emitSaleNote(
   tx: PrismaTx,
   order: OrderForEmit,

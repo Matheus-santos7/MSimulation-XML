@@ -10,8 +10,20 @@ import {
   taxRulesBulkBodySchema,
 } from "../schemas/tax.schemas.js";
 
+/** Mapeamento de erros de regra fiscal para HTTP. */
 const TAX_RULE_ERROR_MAPPINGS = [{ type: TaxRuleError, status: 400 }] as const;
 
+/**
+ * Controller HTTP de regras tributárias.
+ *
+ * | Método | Rota | Use case |
+ * |--------|------|----------|
+ * | GET | `/tax-rules/catalog` | GetTaxRuleCatalogUseCase |
+ * | GET | `/tax-rules` | GetTaxRulesUseCase |
+ * | POST | `/tax-rules/bulk-upsert` | BulkUpsertTaxRulesUseCase |
+ * | DELETE | `/tax-rules` | DeleteAllTaxRulesUseCase (ADMIN) |
+ * | DELETE | `/tax-rules/:baseId` | DeleteTaxRuleGroupUseCase (ADMIN) |
+ */
 export const taxRuleController: FastifyPluginAsync = async (app) => {
   const tax = createTaxModule(app.prisma);
 

@@ -1,3 +1,6 @@
+/**
+ * Linha de importação bulk de regras fiscais (planilha ML / JSON).
+ */
 export type TaxRuleImportRow = {
   ruleId: string;
   nome: string;

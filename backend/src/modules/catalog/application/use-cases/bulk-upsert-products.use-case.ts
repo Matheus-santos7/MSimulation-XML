@@ -7,6 +7,18 @@ import type {
   BulkUpsertProductsResult,
 } from "../dto/bulk-upsert-products.command.js";
 
+/**
+ * Importação em massa (bulk upsert): cria ou atualiza produtos por SKU.
+ *
+ * Fluxo:
+ * 1. Deduplica linhas repetidas (última ocorrência do SKU vence)
+ * 2. Carrega índice SKU existente numa única query
+ * 3. Por linha: valida regra fiscal → update se SKU existe, senão create
+ * 4. Falhas por linha são capturadas; o lote continua (resposta parcial)
+ *
+ * @param command - `tenantId` e array `rows` do payload HTTP
+ * @returns Contadores `created`, `updated`, `failed` e `total` pós-dedupe
+ */
 export class BulkUpsertProductsUseCase {
   constructor(
     private readonly productRepository: ProductRepository,
@@ -80,6 +92,7 @@ export class BulkUpsertProductsUseCase {
   }
 }
 
+/** Normaliza mensagens de erro por linha para resposta HTTP legível. */
 function mapBulkRowErrorMessage(error: unknown): string {
   if (error instanceof ProductConflictError) return error.message;
   if (error instanceof Error) {

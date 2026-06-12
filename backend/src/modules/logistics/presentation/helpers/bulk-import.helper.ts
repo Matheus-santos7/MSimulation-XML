@@ -10,6 +10,11 @@ function parseEnrichCepField(value: unknown): boolean {
   return s !== "false" && s !== "0" && s !== "no";
 }
 
+/**
+ * Resolve payload do bulk import: multipart (XLSX) ou JSON.
+ *
+ * @returns Linhas parseadas, flag `enrichCep` e erros de parse parciais
+ */
 export async function resolveBulkImportPayload(req: FastifyRequest): Promise<
   | {
       ok: true;

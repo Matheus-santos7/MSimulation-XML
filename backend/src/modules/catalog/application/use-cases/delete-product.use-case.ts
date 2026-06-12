@@ -1,6 +1,16 @@
 import { ProductConflictError } from "../../domain/errors/product-conflict.error.js";
 import type { ProductRepository } from "../../domain/ports/product.repository.js";
 
+/**
+ * Remove produto do catálogo e pedidos em rascunho associados.
+ *
+ * Bloqueia exclusão se existir pedido `FATURADO` vinculado (preservação de histórico NF-e).
+ *
+ * @param id - UUID do produto
+ * @param tenantId - Tenant emitente
+ * @returns `true` se removido, `false` se produto não encontrado
+ * @throws {ProductConflictError} Pedidos faturados ou FK impedem exclusão
+ */
 export class DeleteProductUseCase {
   constructor(private readonly productRepository: ProductRepository) {}
 

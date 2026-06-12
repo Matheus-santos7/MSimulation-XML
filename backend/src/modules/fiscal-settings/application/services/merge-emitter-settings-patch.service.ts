@@ -5,7 +5,17 @@ import {
 } from "../../../../lib/fiscal/fiscal-emitter-settings-defaults.js";
 import type { UpdateEmitterSettingsInput } from "../../domain/ports/emitter-settings.repository.js";
 
-/** Merges a partial patch into the current emitter settings snapshot. */
+/**
+ * Funde patch HTTP no snapshot atual de configurações do emissor.
+ *
+ * Faz merge profundo em sub-objetos aninhados (`cstDevolucao`, `composicaoBaseCalculo`,
+ * `calculoDifal.porUf`, `prazoCancelamento`, etc.) antes de validar via
+ * `mergeFiscalEmitterSettings`.
+ *
+ * @param current - Settings efetivos antes do patch
+ * @param patch - Body parcial do `PATCH /fiscal-settings`
+ * @returns Novo `FiscalEmitterSettingsData` validado
+ */
 export function mergeEmitterSettingsPatch(
   current: FiscalEmitterSettingsData,
   patch: UpdateEmitterSettingsInput,
@@ -58,4 +68,5 @@ export function mergeEmitterSettingsPatch(
   });
 }
 
+/** Defaults exportados para testes e bootstrap do repository. */
 export { DEFAULT_FISCAL_EMITTER_SETTINGS };

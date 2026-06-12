@@ -5,6 +5,7 @@ import type { CepLookupPort } from "../../domain/ports/cep-lookup.port.js";
 
 const BRASIL_API = "https://brasilapi.com.br/api";
 
+/** Cabeçalhos padrão para APIs públicas (identificação do cliente HTTP). */
 const FETCH_HEADERS = {
   Accept: "application/json",
   "User-Agent": "msimulation-xml/1.0 (fiscal-simulator)",
@@ -29,7 +30,23 @@ type ViaCepResponse = {
   erro?: boolean;
 };
 
+/**
+ * Gateway HTTP de consulta de CEP.
+ *
+ * Estratégia em duas camadas:
+ * 1. **BrasilAPI** (`/cep/v2/{cep}`) — fonte principal
+ * 2. **ViaCEP** — fallback opcional só para código IBGE quando a BrasilAPI não retorna `city_ibge`
+ *
+ * @implements {CepLookupPort}
+ */
 export class HttpCepLookupGateway implements CepLookupPort {
+  /**
+   * @param rawValue - CEP bruto da rota ou formulário
+   * @returns Endereço normalizado com `codigoMunicipio` quando disponível
+   * @throws {LookupValidationError} Menos ou mais de 8 dígitos
+   * @throws {LookupNotFoundError} HTTP 404 da BrasilAPI
+   * @throws {Error} Resposta não-OK da BrasilAPI (exceto 404)
+   */
   async lookup(rawValue: string): Promise<CepLookupResult> {
     const postalCode = rawValue.replace(/\D/g, "");
     if (postalCode.length !== 8) {
@@ -58,6 +75,10 @@ export class HttpCepLookupGateway implements CepLookupPort {
     };
   }
 
+  /**
+   * Enriquecimento silencioso do código IBGE via ViaCEP.
+   * Falhas não interrompem a consulta principal.
+   */
   private async resolveIbgeViaCep(postalCode: string): Promise<string | undefined> {
     try {
       const response = await fetch(`https://viacep.com.br/ws/${postalCode}/json/`, {

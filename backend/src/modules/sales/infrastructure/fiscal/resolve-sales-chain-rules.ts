@@ -9,6 +9,11 @@ import {
 import type { SalesChainRules } from "../../application/dto/sales-chain.dto.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 
+/**
+ * Resolve regras fiscais de venda e inbound + settings do emissor para a cadeia.
+ *
+ * @param returnDestUf - UF do destino do retorno (CD da remessa FIFO)
+ */
 export async function resolveSalesChainRules(
   tx: PrismaTx,
   order: OrderForEmit,

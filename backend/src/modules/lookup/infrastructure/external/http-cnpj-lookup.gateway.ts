@@ -48,9 +48,28 @@ type OpenCnpjResponse = {
   opcao_mei?: boolean;
 };
 
+/**
+ * Gateway HTTP de consulta de CNPJ com fallback entre provedores.
+ *
+ * Ordem de resolução:
+ * 1. **BrasilAPI** (`/cnpj/v1/{cnpj}`) — preferencial
+ * 2. Em **403/429** ou erro transitório, tenta **OpenCNPJ** sem falhar imediatamente
+ * 3. Na resposta OpenCNPJ, enriquece IBGE/município via {@link CepLookupPort} quando há CEP
+ *
+ * CRT inferido: `1` (Simples/MEI) ou `3` (regime normal).
+ *
+ * @implements {CnpjLookupPort}
+ */
 export class HttpCnpjLookupGateway implements CnpjLookupPort {
   constructor(private readonly cepLookup: CepLookupPort) {}
 
+  /**
+   * @param rawValue - CNPJ bruto da rota ou formulário
+   * @returns Cadastro normalizado para pré-preenchimento de tenant
+   * @throws {LookupValidationError} Formato inválido ou CNPJ fictício (BrasilAPI 400)
+   * @throws {LookupNotFoundError} Não encontrado em BrasilAPI nem OpenCNPJ
+   * @throws {Error} OpenCNPJ indisponível após fallback
+   */
   async lookup(rawValue: string): Promise<CnpjLookupResult> {
     const taxId = rawValue.replace(/\D/g, "");
     if (taxId.length !== 14) {
@@ -69,6 +88,10 @@ export class HttpCnpjLookupGateway implements CnpjLookupPort {
     return this.fetchFromOpenCnpj(taxId);
   }
 
+  /**
+   * Consulta BrasilAPI. Retorna `null` em rate limit (429) ou bloqueio (403)
+   * para permitir fallback sem expor erro ao cliente.
+   */
   private async fetchFromBrasilApi(taxId: string): Promise<CnpjLookupResult | null> {
     const response = await fetch(`${BRASIL_API}/cnpj/v1/${taxId}`, { headers: FETCH_HEADERS });
 
@@ -93,6 +116,7 @@ export class HttpCnpjLookupGateway implements CnpjLookupPort {
     return this.mapBrasilApiResponse((await response.json()) as BrasilApiCnpjResponse, taxId);
   }
 
+  /** Segunda fonte quando BrasilAPI está limitada ou indisponível. */
   private async fetchFromOpenCnpj(taxId: string): Promise<CnpjLookupResult> {
     const response = await fetch(`${OPEN_CNPJ_API}/${taxId}`, { headers: FETCH_HEADERS });
 

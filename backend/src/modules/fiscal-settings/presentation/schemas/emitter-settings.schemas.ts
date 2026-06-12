@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+/**
+ * Schema Zod do body `PATCH /fiscal-settings`.
+ *
+ * Secções opcionais `basic`, `taxes`, `nfe` aceitam objetos JSON parciais;
+ * séries são inteiros 1–999 no `tenant`.
+ */
 export const updateEmitterSettingsBodySchema = z
   .object({
     basic: z.record(z.string(), z.unknown()).optional(),

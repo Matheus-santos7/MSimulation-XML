@@ -1,3 +1,8 @@
+/**
+ * Módulo Fiscal Settings — configurações do emissor fiscal por tenant.
+ *
+ * @see ./README.md — gestão de Emitter Settings e uso na emissão
+ */
 import type { PrismaClient } from "../../generated/prisma/client.js";
 import type { UpdateEmitterSettingsInput } from "./domain/ports/emitter-settings.repository.js";
 import { createFiscalSettingsModule } from "./infrastructure/factory/fiscal-settings-module.factory.js";
@@ -19,7 +24,10 @@ export {
   fiscalEmitterSettingsPatchBody,
 } from "./presentation/schemas/emitter-settings.schemas.js";
 
-/** @deprecated Use createFiscalSettingsModule and GetEmitterSettingsUseCase */
+/**
+ * Fachada legada para código que ainda instancia serviço direto com Prisma.
+ * @deprecated Use `createFiscalSettingsModule` e os use cases
+ */
 export class FiscalEmitterSettingsService {
   constructor(private readonly prisma: PrismaClient) {}
 

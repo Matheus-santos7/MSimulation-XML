@@ -3,6 +3,19 @@ import type { ProductRepository } from "../../domain/ports/product.repository.js
 import type { TaxRuleValidatorPort } from "../../domain/ports/tax-rule-validator.port.js";
 import type { UpdateProductCommand } from "../dto/update-product.command.js";
 
+/**
+ * Atualiza campos de um produto existente (PATCH parcial).
+ *
+ * Mescla estoque: se omitido no comando, mantém o valor atual.
+ * Valida nova `taxRuleBaseId` apenas quando enviada no payload.
+ *
+ * @param id - UUID do produto
+ * @param tenantId - Tenant do utilizador autenticado
+ * @param command - Campos a alterar
+ * @returns Produto atualizado ou `null` se não existir neste tenant
+ * @throws {TaxRuleCatalogError} Regra fiscal inválida
+ * @throws {ProductConflictError} Conflito de SKU
+ */
 export class UpdateProductUseCase {
   constructor(
     private readonly productRepository: ProductRepository,

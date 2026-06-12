@@ -1,24 +1,24 @@
-/** Reversal of FIFO shipment balance after cancellation or return. */
+/** Estorno de saldo FIFO na remessa após cancelamento ou devolução. */
 export interface ReversedShipmentBalance {
   remessaNfeId: string;
   quantidade: number;
 }
 
-/** Result of cancelling a sale NF-e and its symbolic return chain. */
+/** Resultado do cancelamento de venda + retorno simbólico + CT-e. */
 export interface CancelDocumentResult {
   venda: Record<string, unknown>;
   retorno?: Record<string, unknown>;
   saldoEstornado: ReversedShipmentBalance[];
 }
 
-/** Result of processing a sale return (devolução). */
+/** Resultado da devolução de venda (NF-e DEVOLUÇÃO + remessa simbólica opcional). */
 export interface ProcessReturnResult {
   devolucao: Record<string, unknown>;
   remessaSimbolica?: Record<string, unknown>;
   saldoEstornado: ReversedShipmentBalance[];
 }
 
-/** Result of inutilizing an unused NF-e number range. */
+/** Resultado da inutilização de numeração (registo administrativo, não é NF-e). */
 export interface InutilizationResult {
   id: string;
   tipo: "INUT";

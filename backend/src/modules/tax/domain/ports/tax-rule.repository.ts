@@ -4,6 +4,7 @@ import type { TaxRuleImportRow } from "../entities/tax-rule-import-row.entity.js
 import type { TaxRule } from "../entities/tax-rule.entity.js";
 import type { CustomerType, TransactionType } from "../entities/tax-types.entity.js";
 
+/** Parâmetros de resolução de regra (origem × destino × operação). */
 export type ResolveTaxRuleParams = {
   originUf: string;
   destinationUf: string;
@@ -12,12 +13,16 @@ export type ResolveTaxRuleParams = {
   ruleBaseId?: string;
 };
 
+/** Resultado do bulk upsert de regras. */
 export type BulkUpsertTaxRulesResult = {
   created: number;
   updated: number;
   total: number;
 };
 
+/**
+ * Port de persistência e resolução de regras fiscais por tenant.
+ */
 export interface TaxRuleRepository {
   listByTenant(tenantId: string): Promise<TaxRule[]>;
   listCatalogEntries(tenantId: string): Promise<TaxRuleCatalogEntry[]>;
@@ -28,6 +33,10 @@ export interface TaxRuleRepository {
     baseId: string,
     origin: string,
   ): Promise<{ deleted: number; nome: string }>;
+  /**
+   * Valida que `taxRuleBaseId` existe no catálogo do tenant (vínculo em produto).
+   * @throws {TaxRuleError} Regra inexistente ou UF incompatível
+   */
   assertProductBaseId(tenantId: string, taxRuleBaseId: string, tenantUf?: string): Promise<void>;
   resolve(
     tenantId: string,

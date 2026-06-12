@@ -6,6 +6,13 @@ import type { EmissionContext } from "../entities/emission-context.entity.js";
 import type { OrderForEmit } from "../entities/order-for-emit.entity.js";
 import { SalesChainError } from "../errors/sales-chain.error.js";
 
+/**
+ * Valida que o produto possui `taxRuleBaseId` antes de iniciar a cadeia fiscal.
+ *
+ * @param order - Snapshot de emissão com produto
+ * @returns ID da regra base (trimmed)
+ * @throws {SalesChainError} Produto sem regra fiscal associada
+ */
 export function assertProductWithTaxRule(order: OrderForEmit): string {
   const ruleBaseId = order.product.taxRuleBaseId?.trim();
   if (!ruleBaseId) {
@@ -19,6 +26,16 @@ export function assertProductWithTaxRule(order: OrderForEmit): string {
   return ruleBaseId;
 }
 
+/**
+ * Monta o contexto numérico e identificadores da emissão (uma vez por operação).
+ *
+ * Calcula totais de venda e custo, gera `pedidoMl` e fixa série de remessa do tenant.
+ *
+ * @param order - Pedido/checkout a emitir
+ * @param ruleBaseId - Regra fiscal validada
+ * @returns {@link EmissionContext}
+ * @throws {SalesChainError} `precoCusto` ausente ou zero
+ */
 export function buildEmissionContext(order: OrderForEmit, ruleBaseId: string): EmissionContext {
   const unitSalePrice = Number(order.product.preco);
   const unitCostPrice = Number(order.product.precoCusto);
@@ -40,6 +57,12 @@ export function buildEmissionContext(order: OrderForEmit, ruleBaseId: string): E
   };
 }
 
+/**
+ * Extrai endereço e identificação do comprador final para a NF-e de VENDA.
+ *
+ * @param order - Snapshot com campos `dest*`
+ * @returns Objeto normalizado para montagem do destinatário fiscal
+ */
 export function saleDestinationAddress(order: OrderForEmit) {
   return {
     destNome: order.destNome,
@@ -59,6 +82,14 @@ export function saleDestinationAddress(order: OrderForEmit) {
   };
 }
 
+/**
+ * Garante que a resolução de regra fiscal do módulo tax devolveu linha aplicável.
+ *
+ * @param rule - Regra resolvida ou `null`
+ * @param ctx - Metadados para mensagem de erro (origem/destino, perfil do comprador)
+ * @returns Regra válida
+ * @throws {SalesChainError} Linha ausente na planilha importada
+ */
 export function requireTaxRule(
   rule: ResolvedTaxRule | null,
   ctx: {
@@ -81,10 +112,21 @@ export function requireTaxRule(
   );
 }
 
+/**
+ * Deriva perfil do comprador a partir de `indIEDest` da NF-e.
+ *
+ * @param destIndIeDest - `9` = não contribuinte (consumidor final)
+ */
 export function resolveCustomerType(destIndIeDest: number): CustomerType {
   return destIndIeDest === 9 ? "non_taxpayer" : "taxpayer";
 }
 
+/**
+ * Alíquota ICMS fallback intra vs interestadual quando a regra não especifica.
+ *
+ * @param emitUf - UF do emitente
+ * @param destUf - UF do destinatário da venda
+ */
 export function inferIcmsRateForSale(emitUf: string, destUf: string): number {
   return emitUf.toUpperCase() === destUf.toUpperCase() ? 18 : 12;
 }

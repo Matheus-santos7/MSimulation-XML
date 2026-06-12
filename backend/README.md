@@ -366,15 +366,15 @@ Cada bounded context deve ter o seu `README.md` com overview, diagrama de sequê
 | Módulo | README |
 |--------|--------|
 | auth | [`src/modules/auth/README.md`](./src/modules/auth/README.md) |
-| org | [`src/modules/org/README.md`](./src/modules/org/README.md) *(a criar)* |
-| catalog | [`src/modules/catalog/README.md`](./src/modules/catalog/README.md) *(a criar)* |
-| tax | [`src/modules/tax/README.md`](./src/modules/tax/README.md) *(a criar)* |
-| logistics | [`src/modules/logistics/README.md`](./src/modules/logistics/README.md) *(a criar)* |
-| remessas | [`src/modules/remessas/README.md`](./src/modules/remessas/README.md) *(a criar)* |
+| org | [`src/modules/org/README.md`](./src/modules/org/README.md) |
+| catalog | [`src/modules/catalog/README.md`](./src/modules/catalog/README.md) |
+| tax | [`src/modules/tax/README.md`](./src/modules/tax/README.md) |
+| logistics | [`src/modules/logistics/README.md`](./src/modules/logistics/README.md) |
+| remessas | [`src/modules/remessas/README.md`](./src/modules/remessas/README.md) |
 | sales | [`src/modules/sales/README.md`](./src/modules/sales/README.md) |
-| fiscal-documents | [`src/modules/fiscal-documents/README.md`](./src/modules/fiscal-documents/README.md) *(a criar)* |
-| fiscal-settings | [`src/modules/fiscal-settings/README.md`](./src/modules/fiscal-settings/README.md) *(a criar)* |
-| lookup | [`src/modules/lookup/README.md`](./src/modules/lookup/README.md) *(a criar)* |
+| fiscal-documents | [`src/modules/fiscal-documents/README.md`](./src/modules/fiscal-documents/README.md) |
+| fiscal-settings | [`src/modules/fiscal-settings/README.md`](./src/modules/fiscal-settings/README.md) |
+| lookup | [`src/modules/lookup/README.md`](./src/modules/lookup/README.md) |
 | health | [`src/modules/health/README.md`](./src/modules/health/README.md) *(a criar)* |
 
 Documentação de produto complementar: [`docs/`](../docs/) na raiz do monorepo.

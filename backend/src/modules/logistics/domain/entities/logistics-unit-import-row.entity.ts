@@ -1,8 +1,13 @@
+/**
+ * Linha de planilha ML para importação em massa de unidades logísticas.
+ *
+ * Campos espelham o export Meli Full; `idCadIntTran` opcional limpa valor armazenado quando `null`.
+ */
 export type LogisticsUnitImportRow = {
   unidade: string;
   cnpj: string | number;
   inscricaoEstadual?: string | number;
-  /** Present when the spreadsheet column exists; `null` clears the stored value. */
+  /** Presente quando a coluna existe na planilha; `null` limpa o valor guardado. */
   idCadIntTran?: string | number | null;
   logradouro: string;
   numero: string;

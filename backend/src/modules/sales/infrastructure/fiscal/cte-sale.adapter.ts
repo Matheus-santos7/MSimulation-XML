@@ -5,7 +5,11 @@ import { mapCte } from "../../../../lib/fiscal/fiscal-mappers.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { buildCteXmlAutorizado } from "../../../fiscal-documents/infrastructure/xml/cte-xml-service.js";
 
-/** CT-e for sale transport (warehouse → consumer), referencing the sale NF-e. */
+/**
+ * Emite **CT-e de venda** (transporte CD → consumidor) referenciando a NF-e VENDA.
+ *
+ * @param saleNfe - NF-e de venda persistida na etapa anterior da cadeia
+ */
 export async function emitSaleCte(prisma: PrismaTx, tenant: Tenant, saleNfe: NFe) {
   const serie = tenant.serieCte;
   const numero = await proximoNumeroCte(prisma, tenant.id, serie);

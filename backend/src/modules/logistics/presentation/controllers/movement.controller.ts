@@ -1,6 +1,15 @@
 /**
- * Movement routes — entry point for manual physical shipment and warehouse advance.
- * POST /movimentacoes/remessa → Remessas module (EmitirRemessaInicialUseCase).
+ * Controller HTTP de movimentações físicas e avanço entre CDs.
+ *
+ * Orquestra logistics (resolução de produto, listagem) com **remessas** (emissão fiscal).
+ *
+ * | Método | Rota | Responsabilidade |
+ * |--------|------|------------------|
+ * | POST | `/movimentacoes/remessa` | Remessa física inicial → remessas |
+ * | POST | `/movimentacoes/avanco-cd` | Avanço de mercadoria entre CDs |
+ * | GET | `/movimentacoes-produto` | ListProductMovementsUseCase |
+ * | GET | `/movimentacoes/saldo-cd` | Saldo FIFO por CD (remessas) |
+ * | POST | `/movimentacoes/remessa/realign-fifo` | Realinhamento productId por SKU |
  */
 import type { FastifyPluginAsync } from "fastify";
 import { tenantIdFromRequest } from "../../../../lib/auth/request-context.js";

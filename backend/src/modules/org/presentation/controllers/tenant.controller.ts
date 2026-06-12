@@ -5,8 +5,24 @@ import { TenantConflictError } from "../../domain/errors/tenant-conflict.error.j
 import { createOrgModule } from "../../infrastructure/factory/org-module.factory.js";
 import { tenantIdParam, tenantUpdateBody } from "../schemas/tenant.schemas.js";
 
+/** Mapeamento de erros de tenant para HTTP. */
 const TENANT_ERROR_MAPPINGS = [{ type: TenantConflictError, status: 409 }] as const;
 
+/**
+ * Controller HTTP de gestão da empresa emitente (tenant).
+ *
+ * Segurança: o utilizador só acede ao **próprio** tenant do JWT (`tenantIdFromRequest`).
+ * Pedidos a outro `:id` devolvem 404. Criação e exclusão estão bloqueadas na API
+ * (onboarding via `auth`; exclusão não permitida).
+ *
+ * | Método | Rota | Use case |
+ * |--------|------|----------|
+ * | GET | `/tenants` | GetTenantByIdUseCase (array com 1 item) |
+ * | GET | `/tenants/:id` | GetTenantByIdUseCase |
+ * | POST | `/tenants` | 403 — usar onboarding auth |
+ * | PATCH | `/tenants/:id` | UpdateTenantUseCase |
+ * | DELETE | `/tenants/:id` | 403 — exclusão não permitida |
+ */
 export const tenantController: FastifyPluginAsync = async (app) => {
   const org = createOrgModule(app.prisma);
 

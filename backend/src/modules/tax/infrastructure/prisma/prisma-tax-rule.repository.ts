@@ -15,6 +15,12 @@ import { resolveTaxRuleFromDb } from "./tax-rule-resolution.js";
 
 type Db = PrismaClient | PrismaTx;
 
+/**
+ * Implementação Prisma do port {@link TaxRuleRepository}.
+ *
+ * Importação XLSX, catálogo agrupado por `baseId` e delegação de resolução a
+ * {@link resolveTaxRuleFromDb}.
+ */
 export class PrismaTaxRuleRepository implements TaxRuleRepository {
   constructor(private readonly prisma: PrismaClient) {}
 

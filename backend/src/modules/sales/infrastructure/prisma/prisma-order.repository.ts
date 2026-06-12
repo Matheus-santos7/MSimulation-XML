@@ -14,9 +14,16 @@ const orderInclude = {
   nfe: { select: { chave: true, numero: true, serie: true, status: true } },
 } as const;
 
+/**
+ * Implementação Prisma do port {@link OrderRepository}.
+ *
+ * Persiste pedidos na tabela `pedido`, valida ownership de produto por tenant
+ * e mapeia linhas Prisma para entidades de domínio via `order-prisma.mapper`.
+ */
 export class PrismaOrderRepository implements OrderRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
+  /** Lista pedidos do tenant com produto e NF-e vinculada (quando faturado). */
   async listByTenant(tenantId: string) {
     const rows = await this.prisma.pedido.findMany({
       where: { tenantId },
@@ -26,6 +33,7 @@ export class PrismaOrderRepository implements OrderRepository {
     return rows.map(mapOrderFromPrisma);
   }
 
+  /** Busca pedido por ID com isolamento por tenant. */
   async findById(tenantId: string, id: string) {
     const row = await this.prisma.pedido.findFirst({
       where: { id, tenantId },
@@ -34,6 +42,10 @@ export class PrismaOrderRepository implements OrderRepository {
     return row ? mapOrderFromPrisma(row) : null;
   }
 
+  /**
+   * Carrega snapshot completo para emissão da Sales Chain (produto + tenant + destinatário).
+   * Usado por {@link InvoiceOrderUseCase}.
+   */
   async findForEmit(tenantId: string, id: string) {
     const row = await this.prisma.pedido.findFirst({
       where: { id, tenantId },
@@ -42,6 +54,10 @@ export class PrismaOrderRepository implements OrderRepository {
     return row ? mapOrderForEmitFromPrisma(row) : null;
   }
 
+  /**
+   * Cria pedido em `RASCUNHO` após validar que o produto pertence ao tenant.
+   * @throws {CheckoutError} Produto inexistente ou de outro tenant
+   */
   async createDraft(tenantId: string, input: OrderCheckoutInput) {
     const product = await this.assertProductBelongsToTenant(tenantId, input.productId);
     const row = await this.prisma.pedido.create({
@@ -57,6 +73,11 @@ export class PrismaOrderRepository implements OrderRepository {
     return mapOrderFromPrisma(row);
   }
 
+  /**
+   * Atualiza rascunho; rejeita pedidos já `FATURADO`.
+   * @throws {OrderLockedError} Pedido bloqueado para edição
+   * @throws {CheckoutError} Produto inválido
+   */
   async updateDraft(id: string, tenantId: string, input: OrderCheckoutInput) {
     const existing = await this.prisma.pedido.findFirst({ where: { id, tenantId } });
     if (!existing) return null;
@@ -75,6 +96,7 @@ export class PrismaOrderRepository implements OrderRepository {
     return mapOrderFromPrisma(row);
   }
 
+  /** Marca pedido como `FATURADO` e associa NF-e de venda e referência ML. */
   async markInvoiced(id: string, pedidoMl: string, nfeId: string) {
     const row = await this.prisma.pedido.update({
       where: { id },
@@ -84,6 +106,7 @@ export class PrismaOrderRepository implements OrderRepository {
     return mapOrderFromPrisma(row);
   }
 
+  /** Remove pedido do tenant; retorna `false` se não existir. */
   async delete(id: string, tenantId: string) {
     const existing = await this.prisma.pedido.findFirst({ where: { id, tenantId } });
     if (!existing) return false;
@@ -91,6 +114,10 @@ export class PrismaOrderRepository implements OrderRepository {
     return true;
   }
 
+  /**
+   * Garante que o produto existe e pertence ao tenant antes de criar/atualizar pedido.
+   * @throws {CheckoutError} Produto não encontrado nesta empresa
+   */
   async assertProductBelongsToTenant(tenantId: string, productId: string) {
     const product = await this.prisma.product.findFirst({
       where: { id: productId, tenantId },
@@ -99,6 +126,11 @@ export class PrismaOrderRepository implements OrderRepository {
     return { id: product.id };
   }
 
+  /**
+   * Carrega produto e tenant para checkout direto (sem rascunho).
+   * Usado por {@link ProcessCheckoutUseCase}.
+   * @throws {CheckoutError} Produto não encontrado nesta empresa
+   */
   async loadCheckoutContext(tenantId: string, productId: string) {
     const product = await this.prisma.product.findFirst({
       where: { id: productId, tenantId },

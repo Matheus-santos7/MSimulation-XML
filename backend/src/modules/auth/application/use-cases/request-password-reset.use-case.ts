@@ -13,6 +13,15 @@ export type RequestPasswordResetDeps = {
   hashToken: (token: string) => string;
 };
 
+/**
+ * Inicia fluxo de redefinição de senha por e-mail.
+ *
+ * Resposta genérica mesmo quando o e-mail não existe (evita enumeração de contas).
+ * Gera token opaco, persiste hash e envia link via Resend.
+ *
+ * @param command - E-mail do utilizador
+ * @returns Mensagem genérica de confirmação
+ */
 export class RequestPasswordResetUseCase {
   constructor(
     private readonly userRepository: UserRepository,

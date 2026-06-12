@@ -3,6 +3,18 @@ import { OrderLockedError } from "../../domain/errors/order-locked.error.js";
 import type { OrderRepository } from "../../domain/ports/order.repository.js";
 import type { SalesChainPort } from "../../domain/ports/sales-chain.port.js";
 
+/**
+ * Fatura um pedido em rascunho: emite a Sales Chain e marca o pedido como `FATURADO`.
+ *
+ * Após sucesso, o pedido fica bloqueado para edição e referencia a NF-e de venda emitida.
+ *
+ * @param tenantId - Tenant emitente
+ * @param id - UUID do pedido em `RASCUNHO`
+ * @returns `{ pedido, nfe }` ou `null` se pedido não existir
+ * @throws {OrderLockedError} Pedido já faturado
+ * @throws {SalesChainError} Falha na cadeia fiscal
+ * @throws {SaldoRemessaInsuficienteError} FIFO sem saldo
+ */
 export class InvoiceOrderUseCase {
   constructor(
     private readonly prisma: PrismaClient,

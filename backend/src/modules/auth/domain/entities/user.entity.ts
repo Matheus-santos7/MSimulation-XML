@@ -1,5 +1,15 @@
+/** Papel do utilizador dentro do tenant (após onboarding). */
 export type UserRole = "ADMIN" | "MEMBER";
 
+/**
+ * Utilizador autenticável persistido em `user`.
+ *
+ * Regras de negócio relevantes:
+ * - `tenantId === null` indica conta sem empresa (precisa onboarding).
+ * - `tokenVersion` incrementa no logout global e invalida access tokens antigos.
+ * - `totpEnabledAt` / `totpSecretEnc` controlam 2FA TOTP.
+ * - `failedLoginAttempts` + `lockedUntil` implementam lockout progressivo.
+ */
 export type AuthUser = {
   id: string;
   email: string;
@@ -15,6 +25,7 @@ export type AuthUser = {
   lockedUntil: Date | null;
 };
 
+/** Resumo do tenant (empresa emitente) para respostas de sessão e `/auth/me`. */
 export type TenantSummary = {
   id: string;
   razaoSocial: string;
@@ -37,6 +48,7 @@ export type TenantSummary = {
   ambiente: string;
 };
 
+/** Utilizador com tenant opcional (join Prisma `user` + `tenant`). */
 export type AuthUserWithTenant = AuthUser & {
   tenant: TenantSummary | null;
 };

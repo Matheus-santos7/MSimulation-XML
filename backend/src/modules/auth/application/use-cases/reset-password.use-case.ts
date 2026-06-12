@@ -13,6 +13,17 @@ export type ResetPasswordDeps = {
   hashToken: (token: string) => string;
 };
 
+/**
+ * Redefine senha com token recebido por e-mail.
+ *
+ * Se 2FA estiver ativo, exige código TOTP. Invalida todas as sessões após sucesso.
+ *
+ * @param command - Token, nova senha e código 2FA opcional
+ * @returns Mensagem de confirmação
+ * @throws {PasswordResetInvalidError} Token inválido, usado ou expirado
+ * @throws {TwoFactorRequiredError} 2FA ativo sem código ou código inválido
+ * @throws {AuthTooManyRequestsError} Conta bloqueada
+ */
 export class ResetPasswordUseCase {
   constructor(
     private readonly passwordResetRepository: PasswordResetRepository,

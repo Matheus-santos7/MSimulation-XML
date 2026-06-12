@@ -1,5 +1,11 @@
 import type { UserRepository } from "../../domain/ports/user.repository.js";
 
+/**
+ * Indica se 2FA está ativo para o utilizador autenticado.
+ *
+ * @param userId - ID do JWT de acesso
+ * @returns `{ enabled: boolean }`
+ */
 export class GetTwoFactorStatusUseCase {
   constructor(private readonly userRepository: UserRepository) {}
 

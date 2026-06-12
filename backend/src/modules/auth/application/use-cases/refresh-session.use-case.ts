@@ -9,6 +9,13 @@ import type {
 import type { UserSessionRepository } from "../../domain/ports/user-session.repository.js";
 import { FinishLoginUseCase } from "./finish-login.use-case.js";
 
+/**
+ * Renova sessão via refresh token com rotação: revoga sessão antiga e emite nova.
+ *
+ * @param refreshToken - Token opaco recebido no login
+ * @returns Nova sessão (novos access + refresh tokens)
+ * @throws {AuthUnauthorizedError} Refresh inválido, revogado ou expirado
+ */
 export class RefreshSessionUseCase {
   constructor(
     private readonly userSessionRepository: UserSessionRepository,

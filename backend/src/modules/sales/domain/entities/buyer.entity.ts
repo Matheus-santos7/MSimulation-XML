@@ -1,3 +1,9 @@
+/**
+ * Comprador final da venda (destinatário da NF-e de VENDA).
+ *
+ * `indIEDest`: 9 = não contribuinte (consumidor final); outros valores indicam contribuinte.
+ * Campos espelham colunas `dest*` do modelo `pedido` / NF-e.
+ */
 export type Buyer = {
   cpf: string;
   nome: string;

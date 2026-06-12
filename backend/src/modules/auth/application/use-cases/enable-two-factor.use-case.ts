@@ -3,6 +3,15 @@ import { TwoFactorRequiredError } from "../../domain/errors/two-factor-required.
 import type { TotpPort } from "../../domain/ports/totp.port.js";
 import type { UserRepository } from "../../domain/ports/user.repository.js";
 
+/**
+ * Ativa 2FA após utilizador confirmar código do autenticador.
+ *
+ * @param userId - Utilizador autenticado
+ * @param code - Código TOTP de 6 dígitos
+ * @returns `{ enabled: true }`
+ * @throws {AuthStateError} Setup não iniciado ou 2FA já ativo
+ * @throws {TwoFactorRequiredError} Código inválido
+ */
 export class EnableTwoFactorUseCase {
   constructor(
     private readonly userRepository: UserRepository,

@@ -4,9 +4,15 @@ import type {
   EmailVerificationTokenRecord,
 } from "../../domain/ports/email-verification.repository.js";
 
+/**
+ * Implementação Prisma de tokens de verificação de e-mail.
+ *
+ * Um token pendente por utilizador; confirmação define `emailVerifiedAt`.
+ */
 export class PrismaEmailVerificationRepository implements EmailVerificationRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
+  /** Invalida tokens anteriores e cria novo token de verificação. */
   async replacePendingToken(userId: string, tokenHash: string, expiresAt: Date): Promise<void> {
     await this.prisma.$transaction([
       this.prisma.emailVerificationToken.updateMany({
@@ -19,6 +25,7 @@ export class PrismaEmailVerificationRepository implements EmailVerificationRepos
     ]);
   }
 
+  /** Busca registo pelo hash do token recebido na URL. */
   async findByTokenHash(tokenHash: string): Promise<EmailVerificationTokenRecord | null> {
     const row = await this.prisma.emailVerificationToken.findUnique({
       where: { tokenHash },
@@ -32,6 +39,7 @@ export class PrismaEmailVerificationRepository implements EmailVerificationRepos
     };
   }
 
+  /** Marca token como usado e define `user.emailVerifiedAt` em transação. */
   async confirmEmailVerification(tokenId: string, userId: string): Promise<void> {
     await this.prisma.$transaction([
       this.prisma.emailVerificationToken.update({

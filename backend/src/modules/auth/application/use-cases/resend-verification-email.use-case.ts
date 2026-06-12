@@ -6,6 +6,12 @@ export type ResendVerificationEmailDeps = {
   genericMessage: string;
 };
 
+/**
+ * Reenvia e-mail de verificação para utilizador autenticado.
+ *
+ * @param userId - ID do JWT de acesso
+ * @returns Mensagem genérica (não revela se e-mail já estava verificado)
+ */
 export class ResendVerificationEmailUseCase {
   constructor(
     private readonly sendVerificationEmail: SendVerificationEmailUseCase,

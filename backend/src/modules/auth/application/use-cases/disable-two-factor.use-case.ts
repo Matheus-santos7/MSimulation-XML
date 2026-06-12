@@ -5,6 +5,17 @@ import type { PasswordHasherPort } from "../../domain/ports/password-hasher.port
 import type { TotpPort } from "../../domain/ports/totp.port.js";
 import type { UserRepository } from "../../domain/ports/user.repository.js";
 
+/**
+ * Desativa 2FA exigindo senha atual e código TOTP válido.
+ *
+ * @param userId - Utilizador autenticado
+ * @param password - Senha atual para confirmação
+ * @param code - Código TOTP atual
+ * @returns `{ enabled: false }`
+ * @throws {AuthUnauthorizedError} Senha incorreta
+ * @throws {TwoFactorRequiredError} Código TOTP inválido
+ * @throws {AuthStateError} 2FA não está ativo
+ */
 export class DisableTwoFactorUseCase {
   constructor(
     private readonly userRepository: UserRepository,

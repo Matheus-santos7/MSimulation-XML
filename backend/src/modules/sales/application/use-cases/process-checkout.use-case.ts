@@ -4,6 +4,19 @@ import type { OrderForEmit } from "../../domain/entities/order-for-emit.entity.j
 import type { OrderRepository } from "../../domain/ports/order.repository.js";
 import type { SalesChainPort } from "../../domain/ports/sales-chain.port.js";
 
+/**
+ * Checkout direto: emite a Sales Chain sem criar rascunho de pedido.
+ *
+ * Fluxo: carrega produto/tenant → monta `OrderForEmit` → orquestra
+ * retorno simbólico + venda + CT-e em transação única → devolve apenas a NF-e de venda.
+ *
+ * @param tenantId - Tenant emitente
+ * @param input - Dados do checkout (produto, quantidade, comprador)
+ * @returns DTO da NF-e de VENDA emitida
+ * @throws {CheckoutError} Produto inválido
+ * @throws {SalesChainError} Regra fiscal ou custo ausente
+ * @throws {SaldoRemessaInsuficienteError} FIFO sem saldo (propagado do módulo remessas)
+ */
 export class ProcessCheckoutUseCase {
   constructor(
     private readonly prisma: PrismaClient,

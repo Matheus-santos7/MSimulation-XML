@@ -13,6 +13,20 @@ import type { UserRepository } from "../../domain/ports/user.repository.js";
 import type { LoginCommand } from "../dto/login.command.js";
 import { FinishLoginUseCase } from "./finish-login.use-case.js";
 
+/**
+ * Autentica utilizador por e-mail e senha.
+ *
+ * Aplica lockout progressivo em falhas, timing-safe com hash dummy quando o e-mail
+ * não existe e bifurca para desafio 2FA ou {@link FinishLoginUseCase}.
+ *
+ * @param command - E-mail e senha em texto
+ * @param signAccess - Função que assina JWT de acesso
+ * @param meta - User-Agent e IP para auditoria da sessão
+ * @param signTwoFactorPending - Assina JWT temporário se 2FA ativo
+ * @returns Sessão completa ou desafio `requiresTwoFactor`
+ * @throws {AuthTooManyRequestsError} Conta bloqueada por lockout
+ * @throws {AuthUnauthorizedError} Credenciais inválidas
+ */
 export class LoginUseCase {
   constructor(
     private readonly userRepository: UserRepository,

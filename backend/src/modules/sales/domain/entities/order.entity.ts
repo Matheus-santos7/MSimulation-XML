@@ -1,5 +1,6 @@
 import type { Buyer } from "./buyer.entity.js";
 
+/** Resumo do produto exibido na listagem/detalhe do pedido. */
 export type OrderProductSummary = {
   id: string;
   sku: string;
@@ -7,6 +8,7 @@ export type OrderProductSummary = {
   preco: number;
 };
 
+/** NF-e de venda vinculada ao pedido após faturamento. */
 export type OrderNfeSummary = {
   chave: string;
   numero: number;
@@ -14,6 +16,12 @@ export type OrderNfeSummary = {
   status: string;
 };
 
+/**
+ * Pedido de venda persistido (`pedido` no Prisma).
+ *
+ * Status típicos: `RASCUNHO` (editável) e `FATURADO` (bloqueado).
+ * `editavel` / `excluivel` são flags de UI derivadas do status.
+ */
 export type Order = {
   id: string;
   tenantId: string;

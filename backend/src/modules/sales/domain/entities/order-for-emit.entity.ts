@@ -1,3 +1,4 @@
+/** Produto com campos fiscais necessários para a Sales Chain. */
 export type OrderProductForEmit = {
   id: string;
   ncm: string;
@@ -13,6 +14,7 @@ export type OrderProductForEmit = {
   origem?: number;
 };
 
+/** Tenant reduzido para emissão (séries e identificação fiscal). */
 export type TenantForSalesEmit = {
   id: string;
   uf: string;
@@ -21,7 +23,12 @@ export type TenantForSalesEmit = {
   serieCte: number;
 };
 
-/** Minimum order data to emit return + sale + CT-e chain. */
+/**
+ * Snapshot mínimo de um pedido (ou checkout) para emitir a cadeia fiscal completa.
+ *
+ * Contém destinatário final (comprador), produto, tenant e quantidade.
+ * Usado por `SalesChainOrchestrator` — não depende de registo prévio em `pedido`.
+ */
 export type OrderForEmit = {
   tenantId: string;
   productId: string;

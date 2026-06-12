@@ -12,6 +12,16 @@ export type AttachTenantOnboardingDeps = {
   requireEmailVerification: boolean;
 };
 
+/**
+ * Onboarding: cria tenant (empresa) e vincula ao utilizador como ADMIN.
+ *
+ * Exige e-mail verificado quando configurado. Devolve nova sessão com `tenantId`.
+ *
+ * @param command - `userId` e dados fiscais da empresa
+ * @returns Sessão atualizada via {@link FinishLoginUseCase}
+ * @throws {AuthStateError} Empresa já vinculada, e-mail não verificado ou user inexistente
+ * @throws {TenantConflictError} CNPJ duplicado (propagado do repository)
+ */
 export class AttachTenantOnboardingUseCase {
   constructor(
     private readonly onboardingRepository: OnboardingRepository,

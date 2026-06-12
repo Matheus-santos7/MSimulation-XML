@@ -5,6 +5,13 @@ export type VerifyEmailDeps = {
   hashToken: (token: string) => string;
 };
 
+/**
+ * Confirma e-mail do utilizador com token da URL de verificação.
+ *
+ * @param token - Token em claro recebido por query string
+ * @returns Mensagem de sucesso
+ * @throws {EmailVerificationInvalidError} Token inválido, usado ou expirado
+ */
 export class VerifyEmailUseCase {
   constructor(
     private readonly emailVerificationRepository: EmailVerificationRepository,

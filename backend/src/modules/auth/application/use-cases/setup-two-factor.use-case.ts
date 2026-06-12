@@ -2,6 +2,15 @@ import { AuthStateError } from "../../domain/errors/auth-state.error.js";
 import type { TotpPort } from "../../domain/ports/totp.port.js";
 import type { UserRepository } from "../../domain/ports/user.repository.js";
 
+/**
+ * Inicia configuração 2FA: gera segredo TOTP e URL otpauth para QR code.
+ *
+ * O segredo fica encriptado em `totpSecretEnc` até {@link EnableTwoFactorUseCase}.
+ *
+ * @param userId - Utilizador autenticado
+ * @returns Segredo, URL otpauth e issuer
+ * @throws {AuthStateError} 2FA já ativo ou utilizador inexistente
+ */
 export class SetupTwoFactorUseCase {
   constructor(
     private readonly userRepository: UserRepository,

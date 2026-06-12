@@ -11,6 +11,14 @@ type OnboardingControllerOptions = {
   signAccess: (payload: AccessTokenPayload) => string;
 };
 
+/**
+ * Controller de onboarding pós-registo: cria tenant e associa ao utilizador autenticado.
+ *
+ * Requer JWT válido e `tenantId === null`. Após sucesso, devolve nova sessão
+ * com `tenantId` preenchido e role `ADMIN`.
+ *
+ * @route POST `/auth/onboarding/tenant` → {@link AttachTenantOnboardingUseCase}
+ */
 export const onboardingController: FastifyPluginAsync<OnboardingControllerOptions> = async (
   app,
   options,

@@ -8,6 +8,17 @@ import type {
   SessionResponsePort,
   SignAccessToken,
 } from "../../domain/ports/session-response.port.js";
+/**
+ * Finaliza autenticação: cria sessão com refresh token e monta resposta com access JWT.
+ *
+ * Usado após login, 2FA, registo, refresh, refresh rotacionado e onboarding.
+ *
+ * @param userId - ID do utilizador autenticado
+ * @param meta - Metadados da sessão (user-agent, IP)
+ * @param signAccess - Assina access token com `userId`, `tenantId`, `tokenVersion`
+ * @returns {@link AuthSessionResponse}
+ * @throws {AuthUnauthorizedError} Utilizador não encontrado
+ */
 export class FinishLoginUseCase {
   constructor(
     private readonly userRepository: UserRepository,

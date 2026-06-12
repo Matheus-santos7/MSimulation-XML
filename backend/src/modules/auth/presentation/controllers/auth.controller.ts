@@ -21,6 +21,7 @@ import { buildAuthMeta, signAccessToken } from "../helpers/auth-request.helper.j
 import { handleAuthError } from "../mappers/auth-error.handler.js";
 import { onboardingController } from "./onboarding.controller.js";
 
+/** Assina JWT temporário `2fa_pending` com TTL configurável. */
 function signTwoFactorPendingToken(
   signJwt: (payload: TwoFactorPendingPayload, options: { expiresIn: string }) => string,
 ) {
@@ -28,6 +29,30 @@ function signTwoFactorPendingToken(
     signJwt(payload, { expiresIn: twoFactorPendingTtl() });
 }
 
+/**
+ * Controller HTTP de autenticação e gestão de sessão.
+ *
+ * Regista rotas sob `/auth`. Valida entrada com Zod, aplica rate-limit por rota,
+ * Turnstile no registo e traduz erros de domínio via `handleAuthError`.
+ * O sub-plugin `onboardingController` trata o vínculo inicial empresa ↔ utilizador.
+ *
+ * | Método | Rota | Use case |
+ * |--------|------|----------|
+ * | POST | `/auth/register` | RegisterUserUseCase |
+ * | POST | `/auth/login` | LoginUseCase |
+ * | POST | `/auth/login/verify-2fa` | VerifyTwoFactorLoginUseCase |
+ * | POST | `/auth/refresh` | RefreshSessionUseCase |
+ * | POST | `/auth/logout` | LogoutUseCase |
+ * | GET | `/auth/me` | GetCurrentUserUseCase |
+ * | POST | `/auth/forgot-password` | RequestPasswordResetUseCase |
+ * | POST | `/auth/reset-password` | ResetPasswordUseCase |
+ * | POST | `/auth/verify-email` | VerifyEmailUseCase |
+ * | POST | `/auth/resend-verification` | ResendVerificationEmailUseCase |
+ * | GET | `/auth/2fa/status` | GetTwoFactorStatusUseCase |
+ * | POST | `/auth/2fa/setup` | SetupTwoFactorUseCase |
+ * | POST | `/auth/2fa/enable` | EnableTwoFactorUseCase |
+ * | POST | `/auth/2fa/disable` | DisableTwoFactorUseCase |
+ */
 export const authController: FastifyPluginAsync = async (app) => {
   await app.register(rateLimit, {
     global: false,

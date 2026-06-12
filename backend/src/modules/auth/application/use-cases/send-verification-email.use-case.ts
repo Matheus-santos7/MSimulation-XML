@@ -10,6 +10,13 @@ export type SendVerificationEmailDeps = {
   hashToken: (token: string) => string;
 };
 
+/**
+ * Gera token de verificação e envia e-mail (uso interno e reenvio).
+ *
+ * No-op se verificação desativada no ambiente ou e-mail já confirmado.
+ *
+ * @param userId - ID do utilizador a verificar
+ */
 export class SendVerificationEmailUseCase {
   constructor(
     private readonly userRepository: UserRepository,

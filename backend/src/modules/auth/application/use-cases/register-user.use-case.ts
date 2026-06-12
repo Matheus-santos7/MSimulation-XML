@@ -15,6 +15,16 @@ export type RegisterUserDeps = {
   requireEmailVerification: boolean;
 };
 
+/**
+ * Regista nova conta: valida unicidade de e-mail, cria utilizador e inicia sessão.
+ *
+ * Em produção com verificação obrigatória, envia e-mail de confirmação (falha de
+ * envio não bloqueia o registo em desenvolvimento).
+ *
+ * @param command - E-mail, senha, nome e captcha (validado no controller)
+ * @returns Sessão autenticada imediata
+ * @throws {AuthConflictError} E-mail já cadastrado
+ */
 export class RegisterUserUseCase {
   constructor(
     private readonly userRepository: UserRepository,

@@ -12,6 +12,15 @@ import type { UserRepository } from "../../domain/ports/user.repository.js";
 import type { VerifyTwoFactorLoginCommand } from "../dto/verify-two-factor-login.command.js";
 import { FinishLoginUseCase } from "./finish-login.use-case.js";
 
+/**
+ * Completa login após desafio 2FA: valida JWT `2fa_pending` e código TOTP.
+ *
+ * @param command - Token temporário e código de 6 dígitos
+ * @param verifyJwt - Verifica assinatura e expiração do JWT pendente
+ * @returns Sessão completa via {@link FinishLoginUseCase}
+ * @throws {TwoFactorRequiredError} Token expirado, código inválido ou 2FA inativo
+ * @throws {AuthTooManyRequestsError} Conta bloqueada
+ */
 export class VerifyTwoFactorLoginUseCase {
   constructor(
     private readonly userRepository: UserRepository,

@@ -8,6 +8,7 @@ import { SalesChainError, VendaChainError } from "../../domain/errors/sales-chai
 import { createSalesModule } from "../../infrastructure/factory/sales-module.factory.js";
 import { orderCheckoutBody, orderIdParam } from "../schemas/order.schemas.js";
 
+/** Mapeamento de erros de domínio da venda para códigos HTTP na API. */
 const ORDER_ERROR_MAPPINGS = [
   { type: OrderLockedError, status: 409 },
   { type: PedidoLockedError, status: 409 },
@@ -28,6 +29,22 @@ const ORDER_ERROR_MAPPINGS = [
   },
 ] as const;
 
+/**
+ * Controller HTTP de pedidos de venda (Sales).
+ *
+ * Regista rotas sob o prefixo fiscal (`/pedidos`). Delega toda a lógica aos use cases
+ * do módulo; valida entrada com Zod e traduz erros de domínio via `handleRouteError`.
+ *
+ * | Método | Rota | Use case |
+ * |--------|------|----------|
+ * | GET | `/pedidos` | ListOrdersUseCase |
+ * | GET | `/pedidos/:id` | GetOrderByIdUseCase |
+ * | POST | `/pedidos` | CreateOrderDraftUseCase |
+ * | PATCH | `/pedidos/:id` | UpdateOrderDraftUseCase |
+ * | DELETE | `/pedidos/:id` | RemoveOrderUseCase |
+ * | POST | `/pedidos/:id/faturar` | InvoiceOrderUseCase (Sales Chain) |
+ * | POST | `/pedidos/checkout` | ProcessCheckoutUseCase (Sales Chain direto) |
+ */
 export const orderController: FastifyPluginAsync = async (app) => {
   const sales = createSalesModule(app.prisma);
 

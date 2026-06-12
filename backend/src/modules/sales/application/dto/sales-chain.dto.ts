@@ -1,4 +1,4 @@
-import type { FiscalEmitterSettingsData } from "../../../../lib/fiscal/fiscal-emitter-settings-defaults.js";
+import type { FiscalEmitterSettingsData } from "../../../fiscal-settings/domain/services/fiscal-emitter-settings-defaults.js";
 import type { CustomerType, ResolvedTaxRule } from "../../../tax/index.js";
 
 /**

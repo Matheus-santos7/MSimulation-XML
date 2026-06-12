@@ -3,22 +3,22 @@ import { describe, it } from "node:test";
 import { fiscalEventHasXml, fiscalEventXmlHref, fiscalXmlHref } from "./fiscal-xml-routes.js";
 
 describe("fiscalXmlHref", () => {
-  it("monta URLs de NF-e, evento, CT-e e inutilização", () => {
+  it("monta caminhos da API para NF-e, evento, CT-e e inutilização", () => {
     assert.deepEqual(fiscalXmlHref("nfe", "chave-nfe"), {
-      view: "/nfe/chave-nfe/xml",
-      download: "/nfe/chave-nfe/xml?download=1",
+      viewPath: "/api/nfes/chave-nfe/xml",
+      downloadPath: "/api/nfes/chave-nfe/xml?download=1",
     });
     assert.deepEqual(fiscalXmlHref("nfe-evento", "chave-nfe"), {
-      view: "/nfe/chave-nfe/xml?doc=evento",
-      download: "/nfe/chave-nfe/xml?doc=evento&download=1",
+      viewPath: "/api/nfes/chave-nfe/xml?doc=evento",
+      downloadPath: "/api/nfes/chave-nfe/xml?doc=evento&download=1",
     });
     assert.deepEqual(fiscalXmlHref("cte", "chave-cte"), {
-      view: "/cte/chave-cte/xml",
-      download: "/cte/chave-cte/xml?download=1",
+      viewPath: "/api/ctes/chave-cte/xml",
+      downloadPath: "/api/ctes/chave-cte/xml?download=1",
     });
     assert.deepEqual(fiscalXmlHref("inutilizacao", "evt-1"), {
-      view: "/nfe/inutilizacao/evt-1/xml",
-      download: "/nfe/inutilizacao/evt-1/xml?download=1",
+      viewPath: "/api/fiscal-events/evt-1/xml",
+      downloadPath: "/api/fiscal-events/evt-1/xml?download=1",
     });
   });
 });

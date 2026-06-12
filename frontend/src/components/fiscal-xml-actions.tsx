@@ -1,4 +1,6 @@
-import Link from "next/link";
+"use client";
+
+import { useState, useTransition } from "react";
 import { Download, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -7,56 +9,96 @@ import {
   fiscalXmlHref,
   type FiscalXmlHref,
 } from "@/lib/fiscal-xml-routes";
+import { downloadFromApi, openXmlFromApi } from "@/lib/http/authenticated-fetch";
 import type { FiscalEventDto } from "@/lib/fiscal-types";
 
 export type FiscalXmlActionsVariant = "list" | "toolbar";
 
 type XmlLinkPairProps = {
   label: string;
-  viewHref: string;
-  downloadHref: string;
+  hrefs: FiscalXmlHref;
   compact: boolean;
 };
 
 /** Par ver/baixar reutilizável para qualquer documento fiscal XML. */
-export function XmlLinkPair({ label, viewHref, downloadHref, compact }: XmlLinkPairProps) {
+export function XmlLinkPair({ label, hrefs, compact }: XmlLinkPairProps) {
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  function run(action: () => Promise<void>) {
+    setError(null);
+    startTransition(async () => {
+      try {
+        await action();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Falha ao acessar XML");
+      }
+    });
+  }
+
   if (compact) {
     return (
-      <div className="flex items-center justify-end gap-1">
-        <span className="text-[10px] uppercase tracking-wider text-muted-foreground w-8 text-right shrink-0">
-          {label}
-        </span>
-        <Button variant="ghost" size="icon" className="h-7 w-7" asChild title={`Ver XML ${label}`}>
-          <Link href={viewHref} target="_blank" rel="noopener noreferrer">
+      <div className="flex flex-col items-end gap-0.5">
+        <div className="flex items-center justify-end gap-1">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground w-8 text-right shrink-0">
+            {label}
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            disabled={pending}
+            title={`Ver XML ${label}`}
+            onClick={() => run(() => openXmlFromApi(hrefs.viewPath))}
+          >
             <ExternalLink className="h-3.5 w-3.5" />
             <span className="sr-only">Ver XML {label}</span>
-          </Link>
-        </Button>
-        <Button variant="ghost" size="icon" className="h-7 w-7" asChild title={`Baixar XML ${label}`}>
-          <a href={downloadHref}>
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            disabled={pending}
+            title={`Baixar XML ${label}`}
+            onClick={() => run(() => downloadFromApi(hrefs.downloadPath, `${label}.xml`))}
+          >
             <Download className="h-3.5 w-3.5" />
             <span className="sr-only">Baixar XML {label}</span>
-          </a>
-        </Button>
+          </Button>
+        </div>
+        {error && <span className="text-[10px] text-destructive max-w-[12rem] text-right">{error}</span>}
       </div>
     );
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-[11px] text-muted-foreground uppercase tracking-wider min-w-[4.5rem]">{label}</span>
-      <Button variant="outline" size="sm" asChild>
-        <Link href={viewHref} target="_blank" rel="noopener noreferrer">
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-2">
+        <span className="text-[11px] text-muted-foreground uppercase tracking-wider min-w-[4.5rem]">{label}</span>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={pending}
+          onClick={() => run(() => openXmlFromApi(hrefs.viewPath))}
+        >
           <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
           Ver
-        </Link>
-      </Button>
-      <Button variant="outline" size="sm" asChild>
-        <a href={downloadHref}>
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={pending}
+          onClick={() => run(() => downloadFromApi(hrefs.downloadPath, `${label}.xml`))}
+        >
           <Download className="mr-1.5 h-3.5 w-3.5" />
           Baixar
-        </a>
-      </Button>
+        </Button>
+      </div>
+      {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );
 }
@@ -70,14 +112,7 @@ type FiscalXmlDocActionsProps = {
 /** Ações genéricas ver/baixar para um único documento XML. */
 export function FiscalXmlDocActions({ label, hrefs, variant = "list" }: FiscalXmlDocActionsProps) {
   const compact = variant === "list";
-  const content = (
-    <XmlLinkPair
-      label={label}
-      viewHref={hrefs.view}
-      downloadHref={hrefs.download}
-      compact={compact}
-    />
-  );
+  const content = <XmlLinkPair label={label} hrefs={hrefs} compact={compact} />;
 
   if (variant === "toolbar") {
     return <div className="flex flex-col gap-2">{content}</div>;
@@ -108,25 +143,16 @@ export function NfeXmlActions({
   if (variant === "toolbar") {
     return (
       <div className="flex flex-col gap-2">
-        <XmlLinkPair label="NF-e" viewHref={nfe.view} downloadHref={nfe.download} compact={false} />
-        {showCancelamento && (
-          <XmlLinkPair
-            label="Cancel."
-            viewHref={evento.view}
-            downloadHref={evento.download}
-            compact={false}
-          />
-        )}
+        <XmlLinkPair label="NF-e" hrefs={nfe} compact={false} />
+        {showCancelamento && <XmlLinkPair label="Cancel." hrefs={evento} compact={false} />}
       </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-0.5 min-w-[7rem]">
-      <XmlLinkPair label="NF-e" viewHref={nfe.view} downloadHref={nfe.download} compact={compact} />
-      {showCancelamento && (
-        <XmlLinkPair label="Evt" viewHref={evento.view} downloadHref={evento.download} compact={compact} />
-      )}
+      <XmlLinkPair label="NF-e" hrefs={nfe} compact={compact} />
+      {showCancelamento && <XmlLinkPair label="Evt" hrefs={evento} compact={compact} />}
     </div>
   );
 }

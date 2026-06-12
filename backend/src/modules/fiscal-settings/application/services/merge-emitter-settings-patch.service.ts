@@ -2,7 +2,7 @@ import {
   DEFAULT_FISCAL_EMITTER_SETTINGS,
   mergeFiscalEmitterSettings,
   type FiscalEmitterSettingsData,
-} from "../../../../lib/fiscal/fiscal-emitter-settings-defaults.js";
+} from "../../domain/services/fiscal-emitter-settings-defaults.js";
 import type { UpdateEmitterSettingsInput } from "../../domain/ports/emitter-settings.repository.js";
 
 /**

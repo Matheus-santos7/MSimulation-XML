@@ -1,5 +1,5 @@
 import type { PrismaClient } from "../../../generated/prisma/client.js";
-import { mapNfe } from "../../../lib/fiscal/fiscal-mappers.js";
+import { mapNfe } from "../../fiscal-documents/presentation/mappers/fiscal-mappers.js";
 import type { EmitirAvancoMercadoriaResult } from "../application/dto/emitir-avanco-mercadoria.command.js";
 
 /** Mantém contrato legado da API POST /movimentacoes/avanco-cd. */

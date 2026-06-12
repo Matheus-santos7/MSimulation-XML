@@ -21,10 +21,10 @@ import {
   type Product,
 } from "../../../../generated/prisma/client.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
-import { mapNfe } from "../../../../lib/fiscal/fiscal-mappers.js";
+import { mapNfe } from "../../presentation/mappers/fiscal-mappers.js";
 import { mapProduct, type ProductDto } from "../../../../lib/catalog/product-mapper.js";
 import { mapEmitente } from "../../../../lib/org/tenant-mapper.js";
-import { loadEmitterSettings } from "../../../../lib/fiscal/fiscal-emitter-runtime.js";
+import { loadEmitterSettings } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
 import type { Product as ProductModel, Tenant } from "../../../../generated/prisma/client.js";
 
 export type NfeXmlPersistTx = PrismaTx;

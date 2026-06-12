@@ -14,7 +14,7 @@ import {
   type ItemFiscalInput,
   type NotaFiscalResult,
 } from "../../domain/services/tax-engine.js";
-import { taxSnapshotFromRule } from "../../../../lib/fiscal/tax-snapshot.js";
+import { taxSnapshotFromRule } from "../../domain/services/tax-snapshot.js";
 import type { FiscalContext } from "../../domain/entities/fiscal-context.entity.js";
 import type { OrderLine } from "../../domain/entities/order-line.entity.js";
 import type { ProductFiscalLine } from "../../domain/entities/product-fiscal-line.entity.js";

@@ -6,7 +6,7 @@ import {
   normalizeIdCadIntTran,
   normalizeIeMeli,
   unidadeParaDestinoFiscal,
-} from "../../../../lib/logistics/meli-unidade.js";
+} from "../../domain/services/meli-unidade.js";
 import type { LogisticsUnitImportRow } from "../../domain/entities/logistics-unit-import-row.entity.js";
 import { LogisticsUnitError } from "../../domain/errors/logistics-unit.error.js";
 import type {

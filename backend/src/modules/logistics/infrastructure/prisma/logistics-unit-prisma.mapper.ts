@@ -1,4 +1,4 @@
-import { unidadeParaDestinoFiscal } from "../../../../lib/logistics/meli-unidade.js";
+import { unidadeParaDestinoFiscal } from "../../domain/services/meli-unidade.js";
 import type { LogisticsUnit } from "../../domain/entities/logistics-unit.entity.js";
 
 export type MeliUnidadeLogisticaRow = {

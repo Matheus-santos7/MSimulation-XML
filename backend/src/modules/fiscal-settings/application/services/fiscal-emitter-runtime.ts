@@ -3,7 +3,7 @@
  * Remessa usa `loadEmitterSettings` + `enrichTaxSnapshot` (canal composição "remessa").
  * @see docs/remessa-fisica.md — Fase 6
  */
-import type { NFeTipo } from "../../generated/prisma/client.js";
+import type { NFeTipo } from "../../../../generated/prisma/client.js";
 import {
   enrichTaxSnapshot as enrichTaxSnapshotCore,
   type EnrichTaxContext as EnrichTaxContextCore,
@@ -11,7 +11,7 @@ import {
   type FiscalEmitterSettingsData,
   type TaxSnapshot,
 } from "@msimulation-xml/fiscal-core";
-import { mergeFiscalEmitterSettings } from "./fiscal-emitter-settings-defaults.js";
+import { mergeFiscalEmitterSettings } from "../../domain/services/fiscal-emitter-settings-defaults.js";
 import type { NFeTipoValue } from "@msimulation-xml/fiscal-core";
 
 export type { EmitterSnapshot, FiscalEmitterSettingsData, TaxSnapshot };

@@ -1,5 +1,5 @@
 import { ensureNProt, injectSimulationSignature, INUT_SIGNATURE_CONFIG } from "@msimulation-xml/fiscal-core";
-import { ufToCodigo } from "../../modules/fiscal-documents/domain/services/nfe-chave.js";
+import { ufToCodigo } from "./nfe-chave.js";
 
 const xmlEscape = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");

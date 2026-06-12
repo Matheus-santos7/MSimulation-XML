@@ -80,8 +80,8 @@ export function TenantFormFields({ tenant, draft, fieldErrors, idPrefix = "tenan
 
       if (!codigoMunicipio && cep.replace(/\D/g, "").length === 8) {
         try {
-          const viaCep = await lookupCep(cep);
-          codigoMunicipio = viaCep.codigoMunicipio ?? "";
+          const cepLookup = await lookupCep(cep);
+          codigoMunicipio = cepLookup.codigoMunicipio ?? "";
         } catch {
           // IBGE pode ser preenchido manualmente ou via Buscar CEP
         }

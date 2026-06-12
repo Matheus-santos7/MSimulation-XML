@@ -1,4 +1,4 @@
-import type { NFe } from "../../generated/prisma/client.js";
+import type { NFe } from "../../../../generated/prisma/client.js";
 
 export const RETORNO_SIMBOLICO_CFOP_INTRA = "1949";
 export const RETORNO_SIMBOLICO_CFOP_INTER = "2949";

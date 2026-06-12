@@ -1,5 +1,5 @@
 import type { PrismaClient } from "../../../../generated/prisma/client.js";
-import { mergeFiscalEmitterSettings } from "../../../../lib/fiscal/fiscal-emitter-settings-defaults.js";
+import { mergeFiscalEmitterSettings } from "../../domain/services/fiscal-emitter-settings-defaults.js";
 import type { EmitterSettingsView } from "../../domain/entities/emitter-settings-view.entity.js";
 import type {
   EmitterSettingsRepository,

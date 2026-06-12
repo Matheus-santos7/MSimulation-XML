@@ -1,4 +1,4 @@
-import { parseTaxRuleSpreadsheet } from "../../../../lib/fiscal/tax-rule-spreadsheet.parser.js";
+import { parseTaxRuleSpreadsheet } from "../services/tax-rule-spreadsheet.parser.js";
 import { TaxRuleError } from "../../domain/errors/tax-rule.error.js";
 import type { TaxRuleRepository } from "../../domain/ports/tax-rule.repository.js";
 import { mapTaxRuleSpreadsheetRows } from "../services/tax-rule-spreadsheet-mapper.js";

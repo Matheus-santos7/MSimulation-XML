@@ -2,7 +2,7 @@ import {
   buildTaxRuleRowId,
   type CustomerType,
   type TransactionType,
-} from "../../../../lib/fiscal/tax-rule-ids.js";
+} from "../../domain/services/tax-rule-ids.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import type { ResolvedTaxRule } from "../../domain/entities/resolved-tax-rule.entity.js";
 

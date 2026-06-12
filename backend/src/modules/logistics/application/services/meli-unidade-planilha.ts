@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import { normalizeIdCadIntTran } from "../../../../lib/logistics/meli-unidade.js";
+import { normalizeIdCadIntTran } from "../../domain/services/meli-unidade.js";
 import type { LogisticsUnitImportRow } from "../../domain/entities/logistics-unit-import-row.entity.js";
 
 export type MeliUnidadePlanilhaParseResult = {

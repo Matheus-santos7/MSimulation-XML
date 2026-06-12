@@ -18,13 +18,13 @@ import {
   type Product,
   type Tenant,
 } from "../../../../generated/prisma/client.js";
-import { mapNfe } from "../../../../lib/fiscal/fiscal-mappers.js";
+import { mapNfe } from "../../../fiscal-documents/presentation/mappers/fiscal-mappers.js";
 import { buildChaveNFe, gerarPedidoMl } from "../../../fiscal-documents/domain/services/nfe-chave.js";
 import { proximoNumeroNfe } from "../../../fiscal-documents/domain/services/nfe-sequencia.js";
 import { REMESSA_NAT_OP, resolveRemessaCfop } from "./helpers/remessa-dest.js";
-import type { UnidadeDestinoFiscal } from "../../../../lib/logistics/meli-unidade.js";
-import { enrichTaxSnapshot, loadEmitterSettings } from "../../../../lib/fiscal/fiscal-emitter-runtime.js";
-import { taxSnapshotFromRule } from "../../../../lib/fiscal/tax-snapshot.js";
+import type { UnidadeDestinoFiscal } from "../../../logistics/domain/services/meli-unidade.js";
+import { enrichTaxSnapshot, loadEmitterSettings } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
+import { taxSnapshotFromRule } from "../../../tax/domain/services/tax-snapshot.js";
 import {
   enrichFiscalPayloadMlFulfillment,
   enrichFiscalPayloadWithXTexto,

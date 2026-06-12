@@ -1,4 +1,4 @@
-import type { FiscalEmitterSettingsData } from "../../../../lib/fiscal/fiscal-emitter-settings-defaults.js";
+import type { FiscalEmitterSettingsData } from "../../domain/services/fiscal-emitter-settings-defaults.js";
 
 /**
  * Vista agregada das configurações do emissor fiscal de um tenant.

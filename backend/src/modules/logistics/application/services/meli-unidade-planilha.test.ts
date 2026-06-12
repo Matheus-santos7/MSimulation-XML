@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import * as XLSX from "xlsx";
 import { describe, it } from "node:test";
 import { parseMeliUnidadesXlsx } from "./meli-unidade-planilha.js";
-import { normalizeIdCadIntTran } from "../../../../lib/logistics/meli-unidade.js";
+import { normalizeIdCadIntTran } from "../../domain/services/meli-unidade.js";
 
 function sheetBuffer(headers: string[], dataRow: (string | number)[]): Buffer {
   const ws = XLSX.utils.aoa_to_sheet([headers, dataRow]);

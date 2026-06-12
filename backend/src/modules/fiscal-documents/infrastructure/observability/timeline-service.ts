@@ -1,5 +1,5 @@
 import { NFeTipo, type PrismaClient } from "../../../../generated/prisma/client.js";
-import { labelNfeTipo } from "../../../../lib/fiscal/fiscal-mappers.js";
+import { labelNfeTipo } from "../../presentation/mappers/fiscal-mappers.js";
 import { fiscalNotDeleted } from "../../domain/constants/fiscal-not-deleted.js";
 
 export type TimelineChainStepDto = {

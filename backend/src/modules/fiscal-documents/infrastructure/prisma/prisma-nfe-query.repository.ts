@@ -1,5 +1,5 @@
 import { NFeTipo, type PrismaClient } from "../../../../generated/prisma/client.js";
-import { mapNfe } from "../../../../lib/fiscal/fiscal-mappers.js";
+import { mapNfe } from "../../presentation/mappers/fiscal-mappers.js";
 import { fiscalNotDeleted } from "../../domain/constants/fiscal-not-deleted.js";
 import { resolveNfeCancelamentoEventoXml, resolveNfeXml } from "../xml/nfe-xml-service.js";
 import {

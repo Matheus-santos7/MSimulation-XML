@@ -4,7 +4,7 @@ import {
   normalizeTaxRuleDisplayName,
   taxRuleBaseIdFromRuleId,
   taxRuleOriginUf,
-} from "../../../../lib/fiscal/tax-rule-ids.js";
+} from "../../domain/services/tax-rule-ids.js";
 import { TaxRuleError } from "../../domain/errors/tax-rule.error.js";
 import type {
   ResolveTaxRuleParams,

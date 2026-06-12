@@ -6,6 +6,7 @@ import { useRef, useState, useTransition } from "react";
 import { importProdutosPlanilhaAction, type ProdutoPlanilhaImportResult } from "@/app/(app)/produtos/actions";
 import { Button } from "@/components/ui/button";
 import type { ProductDto } from "@/lib/fiscal-types";
+import { downloadFromApi } from "@/lib/http/authenticated-fetch";
 
 type Props = {
   products: ProductDto[];
@@ -20,20 +21,26 @@ export function ProdutoPlanilhaToolbar({ products }: Props) {
 
   const disabled = pending || downloadPending;
 
-  function triggerDownload(path: string) {
+  async function handleDownloadTemplate() {
     setDownloadPending(true);
-    const a = document.createElement("a");
-    a.href = path;
-    a.click();
-    window.setTimeout(() => setDownloadPending(false), 500);
+    try {
+      await downloadFromApi("/api/products/spreadsheet/template", "produtos-modelo.xlsx");
+    } catch (e) {
+      setResult({ error: e instanceof Error ? e.message : "Erro ao baixar modelo" });
+    } finally {
+      setDownloadPending(false);
+    }
   }
 
-  function handleDownloadTemplate() {
-    triggerDownload("/produtos/spreadsheet/template");
-  }
-
-  function handleDownloadCatalog() {
-    triggerDownload("/produtos/spreadsheet/export");
+  async function handleDownloadCatalog() {
+    setDownloadPending(true);
+    try {
+      await downloadFromApi("/api/products/spreadsheet/export", "produtos-catalogo.xlsx");
+    } catch (e) {
+      setResult({ error: e instanceof Error ? e.message : "Erro ao exportar catálogo" });
+    } finally {
+      setDownloadPending(false);
+    }
   }
 
   function handleImport(file: File) {

@@ -1,18 +1,26 @@
-import { lookupCep } from "@/lib/lookup-actions";
+import { lookupCep } from "@/lib/fiscal-api";
 import type { TenantInput } from "@/lib/fiscal-types";
 
+/**
+ * Enriquece endereço da empresa consultando `GET /api/lookup/cep/:cep` no backend
+ * (rate-limit e fallback BrasilAPI → ViaCEP ficam no módulo lookup do servidor).
+ */
 export async function enrichEmpresaFromCep(input: TenantInput): Promise<TenantInput> {
-  if (input.codigoMunicipio.length === 7 || input.cep.length !== 8) return input;
+  const cepDigits = input.cep.replace(/\D/g, "");
+  if (input.codigoMunicipio.length === 7 || cepDigits.length !== 8) {
+    return input;
+  }
 
   try {
-    const viaCep = await lookupCep(input.cep);
+    const cepLookup = await lookupCep(cepDigits);
     return {
       ...input,
-      codigoMunicipio: viaCep.codigoMunicipio ?? input.codigoMunicipio,
-      logradouro: input.logradouro || viaCep.logradouro,
-      bairro: input.bairro || viaCep.bairro,
-      municipio: input.municipio || viaCep.municipio,
-      uf: input.uf || viaCep.uf,
+      cep: cepLookup.cep || cepDigits,
+      codigoMunicipio: cepLookup.codigoMunicipio ?? input.codigoMunicipio,
+      logradouro: input.logradouro || cepLookup.logradouro,
+      bairro: input.bairro || cepLookup.bairro,
+      municipio: input.municipio || cepLookup.municipio,
+      uf: input.uf || cepLookup.uf,
     };
   } catch {
     return input;

@@ -1,5 +1,5 @@
 import type { PedidoStatus, Product } from "../../../../generated/prisma/client.js";
-import { num } from "../../../../lib/fiscal/fiscal-mappers.js";
+import { num } from "../../../fiscal-documents/presentation/mappers/fiscal-mappers.js";
 import type { Buyer } from "../../domain/entities/buyer.entity.js";
 import type { Order } from "../../domain/entities/order.entity.js";
 import type { OrderForEmit } from "../../domain/entities/order-for-emit.entity.js";

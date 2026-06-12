@@ -5,14 +5,14 @@ import {
 } from "@msimulation-xml/fiscal-core";
 import { NFeTipo, type PrismaClient } from "../../../../generated/prisma/client.js";
 import { buildChaveNFe } from "../../../fiscal-documents/domain/services/nfe-chave.js";
-import { enrichTaxSnapshot, loadEmitterSettings } from "../../../../lib/fiscal/fiscal-emitter-runtime.js";
+import { enrichTaxSnapshot, loadEmitterSettings } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import {
   resolveRetornoSimbolicoCfop,
   RETORNO_SIMBOLICO_NAT_OP,
-} from "../../../../lib/fiscal/retorno-simbolico-dest.js";
-import { unidadeParaDestinoFiscal } from "../../../../lib/logistics/meli-unidade.js";
-import { taxSnapshotFromRule } from "../../../../lib/fiscal/tax-snapshot.js";
+} from "../../domain/services/retorno-simbolico-dest.js";
+import { unidadeParaDestinoFiscal } from "../../../logistics/domain/services/meli-unidade.js";
+import { taxSnapshotFromRule } from "../../../tax/domain/services/tax-snapshot.js";
 import { proximoNumeroNfe } from "../../../fiscal-documents/domain/services/nfe-sequencia.js";
 import { loadRemessaDestinoRetorno } from "../fifo/remessa-fifo.js";
 import {

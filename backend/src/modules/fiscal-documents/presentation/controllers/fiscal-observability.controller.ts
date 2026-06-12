@@ -2,8 +2,8 @@ import { fiscalXmlDownloadFilename, prepareFiscalXmlForDownload } from "@msimula
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { tenantIdFromRequest } from "../../../../lib/auth/request-context.js";
-import { buildProcInutNFeXML, infInutId } from "../../../../lib/fiscal/inutilizacao-xml.js";
-import { mapTimeline } from "../../../../lib/fiscal/fiscal-mappers.js";
+import { buildProcInutNFeXML, infInutId } from "../../domain/services/inutilizacao-xml.js";
+import { mapTimeline } from "../mappers/fiscal-mappers.js";
 import { ufToCodigo } from "../../domain/services/nfe-chave.js";
 import { mapEmitente } from "../../../../lib/org/tenant-mapper.js";
 import { listTimelineChains } from "../../infrastructure/observability/timeline-service.js";

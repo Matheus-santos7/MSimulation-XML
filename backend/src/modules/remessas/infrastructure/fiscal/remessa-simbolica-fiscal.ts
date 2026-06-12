@@ -5,13 +5,13 @@ import { NFeTipo } from "../../../../generated/prisma/client.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { resolveRemessaCfop } from "./helpers/remessa-dest.js";
 import { REMESSA_SIMBOLICA_NAT_OP } from "./helpers/remessa-simbolica-dest.js";
-import { enrichTaxSnapshot, loadEmitterSettings } from "../../../../lib/fiscal/fiscal-emitter-runtime.js";
+import { enrichTaxSnapshot, loadEmitterSettings } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
 import {
   enrichFiscalPayloadMlFulfillment,
   enrichFiscalPayloadWithXTexto,
   productUnitPrice,
 } from "@msimulation-xml/fiscal-core";
-import { taxSnapshotFromRule } from "../../../../lib/fiscal/tax-snapshot.js";
+import { taxSnapshotFromRule } from "../../../tax/domain/services/tax-snapshot.js";
 import {
   calcularNotaInbound,
   inferAliqIcmsRemessa,

@@ -1,4 +1,4 @@
-import type { CustomerType, TransactionType } from "../../../../lib/fiscal/tax-rule-ids.js";
+import type { CustomerType, TransactionType } from "../../domain/services/tax-rule-ids.js";
 import type { TaxRuleImportRow } from "../../domain/entities/tax-rule-import-row.entity.js";
 import type { TaxRuleSpreadsheetRawRow } from "../../domain/entities/tax-rule-spreadsheet-raw-row.entity.js";
 

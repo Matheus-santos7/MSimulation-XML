@@ -1,4 +1,4 @@
-import type { MeliUnidadeLogistica } from "../../generated/prisma/client.js";
+import type { MeliUnidadeLogistica } from "../../../../generated/prisma/client.js";
 
 /** Normaliza CNPJ da planilha (float, pontuação) para 14 dígitos. */
 export function normalizeCnpjMeli(raw: unknown): string | null {

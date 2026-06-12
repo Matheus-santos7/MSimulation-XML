@@ -3,38 +3,37 @@ import type { FiscalEventDto } from "./fiscal-types";
 export type FiscalXmlDocKind = "nfe" | "nfe-evento" | "cte" | "inutilizacao";
 
 export type FiscalXmlHref = {
-  view: string;
-  download: string;
+  viewPath: string;
+  downloadPath: string;
 };
 
-function withDownload(base: string, download: boolean): string {
-  if (!download) return base;
+function withDownload(base: string): string {
   const sep = base.includes("?") ? "&" : "?";
   return `${base}${sep}download=1`;
 }
 
-/** Monta URLs de visualização e download para documentos fiscais XML. */
+/** Caminhos da API backend para visualização e download de XML fiscal. */
 export function fiscalXmlHref(kind: FiscalXmlDocKind, id: string): FiscalXmlHref {
   switch (kind) {
     case "nfe":
       return {
-        view: `/nfe/${id}/xml`,
-        download: withDownload(`/nfe/${id}/xml`, true),
+        viewPath: `/api/nfes/${id}/xml`,
+        downloadPath: withDownload(`/api/nfes/${id}/xml`),
       };
     case "nfe-evento":
       return {
-        view: `/nfe/${id}/xml?doc=evento`,
-        download: withDownload(`/nfe/${id}/xml?doc=evento`, true),
+        viewPath: `/api/nfes/${id}/xml?doc=evento`,
+        downloadPath: withDownload(`/api/nfes/${id}/xml?doc=evento`),
       };
     case "cte":
       return {
-        view: `/cte/${id}/xml`,
-        download: withDownload(`/cte/${id}/xml`, true),
+        viewPath: `/api/ctes/${id}/xml`,
+        downloadPath: withDownload(`/api/ctes/${id}/xml`),
       };
     case "inutilizacao":
       return {
-        view: `/nfe/inutilizacao/${id}/xml`,
-        download: withDownload(`/nfe/inutilizacao/${id}/xml`, true),
+        viewPath: `/api/fiscal-events/${id}/xml`,
+        downloadPath: withDownload(`/api/fiscal-events/${id}/xml`),
       };
   }
 }

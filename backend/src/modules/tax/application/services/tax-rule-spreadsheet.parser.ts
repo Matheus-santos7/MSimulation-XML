@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import type { TaxRuleSpreadsheetRawRow } from "../../modules/tax/domain/entities/tax-rule-spreadsheet-raw-row.entity.js";
+import type { TaxRuleSpreadsheetRawRow } from "../../domain/entities/tax-rule-spreadsheet-raw-row.entity.js";
 
 export type TaxRuleSpreadsheetParseResult = {
   rawRows: TaxRuleSpreadsheetRawRow[];

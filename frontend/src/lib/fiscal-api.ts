@@ -20,6 +20,8 @@ import type {
   UserUpdateInput,
   TimelineRemessaGroupDto,
   TimelineStepDto,
+  CepLookupDto,
+  CnpjLookupDto,
 } from "./fiscal-types";
 import type {
   FiscalEmitterSettingsPatch,
@@ -727,4 +729,16 @@ export async function listMovimentacoesProduto(opts?: {
       limit: opts?.limit != null ? String(opts.limit) : undefined,
     }),
   );
+}
+
+/** Consulta CEP via backend (`GET /api/lookup/cep/:cep`) — sem chamada direta a ViaCEP/BrasilAPI. */
+export async function lookupCep(cep: string): Promise<CepLookupDto> {
+  const digits = cep.replace(/\D/g, "");
+  return getJson<CepLookupDto>(url(`/api/lookup/cep/${digits}`));
+}
+
+/** Consulta CNPJ via backend (`GET /api/lookup/cnpj/:cnpj`). */
+export async function lookupCnpj(cnpj: string): Promise<CnpjLookupDto> {
+  const digits = cnpj.replace(/\D/g, "");
+  return getJson<CnpjLookupDto>(url(`/api/lookup/cnpj/${digits}`));
 }

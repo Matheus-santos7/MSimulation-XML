@@ -547,18 +547,6 @@ export async function patchFiscalEmitterSettings(
   return mutateJson<FiscalEmitterSettingsView>(url("/api/fiscal-settings"), "PATCH", patch) as Promise<FiscalEmitterSettingsView>;
 }
 
-export type UnidadeLogisticaImportRow = {
-  unidade: string;
-  cnpj: string | number;
-  inscricaoEstadual?: string | number;
-  idCadIntTran?: string | null;
-  logradouro: string;
-  numero: string;
-  cidade: string;
-  uf: string;
-  cep: string | number;
-};
-
 export type UnidadeLogisticaDto = {
   id: string;
   tenantId: string;
@@ -643,15 +631,31 @@ export async function listUnidadesLogisticas(opts?: {
   );
 }
 
-export async function bulkImportUnidadesLogisticas(
-  rows: UnidadeLogisticaImportRow[],
-  enrichCep = true,
+/** Envia planilha ML (.xlsx) para parse e importação no backend. */
+export async function importUnidadesLogisticasSpreadsheet(
+  file: File,
+  options?: { enrichCep?: boolean },
 ): Promise<UnidadeLogisticaBulkImportResult> {
-  return mutateJson<UnidadeLogisticaBulkImportResult>(
-    url("/api/unidades-logisticas/bulk-import"),
-    "POST",
-    { rows, enrichCep },
-  ) as Promise<UnidadeLogisticaBulkImportResult>;
+  const body = new FormData();
+  body.append("file", file);
+  if (options?.enrichCep === false) {
+    body.append("enrichCep", "false");
+  }
+
+  const href = url("/api/unidades-logisticas/bulk-import");
+  const res = await fetch(href, {
+    method: "POST",
+    headers: await authHeaders(),
+    body,
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const payload = await readApiErrorPayload(res);
+    throw new Error(payload.error);
+  }
+
+  return res.json() as Promise<UnidadeLogisticaBulkImportResult>;
 }
 
 export async function setUnidadeLogisticaPadrao(unidadeId: string): Promise<UnidadeLogisticaDto> {

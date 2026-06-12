@@ -1,0 +1,26 @@
+---
+alwaysApply: true
+---
+---
+description: Regras de arquitetura e Clean Architecture estritas para o Frontend (Next.js/React). Garante que o frontend atue apenas como camada de visualização (Thin Client).
+globs: frontend/**/*.{ts,tsx}
+---
+# Frontend Clean Architecture Rules
+
+O Frontend deste projeto atua estritamente como uma camada de Apresentação (View) e Transporte (I/O). Toda regra de negócio, cálculo e processamento de arquivos pertence ao Backend.
+
+## 1. Zero Processamento de Arquivos e Artefatos de Domínio
+- **Planilhas (XLSX/CSV):** O frontend NUNCA deve importar bibliotecas como `xlsx` ou tentar fazer o parse de planilhas de importação. O frontend deve enviar o objeto `File` intacto para o backend usando `FormData`.
+- **Artefatos Fiscais (XML, PDF):** O frontend NUNCA deve montar, formatar ou assinar tags XML. A geração de documentos fiscais é responsabilidade exclusiva do domínio no backend. O frontend deve apenas consumir rotas que retornam a `string` pronta ou o `Blob` do arquivo.
+
+## 2. Validações UI vs. Validações de Domínio
+- **Permitido no Frontend:** Validações de formato e presença (Zod) para feedback rápido na UI (ex: "Campo obrigatório", "Email inválido").
+- **Proibido no Frontend:** Validações de estado do sistema, regras de deduplicação (ex: "Se o SKU existir, substitua"), ou limpezas complexas de strings que representam regras governamentais (ex: formatar EXTIPI ou idCadIntTran). Exiba apenas os erros retornados pela API (`domain-errors`).
+
+## 3. Isolamento de APIs Externas
+- O frontend deve se comunicar APENAS com o nosso próprio Backend (`/api/...`).
+- É proibido chamar APIs de terceiros (como ViaCEP, SEFAZ, Mercado Livre) diretamente pelo browser. Essas chamadas devem passar pelo nosso backend para garantir rate-limiting, segurança de chaves (API Keys) e auditoria.
+
+## 4. Gerenciamento de Estado
+- Use Server Actions e React Hook Form + Zod para formulários.
+- Componentes devem ser os mais "burros" possíveis. Se uma função em `frontend/src/lib/` tiver mais de 50 linhas mapeando objetos complexos, ela provavelmente pertence ao Backend.

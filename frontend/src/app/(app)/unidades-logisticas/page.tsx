@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { AvancoCdForm } from "@/components/avanco-cd-form";
 import { PageHeader } from "@/components/fiscal-ui";
+import { UnidadesLogisticasImportForm } from "@/components/unidades-logisticas-import-form";
 import { UnidadesLogisticasTable } from "@/components/unidades-logisticas-table";
+import { isAdminRole } from "@/lib/auth/roles";
+import { getAuthMe } from "@/lib/auth/session";
 import { listProducts, listUnidadesLogisticas } from "@/lib/fiscal-api";
 
 export const metadata: Metadata = { title: "Unidades Logísticas" };
@@ -13,14 +16,17 @@ type Props = {
 export default async function UnidadesLogisticasPage({ searchParams }: Props) {
   const { q, cnpj } = await searchParams;
 
-  const [unidades, products] = await Promise.all([
+  const [unidades, products, me] = await Promise.all([
     listUnidadesLogisticas({
       q: q?.trim() || undefined,
       cnpj: cnpj?.trim() || undefined,
       ativa: true,
     }),
     listProducts(),
+    getAuthMe(),
   ]);
+
+  const isAdmin = isAdminRole(me?.role);
 
   const padrao = unidades.find((u) => u.padrao);
 
@@ -50,6 +56,8 @@ export default async function UnidadesLogisticasPage({ searchParams }: Props) {
           </p>
         )}
       </div>
+
+      {isAdmin ? <UnidadesLogisticasImportForm /> : null}
 
       <AvancoCdForm products={products} unidades={unidades} />
 

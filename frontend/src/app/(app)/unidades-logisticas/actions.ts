@@ -4,11 +4,62 @@ import { revalidatePath } from "next/cache";
 import {
   emitirAvancoCd,
   emitirRemessaManual,
+  importUnidadesLogisticasSpreadsheet,
   listSaldoRemessaPorCd,
   realignRemessaFifo,
   setUnidadeLogisticaPadrao,
 } from "@/lib/fiscal-api";
 import type { SaldoRemessaCdDto } from "@/lib/fiscal-api";
+import { validateSpreadsheetFile } from "@/lib/spreadsheet-upload";
+
+export type UnidadesLogisticasImportState = {
+  error?: string;
+  success?: boolean;
+  created?: number;
+  updated?: number;
+  skipped?: number;
+  totalPlanilha?: number;
+  unicos?: number;
+  parseErrors?: { line: number; message: string }[];
+  errors?: { line: number; message: string }[];
+};
+
+export async function importarUnidadesLogisticasAction(
+  _prev: UnidadesLogisticasImportState,
+  formData: FormData,
+): Promise<UnidadesLogisticasImportState> {
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return { error: "Selecione um arquivo .xlsx" };
+  }
+
+  const validation = await validateSpreadsheetFile(file);
+  if (!validation.ok) {
+    return { error: validation.error };
+  }
+
+  const enrichCepValues = formData.getAll("enrichCep").map(String);
+  const enrichCep = !enrichCepValues.includes("false") || enrichCepValues.includes("true");
+
+  try {
+    const result = await importUnidadesLogisticasSpreadsheet(file, { enrichCep });
+    revalidatePath("/unidades-logisticas");
+    revalidatePath("/operacoes");
+    revalidatePath("/produtos");
+    return {
+      success: true,
+      created: result.created,
+      updated: result.updated,
+      skipped: result.skipped,
+      totalPlanilha: result.totalPlanilha,
+      unicos: result.unicos,
+      parseErrors: result.parseErrors,
+      errors: result.errors.length > 0 ? result.errors : undefined,
+    };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Erro ao importar planilha" };
+  }
+}
 
 export type AvancoCdState = {
   error?: string;

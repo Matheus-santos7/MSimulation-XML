@@ -21,3 +21,36 @@ export { EmitirAvancoMercadoriaUseCase } from "./application/use-cases/emitir-av
 export { createRemessasModule } from "./infrastructure/factory/remessas-module.factory.js";
 export { createRemessasAdapters } from "./infrastructure/factory/remessas-adapters.js";
 export { mapAvancoMercadoriaParaApi } from "./presentation/avanco-api.mapper.js";
+
+export {
+  emitirNFeRemessa,
+  emitirRemessaManual,
+  RemessaError,
+  type EmitirRemessaOptions,
+} from "./infrastructure/fiscal/remessa-service.js";
+export {
+  prepararRemessaSimbolicaFiscal,
+  RemessaSimbolicaFiscalError,
+  type RemessaSimbolicaFiscalPreparada,
+} from "./infrastructure/fiscal/remessa-simbolica-fiscal.js";
+export {
+  consumirSaldoRemessaFifo,
+  consumirSaldoRemessaFifoParaVenda,
+  debitarSaldoRemessaPorCd,
+  estornarConsumosRemessa,
+  listarSaldoRemessaPorCd,
+  atualizarItensSaldoFifoParaNfes,
+  saldoLiquidoRemessaNfe,
+  prepararSaldoFifoParaOperacao,
+  resolveOrigemFiscalParaAvanco,
+  resolveUnidadeFifoOrigemId,
+  realignRemessaFifoProductIdsBySku,
+  remessaItemSaldoWhere,
+  remessaSaldoItensWhere,
+  saldoRemessaDisponivel,
+  previewRemessaPrincipalFifoParaVenda,
+  loadRemessaDestinoRetorno,
+  SaldoRemessaInsuficienteError,
+  type SaldoRemessaCdRow,
+} from "./infrastructure/fifo/remessa-fifo.js";
+export { emitirCteRemessa } from "./infrastructure/fiscal/cte-remessa-service.js";

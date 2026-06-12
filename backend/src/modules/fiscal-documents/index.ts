@@ -19,6 +19,21 @@ export { CancelDocumentUseCase } from "./application/use-cases/cancel-document.u
 export { ProcessReturnUseCase } from "./application/use-cases/process-return.use-case.js";
 export { InutilizeNumberUseCase } from "./application/use-cases/inutilize-number.use-case.js";
 
+export { fiscalNotDeleted } from "./domain/constants/fiscal-not-deleted.js";
+export {
+  resolveNfeXml,
+  persistNfeXmlAutorizado,
+  persistNfeXmlFromEmission,
+  buildNfeXmlAutorizado,
+} from "./infrastructure/xml/nfe-xml-service.js";
+export {
+  resolveCteXml,
+  persistCteXmlAutorizado,
+  persistCteFromEmission,
+  buildCteXmlAutorizado,
+} from "./infrastructure/xml/cte-xml-service.js";
+export { listTimelineChains } from "./infrastructure/observability/timeline-service.js";
+
 export { createFiscalDocumentsModule };
 export { nfeController } from "./presentation/controllers/nfe.controller.js";
 export { nfeLifecycleController } from "./presentation/controllers/nfe-lifecycle.controller.js";

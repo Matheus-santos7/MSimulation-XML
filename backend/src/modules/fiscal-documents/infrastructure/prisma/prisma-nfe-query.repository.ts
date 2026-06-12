@@ -1,11 +1,11 @@
 import { NFeTipo, type PrismaClient } from "../../../../generated/prisma/client.js";
 import { mapNfe } from "../../../../lib/fiscal/fiscal-mappers.js";
-import { fiscalNotDeleted } from "../../../../services/fiscal/shared/fiscal-service.js";
-import { resolveNfeXml } from "../../../../services/fiscal/shared/nfe-xml-service.js";
+import { fiscalNotDeleted } from "../../domain/constants/fiscal-not-deleted.js";
+import { resolveNfeXml } from "../xml/nfe-xml-service.js";
 import {
   atualizarItensSaldoFifoParaNfes,
   saldoLiquidoRemessaNfe,
-} from "../../../../services/fiscal/remessa/remessa-fifo.js";
+} from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
 import type { NfeDetail, NfeQueryPort } from "../../domain/ports/nfe-query.port.js";
 
 const nfeListInclude = {

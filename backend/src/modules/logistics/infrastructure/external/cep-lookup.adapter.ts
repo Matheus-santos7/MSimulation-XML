@@ -1,4 +1,4 @@
-import { lookupCep } from "../../../../services/lookup/lookup-service.js";
+import { lookupCep } from "../../../lookup/index.js";
 import type { CepLookupPort } from "../../domain/ports/cep-lookup.port.js";
 
 export class CepLookupAdapter implements CepLookupPort {

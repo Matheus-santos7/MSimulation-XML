@@ -24,8 +24,8 @@ import {
   consumirSaldoRemessaFifoParaVenda,
   loadRemessaDestinoRetorno,
   type PreviewRemessaFifoVenda,
-} from "../../../../services/fiscal/remessa/remessa-fifo.js";
-import { persistNfeXmlFromEmission } from "../../../../services/fiscal/shared/nfe-xml-service.js";
+} from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
+import { persistNfeXmlFromEmission } from "../../../fiscal-documents/infrastructure/xml/nfe-xml-service.js";
 import type { EmissionContext } from "../../domain/entities/emission-context.entity.js";
 import type { OrderForEmit } from "../../domain/entities/order-for-emit.entity.js";
 import type { ReturnNoteCreated, SalesChainRules } from "../../application/dto/sales-chain.dto.js";

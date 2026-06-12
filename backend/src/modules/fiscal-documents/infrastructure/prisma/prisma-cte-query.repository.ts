@@ -1,7 +1,7 @@
 import type { PrismaClient } from "../../../../generated/prisma/client.js";
 import { mapCte } from "../../../../lib/fiscal/fiscal-mappers.js";
-import { fiscalNotDeleted } from "../../../../services/fiscal/shared/fiscal-service.js";
-import { resolveCteXml } from "../../../../services/fiscal/shared/cte-xml-service.js";
+import { fiscalNotDeleted } from "../../domain/constants/fiscal-not-deleted.js";
+import { resolveCteXml } from "../xml/cte-xml-service.js";
 import type { CteQueryPort } from "../../domain/ports/cte-query.port.js";
 
 export class PrismaCteQueryRepository implements CteQueryPort {

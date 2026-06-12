@@ -1,5 +1,5 @@
 import type { PrismaTx } from "../db/prisma-tx.js";
-import { fiscalNotDeleted } from "../../services/fiscal/shared/fiscal-service.js";
+import { fiscalNotDeleted } from "../../modules/fiscal-documents/domain/constants/fiscal-not-deleted.js";
 
 export async function proximoNumeroCte(
   prisma: PrismaTx,

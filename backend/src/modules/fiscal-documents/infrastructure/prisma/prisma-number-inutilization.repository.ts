@@ -4,7 +4,7 @@
 
 import type { PrismaClient } from "../../../../generated/prisma/client.js";
 import { gerarProtocoloSefaz } from "../../../../lib/fiscal/sefaz-protocol.js";
-import { fiscalNotDeleted } from "../../../../services/fiscal/shared/fiscal-service.js";
+import { fiscalNotDeleted } from "../../domain/constants/fiscal-not-deleted.js";
 import type { InutilizationResult } from "../../domain/entities/lifecycle-result.entity.js";
 import { NumberInutilizationError } from "../../domain/errors/number-inutilization.error.js";
 import type {

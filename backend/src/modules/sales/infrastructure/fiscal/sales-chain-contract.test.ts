@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { NFeTipo } from "../../../../generated/prisma/client.js";
-import { consumirSaldoRemessaFifo } from "../../../../services/fiscal/remessa/remessa-fifo.js";
+import { consumirSaldoRemessaFifo } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
 
 /**
  * Sales chain contracts (no real Prisma).

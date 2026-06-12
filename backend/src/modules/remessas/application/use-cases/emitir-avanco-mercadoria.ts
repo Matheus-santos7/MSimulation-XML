@@ -3,13 +3,13 @@ import type { PrismaClient } from "../../../../generated/prisma/client.js";
 import type { Product, Tenant } from "../../../../generated/prisma/client.js";
 import { gerarPedidoMl } from "../../../../lib/fiscal/nfe-chave.js";
 import { FISCAL_TRANSACTION_OPTIONS, type PrismaTx } from "../../../../lib/db/prisma-tx.js";
-import { emitirCteRemessa } from "../../../../services/fiscal/remessa/cte-remessa-service.js";
+import { emitirCteRemessa } from "../../infrastructure/fiscal/cte-remessa-service.js";
 import {
   debitarSaldoRemessaPorCd,
   resolveOrigemFiscalParaAvanco,
   saldoRemessaDisponivel,
   SaldoRemessaInsuficienteError,
-} from "../../../../services/fiscal/remessa/remessa-fifo.js";
+} from "../../infrastructure/fifo/remessa-fifo.js";
 import { createLogisticsModule } from "../../../logistics/index.js";
 import { quantidadeSaldo } from "../../domain/value-objects/quantidade-saldo.js";
 import { RemessaDomainError } from "../../domain/errors.js";

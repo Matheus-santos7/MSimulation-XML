@@ -1,5 +1,5 @@
 import type { PrismaClient } from "../../../../generated/prisma/client.js";
-import { emitirRemessaManual } from "../../../../services/fiscal/remessa/remessa-service.js";
+import { emitirRemessaManual } from "../fiscal/remessa-service.js";
 import { createLogisticsModule } from "../../../logistics/index.js";
 import { EmitirAvancoMercadoriaUseCase } from "../../application/use-cases/emitir-avanco-mercadoria.js";
 import { EmitirRemessaInicialUseCase } from "../../application/use-cases/emitir-remessa-inicial.js";

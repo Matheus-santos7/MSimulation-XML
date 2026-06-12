@@ -10,7 +10,7 @@ import {
   RemessaError,
   SaldoRemessaInsuficienteError,
 } from "../../../../services/fiscal/index.js";
-import { RemessaSimbolicaFiscalError } from "../../../../services/fiscal/remessa/remessa-simbolica-fiscal.js";
+import { RemessaSimbolicaFiscalError } from "../../../remessas/infrastructure/fiscal/remessa-simbolica-fiscal.js";
 import {
   RemessaDomainError,
   SaldoFifoInsuficienteError,

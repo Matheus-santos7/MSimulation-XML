@@ -14,14 +14,14 @@ import {
 import { unidadeParaDestinoFiscal } from "../../../../lib/logistics/meli-unidade.js";
 import { taxSnapshotFromRule } from "../../../../lib/fiscal/tax-snapshot.js";
 import { proximoNumeroNfe } from "../../../../lib/fiscal/nfe-sequencia.js";
-import { loadRemessaDestinoRetorno } from "../../../../services/fiscal/remessa/remessa-fifo.js";
+import { loadRemessaDestinoRetorno } from "../fifo/remessa-fifo.js";
 import {
   calcularNotaInbound,
   inferAliqIcmsIntraestadual,
   linhaPedidoFromProduto,
 } from "../../../tax/index.js";
 import { resolveTaxRule } from "../../../tax/index.js";
-import { prepararRemessaSimbolicaFiscal } from "../../../../services/fiscal/remessa/remessa-simbolica-fiscal.js";
+import { prepararRemessaSimbolicaFiscal } from "./remessa-simbolica-fiscal.js";
 import { findActiveLogisticsUnitRecord } from "../../../logistics/index.js";
 import type { CamposDestinoNfe } from "../../domain/types/destino-nfe.js";
 import type {

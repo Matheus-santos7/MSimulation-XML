@@ -25,12 +25,12 @@ import { enrichFiscalPayloadWithXTexto } from "@msimulation-xml/fiscal-core";
 import { taxSnapshotFromRule } from "../../../../lib/fiscal/tax-snapshot.js";
 import { calcularNotaFiscal } from "../../../../lib/fiscal/tax-engine.js";
 import { montarItemFiscal, resolveTaxRule, type CustomerType } from "../../../tax/index.js";
-import { persistNfeXmlFromEmission } from "../../../../services/fiscal/shared/nfe-xml-service.js";
-import { estornarConsumosRemessa } from "../../../../services/fiscal/remessa/remessa-fifo.js";
+import { persistNfeXmlFromEmission } from "../xml/nfe-xml-service.js";
+import { estornarConsumosRemessa } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
 import {
   prepararRemessaSimbolicaFiscal,
   RemessaSimbolicaFiscalError,
-} from "../../../../services/fiscal/remessa/remessa-simbolica-fiscal.js";
+} from "../../../remessas/infrastructure/fiscal/remessa-simbolica-fiscal.js";
 import type { ProcessReturnResult } from "../../domain/entities/lifecycle-result.entity.js";
 import { DocumentReturnError } from "../../domain/errors/document-return.error.js";
 import type {

@@ -9,7 +9,7 @@ import {
   debitarSaldoRemessaPorCd,
   realignRemessaFifoProductIdsBySku,
   remessaSaldoItensWhere,
-} from "../../../../services/fiscal/remessa/remessa-fifo.js";
+} from "../fifo/remessa-fifo.js";
 type Db = PrismaClient | PrismaTx;
 
 /**

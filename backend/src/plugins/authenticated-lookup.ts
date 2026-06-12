@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { lookupRoutes } from "../routes/lookup/index.js";
+import { lookupController } from "../modules/lookup/presentation/controllers/lookup.controller.js";
 
 /**
  * Lookup CNPJ/CEP: só JWT, sem tenant (onboarding).
@@ -7,5 +7,5 @@ import { lookupRoutes } from "../routes/lookup/index.js";
  */
 export const authenticatedLookupPlugin: FastifyPluginAsync = async (app) => {
   app.addHook("onRequest", app.authenticate);
-  await app.register(lookupRoutes);
+  await app.register(lookupController);
 };

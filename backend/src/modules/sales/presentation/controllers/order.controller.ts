@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { tenantIdFromRequest } from "../../../../lib/auth/request-context.js";
 import { handleRouteError } from "../../../../lib/http/domain-errors.js";
-import { SaldoRemessaInsuficienteError } from "../../../../services/fiscal/remessa/remessa-fifo.js";
+import { SaldoRemessaInsuficienteError } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
 import { CheckoutError } from "../../domain/errors/checkout.error.js";
 import { OrderLockedError, PedidoLockedError } from "../../domain/errors/order-locked.error.js";
 import { SalesChainError, VendaChainError } from "../../domain/errors/sales-chain.error.js";

@@ -3,7 +3,7 @@ import { dadosCteToPrismaCreate, montarDadosCteFromNfe } from "../../../../lib/f
 import { proximoNumeroCte } from "../../../../lib/fiscal/cte-sequencia.js";
 import { mapCte } from "../../../../lib/fiscal/fiscal-mappers.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
-import { buildCteXmlAutorizado } from "../../../../services/fiscal/shared/cte-xml-service.js";
+import { buildCteXmlAutorizado } from "../../../fiscal-documents/infrastructure/xml/cte-xml-service.js";
 
 /** CT-e for sale transport (warehouse → consumer), referencing the sale NF-e. */
 export async function emitSaleCte(prisma: PrismaTx, tenant: Tenant, saleNfe: NFe) {

@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { tenantIdFromRequest } from "../../../../lib/auth/request-context.js";
 import { mapTimeline } from "../../../../lib/fiscal/fiscal-mappers.js";
-import { listTimelineChains } from "../../../../services/fiscal/shared/timeline-service.js";
+import { listTimelineChains } from "../../infrastructure/observability/timeline-service.js";
 
 async function listFiscalEventsForTenant(
   prisma: Parameters<typeof listTimelineChains>[0],

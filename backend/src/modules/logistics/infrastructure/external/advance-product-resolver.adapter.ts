@@ -2,7 +2,7 @@ import type { PrismaClient } from "../../../../generated/prisma/client.js";
 import {
   collectRemessaSaldoProductIds,
   remessaItemSaldoWhere,
-} from "../../../../services/fiscal/remessa/remessa-fifo.js";
+} from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
 import type { AdvanceProductResolved } from "../../domain/entities/advance-product.entity.js";
 import type { AdvanceProductResolverPort } from "../../domain/ports/advance-product-resolver.port.js";
 

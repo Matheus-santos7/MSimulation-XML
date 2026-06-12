@@ -13,8 +13,8 @@ import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { mapNfe } from "../../../../lib/fiscal/fiscal-mappers.js";
 import { loadEmitterSettings } from "../../../../lib/fiscal/fiscal-emitter-runtime.js";
 import { gerarProtocoloSefaz } from "../../../../lib/fiscal/sefaz-protocol.js";
-import { fiscalNotDeleted } from "../../../../services/fiscal/shared/fiscal-service.js";
-import { estornarConsumosRemessa } from "../../../../services/fiscal/remessa/remessa-fifo.js";
+import { fiscalNotDeleted } from "../../domain/constants/fiscal-not-deleted.js";
+import { estornarConsumosRemessa } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
 import type { CancelDocumentResult } from "../../domain/entities/lifecycle-result.entity.js";
 import { DocumentCancellationError } from "../../domain/errors/document-cancellation.error.js";
 import type {

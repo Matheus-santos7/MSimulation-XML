@@ -1,7 +1,7 @@
 import type { Tenant } from "../../../../generated/prisma/client.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { loadEmitterSettings } from "../../../../lib/fiscal/fiscal-emitter-runtime.js";
-import { persistNfeXmlFromEmission } from "../../../../services/fiscal/shared/nfe-xml-service.js";
+import { persistNfeXmlFromEmission } from "../../../fiscal-documents/infrastructure/xml/nfe-xml-service.js";
 import type { PrismaClient } from "../../../../generated/prisma/client.js";
 
 type Db = PrismaClient | PrismaTx;

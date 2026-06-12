@@ -1,9 +1,7 @@
 import multipart from "@fastify/multipart";
 import type { FastifyPluginAsync } from "fastify";
-import {
-  logisticsUnitController,
-  movementController,
-} from "../../modules/logistics/index.js";
+import { logisticsUnitController } from "../../modules/logistics/presentation/controllers/logistics-unit.controller.js";
+import { movementController } from "../../modules/logistics/presentation/controllers/movement.controller.js";
 
 /** Logística ML: unidades logísticas e movimentações de estoque. */
 export const logisticsContextPlugin: FastifyPluginAsync = async (app) => {

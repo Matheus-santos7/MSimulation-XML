@@ -1,7 +1,7 @@
 import type { PrismaClient, Tenant } from "../../../../generated/prisma/client.js";
 import { FISCAL_TRANSACTION_OPTIONS } from "../../../../lib/db/prisma-tx.js";
 import { mapNfe } from "../../../../lib/fiscal/fiscal-mappers.js";
-import { previewRemessaPrincipalFifoParaVenda } from "../../../../services/fiscal/remessa/remessa-fifo.js";
+import { previewRemessaPrincipalFifoParaVenda } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
 import type { SalesChainResult } from "../../application/dto/sales-chain.dto.js";
 import type { OrderForEmit } from "../../domain/entities/order-for-emit.entity.js";
 import type { SalesChainPort } from "../../domain/ports/sales-chain.port.js";

@@ -193,6 +193,23 @@ describe("buildNFeXML — REMESSA", () => {
     assert.match(xml, /<IPINT>\s*<CST>55<\/CST>\s*<\/IPINT>/);
   });
 
+  it("inclui CEST e EXTIPI no bloco prod da remessa quando o produto tem os campos", () => {
+    const product = {
+      sku: "4133250001",
+      nome: "Liquidificador Portatil",
+      ncm: "85094010",
+      cest: "2100100",
+      exTipi: "01",
+      unidade: "PC",
+      origem: 2,
+      preco: 50,
+      precoCusto: 50,
+    };
+    const xml = buildNFeXML(baseNfe(), emit, product);
+    assert.match(xml, /<CEST>2100100<\/CEST>/);
+    assert.match(xml, /<EXTIPI>01<\/EXTIPI>/);
+  });
+
   it("alinha estrutura ML: IBSCBS, vItem, transporta, autXML e reforma nos totais", () => {
     const xml = buildNFeXML(baseNfe(), emit);
     assert.match(xml, /<IBSCBS>\s*<CST>410<\/CST>\s*<cClassTrib>410999<\/cClassTrib>\s*<\/IBSCBS>/);

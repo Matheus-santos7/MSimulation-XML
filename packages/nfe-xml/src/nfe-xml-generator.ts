@@ -491,6 +491,14 @@ function buildRemessaNFeXML(
     const cEAN = formatEanForXml(prod?.ean ?? dtoItem?.product?.ean);
     const xProd = prod?.nome ?? dtoItem?.product?.nome ?? nfe.natOp;
     const ncm = dtoItem?.ncm ?? prod?.ncm ?? dtoItem?.product?.ncm ?? nfe.ncm;
+    const cest = prod?.cest ?? dtoItem?.product?.cest;
+    const exTipi = prod?.exTipi ?? dtoItem?.product?.exTipi;
+    const cestXml = cest ? `\n          <CEST>${cest}</CEST>` : "";
+    const exTipiXml = exTipi
+      ? `\n          <EXTIPI>${exTipi}</EXTIPI>`
+      : i === 0 && typeof fiscal.exTipi === "string" && fiscal.exTipi
+        ? `\n          <EXTIPI>${fiscal.exTipi}</EXTIPI>`
+        : "";
     const cfop = dtoItem?.cfop ?? nfe.cfop;
     const uCom = prod?.unidade ?? dtoItem?.product?.unidade ?? "UNID";
     const vUnComOut =
@@ -531,7 +539,7 @@ function buildRemessaNFeXML(
           <cProd>${xmlEscape(cProd)}</cProd>
           <cEAN>${cEAN}</cEAN>
           <xProd>${xmlEscape(xProd)}</xProd>
-          <NCM>${ncm}</NCM>
+          <NCM>${ncm}</NCM>${cestXml}${exTipiXml}
           <CFOP>${cfop}</CFOP>
           <uCom>${xmlEscape(uCom)}</uCom>
           <qCom>${formatNfeQuantity(qCom)}</qCom>

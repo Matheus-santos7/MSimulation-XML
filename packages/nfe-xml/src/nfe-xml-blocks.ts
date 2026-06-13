@@ -185,11 +185,10 @@ export function vItemXml(vItem: number): string {
 }
 
 export function icmsTotXml(t: IcmsTotValues, opts?: { includeDifalFields?: boolean }): string {
-  const includeDifal = opts?.includeDifalFields ?? false;
+  void opts;
   const hasDifalValues =
     (t.vFCPUFDest ?? 0) !== 0 || (t.vICMSUFDest ?? 0) !== 0 || (t.vICMSUFRemet ?? 0) !== 0;
-  const difal =
-    includeDifal || hasDifalValues
+  const difal = hasDifalValues
       ? `<vFCPUFDest>${(t.vFCPUFDest ?? 0).toFixed(2)}</vFCPUFDest>
           <vICMSUFDest>${(t.vICMSUFDest ?? 0).toFixed(2)}</vICMSUFDest>
           <vICMSUFRemet>${(t.vICMSUFRemet ?? 0).toFixed(2)}</vICMSUFRemet>`

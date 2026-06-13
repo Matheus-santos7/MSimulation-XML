@@ -25,6 +25,7 @@ import type { ResolvedTaxRule } from "../../domain/entities/resolved-tax-rule.en
 import {
   composicaoChannel,
   mapCstDevolucao,
+  resolveIpiCstFromSnapshot,
   resolvePisCofinsCstFromSnapshot,
   resolveDifalMode,
   type FiscalEmitterSettingsData,
@@ -289,7 +290,7 @@ export function buildFiscalItem(
     ipi:
       rule != null || snapshot.ipi.aliquota > 0
         ? {
-            cst: String(snapshot.ipi.st).slice(0, 2),
+            cst: resolveIpiCstFromSnapshot(String(snapshot.ipi.st), ctx.operationTipo),
             pIPI: snapshot.ipi.aliquota,
             cEnq: snapshot.ipi.codEnq,
           }

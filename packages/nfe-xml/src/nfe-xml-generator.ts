@@ -317,11 +317,8 @@ function fulfillmentDetTail(fiscal: Record<string, unknown>, vProd: number): str
   return `${vItemXml(vProd)}`;
 }
 
-function icmsTotBlock(
-  t: Parameters<typeof icmsTotXml>[0],
-  includeDifalFields = false,
-): string {
-  return icmsTotXml(t, { includeDifalFields });
+function icmsTotBlock(t: Parameters<typeof icmsTotXml>[0]): string {
+  return icmsTotXml(t);
 }
 
 function totalBlock(
@@ -479,7 +476,7 @@ function buildRemessaNFeXML(
   let icmsTot: string;
   let vNFTotal: number;
   if (engine?.itens.length) {
-    icmsTot = icmsTotBlock(icmsTotFromEngine(engine.totais, vFrete), idDest === 2);
+    icmsTot = icmsTotBlock(icmsTotFromEngine(engine.totais, vFrete));
     vNFTotal = engine.totais.vNF;
   } else {
     const vBcIcms = asNum(icms.vBc, emitter.bases.vBcIcms);
@@ -496,7 +493,6 @@ function buildRemessaNFeXML(
         vCOFINS: 0,
         vNF: vNFTotal,
       },
-      idDest === 2,
     );
   }
   const detBlocks: string[] = [];
@@ -748,7 +744,7 @@ function buildRetornoNFeXML(
 
   let icmsTot: string;
   if (engineItem && engine) {
-    icmsTot = icmsTotBlock(icmsTotFromEngine(engine.totais, vFrete), idDest === 2);
+    icmsTot = icmsTotBlock(icmsTotFromEngine(engine.totais, vFrete));
   } else {
     icmsTot = icmsTotBlock(
       {
@@ -761,7 +757,6 @@ function buildRetornoNFeXML(
         vCOFINS: 0,
         vNF: vProd,
       },
-      idDest === 2,
     );
   }
   const ibsCbs = (fiscal.ibsCbs as Record<string, unknown> | undefined) ?? {};
@@ -941,7 +936,7 @@ function buildVendaNFeXML(
     icmsXml = buildIcmsXmlFromEngineItem(item.icms);
     ipiXml = item.ipi ? buildIpiXmlFromEngine(item.ipi) : impostoIpiIntXml("50");
     pisCofinsXml = buildPisCofinsXmlFromEngine(item.pis, item.cofins);
-    totBlock = icmsTotBlock(icmsTotFromEngine(engine.totais, vFrete), idDest === 2);
+    totBlock = icmsTotBlock(icmsTotFromEngine(engine.totais, vFrete));
     vUnComOut = item.valorUnitario;
     vProdOut = item.vProd;
     qComOut = item.quantidade;
@@ -972,22 +967,19 @@ function buildVendaNFeXML(
     const vNF = Math.round((nfe.valor + vFrete + vIpi) * 100) / 100;
     const difalFiscal = (fiscal.difal as Record<string, unknown> | undefined) ?? {};
     const interstate = idDest === 2;
-    totBlock = icmsTotBlock(
-      {
-        vBC: vBcIcms,
-        vICMS: valorIcms,
-        vProd: nfe.valor,
-        vFrete,
-        vIPI: vIpi,
-        vPIS: vPis,
-        vCOFINS: vCofins,
-        vNF,
-        vFCPUFDest: interstate ? asNum(difalFiscal.vFCPUFDest, 0) : undefined,
-        vICMSUFDest: interstate ? asNum(difalFiscal.vICMSUFDest, emitter.difal.vDifal) : undefined,
-        vICMSUFRemet: interstate ? asNum(difalFiscal.vICMSUFRemet, 0) : undefined,
-      },
-      interstate,
-    );
+    totBlock = icmsTotBlock({
+      vBC: vBcIcms,
+      vICMS: valorIcms,
+      vProd: nfe.valor,
+      vFrete,
+      vIPI: vIpi,
+      vPIS: vPis,
+      vCOFINS: vCofins,
+      vNF,
+      vFCPUFDest: interstate ? asNum(difalFiscal.vFCPUFDest, 0) : undefined,
+      vICMSUFDest: interstate ? asNum(difalFiscal.vICMSUFDest, emitter.difal.vDifal) : undefined,
+      vICMSUFRemet: interstate ? asNum(difalFiscal.vICMSUFRemet, 0) : undefined,
+    });
   }
 
   const vendaIbsCbsBcInput = engine?.itens[0]

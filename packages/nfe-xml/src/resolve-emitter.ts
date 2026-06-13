@@ -21,25 +21,31 @@ export function resolveEmitterFromPayload(
   valorIcms: number,
 ): EmitterSnapshot {
   const fromPayload = fiscalPayload?.emitter as EmitterSnapshot | undefined;
-  if (fromPayload?.modFrete) return fromPayload;
-  if (settings) {
-    return buildEmitterSnapshot(settings, tipo as NFeTipoValue, valor, valorIcms, "", "");
+  const emitter =
+    fromPayload?.modFrete != null
+      ? fromPayload
+      : settings
+        ? buildEmitterSnapshot(settings, tipo as NFeTipoValue, valor, valorIcms, "", "")
+        : {
+            modFrete: defaultModFreteForTipo(tipo),
+            freteNoCalculo: true,
+            acrescimoNoProduto: false,
+            mensagemInfCpl: "",
+            bases: {
+              vProd: valor,
+              vFrete: 0,
+              vDesc: 0,
+              vIpi: 0,
+              vIcms: valorIcms,
+              vBcIcms: valor,
+              vBcPisCofins: valor,
+              vBcIpi: valor,
+            },
+            difal: { mode: "PADRAO" as const, aplica: false, vDifal: 0 },
+          } satisfies EmitterSnapshot;
+
+  if (tipo === "RETORNO_SIMBOLICO") {
+    return { ...emitter, modFrete: "9" };
   }
-  return {
-    modFrete: defaultModFreteForTipo(tipo),
-    freteNoCalculo: true,
-    acrescimoNoProduto: false,
-    mensagemInfCpl: "",
-    bases: {
-      vProd: valor,
-      vFrete: 0,
-      vDesc: 0,
-      vIpi: 0,
-      vIcms: valorIcms,
-      vBcIcms: valor,
-      vBcPisCofins: valor,
-      vBcIpi: valor,
-    },
-    difal: { mode: "PADRAO", aplica: false, vDifal: 0 },
-  };
+  return emitter;
 }

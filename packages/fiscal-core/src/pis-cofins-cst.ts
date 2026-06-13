@@ -6,14 +6,44 @@ import { NFeTipo, type NFeTipoValue } from "./nfe-tipo.js";
  */
 export const PIS_COFINS_CST_SYMBOLIC_RETURN = "98";
 
+/** CST IPI no retorno simbólico ML Full (entrada com suspensão — `<IPINT>` CST 05). */
+export const IPI_CST_SYMBOLIC_RETURN = "05";
+
+const ML_DEFAULT_MOD_FRETE: Record<NFeTipoValue, string> = {
+  VENDA: "9",
+  REMESSA: "0",
+  RETORNO_SIMBOLICO: "9",
+  REMESSA_SIMBOLICA: "2",
+  DEVOLUCAO: "9",
+};
+
+function pickTaxStCode(snapshotSt: string): string {
+  return String(snapshotSt).trim().slice(0, 2);
+}
+
 /** Resolve CST PIS/COFINS (2 dígitos) conforme o tipo de operação fiscal. */
 export function resolvePisCofinsCstFromSnapshot(
   snapshotSt: string,
   operationTipo?: NFeTipoValue | string,
 ): string {
-  const base = String(snapshotSt).trim().slice(0, 2);
   if (operationTipo === NFeTipo.RETORNO_SIMBOLICO) {
     return PIS_COFINS_CST_SYMBOLIC_RETURN;
   }
-  return base;
+  return pickTaxStCode(snapshotSt);
+}
+
+/** Resolve CST IPI (2 dígitos) conforme o tipo de operação fiscal. */
+export function resolveIpiCstFromSnapshot(
+  snapshotSt: string,
+  operationTipo?: NFeTipoValue | string,
+): string {
+  if (operationTipo === NFeTipo.RETORNO_SIMBOLICO) {
+    return IPI_CST_SYMBOLIC_RETURN;
+  }
+  return pickTaxStCode(snapshotSt);
+}
+
+/** Modalidade de frete padrão ML quando settings estão em modo DEFAULT. */
+export function resolveDefaultModFreteForTipo(tipo: NFeTipoValue): string {
+  return ML_DEFAULT_MOD_FRETE[tipo] ?? "0";
 }

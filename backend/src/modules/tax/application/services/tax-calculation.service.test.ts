@@ -102,6 +102,7 @@ describe("calculateInboundInvoice — envio de estoque interestadual", () => {
 
     assert.equal(result.nota.itens[0]!.pis.cst, "98");
     assert.equal(result.nota.itens[0]!.cofins.cst, "98");
+    assert.equal(result.nota.itens[0]!.ipi?.cst, "05");
     assert.equal(result.nota.itens[0]!.pis.vBC, 0);
     assert.equal(result.nota.itens[0]!.cofins.vBC, 0);
   });

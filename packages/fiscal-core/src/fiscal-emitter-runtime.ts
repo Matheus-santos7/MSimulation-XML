@@ -1,4 +1,5 @@
 import type { NFeTipoValue } from "./nfe-tipo.js";
+import { resolveDefaultModFreteForTipo } from "./pis-cofins-cst.js";
 import type {
   BaseCalcAction,
   ComposicaoLinha,
@@ -79,7 +80,9 @@ export function mapCstDevolucao(vendaCst: string, maps: CstDevolucaoMap[]): stri
 
 export function resolveModFrete(settings: FiscalEmitterSettingsData, tipo: NFeTipoValue): string {
   const m = settings.taxes.modalidadeFrete;
-  if (m.mode === "DEFAULT") return "0";
+  if (m.mode === "DEFAULT") {
+    return resolveDefaultModFreteForTipo(tipo);
+  }
   switch (tipo) {
     case "REMESSA":
       return m.fullfilmentVendas;

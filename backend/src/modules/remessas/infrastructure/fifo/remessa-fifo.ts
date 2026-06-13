@@ -731,7 +731,19 @@ const REMESSA_DEST_SELECT = {
   destTelefone: true,
   destIndIeDest: true,
   fiscalPayload: true,
-  unidadeDestino: { select: { ie: true, idCadIntTran: true } },
+  unidadeDestino: {
+    select: {
+      ie: true,
+      idCadIntTran: true,
+      codigoMunicipio: true,
+      municipio: true,
+      bairro: true,
+      logradouro: true,
+      numero: true,
+      complemento: true,
+      cep: true,
+    },
+  },
 } as const;
 
 export type PreviewRemessaFifoVenda = {

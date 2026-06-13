@@ -50,7 +50,22 @@ type RemessaDestFields = Pick<
   | "fiscalPayload"
 >;
 
-type RemessaDestUnidade = { ie: string | null } | null;
+export type RemessaDestUnidade = {
+  ie: string | null;
+  codigoMunicipio?: string | null;
+  municipio?: string | null;
+  bairro?: string | null;
+  logradouro?: string | null;
+  numero?: string | null;
+  complemento?: string | null;
+  cep?: string | null;
+} | null;
+
+function pickNonEmpty(primary: string | null | undefined, fallback?: string | null): string {
+  const normalized = primary?.trim() ?? "";
+  if (normalized) return normalized;
+  return fallback?.trim() ?? "";
+}
 
 /** Destinatário do retorno = mesmo CD ML da remessa FIFO referenciada (padrão XMLs produção). */
 export function destinoRetornoFromRemessa(
@@ -61,13 +76,16 @@ export function destinoRetornoFromRemessa(
     destNome: remessa.destNome,
     destDoc: remessa.destDoc,
     destUf: remessa.destUf,
-    destLogradouro: remessa.destLogradouro,
-    destNumero: remessa.destNumero,
-    destComplemento: remessa.destComplemento,
-    destBairro: remessa.destBairro,
-    destCodigoMunicipio: remessa.destCodigoMunicipio,
-    destMunicipio: remessa.destMunicipio,
-    destCep: remessa.destCep,
+    destLogradouro: pickNonEmpty(remessa.destLogradouro, unidadeDestino?.logradouro),
+    destNumero: pickNonEmpty(remessa.destNumero, unidadeDestino?.numero),
+    destComplemento: remessa.destComplemento ?? unidadeDestino?.complemento ?? null,
+    destBairro: pickNonEmpty(remessa.destBairro, unidadeDestino?.bairro),
+    destCodigoMunicipio: pickNonEmpty(
+      remessa.destCodigoMunicipio,
+      unidadeDestino?.codigoMunicipio,
+    ),
+    destMunicipio: pickNonEmpty(remessa.destMunicipio, unidadeDestino?.municipio),
+    destCep: pickNonEmpty(remessa.destCep, unidadeDestino?.cep),
     destCodigoPais: remessa.destCodigoPais,
     destNomePais: remessa.destNomePais,
     destTelefone: remessa.destTelefone,

@@ -108,7 +108,7 @@ function resolveEmitGIbscbs(ibsCbs: Record<string, unknown> | null | undefined, 
 
 /** BC do item: vProd (+ encargos) − tributos que compõem a base (UB16-10). */
 export function calcIbsCbsItemVBc(input: IbsCbsVBcInput): number {
-  return roundMoney(
+  return Math.max(0, roundMoney(
     (input.vProd ?? 0) +
       (input.vServ ?? 0) +
       (input.vFrete ?? 0) +
@@ -125,7 +125,7 @@ export function calcIbsCbsItemVBc(input: IbsCbsVBcInput): number {
       (input.vICMSMono ?? 0) -
       (input.vISSQN ?? 0) +
       (input.vIS ?? 0),
-  );
+  ));
 }
 
 /** Soma das BC já arredondadas por item — evita rejeição 1076. */
@@ -172,6 +172,73 @@ export function ibsCbsImpostoXmlFromPayload(
   return ibsCbsImpostoXml(ibsCbs, VENDA_IBS_CBS_DEFAULTS, false, vBC);
 }
 
+export type IbsCbsVendaRates = {
+  pIBSUF: number;
+  pIBSMun: number;
+  pCBS: number;
+};
+
+export function calcIbsCbsVendaValues(vBC: number, rates: IbsCbsVendaRates) {
+  const vIBSUF = roundMoney(vBC * (rates.pIBSUF / 100));
+  const vIBSMun = roundMoney(vBC * (rates.pIBSMun / 100));
+  const vIBS = roundMoney(vIBSUF + vIBSMun);
+  const vCBS = roundMoney(vBC * (rates.pCBS / 100));
+  return { vIBSUF, vIBSMun, vIBS, vCBS };
+}
+
+function readVendaIbsCbsRates(ibsCbs?: Record<string, unknown> | null): IbsCbsVendaRates {
+  return {
+    pIBSUF: asNum(ibsCbs?.pIBSUF, 0.1),
+    pIBSMun: asNum(ibsCbs?.pIBSMun, 0),
+    pCBS: asNum(ibsCbs?.pCBS, 0.9),
+  };
+}
+
+/** Venda ML: `<IBSCBS>` com `<gIBSUF>`, `<gIBSMun>` e `<gCBS>`. */
+export function ibsCbsImpostoXmlVenda(
+  ibsCbs?: Record<string, unknown> | null,
+  vBC?: number | null,
+): string {
+  const hasExplicit =
+    !!ibsCbs && (ibsCbs.st != null || ibsCbs.cst != null || ibsCbs.cClassTrib != null);
+  if (!hasExplicit || vBC == null || !Number.isFinite(vBC)) return "";
+  const cst = String(ibsCbs?.st ?? ibsCbs?.cst ?? VENDA_IBS_CBS_DEFAULTS.cst).slice(0, 3);
+  const cClassTrib = String(ibsCbs?.cClassTrib ?? VENDA_IBS_CBS_DEFAULTS.cClassTrib).slice(0, 6);
+  const rates = readVendaIbsCbsRates(ibsCbs);
+  const { vIBSUF, vIBSMun, vIBS, vCBS } = calcIbsCbsVendaValues(vBC, rates);
+  return `<IBSCBS><CST>${cst}</CST><cClassTrib>${cClassTrib}</cClassTrib><gIBSCBS><vBC>${vBC.toFixed(2)}</vBC><gIBSUF><pIBSUF>${rates.pIBSUF.toFixed(2)}</pIBSUF><vIBSUF>${vIBSUF.toFixed(2)}</vIBSUF></gIBSUF><gIBSMun><pIBSMun>${rates.pIBSMun.toFixed(2)}</pIBSMun><vIBSMun>${vIBSMun.toFixed(2)}</vIBSMun></gIBSMun><vIBS>${vIBS.toFixed(2)}</vIBS><gCBS><pCBS>${rates.pCBS.toFixed(2)}</pCBS><vCBS>${vCBS.toFixed(2)}</vCBS></gCBS></gIBSCBS></IBSCBS>`;
+}
+
+export function ibsCbsTotXmlVenda(vBC: number, ibsCbs?: Record<string, unknown> | null): string {
+  const rates = readVendaIbsCbsRates(ibsCbs);
+  const { vIBSUF, vIBSMun, vIBS, vCBS } = calcIbsCbsVendaValues(vBC, rates);
+  return `<IBSCBSTot>
+          <vBCIBSCBS>${vBC.toFixed(2)}</vBCIBSCBS>
+          <gIBS><gIBSUF><vDif>0.00</vDif><vDevTrib>0.00</vDevTrib><vIBSUF>${vIBSUF.toFixed(2)}</vIBSUF></gIBSUF><gIBSMun><vDif>0.00</vDif><vDevTrib>0.00</vDevTrib><vIBSMun>${vIBSMun.toFixed(2)}</vIBSMun></gIBSMun><vIBS>${vIBS.toFixed(2)}</vIBS><vCredPres>0.00</vCredPres><vCredPresCondSus>0.00</vCredPresCondSus></gIBS><gCBS><vDif>0.00</vDif><vDevTrib>0.00</vDevTrib><vCBS>${vCBS.toFixed(2)}</vCBS><vCredPres>0.00</vCredPres><vCredPresCondSus>0.00</vCredPresCondSus></gCBS></IBSCBSTot>`;
+}
+
+export function nfePagXmlVenda(vNF: number, pagamento?: Record<string, unknown> | null): string {
+  const card = (pagamento?.card as Record<string, unknown> | undefined) ?? {};
+  const tPag = String(pagamento?.tPag ?? "03");
+  const cAut = String(card.cAut ?? "837812");
+  const tBand = String(card.tBand ?? "01");
+  const tpIntegra = String(card.tpIntegra ?? "1");
+  const cnpj = String(card.cnpj ?? "03007331000141").replace(/\D/g, "");
+  return `      <pag>
+        <detPag>
+          <indPag>0</indPag>
+          <tPag>${tPag}</tPag>
+          <vPag>${vNF.toFixed(2)}</vPag>
+          <card>
+            <tpIntegra>${tpIntegra}</tpIntegra>
+            <CNPJ>${cnpj}</CNPJ>
+            <tBand>${tBand}</tBand>
+            <cAut>${xmlEscape(cAut)}</cAut>
+          </card>
+        </detPag>
+      </pag>`;
+}
+
 /** Remessa: sempre emite IBSCBS (padrão ML reforma tributária). */
 export function ibsCbsImpostoXmlRemessa(
   ibsCbs?: Record<string, unknown> | null,
@@ -214,7 +281,7 @@ export function icmsTotXml(t: IcmsTotValues, opts?: { includeDifalFields?: boole
           <vCOFINS>${t.vCOFINS.toFixed(2)}</vCOFINS>
           <vOutro>0.00</vOutro>
           <vNF>${t.vNF.toFixed(2)}</vNF>
-          <vTotTrib>0.00</vTotTrib>
+          <vTotTrib>${(t.vTotTrib ?? 0).toFixed(2)}</vTotTrib>
         </ICMSTot>`;
 }
 
@@ -231,12 +298,14 @@ export function vNFTotXml(vNF: number): string {
 export function nfeTotalXml(
   icmsTot: string,
   vNF: number,
-  opts?: { includeReformaTributaria?: boolean; vBCIBSCBS?: number },
+  opts?: { includeReformaTributaria?: boolean; vBCIBSCBS?: number; ibsCbs?: Record<string, unknown> | null },
 ): string {
   const reforma =
-    opts?.includeReformaTributaria !== false
-      ? `\n        ${ibsCbsTotXml(opts?.vBCIBSCBS ?? 0)}\n        ${vNFTotXml(vNF)}`
-      : "";
+    opts?.includeReformaTributaria !== false && opts?.vBCIBSCBS != null && opts?.ibsCbs
+      ? `\n        ${ibsCbsTotXmlVenda(opts.vBCIBSCBS, opts.ibsCbs)}\n        ${vNFTotXml(vNF)}`
+      : opts?.includeReformaTributaria !== false
+        ? `\n        ${ibsCbsTotXml(opts?.vBCIBSCBS ?? 0)}\n        ${vNFTotXml(vNF)}`
+        : "";
   return `${icmsTot}${reforma}`;
 }
 

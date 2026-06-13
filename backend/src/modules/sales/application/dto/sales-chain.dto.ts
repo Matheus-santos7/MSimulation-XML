@@ -20,6 +20,9 @@ export type ReturnNoteCreated = {
   id: string;
   chave: string;
   remessaChave: string;
+  numero: number;
+  serie: number;
+  emitidaEm: Date;
 };
 
 /**

@@ -4,7 +4,11 @@ import {
   buildNFeXML,
 } from "./nfe-xml-generator.js";
 import type { EmitenteXml, NFeXmlInput, ProductXmlInput } from "./types.js";
-import { ML_NFE_VER_PROC, VENDA_ML_NAT_OP } from "@msimulation-xml/fiscal-core";
+import {
+  enrichFiscalPayloadMlVenda,
+  ML_NFE_VER_PROC,
+  VENDA_ML_NAT_OP,
+} from "@msimulation-xml/fiscal-core";
 import { verifySimulationXmlSignature } from "@msimulation-xml/fiscal-core";
 
 const emit: EmitenteXml = {
@@ -77,35 +81,44 @@ describe("buildNFeXML — VENDA", () => {
       quantidade: 1,
       tipo: "VENDA",
       nfeReferenciaChave: "41260678242849000169550050000000041410852632",
-      fiscalPayload: {
-        autXmlCpfs: ["07116024921", "05168151990"],
-        xPed: "200001579233992",
-        valorFrete: 55.99,
-        engine: {
-          itens: [
-            {
+      fiscalPayload: enrichFiscalPayloadMlVenda(
+        {
+          autXmlCpfs: ["07116024921", "05168151990"],
+          xPed: "200001579233992",
+          valorFrete: 55.99,
+          engine: {
+            itens: [
+              {
+                vProd: 815.86,
+                vFrete: 55.99,
+                quantidade: 1,
+                valorUnitario: 815.86,
+                icms: { cst: "00", orig: 5, vBC: 894.52, pICMS: 19.5, vICMS: 174.43 },
+                ipi: { cst: "50", cEnq: "999", vBC: 871.85, pIPI: 2.6, vIPI: 22.67 },
+                pis: { cst: "01", vBC: 697.42, pPIS: 1.65, vPIS: 11.51 },
+                cofins: { cst: "01", vBC: 697.42, pCOFINS: 7.6, vCOFINS: 53.0 },
+              },
+            ],
+            totais: {
+              vBC: 894.52,
+              vICMS: 174.43,
               vProd: 815.86,
               vFrete: 55.99,
-              quantidade: 1,
-              valorUnitario: 815.86,
-              icms: { cst: "00", orig: 5, vBC: 894.52, pICMS: 19.5, vICMS: 174.43 },
-              ipi: { cst: "50", cEnq: "999", vBC: 871.85, pIPI: 2.6, vIPI: 22.67 },
-              pis: { cst: "01", vBC: 697.42, pPIS: 1.65, vPIS: 11.51 },
-              cofins: { cst: "01", vBC: 697.42, pCOFINS: 7.6, vCOFINS: 53.0 },
+              vIPI: 22.67,
+              vPIS: 11.51,
+              vCOFINS: 53.0,
+              vNF: 894.52,
             },
-          ],
-          totais: {
-            vBC: 894.52,
-            vICMS: 174.43,
-            vProd: 815.86,
-            vFrete: 55.99,
-            vIPI: 22.67,
-            vPIS: 11.51,
-            vCOFINS: 53.0,
-            vNF: 894.52,
           },
         },
-      },
+        {
+          quantidade: 1,
+          valorFrete: 55.99,
+          xPed: "200001579233992",
+          vTotTrib: 289.96,
+          returnNote: { numero: 4, serie: 5, emitidaEm: "2026-06-13T12:00:00-03:00" },
+        },
+      ),
     };
 
     const xml = buildNFeXML(nfe, emit, product);
@@ -117,6 +130,20 @@ describe("buildNFeXML — VENDA", () => {
     assert.match(xml, /<xPed>200001579233992<\/xPed>/);
     assert.match(xml, /<nFCI>A7B816FF-59CC-41D9-97C1-B39BCED07B17<\/nFCI>/);
     assert.match(xml, /<vItem>815\.86<\/vItem>/);
+    assert.match(xml, /<imposto>\s*<vTotTrib>289\.96<\/vTotTrib>/);
+    assert.match(xml, /<vTotTrib>289\.96<\/vTotTrib>/);
+    assert.match(xml, /<infAdProd>[^<]*289,96<\/infAdProd>/);
+    assert.match(xml, /<pIPI>2\.6000<\/pIPI>/);
+    assert.match(xml, /<gIBSUF><pIBSUF>0\.10<\/pIBSUF><vIBSUF>0\.63<\/vIBSUF><\/gIBSUF>/);
+    assert.match(xml, /<vBCIBSCBS>632\.91<\/vBCIBSCBS>/);
+    assert.match(xml, /<vNFTot>815\.86<\/vNFTot>/);
+    assert.match(xml, /<transporta>\s*<CNPJ>03007331012239<\/CNPJ>/);
+    assert.match(xml, /<tPag>03<\/tPag>/);
+    assert.match(xml, /<vPag>894\.52<\/vPag>/);
+    assert.match(xml, /<card>\s*<tpIntegra>1<\/tpIntegra>/);
+    assert.match(xml, /<infCpl>Enviado diretamente do deposito temporario/);
+    assert.match(xml, /<infRespTec>/);
+    assert.match(xml, /<hashCSRT>\+TuKUMc7ueWv9UiYNVaTD\+ym1a4=<\/hashCSRT>/);
     assert.doesNotMatch(xml, /<CFOP><\/CFOP>/);
     assert.equal(verifySimulationXmlSignature(xml), true);
   });

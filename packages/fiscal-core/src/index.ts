@@ -78,6 +78,18 @@ export {
   VENDA_ML_NAT_OP,
   type SaleCustomerType,
 } from "./sale-cfop.js";
+export {
+  VENDA_ML_CD_DEPOSITO,
+  VENDA_ML_IBS_CBS_DEFAULT,
+  VENDA_ML_INF_RESP_TEC,
+  VENDA_ML_TRANSPORTA,
+  buildVendaInfAdProdText,
+  buildVendaInfCplText,
+  enrichFiscalPayloadMlVenda,
+  estimateVendaVTotTrib,
+  type EnrichMlVendaPayloadInput,
+  type VendaMlReturnNoteRef,
+} from "./venda-ml-payload.js";
 export { normalizeTaxPercent, parseTaxPercent } from "./tax-percent.js";
 export {
   buildEmitterSnapshot,

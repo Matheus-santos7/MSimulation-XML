@@ -1,4 +1,9 @@
-import { enrichFiscalPayloadWithXTexto, resolveSaleCfop, VENDA_ML_NAT_OP } from "@msimulation-xml/fiscal-core";
+import {
+  enrichFiscalPayloadMlVenda,
+  enrichFiscalPayloadWithXTexto,
+  resolveSaleCfop,
+  VENDA_ML_NAT_OP,
+} from "@msimulation-xml/fiscal-core";
 import { FiscalStatus, NFeTipo, Prisma } from "../../../../generated/prisma/client.js";
 import { buildChaveNFe } from "../../../fiscal-documents/domain/services/nfe-chave.js";
 import { enrichTaxSnapshot } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
@@ -94,22 +99,36 @@ export async function emitSaleNote(
       tipo: NFeTipo.VENDA,
       nfeReferenciaId: returnNote.id,
       fiscalPayload: enrichFiscalPayloadWithXTexto(
-        {
-          ...enrichTaxSnapshot(taxSnapshotFromRule(saleTaxRule, fallbackRate, emitterSettings), {
-            settings: emitterSettings,
-            tipo: NFeTipo.VENDA,
-            valor: ctx.valorTotalVenda,
-            valorIcms: icmsValue,
-            emitUf: tenant.uf,
-            destUf: order.destUf,
-            indFinal: 1,
-          }),
-          engine: saleInvoice,
-          ...(autXmlCpfs ? { autXmlCpfs } : {}),
-          ...(nfci ? { nfci } : {}),
-          ...(xPed ? { xPed } : {}),
-          ...(valorFrete > 0 ? { valorFrete } : {}),
-        } as Record<string, unknown>,
+        enrichFiscalPayloadMlVenda(
+          {
+            ...enrichTaxSnapshot(taxSnapshotFromRule(saleTaxRule, fallbackRate, emitterSettings), {
+              settings: emitterSettings,
+              tipo: NFeTipo.VENDA,
+              valor: ctx.valorTotalVenda,
+              valorIcms: icmsValue,
+              emitUf: tenant.uf,
+              destUf: order.destUf,
+              indFinal: 1,
+            }),
+            engine: saleInvoice,
+            ...(autXmlCpfs ? { autXmlCpfs } : {}),
+            ...(nfci ? { nfci } : {}),
+            ...(xPed ? { xPed } : {}),
+            ...(valorFrete > 0 ? { valorFrete } : {}),
+          } as Record<string, unknown>,
+          {
+            quantidade: order.quantidade,
+            valorFrete,
+            xPed,
+            nfci,
+            autXmlCpfs,
+            returnNote: {
+              numero: returnNote.numero,
+              serie: returnNote.serie,
+              emitidaEm: returnNote.emitidaEm,
+            },
+          },
+        ),
         {
           tipo: NFeTipo.VENDA,
           cfop,

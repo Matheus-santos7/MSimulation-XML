@@ -134,7 +134,14 @@ export async function emitReturnNote(
     },
   });
 
-  return { id: row.id, chave: row.chave, remessaChave: fifoPreview.remessaChave };
+  return {
+    id: row.id,
+    chave: row.chave,
+    remessaChave: fifoPreview.remessaChave,
+    numero: row.numero,
+    serie: row.serie,
+    emitidaEm: row.emitidaEm,
+  };
 }
 
 /**

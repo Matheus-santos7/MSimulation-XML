@@ -10,7 +10,12 @@
  */
 
 import type { FiscalEmitterSettingsData } from "@msimulation-xml/fiscal-core";
-import { ML_INF_RESP_TEC, ML_NFE_VER_PROC, resolveSaleCfop } from "@msimulation-xml/fiscal-core";
+import {
+  ML_INF_RESP_TEC,
+  ML_NFE_VER_PROC,
+  resolveSaleCfop,
+  VENDA_ML_INF_RESP_TEC,
+} from "@msimulation-xml/fiscal-core";
 import {
   ensureNProt,
   injectSimulationSignature,
@@ -36,8 +41,8 @@ import {
   resolveAutXmlCpfs,
   resolveIdCadIntTran,
   resolveRemessaTranspVol,
-  ibsCbsImpostoXmlFromPayload,
   ibsCbsImpostoXmlRemessa,
+  ibsCbsImpostoXmlVenda,
   type IbsCbsVBcInput,
   icmsTotXml,
   REMESSA_IBS_CBS_DEFAULTS,
@@ -46,6 +51,7 @@ import {
   VENDA_IBS_CBS_DEFAULTS,
   impostoIpiIntXml,
   nfeAutXmlBlocks,
+  nfePagXmlVenda,
   nfeTotalXml,
   nfeTranspXml,
   remessaInfCplText,
@@ -284,6 +290,7 @@ function hasMlFulfillmentPayload(fiscal: Record<string, unknown>): boolean {
 function ibsCbsBcInputFromEngineItem(engineItem?: EngineItem): IbsCbsVBcInput {
   return {
     vProd: engineItem?.vProd ?? 0,
+    vFrete: engineItem?.vFrete ?? 0,
     vPIS: engineItem?.pis.vPIS ?? 0,
     vCOFINS: engineItem?.cofins.vCOFINS ?? 0,
     vICMS: engineItem?.icms.vICMS ?? 0,
@@ -304,8 +311,10 @@ function ibsCbsBcInputFromSnapshot(
   const pPis = asNum(pis.aliquota, 0);
   const pCofins = asNum(cofins.aliquota, 0);
   const difal = (fiscal.difal as Record<string, unknown> | undefined) ?? {};
+  const vFrete = asNum(fiscal.valorFrete, 0);
   return {
     vProd,
+    vFrete,
     vPIS: Math.round(vBcPis * (pPis / 100) * 100) / 100,
     vCOFINS: Math.round(vBcPis * (pCofins / 100) * 100) / 100,
     vICMS: valorIcms,
@@ -334,7 +343,11 @@ function icmsTotBlock(t: Parameters<typeof icmsTotXml>[0]): string {
 function totalBlock(
   icmsTot: string,
   vNF: number,
-  opts?: { includeReformaTributaria?: boolean; vBCIBSCBS?: number },
+  opts?: {
+    includeReformaTributaria?: boolean;
+    vBCIBSCBS?: number;
+    ibsCbs?: Record<string, unknown> | null;
+  },
 ): string {
   return nfeTotalXml(icmsTot, vNF, opts);
 }
@@ -939,6 +952,7 @@ function buildVendaNFeXML(
   const payloadFrete = asNum(fiscal.valorFrete, 0);
   const vFrete = engineFrete > 0 ? engineFrete : payloadFrete > 0 ? payloadFrete : emitter.bases.vFrete;
   const autXml = autXmlBlock(fiscal);
+  const vTotTrib = asNum(fiscal.vTotTrib, 0);
   const finNFe = 1;
   const idDest = idDestFromUfs(e.uf, de.uf);
 
@@ -950,17 +964,19 @@ function buildVendaNFeXML(
   let vProdOut = vProd;
   let qComOut = qCom;
   let vFreteOut = vFrete;
+  let vNFOut = nfe.valor + vFrete;
 
   if (engine?.itens[0]) {
     const item = engine.itens[0];
     icmsXml = buildIcmsXmlFromEngineItem(item.icms);
     ipiXml = item.ipi ? buildIpiXmlFromEngine(item.ipi) : impostoIpiIntXml("50");
     pisCofinsXml = buildPisCofinsXmlFromEngine(item.pis, item.cofins);
-    totBlock = icmsTotBlock(icmsTotFromEngine(engine.totais, vFrete));
+    totBlock = icmsTotBlock({ ...icmsTotFromEngine(engine.totais, vFrete), vTotTrib });
     vUnComOut = item.valorUnitario;
     vProdOut = item.vProd;
     qComOut = item.quantidade;
     vFreteOut = item.vFrete ?? 0;
+    vNFOut = engine.totais.vNF;
   } else {
     const vBcIcms = asNum(icms.vBc, emitter.bases.vBcIcms);
     const vBcPis = asNum(pis.vBc, emitter.bases.vBcPisCofins);
@@ -986,6 +1002,7 @@ function buildVendaNFeXML(
           <COFINS><COFINSAliq><CST>${cstCofins}</CST><vBC>${vBcPis.toFixed(2)}</vBC><pCOFINS>${pCofins.toFixed(2)}</pCOFINS><vCOFINS>${vCofins.toFixed(2)}</vCOFINS></COFINSAliq></COFINS>`;
 
     const vNF = Math.round((nfe.valor + vFrete + vIpi) * 100) / 100;
+    vNFOut = vNF;
     const difalFiscal = (fiscal.difal as Record<string, unknown> | undefined) ?? {};
     const interstate = idDest === 2;
     totBlock = icmsTotBlock({
@@ -997,6 +1014,7 @@ function buildVendaNFeXML(
       vPIS: vPis,
       vCOFINS: vCofins,
       vNF,
+      vTotTrib,
       vFCPUFDest: interstate ? asNum(difalFiscal.vFCPUFDest, 0) : undefined,
       vICMSUFDest: interstate ? asNum(difalFiscal.vICMSUFDest, emitter.difal.vDifal) : undefined,
       vICMSUFRemet: interstate ? asNum(difalFiscal.vICMSUFRemet, 0) : undefined,
@@ -1011,24 +1029,33 @@ function buildVendaNFeXML(
   const vendaVBcIbsCbs = hasIbsCbsPayload
     ? resolveIbsCbsItemVBc(ibsCbs, vendaIbsCbsBcInput, VENDA_IBS_CBS_DEFAULTS)
     : null;
-  const ibsCbsXml = ibsCbsImpostoXmlFromPayload(ibsCbs, vendaVBcIbsCbs);
-  if (ibsCbsXml) {
-    const vNFTotal = engine?.totais.vNF ?? nfe.valor + vFrete;
-    totBlock = totalBlock(totBlock, vNFTotal, {
+  const ibsCbsXml = hasIbsCbsPayload
+    ? ibsCbsImpostoXmlVenda(ibsCbs, vendaVBcIbsCbs)
+    : "";
+  if (ibsCbsXml && vendaVBcIbsCbs != null) {
+    totBlock = totalBlock(totBlock, vProdOut, {
       includeReformaTributaria: true,
-      vBCIBSCBS: vendaVBcIbsCbs != null ? sumIbsCbsVBc([vendaVBcIbsCbs]) : 0,
+      vBCIBSCBS: vendaVBcIbsCbs,
+      ibsCbs,
     });
   }
 
+  const vTotTribImpostoXml =
+    vTotTrib > 0 ? `<vTotTrib>${vTotTrib.toFixed(2)}</vTotTrib>` : "";
+  const infAdProdText =
+    (typeof fiscal.infAdProd === "string" && fiscal.infAdProd.trim()) || "";
+  const infAdProd = infAdProdText
+    ? `\n        <infAdProd>${xmlEscape(infAdProdText)}</infAdProd>`
+    : "";
+  const infCplVenda =
+    typeof fiscal.infCplVenda === "string" && fiscal.infCplVenda.trim()
+      ? fiscal.infCplVenda
+      : undefined;
+  const pagXml = nfePagXmlVenda(vNFOut, fiscal.pagamento as Record<string, unknown> | undefined);
+  const infRespTec = `\n${infRespTecXml(VENDA_ML_INF_RESP_TEC)}`;
   const nfciXml = nfciXmlFromSources(fiscal, product);
   const xPedXml = prodXPedXml(fiscal, nfe.pedidoML);
   const vFreteXml = prodVFreteXml(vFreteOut);
-  const infAdProd =
-    xPedXml.trim() || nfe.pedidoML
-      ? `\n        <infAdProd>xPed:${xmlEscape(
-          (typeof fiscal.xPed === "string" && fiscal.xPed.trim()) || nfe.pedidoML,
-        )}</infAdProd>`
-      : "";
   const vItemBlock = vItemXml(vProdOut);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -1110,6 +1137,7 @@ ${autXml}      <det nItem="1">
           <indTot>1</indTot>${xPedXml}${nfciXml}
         </prod>
         <imposto>
+          ${vTotTribImpostoXml}
           ${icmsXml}
           ${ipiXml}
           ${pisCofinsXml}
@@ -1120,8 +1148,8 @@ ${autXml}      <det nItem="1">
         ${totBlock}
       </total>
 ${transpXml(emitter.modFrete, fiscal, qComOut)}
-${pagBlock()}
-${infIntermedBlock(fiscal)}${infAdicXml(nfe, emitter)}
+${pagXml}
+${infIntermedBlock(fiscal)}${infAdicXml(nfe, emitter, infCplVenda)}${infRespTec}
     </infNFe>
   </NFe>
 ${protNFeBlock(nfe, dhEmi)}

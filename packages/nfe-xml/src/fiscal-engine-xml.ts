@@ -61,6 +61,7 @@ export type EngineTotais = {
   vPIS: number;
   vCOFINS: number;
   vNF: number;
+  vTotTrib?: number;
   vFCPUFDest?: number;
   vICMSUFDest?: number;
   vICMSUFRemet?: number;
@@ -80,6 +81,7 @@ export type IcmsTotInput = {
   vPIS: number;
   vCOFINS: number;
   vNF: number;
+  vTotTrib?: number;
   vFCPUFDest?: number;
   vICMSUFDest?: number;
   vICMSUFRemet?: number;

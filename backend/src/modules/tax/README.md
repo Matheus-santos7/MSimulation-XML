@@ -157,7 +157,6 @@ graph TD
 | `GetTaxRulesUseCase` | Lista completa (admin) |
 | `BulkUpsertTaxRulesUseCase` | Importação planilha |
 | `DeleteAllTaxRulesUseCase` | Limpa tenant (ADMIN) |
-| `DeleteTaxRuleGroupUseCase` | Remove grupo baseId+origem |
 | `ResolveTaxRuleUseCase` | Resolução origem×destino |
 | `AssertProductTaxRuleBaseIdUseCase` | Valida vínculo em produto |
 | `CalculateTaxesUseCase` | Nota venda multi-item |

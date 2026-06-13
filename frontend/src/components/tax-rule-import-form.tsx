@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import type { TaxRuleImportState } from "@/app/(app)/regras/actions";
 import { importarRegrasTributariasAction } from "@/app/(app)/regras/actions";
-import { TaxRuleDeleteAllButton } from "@/components/tax-rule-delete-all-button";
+import { DeleteTaxAllButton } from "@/components/delete-tax-all-button";
 import { Button } from "@/components/ui/button";
 
 type Props = {
@@ -20,7 +20,7 @@ export function TaxRuleImportForm({ rulesCount, isAdmin = false }: Props) {
         <div className="text-[12px] uppercase font-bold tracking-widest text-muted-foreground">
           Importar planilha Mercado Livre (.xlsx)
         </div>
-        {isAdmin ? <TaxRuleDeleteAllButton rulesCount={rulesCount} /> : null}
+        {isAdmin ? <DeleteTaxAllButton rulesCount={rulesCount} /> : null}
       </div>
 
       <form action={action} className="space-y-3">

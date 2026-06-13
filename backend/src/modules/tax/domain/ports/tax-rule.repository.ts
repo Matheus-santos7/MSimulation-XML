@@ -28,11 +28,6 @@ export interface TaxRuleRepository {
   listCatalogEntries(tenantId: string): Promise<TaxRuleCatalogEntry[]>;
   bulkUpsert(tenantId: string, rows: TaxRuleImportRow[]): Promise<BulkUpsertTaxRulesResult>;
   deleteAll(tenantId: string): Promise<{ deleted: number }>;
-  deleteGroup(
-    tenantId: string,
-    baseId: string,
-    origin: string,
-  ): Promise<{ deleted: number; nome: string }>;
   /**
    * Valida que `taxRuleBaseId` existe no catálogo do tenant (vínculo em produto).
    * @throws {TaxRuleError} Regra inexistente ou UF incompatível

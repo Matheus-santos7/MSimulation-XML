@@ -6,8 +6,7 @@ import { TaxRuleError } from "../../domain/errors/tax-rule.error.js";
 import { createTaxModule } from "../../infrastructure/factory/tax-module.factory.js";
 import { resolveTaxRuleSpreadsheetUpload } from "../helpers/tax-rule-import.helper.js";
 import {
-  taxRuleBaseIdParamSchema,
-  taxRuleGroupQuerySchema,
+  taxRuleImportRowSchema,
   taxRulesBulkBodySchema,
 } from "../schemas/tax.schemas.js";
 
@@ -24,7 +23,6 @@ const TAX_RULE_ERROR_MAPPINGS = [{ type: TaxRuleError, status: 400 }] as const;
  * | POST | `/tax-rules/bulk-upsert` | BulkUpsertTaxRulesUseCase |
  * | POST | `/tax-rules/import-spreadsheet` | ImportTaxRulesSpreadsheetUseCase |
  * | DELETE | `/tax-rules` | DeleteAllTaxRulesUseCase (ADMIN) |
- * | DELETE | `/tax-rules/:baseId` | DeleteTaxRuleGroupUseCase (ADMIN) |
  */
 export const taxRuleController: FastifyPluginAsync = async (app) => {
   const tax = createTaxModule(app.prisma);
@@ -69,23 +67,6 @@ export const taxRuleController: FastifyPluginAsync = async (app) => {
     const tenantId = tenantIdFromRequest(req);
     try {
       return await tax.deleteAllTaxRules.execute(tenantId);
-    } catch (error) {
-      if (handleRouteError(reply, error, { mappings: [...TAX_RULE_ERROR_MAPPINGS] })) return;
-      throw error;
-    }
-  });
-
-  app.delete("/tax-rules/:baseId", { onRequest: [requireAdminHook] }, async (req, reply) => {
-    const tenantId = tenantIdFromRequest(req);
-    const { baseId } = taxRuleBaseIdParamSchema.parse(req.params);
-    const { origin } = taxRuleGroupQuerySchema.parse(req.query);
-
-    try {
-      return await tax.deleteTaxRuleGroup.execute(
-        tenantId,
-        decodeURIComponent(baseId),
-        origin.toUpperCase(),
-      );
     } catch (error) {
       if (handleRouteError(reply, error, { mappings: [...TAX_RULE_ERROR_MAPPINGS] })) return;
       throw error;

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { deleteAllTaxRules, deleteTaxRuleGroup, importTaxRulesSpreadsheet } from "@/lib/fiscal-api";
+import { deleteAllTaxRules, importTaxRulesSpreadsheet } from "@/lib/fiscal-api";
 import { validateSpreadsheetFile } from "@/lib/spreadsheet-upload";
 
 export type TaxRuleImportState = {
@@ -54,18 +54,5 @@ export async function excluirTodasRegrasTributariasAction(): Promise<{
     return { deleted: result.deleted };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Erro ao excluir regras" };
-  }
-}
-
-export async function excluirRegraTributariaAction(
-  baseId: string,
-  origin: string,
-): Promise<{ error?: string; nome?: string; deleted?: number }> {
-  try {
-    const result = await deleteTaxRuleGroup(baseId, origin);
-    revalidateTaxRulesPaths();
-    return { nome: result.nome, deleted: result.deleted };
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "Erro ao excluir regra" };
   }
 }

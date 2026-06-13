@@ -20,7 +20,7 @@ type Props = {
   rulesCount: number;
 };
 
-export function TaxRuleDeleteAllButton({ rulesCount }: Props) {
+export function DeleteTaxAllButton({ rulesCount }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);

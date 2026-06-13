@@ -42,8 +42,6 @@ export { taxRuleController } from "./presentation/controllers/tax-rule.controlle
 export {
   taxRuleImportRowSchema,
   taxRulesBulkBodySchema,
-  taxRuleBaseIdParamSchema,
-  taxRuleGroupQuerySchema,
 } from "./presentation/schemas/tax.schemas.js";
 
 export async function resolveTaxRule(
@@ -73,15 +71,6 @@ export async function assertProductTaxRuleBaseId(
 
 export async function deleteAllTaxRules(prisma: PrismaClient, tenantId: string) {
   return createTaxModule(prisma).deleteAllTaxRules.execute(tenantId);
-}
-
-export async function deleteTaxRuleGroup(
-  prisma: PrismaClient,
-  tenantId: string,
-  baseId: string,
-  origin: string,
-) {
-  return createTaxModule(prisma).deleteTaxRuleGroup.execute(tenantId, baseId, origin);
 }
 
 /** @deprecated Use orderLineFromProduct */

@@ -514,21 +514,6 @@ export async function importTaxRulesSpreadsheet(file: File): Promise<TaxRuleSpre
   return res.json() as Promise<TaxRuleSpreadsheetImportResult>;
 }
 
-export type TaxRuleDeleteResult = {
-  deleted: number;
-  nome: string;
-};
-
-export async function deleteTaxRuleGroup(
-  baseId: string,
-  origin: string,
-): Promise<TaxRuleDeleteResult> {
-  const href = url(`/api/tax-rules/${encodeURIComponent(baseId)}`, {
-    origin: origin.toUpperCase().slice(0, 2),
-  });
-  return mutateJson<TaxRuleDeleteResult>(href, "DELETE") as Promise<TaxRuleDeleteResult>;
-}
-
 export async function deleteAllTaxRules(): Promise<{ deleted: number }> {
   return mutateJson<{ deleted: number }>(url("/api/tax-rules"), "DELETE") as Promise<{
     deleted: number;

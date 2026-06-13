@@ -120,44 +120,6 @@ export class PrismaTaxRuleRepository implements TaxRuleRepository {
     return { deleted: result.count };
   }
 
-  async deleteGroup(tenantId: string, baseId: string, origin: string) {
-    const normalizedBase = baseId.trim();
-    const normalizedOrigin = origin.toUpperCase().slice(0, 2);
-    if (!normalizedBase) throw new TaxRuleError("Regra inválida");
-    if (!normalizedOrigin) throw new TaxRuleError("Origem fiscal inválida");
-
-    const productsUsing = await this.prisma.product.count({
-      where: { tenantId, taxRuleBaseId: normalizedBase },
-    });
-    if (productsUsing > 0) {
-      throw new TaxRuleError(
-        `Não é possível excluir: ${productsUsing} produto(s) usam esta regra. Altere a regra fiscal deles antes.`,
-      );
-    }
-
-    const rules = await this.prisma.taxRule.findMany({
-      where: {
-        tenantId,
-        ruleId: { startsWith: `${normalizedBase}-` },
-      },
-      select: { id: true, nome: true, origin: true, uf: true, ruleId: true },
-    });
-
-    const toDelete = rules.filter((r) => taxRuleOriginUf(r) === normalizedOrigin);
-    if (toDelete.length === 0) {
-      throw new TaxRuleError("Regra não encontrada para esta origem");
-    }
-
-    await this.prisma.taxRule.deleteMany({
-      where: { id: { in: toDelete.map((r) => r.id) } },
-    });
-
-    return {
-      deleted: toDelete.length,
-      nome: normalizeTaxRuleDisplayName(toDelete[0]!.nome),
-    };
-  }
-
   async assertProductBaseId(tenantId: string, taxRuleBaseId: string, tenantUf?: string) {
     const baseId = taxRuleBaseId.trim();
     if (!baseId) throw new TaxRuleError("Selecione a regra fiscal do produto");

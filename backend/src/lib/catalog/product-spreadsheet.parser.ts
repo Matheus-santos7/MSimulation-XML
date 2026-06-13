@@ -10,6 +10,7 @@ export const PRODUCT_SPREADSHEET_COLUMNS = [
   "cest",
   "ex_tipi",
   "origem",
+  "nfci",
   "unidade",
   "preco",
   "preco_custo",
@@ -37,6 +38,10 @@ const HEADER_ALIASES: Record<string, ProductSpreadsheetColumn> = {
   extipi: "ex_tipi",
   origem: "origem",
   orig: "origem",
+  nfci: "nfci",
+  nf_ci: "nfci",
+  "n fci": "nfci",
+  fci: "nfci",
   unidade: "unidade",
   ucom: "unidade",
   utrib: "unidade",
@@ -148,6 +153,7 @@ function rowToRawDto(line: number, row: Record<ProductSpreadsheetColumn, string>
     cest: cell(row, "cest"),
     exTipi: cell(row, "ex_tipi") || undefined,
     origem: cell(row, "origem") || undefined,
+    nfci: cell(row, "nfci") || undefined,
     unidade: cell(row, "unidade") || undefined,
     preco: cell(row, "preco"),
     precoCusto: cell(row, "preco_custo"),
@@ -170,7 +176,12 @@ function parseProductSpreadsheetMatrix(matrix: string[][]): ProductSpreadsheetPa
   }
 
   const missing = PRODUCT_SPREADSHEET_COLUMNS.filter(
-    (c) => c !== "ean" && c !== "ex_tipi" && c !== "tax_rule_base_id" && !colIndex.has(c),
+    (c) =>
+      c !== "ean" &&
+      c !== "ex_tipi" &&
+      c !== "nfci" &&
+      c !== "tax_rule_base_id" &&
+      !colIndex.has(c),
   );
   if (missing.length > 0) {
     return {

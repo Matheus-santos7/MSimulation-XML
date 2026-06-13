@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import { DOMParser } from "@xmldom/xmldom";
 import {
   enrichFiscalPayloadMlFulfillment,
+  enrichFiscalPayloadWithXTexto,
   verifySimulationXmlSignature,
 } from "@msimulation-xml/fiscal-core";
 import { buildNFeXML } from "./nfe-xml-generator.js";
@@ -211,19 +212,25 @@ describe("buildNFeXML — REMESSA", () => {
   });
 
   it("alinha estrutura ML: IBSCBS, vItem, transporta, autXML e reforma nos totais", () => {
-    const xml = buildNFeXML(baseNfe(), emit);
+    const nfe = baseNfe();
+    nfe.fiscalPayload = enrichFiscalPayloadMlFulfillment(nfe.fiscalPayload ?? {}, {
+      quantidadeTotal: nfe.quantidade,
+      destIe: "261755994",
+    });
+    const xml = buildNFeXML(nfe, emit);
     assert.match(xml, /<IBSCBS>\s*<CST>410<\/CST>\s*<cClassTrib>410999<\/cClassTrib>\s*<\/IBSCBS>/);
     assert.doesNotMatch(xml, /<gIBSCBS>/);
     assert.match(xml, /<vItem>100\.00<\/vItem>/);
     assert.match(xml, /<IBSCBSTot>\s*<vBCIBSCBS>0\.00<\/vBCIBSCBS>\s*<\/IBSCBSTot>/);
     assert.match(xml, /<vNFTot>100\.00<\/vNFTot>/);
-    assert.match(xml, /<modFrete>2<\/modFrete>/);
-    assert.match(xml, /<transporta>/);
+    assert.match(xml, /<transporta>\s*<xNome>Transgoss Transporte e Logistica<\/xNome>\s*<\/transporta>/);
+    assert.match(xml, /<infRespTec>/);
     assert.match(xml, /<autXML>\s*<CPF>87659808915<\/CPF>\s*<\/autXML>/);
     assert.match(xml, /<cEnq>103<\/cEnq>/);
     assert.match(xml, /<IPINT>\s*<CST>55<\/CST>\s*<\/IPINT>/);
-    assert.match(xml, /Portaria CAT 31\/2019/);
+    assert.match(xml, /<infCpl>Remessa para Deposito Temporario\.<\/infCpl>/);
     assert.match(xml, /<xCpl>Nao consta<\/xCpl>/);
+    assert.doesNotMatch(xml, /Portaria CAT 31\/2019/);
     assert.doesNotMatch(xml, /<vFCPUFDest>/);
     assert.doesNotMatch(xml, /<CEST>/);
   });
@@ -420,14 +427,45 @@ describe("buildNFeXML — REMESSA", () => {
 
   it("usa idCadIntTran e pesos do fiscalPayload enriquecido (emissão real)", () => {
     const nfe = baseNfe();
-    nfe.fiscalPayload = enrichFiscalPayloadMlFulfillment(nfe.fiscalPayload ?? {}, {
-      quantidadeTotal: 2,
-      idCadIntTran: "3272442934",
-      destIe: "241174886113",
-    });
+    nfe.fiscalPayload = enrichFiscalPayloadMlFulfillment(
+      enrichFiscalPayloadWithXTexto(nfe.fiscalPayload ?? {}, {
+        tipo: "REMESSA",
+        cfop: nfe.cfop,
+        natOp: nfe.natOp,
+        pedidoMl: nfe.pedidoML,
+      }),
+      {
+        quantidadeTotal: 2,
+        idCadIntTran: "3272442934",
+        destIe: "241174886113",
+      },
+    );
     const xml = buildNFeXML(nfe, emit);
     assert.match(xml, /<idCadIntTran>3272442934<\/idCadIntTran>/);
+    assert.match(xml, /OLSS-3272442934<\/xTexto>/);
+    assert.match(xml, /<qVol>2<\/qVol>/);
     assert.match(xml, /<pesoL>1\.400<\/pesoL>/);
     assert.match(xml, /<pesoB>1\.420<\/pesoB>/);
+  });
+
+  it("inclui nFCI no produto da remessa quando cadastrado", () => {
+    const nfe = baseNfe();
+    nfe.fiscalPayload = enrichFiscalPayloadMlFulfillment(nfe.fiscalPayload ?? {}, {
+      quantidadeTotal: nfe.quantidade,
+    });
+    const product = {
+      sku: "300002137",
+      nome: "Fogao Teste",
+      ncm: "73211100",
+      cest: "2100100",
+      exTipi: "01",
+      unidade: "UNID",
+      origem: 5,
+      preco: 653.4,
+      precoCusto: 653.4,
+      nfci: "A7B816FF-59CC-41D9-97C1-B39BCED07B17",
+    };
+    const xml = buildNFeXML(nfe, emit, product);
+    assert.match(xml, /<nFCI>A7B816FF-59CC-41D9-97C1-B39BCED07B17<\/nFCI>/);
   });
 });

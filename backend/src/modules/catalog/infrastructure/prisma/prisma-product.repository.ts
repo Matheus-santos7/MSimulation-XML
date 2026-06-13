@@ -50,6 +50,7 @@ export class PrismaProductRepository implements ProductRepository {
           ncm: data.ncm,
           cest: data.cest,
           exTipi: data.exTipi,
+          nfci: data.nfci,
           origem: data.origem,
           unidade: data.unidade,
           preco: data.preco,

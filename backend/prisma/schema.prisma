@@ -274,6 +274,8 @@ model Product {
   ncm       String   @map("ncm")
   cest      String   @map("cest")
   exTipi    String?  @map("ex_tipi") @db.VarChar(3)
+  /// Ficha de conteúdo de importação (`<nFCI>`) quando aplicável.
+  nfci            String?  @map("nfci") @db.VarChar(36)
   origem    Int      @map("origem")
   unidade   String   @map("unidade")
   preco           Decimal  @map("preco") @db.Decimal(15, 8)

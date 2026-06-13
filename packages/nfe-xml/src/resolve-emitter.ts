@@ -7,7 +7,8 @@ import {
 import type { NFeTipoXml } from "./types.js";
 
 function defaultModFreteForTipo(tipo: NFeTipoXml): string {
-  if (tipo === "REMESSA" || tipo === "REMESSA_SIMBOLICA") return "2";
+  if (tipo === "REMESSA") return "0";
+  if (tipo === "REMESSA_SIMBOLICA") return "2";
   if (tipo === "RETORNO_SIMBOLICO") return "9";
   return "0";
 }

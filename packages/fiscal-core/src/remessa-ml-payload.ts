@@ -24,22 +24,17 @@ export const REMESSA_IBS_CBS_DEFAULT = {
 } as const;
 
 export type RemessaMlTransporta = {
-  cnpj: string;
-  ie: string;
+  cnpj?: string;
+  ie?: string;
   xNome: string;
-  xEnder: string;
-  xMun: string;
-  uf: string;
+  xEnder?: string;
+  xMun?: string;
+  uf?: string;
 };
 
-/** Transportador terceiro ML (modFrete=2) — padrão dos XMLs de remessa em produção. */
+/** Transportador nos XMLs ML de remessa física (modFrete=0, somente razão social). */
 export const REMESSA_ML_TRANSPORTA_DEFAULT: RemessaMlTransporta = {
-  cnpj: "03007331012239",
-  ie: "120519234116",
-  xNome: "EBAZAR.COM.BR LTDA",
-  xEnder: "AVENIDA DAS NACOES UNIDAS 3000 3003",
-  xMun: "OSASCO",
-  uf: "SP",
+  xNome: "Transgoss Transporte e Logistica",
 };
 
 export type RemessaTranspVol = {
@@ -52,7 +47,17 @@ export type RemessaTranspVol = {
 export function estimateRemessaPesoVol(quantidade: number): RemessaTranspVol {
   const pesoL = Math.round(quantidade * 0.7 * 1000) / 1000;
   const pesoB = Math.round(pesoL * 1.014286 * 1000) / 1000;
-  return { qVol: 1, pesoL, pesoB };
+  return { qVol: quantidade, pesoL, pesoB };
+}
+
+/** Alinha sufixo OLSS do `obsContXTexto` ao `idCadIntTran` resolvido. */
+export function syncObsContXTextoWarehouseSuffix(
+  payload: Record<string, unknown>,
+  warehouseId: string,
+): void {
+  const xTexto = payload.obsContXTexto;
+  if (typeof xTexto !== "string" || !warehouseId.trim()) return;
+  payload.obsContXTexto = xTexto.replace(/OLSS-\d+$/, `OLSS-${warehouseId.trim()}`);
 }
 
 export type EnrichMlFulfillmentPayloadInput = {
@@ -111,6 +116,8 @@ export function enrichFiscalPayloadMlFulfillment(
   if (destIe && !out.destIe) {
     out.destIe = destIe;
   }
+
+  syncObsContXTextoWarehouseSuffix(out, idCadIntTran);
 
   if (input.withLogistics !== false) {
     out.transporta = payload.transporta ?? { ...REMESSA_ML_TRANSPORTA_DEFAULT };

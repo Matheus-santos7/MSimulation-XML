@@ -98,6 +98,8 @@ export type ProductXmlInput = ProductPricesDto & {
   exTipi?: string;
   origem?: number;
   unidade?: string;
+  /** Ficha de conteúdo de importação (UUID) — tag `<nFCI>` quando origem importada. */
+  nfci?: string;
 };
 
 export type FiscalEventoXmlInput = {

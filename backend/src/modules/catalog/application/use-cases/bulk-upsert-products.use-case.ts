@@ -2,6 +2,7 @@ import { ProductConflictError } from "../../domain/errors/product-conflict.error
 import { ProductValidationError } from "../../domain/errors/product-validation.error.js";
 import type { ProductRepository } from "../../domain/ports/product.repository.js";
 import type { TaxRuleValidatorPort } from "../../domain/ports/tax-rule-validator.port.js";
+import { resolveProductNfci } from "../../domain/services/product-nfci.js";
 import { dedupeBulkRowsBySku } from "../../domain/services/dedupe-bulk-rows-by-sku.service.js";
 import type {
   BulkUpsertProductsCommand,
@@ -69,6 +70,8 @@ export class BulkUpsertProductsUseCase {
           await this.taxRuleValidator.assertProductTaxRuleBaseId(tenantId, taxRuleBaseId, tenantUf);
         }
 
+        const resolvedNfci = resolveProductNfci(row.origem, row.nfci) ?? null;
+
         if (existing) {
           await this.productRepository.update(existing.id, {
             ean: row.ean,
@@ -77,6 +80,7 @@ export class BulkUpsertProductsUseCase {
             cest: row.cest,
             exTipi: row.exTipi,
             origem: row.origem,
+            nfci: resolvedNfci,
             unidade: row.unidade,
             preco: row.preco,
             precoCusto: row.precoCusto,
@@ -94,6 +98,7 @@ export class BulkUpsertProductsUseCase {
             cest: row.cest,
             exTipi: row.exTipi,
             origem: row.origem,
+            nfci: resolvedNfci,
             unidade: row.unidade,
             preco: row.preco,
             precoCusto: row.precoCusto,
@@ -125,6 +130,7 @@ export class BulkUpsertProductsUseCase {
 /** Normaliza mensagens de erro por linha para resposta HTTP legível. */
 function mapBulkRowErrorMessage(error: unknown): string {
   if (error instanceof ProductConflictError) return error.message;
+  if (error instanceof ProductValidationError) return error.message;
   if (error instanceof Error) {
     if (error.name === "TaxRuleCatalogError") return error.message;
     if (/Unique constraint failed/i.test(error.message)) return "SKU já cadastrado nesta empresa";

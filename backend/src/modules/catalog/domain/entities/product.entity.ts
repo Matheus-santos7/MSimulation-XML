@@ -17,6 +17,8 @@ export type Product = {
   ncm: string;
   cest: string;
   exTipi?: string;
+  /** UUID da Ficha de Conteúdo de Importação (`<nFCI>`). */
+  nfci?: string;
   origem: number;
   unidade: string;
   preco: number;

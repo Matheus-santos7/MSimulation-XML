@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { ProdutoFormValues } from "@/lib/produto-form";
 import { taxRuleSelectValue } from "@/lib/produto-form";
-import { EX_TIPI_FIELD_HELP } from "@/lib/produto-form-constants";
+import { EX_TIPI_FIELD_HELP, NFCI_FIELD_HELP } from "@/lib/produto-form-constants";
+import { requiresProductNfci } from "@/lib/product-nfci";
 import type { ProductDto, TaxRuleCatalogEntry } from "@/lib/fiscal-types";
 
 const ORIGEM_OPTIONS = [
@@ -45,6 +46,7 @@ function toFormState(
     cest: product?.cest ?? "",
     exTipi: product?.exTipi ?? "",
     origem: String(product?.origem ?? 0),
+    nfci: product?.nfci ?? "",
     unidade: product?.unidade ?? "UN",
     preco: product != null ? String(product.preco) : "",
     precoCusto: product != null ? String(product.precoCusto) : "",
@@ -72,24 +74,36 @@ export function ProductFormFields({
     if (product) setForm(toFormState(product, undefined, taxRuleCatalog));
   }, [product?.id, draft, taxRuleCatalog]);
 
-  const set = (key: keyof ProdutoFormValues, value: string) => setForm((f) => ({ ...f, [key]: value }));
+  const setField = (key: keyof ProdutoFormValues, value: string) => {
+    if (key === "origem") {
+      const nextOrigem = Number(value);
+      setForm((f) => ({
+        ...f,
+        origem: value,
+        nfci: requiresProductNfci(nextOrigem) ? f.nfci : "",
+      }));
+      return;
+    }
+    setForm((f) => ({ ...f, [key]: value }));
+  };
   const err = (name: keyof ProdutoFormValues) => fieldErrors?.[name]?.[0];
+  const showNfci = requiresProductNfci(Number(form.origem));
 
   return (
     <div className="space-y-6">
       <Section title="Identificação (prod)">
-        <Field id={`${idPrefix}-sku`} label="Código (cProd)" name="sku" value={form.sku} onChange={set} required mono error={err("sku")} />
+        <Field id={`${idPrefix}-sku`} label="Código (cProd)" name="sku" value={form.sku} onChange={setField} required mono error={err("sku")} />
         <Field
           id={`${idPrefix}-ean`}
           label="EAN/GTIN (cEAN)"
           name="ean"
           value={form.ean}
-          onChange={set}
+          onChange={setField}
           mono
           error={err("ean")}
           hint="Deixe vazio para SEM GTIN no XML"
         />
-        <Field id={`${idPrefix}-nome`} label="Descrição (xProd)" name="nome" value={form.nome} onChange={set} required error={err("nome")} />
+        <Field id={`${idPrefix}-nome`} label="Descrição (xProd)" name="nome" value={form.nome} onChange={setField} required error={err("nome")} />
       </Section>
 
       <Section title="Classificação fiscal">
@@ -98,7 +112,7 @@ export function ProductFormFields({
           label="Regra tributária (planilha)"
           name="taxRuleBaseId"
           value={form.taxRuleBaseId}
-          onChange={set}
+          onChange={setField}
           required
           options={
             taxRuleCatalog.length > 0
@@ -112,15 +126,15 @@ export function ProductFormFields({
           hint="Só aparecem regras cuja coluna ORIGIN da planilha coincide com a UF do emitente."
         />
         <div className="grid grid-cols-2 gap-3">
-          <Field id={`${idPrefix}-ncm`} label="NCM" name="ncm" value={form.ncm} onChange={set} required mono error={err("ncm")} />
-          <Field id={`${idPrefix}-cest`} label="CEST" name="cest" value={form.cest} onChange={set} required mono error={err("cest")} />
+          <Field id={`${idPrefix}-ncm`} label="NCM" name="ncm" value={form.ncm} onChange={setField} required mono error={err("ncm")} />
+          <Field id={`${idPrefix}-cest`} label="CEST" name="cest" value={form.cest} onChange={setField} required mono error={err("cest")} />
         </div>
         <Field
           id={`${idPrefix}-exTipi`}
           label="EXTIPI"
           name="exTipi"
           value={form.exTipi}
-          onChange={set}
+          onChange={setField}
           mono
           error={err("exTipi")}
           labelHelp={EX_TIPI_FIELD_HELP}
@@ -130,10 +144,24 @@ export function ProductFormFields({
           label="Origem (ICMS)"
           name="origem"
           value={form.origem}
-          onChange={set}
+          onChange={setField}
           options={ORIGEM_OPTIONS}
           error={err("origem")}
         />
+        {showNfci ? (
+          <Field
+            id={`${idPrefix}-nfci`}
+            label="nFCI (FCI)"
+            name="nfci"
+            value={form.nfci}
+            onChange={setField}
+            required
+            mono
+            error={err("nfci")}
+            labelHelp={NFCI_FIELD_HELP}
+            hint="UUID homologado no portal FCI da Receita"
+          />
+        ) : null}
       </Section>
 
       <Section title="Comercial">
@@ -143,7 +171,7 @@ export function ProductFormFields({
             label="Unidade"
             name="unidade"
             value={form.unidade}
-            onChange={set}
+            onChange={setField}
             options={UNIDADE_OPTIONS.map((u) => ({ value: u, label: u }))}
             error={err("unidade")}
           />
@@ -152,7 +180,7 @@ export function ProductFormFields({
             label="Preço de custo"
             name="precoCusto"
             value={form.precoCusto}
-            onChange={set}
+            onChange={setField}
             required
             mono
             type="number"
@@ -168,7 +196,7 @@ export function ProductFormFields({
             label="Preço de venda"
             name="preco"
             value={form.preco}
-            onChange={set}
+            onChange={setField}
             required
             mono
             type="number"
@@ -182,7 +210,7 @@ export function ProductFormFields({
             label="Quantidade"
             name="estoque"
             value={form.estoque}
-            onChange={set}
+            onChange={setField}
             required
             mono
             type="number"

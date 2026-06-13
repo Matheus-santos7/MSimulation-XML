@@ -92,7 +92,7 @@ describe("fiscal-emitter-runtime", () => {
 
   it("resolveModFrete por tipo de NF-e", () => {
     const s = minimalSettings();
-    assert.equal(resolveModFrete(s, "REMESSA"), "1");
+    assert.equal(resolveModFrete(s, "REMESSA"), "9");
     assert.equal(resolveModFrete(s, "REMESSA_SIMBOLICA"), "1");
     assert.equal(resolveModFrete(s, "RETORNO_SIMBOLICO"), "3");
     assert.equal(resolveModFrete(s, "VENDA"), "9");
@@ -124,7 +124,7 @@ describe("fiscal-emitter-runtime", () => {
       destUf: "RJ",
       indFinal: 0,
     });
-    assert.equal(out.emitter?.modFrete, "1");
+    assert.equal(out.emitter?.modFrete, "9");
     assert.equal(out.icms.vBc, 200);
     assert.equal(out.pis.vBc, 164);
     assert.equal(out.emitter?.bases.vBcPisCofins, 164);

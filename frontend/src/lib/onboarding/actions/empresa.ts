@@ -42,5 +42,3 @@ export async function onboardingEmpresaAction(
   revalidatePath("/");
   redirect("/");
 }
-
-export type { OnboardingEmpresaState };

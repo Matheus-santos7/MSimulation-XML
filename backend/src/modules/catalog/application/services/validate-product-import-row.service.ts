@@ -57,6 +57,7 @@ function mapRawRowToCreateInput(raw: ProductImportRawRow): Record<string, unknow
     cest: raw.cest,
     exTipi: raw.exTipi,
     origem,
+    nfci: raw.nfci,
     unidade: raw.unidade?.trim() || "UN",
     preco,
     precoCusto,

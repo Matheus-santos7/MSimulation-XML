@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { validateProductNfciForOrigem } from "../../domain/services/product-nfci.js";
 
 export function digitsOnly(s: string): string {
   return s.replace(/\D/g, "");
@@ -50,7 +51,12 @@ const exTipiField = z.preprocess(
     .refine((v) => !v || /^\d{2,3}$/.test(v), "EXTIPI deve ter 2 ou 3 dígitos"),
 );
 
-export const productCreateBody = z.object({
+const nfciField = z.preprocess(
+  (v) => (v === "" || v === null || v === undefined ? undefined : v),
+  z.string().trim().max(36, "nFCI deve ter no máximo 36 caracteres").optional(),
+);
+
+const productBodyFields = {
   sku: z.string().trim().min(1, "SKU obrigatório").max(60),
   ean: eanField,
   nome: z.string().trim().min(1, "Descrição obrigatória").max(120, "Descrição deve ter no máximo 120 caracteres"),
@@ -58,6 +64,7 @@ export const productCreateBody = z.object({
   cest: cestField,
   exTipi: exTipiField,
   origem: z.coerce.number().int().min(0).max(8),
+  nfci: nfciField,
   unidade: z.string().trim().min(1, "Unidade obrigatória").max(6),
   preco: z.coerce.number().positive("Preço de venda deve ser maior que zero"),
   precoCusto: z.coerce.number().min(0, "Preço de custo não pode ser negativo"),
@@ -65,9 +72,18 @@ export const productCreateBody = z.object({
   taxRuleBaseId: optionalTrimmed.pipe(
     z.string().max(120, "Regra fiscal deve ter no máximo 120 caracteres").optional(),
   ),
-});
+};
 
-export const productUpdateBody = productCreateBody.partial();
+function refineProductNfci<T extends { origem: number; nfci?: string }>(data: T, ctx: z.RefinementCtx) {
+  const message = validateProductNfciForOrigem(data.origem, data.nfci);
+  if (message) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message, path: ["nfci"] });
+  }
+}
+
+export const productCreateBody = z.object(productBodyFields).superRefine(refineProductNfci);
+
+export const productUpdateBody = z.object(productBodyFields).partial();
 
 export const productIdParam = z.object({
   id: z.string().uuid(),
@@ -86,6 +102,7 @@ export const productImportRawRowSchema = z.object({
   cest: z.string(),
   exTipi: z.string().optional(),
   origem: z.union([z.string(), z.number()]).optional(),
+  nfci: z.string().optional(),
   unidade: z.string().optional(),
   preco: z.union([z.string(), z.number()]),
   precoCusto: z.union([z.string(), z.number()]),

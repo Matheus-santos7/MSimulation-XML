@@ -205,12 +205,22 @@ function transpXml(
   quantidade: number,
 ): string {
   const transporta =
-    modFrete === "2" ? resolveTransportaFromFiscal(fiscal, REMESSA_ML_TRANSPORTA) : null;
+    fiscal.transporta != null || modFrete === "2"
+      ? resolveTransportaFromFiscal(fiscal, REMESSA_ML_TRANSPORTA)
+      : null;
   return nfeTranspXml({
     modFrete,
     transporta,
     vol: resolveRemessaTranspVol(quantidade, fiscal),
   });
+}
+
+function nfciXmlFromSources(fiscal: Record<string, unknown>, prod?: ProductXmlInput): string {
+  const nfciRaw =
+    (typeof fiscal.nfci === "string" && fiscal.nfci) ||
+    (typeof prod?.nfci === "string" && prod.nfci) ||
+    "";
+  return nfciRaw ? `\n          <nFCI>${xmlEscape(nfciRaw)}</nFCI>` : "";
 }
 
 /**
@@ -444,6 +454,15 @@ function buildRemessaNFeXML(
   const vFrete = emitter.freteNoCalculo ? emitter.bases.vFrete : 0;
   const infAdic = infAdicXml(nfe, emitter, remessaInfCplText(destIe));
   const autXml = autXmlBlock(fiscal);
+  const fulfillment = hasMlFulfillmentPayload(fiscal);
+  const infRespTec = fulfillment
+    ? `\n${infRespTecXml({
+        cnpj: ML_INF_RESP_TEC.cnpj,
+        xContato: ML_INF_RESP_TEC.xContato,
+        email: ML_INF_RESP_TEC.email,
+        fone: ML_INF_RESP_TEC.fone,
+      })}`
+    : "";
 
   const itemCount = Math.max(
     engine?.itens.length ?? 0,
@@ -508,6 +527,7 @@ function buildRemessaNFeXML(
     const orig = prod?.origem ?? dtoItem?.product?.origem ?? 1;
     const infAdProd =
       i === 0 && nfe.pedidoML ? `\n        <infAdProd>xPed:${xmlEscape(nfe.pedidoML)}</infAdProd>` : "";
+    const nfciXml = nfciXmlFromSources(fiscal, prod);
     const vItem = vItemXml(vProdOut);
 
     const vBcIcmsItem = asNum(icms.vBc, emitter.bases.vBcIcms);
@@ -549,7 +569,7 @@ function buildRemessaNFeXML(
           <uTrib>${xmlEscape(uCom)}</uTrib>
           <qTrib>${formatNfeQuantity(qCom)}</qTrib>
           <vUnTrib>${vUnComOut.toFixed(8)}</vUnTrib>
-          <indTot>1</indTot>
+          <indTot>1</indTot>${nfciXml}
         </prod>
         <imposto>
           <vTotTrib>0.00</vTotTrib>
@@ -635,7 +655,7 @@ ${detXml}
       </total>
 ${transpXml(emitter.modFrete, fiscal, totalQty)}
 ${pagBlock()}
-${infIntermedBlock(fiscal)}${infAdic}
+${infIntermedBlock(fiscal)}${infAdic}${infRespTec}
     </infNFe>
   </NFe>
 ${protNFeBlock(nfe, dhEmi)}

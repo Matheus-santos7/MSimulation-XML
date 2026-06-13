@@ -11,6 +11,7 @@ export function mapProductFromPrisma(row: PrismaProduct): Product {
     ncm: row.ncm,
     cest: row.cest,
     exTipi: row.exTipi ?? undefined,
+    nfci: row.nfci ?? undefined,
     origem: row.origem,
     unidade: row.unidade,
     preco: Number(row.preco),

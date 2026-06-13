@@ -36,6 +36,34 @@ describe("validateProductImportRow", () => {
     assert.equal(result.ok, false);
     if (!result.ok) assert.match(result.message, /CEST/);
   });
+
+  it("rejeita origem 5 sem nFCI", () => {
+    const result = validateProductImportRow({ ...base, origem: 5 });
+    assert.equal(result.ok, false);
+    if (!result.ok) assert.match(result.message, /nFCI/i);
+  });
+
+  it("rejeita origem 0 com nFCI", () => {
+    const result = validateProductImportRow({
+      ...base,
+      origem: 0,
+      nfci: "A7B816FF-59CC-41D9-97C1-B39BCED07B17",
+    });
+    assert.equal(result.ok, false);
+    if (!result.ok) assert.match(result.message, /nFCI/i);
+  });
+
+  it("aceita origem 5 com nFCI válido", () => {
+    const result = validateProductImportRow({
+      ...base,
+      origem: 5,
+      nfci: "A7B816FF-59CC-41D9-97C1-B39BCED07B17",
+    });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      assert.equal(result.row.nfci, "A7B816FF-59CC-41D9-97C1-B39BCED07B17");
+    }
+  });
 });
 
 describe("parseBrazilianPrice", () => {

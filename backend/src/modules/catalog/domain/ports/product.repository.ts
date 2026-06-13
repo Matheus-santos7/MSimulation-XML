@@ -11,6 +11,7 @@ export type ProductWriteData = {
   ncm: string;
   cest: string;
   exTipi?: string;
+  nfci?: string | null;
   origem: number;
   unidade: string;
   preco: number;

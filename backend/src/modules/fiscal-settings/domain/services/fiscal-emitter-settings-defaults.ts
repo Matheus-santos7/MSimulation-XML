@@ -12,6 +12,8 @@ import type {
   ComposicaoLinha,
   ComposicaoTributo,
   CstDevolucaoMap,
+  DefaultIcmsRates,
+  DefaultPisCofinsRates,
   DifalCalculo,
   FiscalEmitterSettingsData,
 } from "@msimulation-xml/fiscal-core";
@@ -137,6 +139,29 @@ export const DEFAULT_FISCAL_EMITTER_SETTINGS: FiscalEmitterSettingsData = {
   },
 };
 
+function mergeDefaultIcmsRates(
+  base: DefaultIcmsRates | undefined,
+  patch?: Partial<DefaultIcmsRates>,
+): DefaultIcmsRates {
+  const resolved = base ?? { ...DEFAULT_ICMS_FALLBACK_RATES };
+  return {
+    intra: patch?.intra ?? resolved.intra,
+    interSale: patch?.interSale ?? resolved.interSale,
+    interInbound: patch?.interInbound ?? resolved.interInbound,
+  };
+}
+
+function mergeDefaultPisCofinsRates(
+  base: DefaultPisCofinsRates | undefined,
+  patch?: Partial<DefaultPisCofinsRates>,
+): DefaultPisCofinsRates {
+  const resolved = base ?? { ...DEFAULT_PIS_COFINS_RATES };
+  return {
+    pis: patch?.pis ?? resolved.pis,
+    cofins: patch?.cofins ?? resolved.cofins,
+  };
+}
+
 function mergeComposicaoTributo(
   base: ComposicaoTributo,
   patch?: Partial<ComposicaoTributo>,
@@ -194,14 +219,14 @@ export function mergeFiscalEmitterSettings(partial: unknown): FiscalEmitterSetti
         ...p.taxes?.emissaoGnre,
         estadosComIe: p.taxes?.emissaoGnre?.estadosComIe ?? base.taxes.emissaoGnre.estadosComIe,
       },
-      defaultIcmsRates: {
-        ...base.taxes.defaultIcmsRates,
-        ...p.taxes?.defaultIcmsRates,
-      },
-      defaultPisCofins: {
-        ...base.taxes.defaultPisCofins,
-        ...p.taxes?.defaultPisCofins,
-      },
+      defaultIcmsRates: mergeDefaultIcmsRates(
+        base.taxes.defaultIcmsRates,
+        p.taxes?.defaultIcmsRates,
+      ),
+      defaultPisCofins: mergeDefaultPisCofinsRates(
+        base.taxes.defaultPisCofins,
+        p.taxes?.defaultPisCofins,
+      ),
     },
     nfe: {
       ...base.nfe,

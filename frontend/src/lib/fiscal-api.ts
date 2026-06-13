@@ -414,6 +414,7 @@ export type ProductImportRawRow = {
   cest: string;
   exTipi?: string;
   origem?: string | number;
+  nfci?: string;
   unidade?: string;
   preco: string | number;
   precoCusto: string | number;

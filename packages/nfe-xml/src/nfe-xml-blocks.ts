@@ -242,14 +242,27 @@ export function nfeTotalXml(
 }
 
 export function transportaXml(t: NfeTransportaInput): string {
-  return `        <transporta>
-          <CNPJ>${t.cnpj.replace(/\D/g, "")}</CNPJ>
-          <xNome>${xmlEscape(t.xNome)}</xNome>
-          <IE>${t.ie.replace(/\D/g, "")}</IE>
-          <xEnder>${xmlEscape(t.xEnder)}</xEnder>
-          <xMun>${xmlEscape(t.xMun)}</xMun>
-          <UF>${t.uf}</UF>
-        </transporta>`;
+  const lines = ["        <transporta>"];
+  if (t.cnpj?.trim()) {
+    lines.push(`          <CNPJ>${t.cnpj.replace(/\D/g, "")}</CNPJ>`);
+  }
+  if (t.xNome?.trim()) {
+    lines.push(`          <xNome>${xmlEscape(t.xNome)}</xNome>`);
+  }
+  if (t.ie?.trim()) {
+    lines.push(`          <IE>${t.ie.replace(/\D/g, "")}</IE>`);
+  }
+  if (t.xEnder?.trim()) {
+    lines.push(`          <xEnder>${xmlEscape(t.xEnder)}</xEnder>`);
+  }
+  if (t.xMun?.trim()) {
+    lines.push(`          <xMun>${xmlEscape(t.xMun)}</xMun>`);
+  }
+  if (t.uf?.trim()) {
+    lines.push(`          <UF>${t.uf}</UF>`);
+  }
+  lines.push("        </transporta>");
+  return lines.join("\n");
 }
 
 export function nfeTranspXml(opts: {
@@ -257,8 +270,7 @@ export function nfeTranspXml(opts: {
   transporta?: NfeTransportaInput | null;
   vol: NfeTranspVolInput;
 }): string {
-  const transportaBlock =
-    opts.modFrete === "2" && opts.transporta ? `\n${transportaXml(opts.transporta)}` : "";
+  const transportaBlock = opts.transporta ? `\n${transportaXml(opts.transporta)}` : "";
   const volBlock =
     opts.modFrete === "9"
       ? ""
@@ -297,12 +309,12 @@ export function resolveTransportaFromFiscal(
   const raw = fiscal?.transporta as Record<string, unknown> | undefined;
   if (!raw) return fallback;
   return {
-    cnpj: String(raw.cnpj ?? fallback.cnpj),
-    ie: String(raw.ie ?? fallback.ie),
+    ...(fallback.cnpj || raw.cnpj ? { cnpj: String(raw.cnpj ?? fallback.cnpj ?? "") } : {}),
     xNome: String(raw.xNome ?? fallback.xNome),
-    xEnder: String(raw.xEnder ?? fallback.xEnder),
-    xMun: String(raw.xMun ?? fallback.xMun),
-    uf: String(raw.uf ?? fallback.uf),
+    ...(fallback.ie || raw.ie ? { ie: String(raw.ie ?? fallback.ie ?? "") } : {}),
+    ...(fallback.xEnder || raw.xEnder ? { xEnder: String(raw.xEnder ?? fallback.xEnder ?? "") } : {}),
+    ...(fallback.xMun || raw.xMun ? { xMun: String(raw.xMun ?? fallback.xMun ?? "") } : {}),
+    ...(fallback.uf || raw.uf ? { uf: String(raw.uf ?? fallback.uf ?? "") } : {}),
   };
 }
 
@@ -338,11 +350,8 @@ export function destComplementoXml(complemento?: string, placeholder = "Nao cons
   return `\n          <xCpl>${xmlEscape(value)}</xCpl>`;
 }
 
-export function remessaInfCplText(destIe?: string): string {
-  const ie = (destIe ?? "").replace(/\D/g, "");
-  const base = "Remessa para Deposito Temporario - Portaria CAT 31/2019.";
-  if (!ie) return base;
-  return `${base} Inscricao Estadual do Operador Logistico: ${ie}`;
+export function remessaInfCplText(_destIe?: string): string {
+  return "Remessa para Deposito Temporario.";
 }
 
 export function retornoInfCplText(): string {
@@ -354,15 +363,17 @@ export function infRespTecXml(opts: {
   xContato: string;
   email: string;
   fone: string;
-  idCSRT: string;
-  hashCSRT: string;
+  idCSRT?: string;
+  hashCSRT?: string;
 }): string {
+  const csrtBlock =
+    opts.idCSRT?.trim() && opts.hashCSRT?.trim()
+      ? `\n        <idCSRT>${xmlEscape(opts.idCSRT)}</idCSRT>\n        <hashCSRT>${xmlEscape(opts.hashCSRT)}</hashCSRT>`
+      : "";
   return `      <infRespTec>
         <CNPJ>${opts.cnpj.replace(/\D/g, "")}</CNPJ>
         <xContato>${xmlEscape(opts.xContato)}</xContato>
         <email>${xmlEscape(opts.email)}</email>
-        <fone>${opts.fone.replace(/\D/g, "")}</fone>
-        <idCSRT>${xmlEscape(opts.idCSRT)}</idCSRT>
-        <hashCSRT>${xmlEscape(opts.hashCSRT)}</hashCSRT>
+        <fone>${opts.fone.replace(/\D/g, "")}</fone>${csrtBlock}
       </infRespTec>`;
 }

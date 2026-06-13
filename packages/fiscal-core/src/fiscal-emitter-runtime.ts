@@ -82,6 +82,7 @@ export function resolveModFrete(settings: FiscalEmitterSettingsData, tipo: NFeTi
   if (m.mode === "DEFAULT") return "0";
   switch (tipo) {
     case "REMESSA":
+      return m.fullfilmentVendas;
     case "REMESSA_SIMBOLICA":
       return m.coleta;
     case "RETORNO_SIMBOLICO":

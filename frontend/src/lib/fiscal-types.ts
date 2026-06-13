@@ -330,6 +330,7 @@ export type ProductDto = {
   cest: string;
   exTipi?: string;
   origem: number;
+  nfci?: string;
   unidade: string;
   preco: number;
   precoCusto: number;
@@ -352,6 +353,7 @@ export type ProductInput = {
   cest: string;
   exTipi?: string;
   origem: number;
+  nfci?: string;
   unidade: string;
   preco: number;
   precoCusto: number;

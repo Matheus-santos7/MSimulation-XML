@@ -93,6 +93,11 @@ export function ProdutoCard({
           <div>
             <span className="text-muted-foreground">Orig.:</span> {product.origem}
           </div>
+          {product.nfci ? (
+            <div className="col-span-2 truncate" title={product.nfci}>
+              <span className="text-muted-foreground">nFCI:</span> {product.nfci}
+            </div>
+          ) : null}
           {product.ean && (
             <div className="col-span-2 truncate">
               <span className="text-muted-foreground">EAN:</span> {product.ean}

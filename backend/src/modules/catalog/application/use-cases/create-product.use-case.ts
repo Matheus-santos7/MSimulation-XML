@@ -1,6 +1,8 @@
 import type { Product } from "../../domain/entities/product.entity.js";
+import { ProductValidationError } from "../../domain/errors/product-validation.error.js";
 import type { ProductRepository } from "../../domain/ports/product.repository.js";
 import type { TaxRuleValidatorPort } from "../../domain/ports/tax-rule-validator.port.js";
+import { resolveProductNfci } from "../../domain/services/product-nfci.js";
 import type { CreateProductCommand } from "../dto/create-product.command.js";
 
 /**
@@ -38,11 +40,20 @@ export class CreateProductUseCase {
       cest: command.cest,
       exTipi: command.exTipi,
       origem: command.origem,
+      nfci: resolveProductNfciOrThrow(command.origem, command.nfci),
       unidade: command.unidade,
       preco: command.preco,
       precoCusto: command.precoCusto,
       estoque: stock,
       taxRuleBaseId,
     });
+  }
+}
+
+function resolveProductNfciOrThrow(origem: number, nfci?: string | null): string | undefined {
+  try {
+    return resolveProductNfci(origem, nfci);
+  } catch (error) {
+    throw new ProductValidationError(error instanceof Error ? error.message : "nFCI inválido");
   }
 }

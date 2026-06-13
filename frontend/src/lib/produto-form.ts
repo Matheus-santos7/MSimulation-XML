@@ -26,6 +26,7 @@ export type ProdutoFormValues = {
   cest: string;
   exTipi: string;
   origem: string;
+  nfci: string;
   unidade: string;
   preco: string;
   precoCusto: string;
@@ -49,6 +50,7 @@ export function inputToFormValues(input: ProductInput): ProdutoFormValues {
     cest: input.cest,
     exTipi: input.exTipi ?? "",
     origem: String(input.origem),
+    nfci: input.nfci ?? "",
     unidade: input.unidade,
     preco: String(input.preco),
     precoCusto: String(input.precoCusto ?? ""),
@@ -65,6 +67,7 @@ export function productToFormValues(p: {
   cest: string;
   exTipi?: string;
   origem: number;
+  nfci?: string;
   unidade: string;
   preco: number;
   precoCusto: number;
@@ -107,6 +110,7 @@ export function parseProductForm(formData: FormData): ProductInput {
     cest: String(formData.get("cest") ?? "").replace(/\D/g, ""),
     exTipi: opt("exTipi"),
     origem: Number(formData.get("origem") ?? 0),
+    nfci: opt("nfci"),
     unidade: String(formData.get("unidade") ?? "UN").trim(),
     preco: Number(String(formData.get("preco") ?? "0").replace(",", ".")),
     precoCusto: Number(String(formData.get("precoCusto") ?? "0").replace(",", ".")),

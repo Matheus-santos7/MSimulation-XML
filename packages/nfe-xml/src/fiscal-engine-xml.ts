@@ -41,6 +41,7 @@ export type EngineDifal = {
 
 export type EngineItem = {
   vProd: number;
+  vFrete?: number;
   quantidade: number;
   valorUnitario: number;
   icms: EngineIcms;
@@ -124,6 +125,7 @@ export function parseEngineFromFiscalPayload(
 
     return {
       vProd: num(item.vProd),
+      vFrete: num(item.vFrete),
       quantidade: num(item.quantidade, 1),
       valorUnitario: num(item.valorUnitario),
       icms: {
@@ -246,7 +248,7 @@ export function buildIpiXmlFromEngine(ipi: EngineIpi): string {
   if (isIpiNaoTributadoCst(cst)) {
     return `<IPI><cEnq>${cEnq}</cEnq><IPINT><CST>${cst}</CST></IPINT></IPI>`;
   }
-  return `<IPI><cEnq>${cEnq}</cEnq><IPITrib><CST>${cst}</CST><vBC>${ipi.vBC.toFixed(2)}</vBC><pIPI>${ipi.pIPI.toFixed(2)}</pIPI><vIPI>${ipi.vIPI.toFixed(2)}</vIPI></IPITrib></IPI>`;
+  return `<IPI><cEnq>${cEnq}</cEnq><IPITrib><CST>${cst}</CST><vBC>${ipi.vBC.toFixed(2)}</vBC><pIPI>${ipi.pIPI.toFixed(4)}</pIPI><vIPI>${ipi.vIPI.toFixed(2)}</vIPI></IPITrib></IPI>`;
 }
 
 /** Fallback quando o item da engine não traz IPI — lê snapshot da regra no fiscalPayload. */
@@ -296,8 +298,8 @@ function pisCofinsAliqXml(
   pis: { vBC: number; pPIS: number; vPIS: number },
   cofins: { vBC: number; pCOFINS: number; vCOFINS: number },
 ): string {
-  return `<PIS><PISAliq><CST>${cstPis}</CST><vBC>${pis.vBC.toFixed(2)}</vBC><pPIS>${pis.pPIS.toFixed(2)}</pPIS><vPIS>${pis.vPIS.toFixed(2)}</vPIS></PISAliq></PIS>
-          <COFINS><COFINSAliq><CST>${cstCofins}</CST><vBC>${cofins.vBC.toFixed(2)}</vBC><pCOFINS>${cofins.pCOFINS.toFixed(2)}</pCOFINS><vCOFINS>${cofins.vCOFINS.toFixed(2)}</vCOFINS></COFINSAliq></COFINS>`;
+  return `<PIS><PISAliq><CST>${cstPis}</CST><vBC>${pis.vBC.toFixed(2)}</vBC><pPIS>${pis.pPIS.toFixed(4)}</pPIS><vPIS>${pis.vPIS.toFixed(2)}</vPIS></PISAliq></PIS>
+          <COFINS><COFINSAliq><CST>${cstCofins}</CST><vBC>${cofins.vBC.toFixed(2)}</vBC><pCOFINS>${cofins.pCOFINS.toFixed(4)}</pCOFINS><vCOFINS>${cofins.vCOFINS.toFixed(2)}</vCOFINS></COFINSAliq></COFINS>`;
 }
 
 /** Monta `<PIS>`/`<COFINS>` conforme o grupo do CST (NT, Outr ou Aliq). */

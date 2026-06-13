@@ -4,6 +4,7 @@
  * @see docs/remessa-fisica.md — Fase 4 e 6
  */
 import type { FiscalEmitterSettingsData } from "@msimulation-xml/fiscal-core";
+import { parseTaxPercent } from "@msimulation-xml/fiscal-core";
 import type { ResolvedTaxRule } from "../entities/resolved-tax-rule.entity.js";
 
 const DEFAULT_PIS_COFINS = { pis: 1.65, cofins: 7.6 } as const;
@@ -32,11 +33,7 @@ export function taxSnapshotFromRule(
     if (typeof v === "number" && Number.isFinite(v)) return String(Math.trunc(v));
     return fallback;
   };
-  const toNum = (v: unknown, fallback = 0): number => {
-    if (typeof v === "number" && Number.isFinite(v)) return v;
-    const n = Number(v);
-    return Number.isFinite(n) ? n : fallback;
-  };
+  const toNum = (v: unknown, fallback = 0): number => parseTaxPercent(v, fallback);
 
   return {
     ruleId: rule?.ruleId,

@@ -10,7 +10,7 @@
  */
 
 import type { FiscalEmitterSettingsData } from "@msimulation-xml/fiscal-core";
-import { ML_INF_RESP_TEC } from "@msimulation-xml/fiscal-core";
+import { ML_INF_RESP_TEC, ML_NFE_VER_PROC, resolveSaleCfop } from "@msimulation-xml/fiscal-core";
 import {
   ensureNProt,
   injectSimulationSignature,
@@ -221,6 +221,16 @@ function nfciXmlFromSources(fiscal: Record<string, unknown>, prod?: ProductXmlIn
     (typeof prod?.nfci === "string" && prod.nfci) ||
     "";
   return nfciRaw ? `\n          <nFCI>${xmlEscape(nfciRaw)}</nFCI>` : "";
+}
+
+function prodVFreteXml(vFrete: number): string {
+  return vFrete > 0 ? `\n          <vFrete>${vFrete.toFixed(2)}</vFrete>` : "";
+}
+
+function prodXPedXml(fiscal: Record<string, unknown>, pedidoMl: string): string {
+  const xPed =
+    (typeof fiscal.xPed === "string" && fiscal.xPed.trim()) || pedidoMl.trim();
+  return xPed ? `\n          <xPed>${xmlEscape(xPed)}</xPed>` : "";
 }
 
 /**
@@ -895,7 +905,6 @@ function buildVendaNFeXML(
   const cEAN = formatEanForXml(product?.ean);
   const xProd = product?.nome ?? nfe.natOp;
   const ncm = product?.ncm ?? nfe.ncm;
-  const cfop = nfe.cfop;
   const uCom = product?.unidade ?? "UN";
   const vUnCom = productUnitPriceForNfe(product, nfe);
   const vProd = nfe.valor;
@@ -905,6 +914,13 @@ function buildVendaNFeXML(
 
   const d = nfe.destinatario;
   const de = d.endereco;
+  const cfop =
+    nfe.cfop?.trim() ||
+    resolveSaleCfop(
+      e.uf,
+      de.uf,
+      d.indIEDest === 9 ? "non_taxpayer" : "taxpayer",
+    );
   const docDigits = d.doc.replace(/\D/g, "");
   const docTag = d.docTipo === "CNPJ" ? "CNPJ" : "CPF";
   const destXCpl = de.complemento ? `\n          <xCpl>${xmlEscape(de.complemento)}</xCpl>` : "";
@@ -919,7 +935,10 @@ function buildVendaNFeXML(
   const cofins = (fiscal.cofins as Record<string, unknown> | undefined) ?? {};
   const ibsCbs = (fiscal.ibsCbs as Record<string, unknown> | undefined) ?? {};
   const emitter = resolveEmitterFromPayload(fiscal, emitterSettings ?? null, nfe.tipo, nfe.valor, nfe.valorICMS);
-  const vFrete = emitter.freteNoCalculo ? emitter.bases.vFrete : 0;
+  const engineFrete = engine?.itens[0]?.vFrete ?? engine?.totais.vFrete ?? 0;
+  const payloadFrete = asNum(fiscal.valorFrete, 0);
+  const vFrete = engineFrete > 0 ? engineFrete : payloadFrete > 0 ? payloadFrete : emitter.bases.vFrete;
+  const autXml = autXmlBlock(fiscal);
   const finNFe = 1;
   const idDest = idDestFromUfs(e.uf, de.uf);
 
@@ -930,6 +949,7 @@ function buildVendaNFeXML(
   let vUnComOut = vUnCom;
   let vProdOut = vProd;
   let qComOut = qCom;
+  let vFreteOut = vFrete;
 
   if (engine?.itens[0]) {
     const item = engine.itens[0];
@@ -940,6 +960,7 @@ function buildVendaNFeXML(
     vUnComOut = item.valorUnitario;
     vProdOut = item.vProd;
     qComOut = item.quantidade;
+    vFreteOut = item.vFrete ?? 0;
   } else {
     const vBcIcms = asNum(icms.vBc, emitter.bases.vBcIcms);
     const vBcPis = asNum(pis.vBc, emitter.bases.vBcPisCofins);
@@ -999,6 +1020,17 @@ function buildVendaNFeXML(
     });
   }
 
+  const nfciXml = nfciXmlFromSources(fiscal, product);
+  const xPedXml = prodXPedXml(fiscal, nfe.pedidoML);
+  const vFreteXml = prodVFreteXml(vFreteOut);
+  const infAdProd =
+    xPedXml.trim() || nfe.pedidoML
+      ? `\n        <infAdProd>xPed:${xmlEscape(
+          (typeof fiscal.xPed === "string" && fiscal.xPed.trim()) || nfe.pedidoML,
+        )}</infAdProd>`
+      : "";
+  const vItemBlock = vItemXml(vProdOut);
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
   <NFe>
@@ -1024,7 +1056,7 @@ function buildVendaNFeXML(
         <indPres>2</indPres>
         <indIntermed>1</indIntermed>
         <procEmi>0</procEmi>
-        <verProc>fiscal-engine-3.2-SIMULATION</verProc>${ideNfRefXml(nfe)}
+        <verProc>${ML_NFE_VER_PROC}</verProc>${ideNfRefXml(nfe)}
       </ide>
       <emit>
         <CNPJ>${emit.cnpj.replace(/\D/g, "")}</CNPJ>
@@ -1060,7 +1092,7 @@ function buildVendaNFeXML(
         </enderDest>
         <indIEDest>${d.indIEDest}</indIEDest>
       </dest>
-      <det nItem="1">
+${autXml}      <det nItem="1">
         <prod>
           <cProd>${xmlEscape(cProd)}</cProd>
           <cEAN>${cEAN}</cEAN>
@@ -1074,15 +1106,15 @@ function buildVendaNFeXML(
           <cEANTrib>${cEAN}</cEANTrib>
           <uTrib>${xmlEscape(uCom)}</uTrib>
           <qTrib>${qComOut.toFixed(4)}</qTrib>
-          <vUnTrib>${vUnComOut.toFixed(8)}</vUnTrib>
-          <indTot>1</indTot>
+          <vUnTrib>${vUnComOut.toFixed(8)}</vUnTrib>${vFreteXml}
+          <indTot>1</indTot>${xPedXml}${nfciXml}
         </prod>
         <imposto>
           ${icmsXml}
           ${ipiXml}
           ${pisCofinsXml}
           ${ibsCbsXml}
-        </imposto>
+        </imposto>${infAdProd}${vItemBlock}
       </det>
       <total>
         ${totBlock}

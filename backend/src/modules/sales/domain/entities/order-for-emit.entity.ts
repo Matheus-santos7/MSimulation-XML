@@ -12,6 +12,7 @@ export type OrderProductForEmit = {
   exTipi?: string | null;
   unidade?: string;
   origem?: number;
+  nfci?: string | null;
 };
 
 /** Tenant reduzido para emissão (séries e identificação fiscal). */
@@ -49,4 +50,8 @@ export type OrderForEmit = {
   destIndIeDest: number;
   product: OrderProductForEmit;
   tenant: TenantForSalesEmit;
+  /** Frete do pedido ML (opcional) — compõe `<vFrete>` e bases de ICMS/IPI. */
+  valorFrete?: number;
+  /** ID numérico do pack/pedido ML para `<xPed>` (ex.: 200001579233992). */
+  mlPackId?: string;
 };

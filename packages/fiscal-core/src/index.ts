@@ -73,6 +73,13 @@ export {
   resolvePisCofinsCstFromSnapshot,
 } from "./pis-cofins-cst.js";
 export {
+  ML_NFE_VER_PROC,
+  resolveSaleCfop,
+  VENDA_ML_NAT_OP,
+  type SaleCustomerType,
+} from "./sale-cfop.js";
+export { normalizeTaxPercent, parseTaxPercent } from "./tax-percent.js";
+export {
   buildEmitterSnapshot,
   calcTributoBase,
   composicaoChannel,

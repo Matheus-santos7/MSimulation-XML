@@ -10,6 +10,19 @@ export type DifalCalculo = "PADRAO" | "BASE_DUPLA_COM_ICMS" | "SEM_DIFAL";
 
 export type CstDevolucaoMap = { venda: string; devolucao: string };
 
+/** Alíquotas ICMS padrão quando a planilha não especifica (fonte secundária). */
+export type DefaultIcmsRates = {
+  intra: number;
+  interSale: number;
+  interInbound: number;
+};
+
+/** Alíquotas PIS/COFINS padrão quando a planilha não especifica. */
+export type DefaultPisCofinsRates = {
+  pis: number;
+  cofins: number;
+};
+
 export type ComposicaoLinha = { venda: BaseCalcAction; remessa: BaseCalcAction };
 
 export type ComposicaoTributo = {
@@ -59,6 +72,10 @@ export type FiscalEmitterSettingsData = {
       estadosIeCount: number;
       estadosComIe: string[];
     };
+    /** Fallback de alíquotas ICMS quando a regra da planilha não preenche o campo. */
+    defaultIcmsRates?: DefaultIcmsRates;
+    /** Fallback de alíquotas PIS/COFINS quando a regra da planilha não preenche o campo. */
+    defaultPisCofins?: DefaultPisCofinsRates;
   };
   nfe: {
     mensagemNfeOk: boolean;

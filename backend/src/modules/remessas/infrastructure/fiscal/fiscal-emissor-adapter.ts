@@ -17,7 +17,7 @@ import { proximoNumeroNfe } from "../../../fiscal-documents/domain/services/nfe-
 import { loadRemessaDestinoRetorno } from "../fifo/remessa-fifo.js";
 import {
   calcularNotaInbound,
-  inferAliqIcmsIntraestadual,
+  resolveIcmsFallbackRate,
   linhaPedidoFromProduto,
 } from "../../../tax/index.js";
 import { resolveTaxRule } from "../../../tax/index.js";
@@ -120,7 +120,8 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
       numero,
     });
 
-    const aliqFallback = inferAliqIcmsIntraestadual(tenant.uf, destUf);
+    const emitterSettings = await loadEmitterSettings(tx, tenant.id);
+    const aliqFallback = resolveIcmsFallbackRate(tenant.uf, destUf, "inbound", emitterSettings);
     const cfop = resolveRetornoSimbolicoCfop(tenant.uf, destUf);
     const calc = calcularNotaInbound(
       linhaPedidoFromProduto(product, {
@@ -134,14 +135,13 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
       aliqFallback,
     );
 
-    const emitterSettings = await loadEmitterSettings(tx, tenant.id);
     const autXmlCpfs = emitterSettings.nfe.autXmlCpfs?.filter(
       (c) => c.replace(/\D/g, "").length === 11,
     );
     const fiscalPayload = enrichFiscalPayloadMlFulfillment(
       enrichFiscalPayloadWithXTexto(
         {
-          ...enrichTaxSnapshot(taxSnapshotFromRule(inboundTaxRule, aliqFallback), {
+          ...enrichTaxSnapshot(taxSnapshotFromRule(inboundTaxRule, aliqFallback, emitterSettings), {
             settings: emitterSettings,
             tipo: NFeTipo.RETORNO_SIMBOLICO,
             valor: calc.valor,

@@ -60,6 +60,8 @@ export type {
   ComposicaoTributo,
   CstDevolucaoMap,
   DifalCalculo,
+  DefaultIcmsRates,
+  DefaultPisCofinsRates,
   FiscalEmitterSettingsData,
   SettingsMode,
 } from "./fiscal-emitter-settings-types.js";
@@ -69,6 +71,7 @@ export {
   composicaoChannel,
   enrichTaxSnapshot,
   mapCstDevolucao,
+  normalizeTaxStCode,
   resolveDifalMode,
   resolveModFrete,
   type EmitterSnapshot,

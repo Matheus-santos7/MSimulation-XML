@@ -31,6 +31,13 @@ function pct(value: number | undefined | null): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
+/** CSTs em que o ICMS próprio não gera base/valor (isenção, ST retido, não tributado). */
+const ICMS_CST_SEM_TRIBUTACAO_PROPRIA = new Set(["40", "41", "50", "60"]);
+
+function isIcmsSemTributacaoPropria(cst: string, pICMS: number, pFCP: number): boolean {
+  return ICMS_CST_SEM_TRIBUTACAO_PROPRIA.has(cst.slice(0, 2)) || (pICMS === 0 && pFCP === 0);
+}
+
 export type IcmsInput = {
   /** CST (Regime Normal: 00, 20, 40, 41, 51, 60…). */
   cst: string;
@@ -233,10 +240,10 @@ export function calcularItem(input: ItemFiscalInput): ItemFiscalResult {
   const pICMS = pct(input.icms.pICMS);
   const pFCP = pct(input.icms.pFCP);
   const vBCIcmsBruta = round2(baseAntesReducao * (1 - pRedBcIcms / 100));
-  // SEFAZ: sem alíquota efetiva (remessa/retorno CST 90 etc.) → vBC zerada.
-  const vBCIcms = pICMS === 0 && pFCP === 0 ? 0 : vBCIcmsBruta;
-  const vICMS = round2(vBCIcms * (pICMS / 100));
-  const vFCP = round2(vBCIcms * (pFCP / 100));
+  const semTributacaoIcms = isIcmsSemTributacaoPropria(input.icms.cst, pICMS, pFCP);
+  const vBCIcms = semTributacaoIcms ? 0 : vBCIcmsBruta;
+  const vICMS = semTributacaoIcms ? 0 : round2(vBCIcms * (pICMS / 100));
+  const vFCP = semTributacaoIcms ? 0 : round2(vBCIcms * (pFCP / 100));
 
   // 5) PIS e COFINS — base pode ter redução própria.
   const pPIS = pct(input.pis.aliquota);

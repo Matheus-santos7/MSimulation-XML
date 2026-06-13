@@ -96,7 +96,8 @@ async function emitirNFeRemessaComItens(
     idCadIntTran: destination.idCadIntTran ?? null,
   };
 
-  const aliqFallback = inferAliqIcmsRemessa(tenant.uf, destino.uf);
+  const emitterSettings = await loadEmitterSettings(prisma, tenant.id);
+  const aliqFallback = inferAliqIcmsRemessa(tenant.uf, destino.uf, emitterSettings);
   const pedidoMl = options?.pedidoMl ?? gerarPedidoMl();
 
   // --- Fase 3: por item — regra tributária inbound + linha fiscal ---
@@ -175,7 +176,7 @@ async function emitirNFeRemessaComItens(
     const fiscalPayload = enrichFiscalPayloadMlFulfillment(
       enrichFiscalPayloadWithXTexto(
         {
-          ...enrichTaxSnapshot(taxSnapshotFromRule(linhasComRegras[0]!.rule, aliqFallback), {
+          ...enrichTaxSnapshot(taxSnapshotFromRule(linhasComRegras[0]!.rule, aliqFallback, emitterSettings), {
             settings: emitterSettings,
             tipo: NFeTipo.REMESSA,
             valor,

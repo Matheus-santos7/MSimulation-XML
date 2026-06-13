@@ -1,3 +1,4 @@
+import { normalizeTaxStCode } from "@msimulation-xml/fiscal-core";
 import {
   buildTaxRuleRowId,
   type CustomerType,
@@ -104,7 +105,8 @@ export function mapResolvedTaxRule(
   const icmsByUf = (payload.icmsByUf ?? {}) as Record<string, unknown>;
   const aliq = toNum(icmsByUf[`ICMS_${destinationUf}_PICMS_INTERNAL`]);
   const cstRaw = icmsByUf[`ICMS_${destinationUf}_CST`];
-  const cst = typeof cstRaw === "string" ? cstRaw.slice(0, 2) : undefined;
+  const cstCode = normalizeTaxStCode(cstRaw);
+  const cst = cstCode || undefined;
 
   return {
     ruleId: rule.ruleId,

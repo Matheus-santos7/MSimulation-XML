@@ -2,6 +2,8 @@ import { lineTotal } from "@msimulation-xml/fiscal-core";
 import { gerarPedidoMl } from "../../../fiscal-documents/domain/services/nfe-chave.js";
 import type { ResolvedTaxRule } from "../../../tax/domain/entities/resolved-tax-rule.entity.js";
 import type { CustomerType } from "../../../tax/domain/entities/tax-types.entity.js";
+import { resolveIcmsFallbackRate } from "../../../tax/index.js";
+import type { FiscalEmitterSettingsData } from "@msimulation-xml/fiscal-core";
 import type { EmissionContext } from "../entities/emission-context.entity.js";
 import type { OrderForEmit } from "../entities/order-for-emit.entity.js";
 import { SalesChainError } from "../errors/sales-chain.error.js";
@@ -127,6 +129,10 @@ export function resolveCustomerType(destIndIeDest: number): CustomerType {
  * @param emitUf - UF do emitente
  * @param destUf - UF do destinatário da venda
  */
-export function inferIcmsRateForSale(emitUf: string, destUf: string): number {
-  return emitUf.toUpperCase() === destUf.toUpperCase() ? 18 : 12;
+export function inferIcmsRateForSale(
+  emitUf: string,
+  destUf: string,
+  settings?: FiscalEmitterSettingsData | null,
+): number {
+  return resolveIcmsFallbackRate(emitUf, destUf, "sale", settings);
 }

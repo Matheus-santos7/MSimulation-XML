@@ -118,6 +118,24 @@ describe("tax-engine", () => {
     assert.equal(item.icms.vICMS, 18);
   });
 
+  it("zera vBC quando CST é isento/não tributado (40/41/50/60)", () => {
+    const item = calcularItem({
+      numeroItem: 1,
+      codigo: "D",
+      descricao: "Isento",
+      ncm: "00000000",
+      cfop: "5949",
+      unidade: "UN",
+      quantidade: 1,
+      valorUnitario: 100,
+      icms: { cst: "40", orig: 0, pICMS: 18 },
+      pis: { cst: "01", aliquota: 1.65 },
+      cofins: { cst: "01", aliquota: 7.6 },
+    });
+    assert.equal(item.icms.vBC, 0);
+    assert.equal(item.icms.vICMS, 0);
+  });
+
   it("zera vBC de ICMS/PIS/COFINS/IPI quando alíquota é 0% (remessa/retorno)", () => {
     const item = calcularItem({
       numeroItem: 1,

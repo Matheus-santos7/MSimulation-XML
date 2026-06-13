@@ -15,10 +15,41 @@ import {
   type NotaFiscalResult,
 } from "../../domain/services/tax-engine.js";
 import { taxSnapshotFromRule } from "../../domain/services/tax-snapshot.js";
-import type { FiscalContext } from "../../domain/entities/fiscal-context.entity.js";
+import type {
+  FiscalContext,
+  FiscalOperationTipo,
+} from "../../domain/entities/fiscal-context.entity.js";
 import type { OrderLine } from "../../domain/entities/order-line.entity.js";
 import type { ProductFiscalLine } from "../../domain/entities/product-fiscal-line.entity.js";
 import type { ResolvedTaxRule } from "../../domain/entities/resolved-tax-rule.entity.js";
+import {
+  composicaoChannel,
+  mapCstDevolucao,
+  resolveDifalMode,
+  type FiscalEmitterSettingsData,
+} from "@msimulation-xml/fiscal-core";
+import {
+  defaultInterstateConvenioRate,
+  inferIcmsRateForShipment,
+  inferIntraStateIcmsRate,
+} from "./tax-fallback-resolver.service.js";
+
+export {
+  defaultInterstateConvenioRate,
+  inferIcmsRateForSale,
+  inferIcmsRateForShipment,
+  inferIntraStateIcmsRate,
+  resolveIcmsFallbackRate,
+  resolveInterstateSaleFallbackRate,
+  resolvePisCofinsFallbackRates,
+} from "./tax-fallback-resolver.service.js";
+
+/** Contexto estendido: regras da planilha + fallback das configurações do emissor. */
+export type BuildFiscalItemContext = FiscalContext & {
+  emitterSettings?: FiscalEmitterSettingsData | null;
+};
+
+const ICMS_CST_NAO_TRIBUTADO = new Set(["40", "41", "50", "60"]);
 
 /** Resultado simplificado de nota inbound (retorno simbólico / remessa). */
 export type InboundInvoiceResult = {
@@ -28,27 +59,6 @@ export type InboundInvoiceResult = {
   aliqIcms: number;
   cfop: string;
 };
-
-/**
- * Alíquota ICMS fallback para **remessas** interestaduais (4%) vs intra (18%).
- *
- * @param emitUf - UF do emitente
- * @param destUf - UF do destinatário (CD)
- */
-export function inferIcmsRateForShipment(emitUf: string, destUf: string): number {
-  if (emitUf.toUpperCase() === destUf.toUpperCase()) return 18;
-  return 4;
-}
-
-/**
- * Alíquota ICMS fallback para operações com tabela interestadual padrão (7/12/18).
- *
- * @see defaultInterstateIcmsRate
- */
-export function inferIntraStateIcmsRate(emitUf: string, destUf: string): number {
-  if (emitUf.toUpperCase() === destUf.toUpperCase()) return 18;
-  return defaultInterstateIcmsRate(emitUf, destUf);
-}
 
 /**
  * Converte produto do catálogo em linha fiscal para cálculo.
@@ -128,29 +138,72 @@ function resolveInterstateIcmsRate(
   }
   return (
     snapshot.icms.pIcmsInterstate ??
-    defaultInterstateIcmsRate(ctx.ufOrigem, ctx.ufDestino) ??
+    defaultInterstateConvenioRate(ctx.ufOrigem, ctx.ufDestino) ??
     internalRate
   );
 }
 
-/**
- * Tabela simplificada de alíquota interestadual (Convênio ICMS).
- *
- * - Mesma UF → 0 (caller trata intra separadamente)
- * - Sul/Sudeste → N/NE/CO/ES → 7%
- * - Demais → 12%
- */
-function defaultInterstateIcmsRate(originUf: string, destinationUf: string): number {
-  const o = originUf.toUpperCase();
-  const d = destinationUf.toUpperCase();
-  if (o === d) return 0;
-  const southSoutheast = new Set(["SP", "RJ", "MG", "PR", "SC", "RS"]);
-  const northNortheastCenterWestEs = new Set([
-    "AC", "AL", "AP", "AM", "BA", "CE", "ES", "GO", "MA", "MT", "MS",
-    "PA", "PB", "PE", "PI", "RN", "RO", "RR", "SE", "TO", "DF",
-  ]);
-  if (southSoutheast.has(o) && northNortheastCenterWestEs.has(d)) return 7;
-  return 12;
+function toOptionalNum(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function taxPayloadRedBc(rule: ResolvedTaxRule | null, tax: "pis" | "cofins"): number | undefined {
+  const taxes = (rule?.payload?.taxes as Record<string, unknown> | undefined) ?? {};
+  const block = (taxes[tax] as Record<string, unknown> | undefined) ?? {};
+  return toOptionalNum(block.pRedBc ?? block.pRedBC);
+}
+
+function resolveIcmsCst(snapshotCst: string, ctx: BuildFiscalItemContext): string {
+  if (
+    ctx.operationTipo === "DEVOLUCAO" &&
+    ctx.emitterSettings?.taxes.cstDevolucao.mode !== "DEFAULT" &&
+    ctx.cstVendaReferencia?.icms
+  ) {
+    return mapCstDevolucao(
+      ctx.cstVendaReferencia.icms,
+      ctx.emitterSettings.taxes.cstDevolucao.icms,
+    );
+  }
+  return snapshotCst;
+}
+
+function resolvePisCofinsCst(
+  snapshotSt: string,
+  ctx: BuildFiscalItemContext,
+  tax: "pis" | "cofins",
+): string {
+  const base = String(snapshotSt).slice(0, 2);
+  if (
+    ctx.operationTipo === "DEVOLUCAO" &&
+    ctx.emitterSettings?.taxes.cstDevolucao.mode !== "DEFAULT"
+  ) {
+    const ref = tax === "pis" ? ctx.cstVendaReferencia?.pis : ctx.cstVendaReferencia?.cofins;
+    if (ref) {
+      return mapCstDevolucao(ref, ctx.emitterSettings.taxes.cstDevolucao.pisCofins);
+    }
+  }
+  return base;
+}
+
+function shouldIncludeIpiInIcmsBase(ctx: BuildFiscalItemContext, isFinalConsumer: boolean): boolean {
+  const settings = ctx.emitterSettings;
+  if (!settings) return isFinalConsumer;
+
+  const channel = composicaoChannel((ctx.operationTipo ?? "VENDA") as FiscalOperationTipo);
+  const ipiAction = settings.taxes.composicaoBaseCalculo.icms.ipi?.[channel];
+  if (ipiAction === "INCLUIR_NA_BASE") return true;
+  if (ipiAction === "NAO_INCLUIR") return false;
+  return isFinalConsumer;
+}
+
+function shouldApplyDifal(ctx: BuildFiscalItemContext, isInterstate: boolean, isFinalConsumer: boolean): boolean {
+  if (!isInterstate || !isFinalConsumer) return false;
+  const mode = ctx.emitterSettings
+    ? resolveDifalMode(ctx.emitterSettings, ctx.ufDestino)
+    : "PADRAO";
+  return mode !== "SEM_DIFAL";
 }
 
 /**
@@ -171,19 +224,27 @@ function defaultInterstateIcmsRate(originUf: string, destinationUf: string): num
 export function buildFiscalItem(
   line: OrderLine,
   rule: ResolvedTaxRule | null,
-  ctx: FiscalContext,
+  ctx: BuildFiscalItemContext,
   fallbackIcmsRate: number,
 ): ItemFiscalInput {
-  const snapshot = taxSnapshotFromRule(rule, fallbackIcmsRate);
+  const snapshot = taxSnapshotFromRule(rule, fallbackIcmsRate, ctx.emitterSettings);
 
   const isInterstate = ctx.ufOrigem.toUpperCase() !== ctx.ufDestino.toUpperCase();
   const isFinalConsumer = ctx.customerType === "non_taxpayer";
-  const appliesDifal = isInterstate && isFinalConsumer;
+  const appliesDifal = shouldApplyDifal(ctx, isInterstate, isFinalConsumer);
 
   const internalRate = snapshot.icms.aliquota;
   const icmsRate = isInterstate
     ? resolveInterstateIcmsRate(rule, snapshot, ctx, fallbackIcmsRate, internalRate)
     : internalRate;
+
+  const icmsCst = resolveIcmsCst(snapshot.icms.cst, ctx);
+  const effectivePIcms = ICMS_CST_NAO_TRIBUTADO.has(icmsCst) ? 0 : icmsRate;
+
+  const pisCst = resolvePisCofinsCst(snapshot.pis.st, ctx, "pis");
+  const cofinsCst = resolvePisCofinsCst(snapshot.cofins.st, ctx, "cofins");
+  const pisRedBc = taxPayloadRedBc(rule, "pis");
+  const cofinsRedBc = taxPayloadRedBc(rule, "cofins");
 
   return {
     numeroItem: line.numeroItem ?? 1,
@@ -202,9 +263,9 @@ export function buildFiscalItem(
     despesasAcessorias: line.despesasAcessorias,
     desconto: line.desconto,
     icms: {
-      cst: snapshot.icms.cst,
+      cst: icmsCst,
       orig: line.origem,
-      pICMS: icmsRate,
+      pICMS: effectivePIcms,
       modBC: 3,
       pRedBC: snapshot.icms.pRedBc,
       pFCP: snapshot.icms.pIcmsFcp,
@@ -218,12 +279,14 @@ export function buildFiscalItem(
           }
         : undefined,
     pis: {
-      cst: String(snapshot.pis.st).slice(0, 2),
+      cst: pisCst,
       aliquota: snapshot.pis.aliquota,
+      ...(pisRedBc != null ? { pRedBC: pisRedBc } : {}),
     },
     cofins: {
-      cst: String(snapshot.cofins.st).slice(0, 2),
+      cst: cofinsCst,
       aliquota: snapshot.cofins.aliquota,
+      ...(cofinsRedBc != null ? { pRedBC: cofinsRedBc } : {}),
     },
     difal: appliesDifal
       ? {
@@ -233,7 +296,7 @@ export function buildFiscalItem(
           pRedBC: snapshot.icms.pRedBcDifal,
         }
       : undefined,
-    incluirIpiNaBaseIcms: isFinalConsumer,
+    incluirIpiNaBaseIcms: shouldIncludeIpiInIcmsBase(ctx, isFinalConsumer),
   };
 }
 
@@ -247,7 +310,7 @@ export function buildFiscalItem(
  */
 export function calculateInvoiceTaxes(
   lines: { line: OrderLine; rule: ResolvedTaxRule | null }[],
-  ctx: FiscalContext,
+  ctx: BuildFiscalItemContext,
   fallbackIcmsRate: number,
 ): NotaFiscalResult {
   const items = lines.map(({ line, rule }, i) =>

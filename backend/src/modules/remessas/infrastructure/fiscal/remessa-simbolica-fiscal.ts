@@ -83,7 +83,8 @@ export async function prepararRemessaSimbolicaFiscal(
     );
   }
 
-  const aliqFallback = inferAliqIcmsRemessa(input.emitUf, input.destUf);
+  const emitterSettings = await loadEmitterSettings(prisma, input.tenantId);
+  const aliqFallback = inferAliqIcmsRemessa(input.emitUf, input.destUf, emitterSettings);
   const cfop = resolveRemessaCfop(input.emitUf, input.destUf);
   const calc = calcularNotaInbound(
     linhaPedidoFromProduto(input.product, {
@@ -97,11 +98,10 @@ export async function prepararRemessaSimbolicaFiscal(
     aliqFallback,
   );
 
-  const emitterSettings = await loadEmitterSettings(prisma, input.tenantId);
   const fiscalPayload = enrichFiscalPayloadMlFulfillment(
     enrichFiscalPayloadWithXTexto(
       {
-        ...enrichTaxSnapshot(taxSnapshotFromRule(taxRule, aliqFallback), {
+        ...enrichTaxSnapshot(taxSnapshotFromRule(taxRule, aliqFallback, emitterSettings), {
           settings: emitterSettings,
           tipo: NFeTipo.REMESSA_SIMBOLICA,
           valor: calc.valor,

@@ -34,7 +34,7 @@ export async function emitSaleNote(
 
   const numero = await proximoNumeroNfe(tx, tenant.id, ctx.serie);
   const chave = buildChaveNFe({ uf: tenant.uf, cnpj: tenant.cnpj, serie: ctx.serie, numero });
-  const fallbackRate = inferIcmsRateForSale(tenant.uf, order.destUf);
+  const fallbackRate = inferIcmsRateForSale(tenant.uf, order.destUf, emitterSettings);
 
   const saleItem = montarItemFiscal(
     {
@@ -86,7 +86,7 @@ export async function emitSaleNote(
       nfeReferenciaId: returnNote.id,
       fiscalPayload: enrichFiscalPayloadWithXTexto(
         {
-          ...enrichTaxSnapshot(taxSnapshotFromRule(saleTaxRule, fallbackRate), {
+          ...enrichTaxSnapshot(taxSnapshotFromRule(saleTaxRule, fallbackRate, emitterSettings), {
             settings: emitterSettings,
             tipo: NFeTipo.VENDA,
             valor: ctx.valorTotalVenda,

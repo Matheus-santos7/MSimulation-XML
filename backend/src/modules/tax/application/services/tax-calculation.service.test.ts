@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { ResolvedTaxRule } from "../../domain/entities/resolved-tax-rule.entity.js";
-import { calculateInboundInvoice, orderLineFromProduct } from "./tax-calculation.service.js";
+import {
+  buildFiscalItem,
+  calculateInboundInvoice,
+  orderLineFromProduct,
+} from "./tax-calculation.service.js";
+import { DEFAULT_FISCAL_EMITTER_SETTINGS } from "../../../fiscal-settings/domain/services/fiscal-emitter-settings-defaults.js";
+import { calcularNotaFiscal } from "../../domain/services/tax-engine.js";
 
 const product = {
   id: "prod-1",
@@ -68,5 +74,88 @@ describe("calculateInboundInvoice — envio de estoque interestadual", () => {
     assert.equal(result.valorIcms, 0);
     assert.equal(result.nota.totais.vICMS, 0);
     assert.equal(result.nota.totais.vBC, 0);
+  });
+});
+
+const saleRule: ResolvedTaxRule = {
+  ruleId: "sku-SP-non_taxpayer-sale",
+  aliquotaIcmsInterna: 18,
+  cfop: "5102",
+  payload: {
+    taxes: {
+      pis: { st: "01 - Operação Tributável com Alíquota Básica", aliquota: 1.65 },
+      cofins: { st: "01 - Operação Tributável com Alíquota Básica", aliquota: 7.6 },
+      ipi: { st: "50 - Saída Tributada", aliquota: 0, codEnq: "999" },
+    },
+    icmsByUf: { ICMS_SP_CST: "00", ICMS_SP_PICMS_INTERNAL: 18 },
+  },
+  icms: { cst: "00", pIcmsInternal: 18 },
+};
+
+describe("buildFiscalItem — devolução", () => {
+  it("mapeia CST de venda para CST de devolução no engine", () => {
+    const line = orderLineFromProduct(product, {
+      cfop: "1202",
+      quantidade: 1,
+      valorUnitario: 100,
+    });
+
+    const emitterSettings = {
+      ...DEFAULT_FISCAL_EMITTER_SETTINGS,
+      taxes: {
+        ...DEFAULT_FISCAL_EMITTER_SETTINGS.taxes,
+        cstDevolucao: {
+          ...DEFAULT_FISCAL_EMITTER_SETTINGS.taxes.cstDevolucao,
+          icms: [{ venda: "00", devolucao: "41" }],
+        },
+      },
+    };
+
+    const item = buildFiscalItem(
+      line,
+      saleRule,
+      {
+        ufOrigem: "SP",
+        ufDestino: "SP",
+        customerType: "non_taxpayer",
+        operationTipo: "DEVOLUCAO",
+        emitterSettings,
+        cstVendaReferencia: { icms: "00", pis: "01", cofins: "01" },
+      },
+      18,
+    );
+
+    assert.equal(item.icms.cst, "41");
+    assert.equal(item.pis.cst, "50");
+    assert.equal(item.cofins.cst, "50");
+
+    const nota = calcularNotaFiscal([item]);
+    assert.equal(nota.itens[0]!.icms.cst, "41");
+    assert.equal(nota.itens[0]!.icms.vBC, 0);
+  });
+
+  it("mapeia CSOSN 102 da venda para 41 na devolução (settings padrão)", () => {
+    const line = orderLineFromProduct(product, {
+      cfop: "1202",
+      quantidade: 1,
+      valorUnitario: 100,
+    });
+
+    const item = buildFiscalItem(
+      line,
+      saleRule,
+      {
+        ufOrigem: "SP",
+        ufDestino: "SP",
+        customerType: "non_taxpayer",
+        operationTipo: "DEVOLUCAO",
+        emitterSettings: DEFAULT_FISCAL_EMITTER_SETTINGS,
+        cstVendaReferencia: { icms: "102", pis: "01", cofins: "01" },
+      },
+      18,
+    );
+
+    assert.equal(item.icms.cst, "41");
+    assert.equal(item.pis.cst, "50");
   });
 });

@@ -17,7 +17,7 @@ import type { Tenant } from "../../../../generated/prisma/client.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import {
   calcularNotaInbound,
-  inferAliqIcmsIntraestadual,
+  resolveIcmsFallbackRate,
   linhaPedidoFromProduto,
 } from "../../../tax/index.js";
 import {
@@ -60,7 +60,7 @@ export async function emitReturnNote(
   const numero = await proximoNumeroNfe(tx, tenant.id, ctx.serie);
   const chave = buildChaveNFe({ uf: tenant.uf, cnpj: tenant.cnpj, serie: ctx.serie, numero });
 
-  const fallbackRate = inferAliqIcmsIntraestadual(tenant.uf, destUf);
+  const fallbackRate = resolveIcmsFallbackRate(tenant.uf, destUf, "inbound", emitterSettings);
   const cfop = resolveRetornoSimbolicoCfop(tenant.uf, destUf);
   const calc = calcularNotaInbound(
     linhaPedidoFromProduto(order.product, {
@@ -102,7 +102,7 @@ export async function emitReturnNote(
       fiscalPayload: enrichFiscalPayloadMlFulfillment(
         enrichFiscalPayloadWithXTexto(
           {
-            ...enrichTaxSnapshot(taxSnapshotFromRule(inboundTaxRule, fallbackRate), {
+            ...enrichTaxSnapshot(taxSnapshotFromRule(inboundTaxRule, fallbackRate, emitterSettings), {
               settings: emitterSettings,
               tipo: NFeTipo.RETORNO_SIMBOLICO,
               valor,

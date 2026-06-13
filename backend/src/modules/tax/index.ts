@@ -7,6 +7,9 @@ import {
   inferIcmsRateForShipment,
   inferIntraStateIcmsRate,
   orderLineFromProduct,
+  resolveIcmsFallbackRate,
+  resolveInterstateSaleFallbackRate,
+  resolvePisCofinsFallbackRates,
   type InboundInvoiceResult,
 } from "./application/services/tax-calculation.service.js";
 import type { FiscalContext } from "./domain/entities/fiscal-context.entity.js";
@@ -35,6 +38,9 @@ export {
   inferIcmsRateForShipment,
   inferIntraStateIcmsRate,
   orderLineFromProduct,
+  resolveIcmsFallbackRate,
+  resolveInterstateSaleFallbackRate,
+  resolvePisCofinsFallbackRates,
   createTaxModule,
   resolveTaxRuleFromDb,
 };

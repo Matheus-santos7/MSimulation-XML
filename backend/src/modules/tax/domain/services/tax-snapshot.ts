@@ -3,9 +3,17 @@
  * Usado na remessa em conjunto com `enrichTaxSnapshot` (configurações do emissor).
  * @see docs/remessa-fisica.md — Fase 4 e 6
  */
+import type { FiscalEmitterSettingsData } from "@msimulation-xml/fiscal-core";
 import type { ResolvedTaxRule } from "../entities/resolved-tax-rule.entity.js";
 
-export function taxSnapshotFromRule(rule: ResolvedTaxRule | null, fallbackAliqIcms: number) {
+const DEFAULT_PIS_COFINS = { pis: 1.65, cofins: 7.6 } as const;
+
+export function taxSnapshotFromRule(
+  rule: ResolvedTaxRule | null,
+  fallbackAliqIcms: number,
+  settings?: FiscalEmitterSettingsData | null,
+) {
+  const pisCofinsDefaults = settings?.taxes.defaultPisCofins ?? DEFAULT_PIS_COFINS;
   const taxes = ((rule?.payload?.taxes as Record<string, unknown> | undefined) ?? {}) as Record<
     string,
     unknown
@@ -60,11 +68,11 @@ export function taxSnapshotFromRule(rule: ResolvedTaxRule | null, fallbackAliqIc
     },
     pis: {
       st: toText(pis.st, "01 - Operação Tributável com Alíquota Básica"),
-      aliquota: toNum(pis.aliquota, 1.65),
+      aliquota: toNum(pis.aliquota, pisCofinsDefaults.pis),
     },
     cofins: {
       st: toText(cofins.st, "01 - Operação Tributável com Alíquota Básica"),
-      aliquota: toNum(cofins.aliquota, 7.6),
+      aliquota: toNum(cofins.aliquota, pisCofinsDefaults.cofins),
     },
     ibsCbs: {
       st: toText(ibsCbs.st),

@@ -72,6 +72,17 @@ export const DEFAULT_CST_DEVOLUCAO_PIS_COFINS: CstDevolucaoMap[] = [
   { venda: "99", devolucao: "98" },
 ];
 
+export const DEFAULT_ICMS_FALLBACK_RATES = {
+  intra: 18,
+  interSale: 12,
+  interInbound: 4,
+} as const;
+
+export const DEFAULT_PIS_COFINS_RATES = {
+  pis: 1.65,
+  cofins: 7.6,
+} as const;
+
 function defaultDifalPorUf(): Record<string, DifalCalculo> {
   return Object.fromEntries(BR_UFS.map((uf) => [uf, uf === "PB" ? "BASE_DUPLA_COM_ICMS" : "PADRAO"]));
 }
@@ -112,6 +123,8 @@ export const DEFAULT_FISCAL_EMITTER_SETTINGS: FiscalEmitterSettingsData = {
       estadosIeCount: 0,
       estadosComIe: [],
     },
+    defaultIcmsRates: { ...DEFAULT_ICMS_FALLBACK_RATES },
+    defaultPisCofins: { ...DEFAULT_PIS_COFINS_RATES },
   },
   nfe: {
     mensagemNfeOk: false,
@@ -180,6 +193,14 @@ export function mergeFiscalEmitterSettings(partial: unknown): FiscalEmitterSetti
         ...base.taxes.emissaoGnre,
         ...p.taxes?.emissaoGnre,
         estadosComIe: p.taxes?.emissaoGnre?.estadosComIe ?? base.taxes.emissaoGnre.estadosComIe,
+      },
+      defaultIcmsRates: {
+        ...base.taxes.defaultIcmsRates,
+        ...p.taxes?.defaultIcmsRates,
+      },
+      defaultPisCofins: {
+        ...base.taxes.defaultPisCofins,
+        ...p.taxes?.defaultPisCofins,
       },
     },
     nfe: {

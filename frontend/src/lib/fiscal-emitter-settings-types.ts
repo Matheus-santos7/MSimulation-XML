@@ -59,6 +59,15 @@ export type FiscalEmitterSettingsData = {
       estadosIeCount: number;
       estadosComIe: string[];
     };
+    defaultIcmsRates?: {
+      intra: number;
+      interSale: number;
+      interInbound: number;
+    };
+    defaultPisCofins?: {
+      pis: number;
+      cofins: number;
+    };
   };
   nfe: {
     mensagemNfeOk: boolean;

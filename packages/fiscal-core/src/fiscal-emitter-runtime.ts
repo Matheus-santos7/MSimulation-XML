@@ -52,9 +52,29 @@ export type EnrichTaxContext = {
   cstVendaReferencia?: { icms?: string; pis?: string; cofins?: string };
 };
 
+export function normalizeTaxStCode(raw: unknown): string {
+  if (raw == null) return "";
+  const text = String(raw).trim();
+  const match = text.match(/^(\d{2,3})/);
+  return match?.[1] ?? text.slice(0, 2);
+}
+
 export function mapCstDevolucao(vendaCst: string, maps: CstDevolucaoMap[]): string {
-  const key = vendaCst.slice(0, 2);
-  return maps.find((m) => m.venda === key)?.devolucao ?? key;
+  const code = normalizeTaxStCode(vendaCst);
+  if (!code) return vendaCst.slice(0, 2);
+
+  const exact = maps.find((m) => m.venda === code);
+  if (exact) return exact.devolucao;
+
+  if (code.length >= 3) {
+    const by3 = maps.find((m) => m.venda === code.slice(0, 3));
+    if (by3) return by3.devolucao;
+  }
+
+  const by2 = maps.find((m) => m.venda === code.slice(0, 2));
+  if (by2) return by2.devolucao;
+
+  return code.slice(0, 2);
 }
 
 export function resolveModFrete(settings: FiscalEmitterSettingsData, tipo: NFeTipoValue): string {

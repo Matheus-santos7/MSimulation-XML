@@ -11,6 +11,7 @@
  *  - reverses FIFO balance consumed in the chain back to shipments.
  */
 
+import { normalizeTaxStCode } from "@msimulation-xml/fiscal-core";
 import {
   FiscalStatus,
   NFeTipo,
@@ -24,7 +25,7 @@ import { enrichTaxSnapshot, loadEmitterSettings } from "../../../fiscal-settings
 import { enrichFiscalPayloadWithXTexto } from "@msimulation-xml/fiscal-core";
 import { taxSnapshotFromRule } from "../../../tax/domain/services/tax-snapshot.js";
 import { calcularNotaFiscal } from "../../../tax/domain/services/tax-engine.js";
-import { montarItemFiscal, resolveTaxRule, type CustomerType } from "../../../tax/index.js";
+import { montarItemFiscal, resolveTaxRule, resolveIcmsFallbackRate, type CustomerType } from "../../../tax/index.js";
 import { persistNfeXmlFromEmission } from "../xml/nfe-xml-service.js";
 import { estornarConsumosRemessa } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
 import {
@@ -90,7 +91,10 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
         ruleBaseId: product.taxRuleBaseId?.trim() || undefined,
       });
 
-      const icmsFallbackRate = num(sale.aliqIcms) || 0;
+      const icmsFallbackRate =
+        num(sale.aliqIcms) ||
+        resolveIcmsFallbackRate(tenant.uf, sale.destUf, "sale", emitterSettings);
+      const referencedSaleCst = extractCstFromPayload(sale.fiscalPayload);
 
       const fiscalItem = montarItemFiscal(
         {
@@ -107,7 +111,14 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
           valorUnitario: unitValue,
         },
         saleTaxRule,
-        { ufOrigem: tenant.uf, ufDestino: sale.destUf, customerType },
+        {
+          ufOrigem: tenant.uf,
+          ufDestino: sale.destUf,
+          customerType,
+          emitterSettings,
+          operationTipo: "DEVOLUCAO",
+          cstVendaReferencia: referencedSaleCst,
+        },
         icmsFallbackRate,
       );
       const invoice = calcularNotaFiscal([fiscalItem]);
@@ -118,9 +129,9 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
       const number = await proximoNumeroNfe(tx, tenant.id, series);
       const accessKey = buildChaveNFe({ uf: tenant.uf, cnpj: tenant.cnpj, serie: series, numero: number });
 
-      const referencedSaleCst = extractCstFromPayload(sale.fiscalPayload);
-
-      const taxSnapshot = enrichTaxSnapshot(taxSnapshotFromRule(saleTaxRule, icmsFallbackRate), {
+      const taxSnapshot = enrichTaxSnapshot(
+        taxSnapshotFromRule(saleTaxRule, icmsFallbackRate, emitterSettings),
+        {
         settings: emitterSettings,
         tipo: NFeTipo.DEVOLUCAO,
         valor: totalValue,
@@ -299,8 +310,10 @@ function extractCstFromPayload(payload: unknown): {
   const icms = (root.icms ?? {}) as Record<string, unknown>;
   const pis = (root.pis ?? {}) as Record<string, unknown>;
   const cofins = (root.cofins ?? {}) as Record<string, unknown>;
-  const asCst = (value: unknown): string | undefined =>
-    typeof value === "string" && value.trim() ? value.trim().slice(0, 2) : undefined;
+  const asCst = (value: unknown): string | undefined => {
+    const code = normalizeTaxStCode(value);
+    return code || undefined;
+  };
   return {
     icms: asCst(icms.cst),
     pis: asCst(pis.st),

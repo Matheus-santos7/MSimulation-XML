@@ -5,6 +5,7 @@ import {
   composicaoChannel,
   enrichTaxSnapshot,
   mapCstDevolucao,
+  normalizeTaxStCode,
   resolveModFrete,
   type TaxSnapshot,
 } from "./fiscal-emitter-runtime.js";
@@ -71,6 +72,22 @@ describe("fiscal-emitter-runtime", () => {
     const maps = [{ venda: "01", devolucao: "50" }];
     assert.equal(mapCstDevolucao("01", maps), "50");
     assert.equal(mapCstDevolucao("99", maps), "99");
+  });
+
+  it("normalizeTaxStCode extrai CST (2) ou CSOSN (3)", () => {
+    assert.equal(normalizeTaxStCode("00 - Tributada"), "00");
+    assert.equal(normalizeTaxStCode("102 - SN"), "102");
+    assert.equal(normalizeTaxStCode(41), "41");
+  });
+
+  it("mapCstDevolucao mapeia CSOSN de 3 dígitos (ex.: 102 → 41)", () => {
+    const maps = [
+      { venda: "102", devolucao: "41" },
+      { venda: "500", devolucao: "60" },
+    ];
+    assert.equal(mapCstDevolucao("102", maps), "41");
+    assert.equal(mapCstDevolucao("102 - Tributada", maps), "41");
+    assert.equal(mapCstDevolucao("500", maps), "60");
   });
 
   it("resolveModFrete por tipo de NF-e", () => {

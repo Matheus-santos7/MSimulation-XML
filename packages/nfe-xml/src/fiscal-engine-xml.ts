@@ -214,6 +214,18 @@ export function buildIcmsXmlFromEngineItem(icms: EngineIcms): string {
       ? `<pFCP>${icms.pFCP!.toFixed(4)}</pFCP><vFCP>${(icms.vFCP ?? 0).toFixed(2)}</vFCP>`
       : "";
 
+  if (["40", "41", "50"].includes(cst)) {
+    return `<ICMS><ICMS40><orig>${icms.orig}</orig><CST>${cst}</CST></ICMS40></ICMS>`;
+  }
+
+  if (cst === "60") {
+    return `<ICMS><ICMS60><orig>${icms.orig}</orig><CST>60</CST></ICMS60></ICMS>`;
+  }
+
+  if (cst === "90" && icms.vBC === 0 && icms.vICMS === 0) {
+    return `<ICMS><ICMS90><orig>${icms.orig}</orig><CST>90</CST></ICMS90></ICMS>`;
+  }
+
   if (cst === "00") {
     return `<ICMS><ICMS00><orig>${icms.orig}</orig><CST>00</CST><modBC>${modBC}</modBC><vBC>${icms.vBC.toFixed(2)}</vBC><pICMS>${icms.pICMS.toFixed(4)}</pICMS><vICMS>${icms.vICMS.toFixed(2)}</vICMS>${pFcpXml}</ICMS00></ICMS>`;
   }

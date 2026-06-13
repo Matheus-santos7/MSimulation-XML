@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FiscalDocumentDeleteButton } from "@/components/fiscal-document-delete-button";
+import { DeleteConfirmButton } from "@/components/delete-confirm-button";
 import { NfeCancelarButton } from "@/components/nfe-cancelar-button";
 import { NfeDevolucaoButton } from "@/components/nfe-devolucao-button";
 import { NfeInutXmlActions, NfeXmlActions } from "@/components/fiscal-xml-actions";
@@ -184,8 +184,8 @@ export default async function NFeListPage() {
                             />
                           </>
                         )}
-                        <FiscalDocumentDeleteButton
-                          tipo="nfe"
+                        <DeleteConfirmButton
+                          variant="nfe"
                           chave={nfe.chave}
                           label={`${nfe.numero}/${nfe.serie}`}
                         />

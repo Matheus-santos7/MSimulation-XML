@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CteXmlActions } from "@/components/fiscal-xml-actions";
-import { FiscalDocumentDeleteButton } from "@/components/fiscal-document-delete-button";
+import { DeleteConfirmButton } from "@/components/delete-confirm-button";
 import { PageHeader, StatusBadge } from "@/components/fiscal-ui";
 import { resolveActiveTenantId } from "@/lib/active-tenant";
 import { listCtes } from "@/lib/fiscal-api";
@@ -64,7 +64,7 @@ export default async function CTePage() {
                     <CteXmlActions chave={c.chave} variant="list" />
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <FiscalDocumentDeleteButton tipo="cte" chave={c.chave} label={`CT-e ${c.numero}`} />
+                    <DeleteConfirmButton variant="cte" chave={c.chave} label={`CT-e ${c.numero}`} />
                   </td>
                 </tr>
               ))}

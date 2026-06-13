@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { faturarPedidoAction } from "@/app/(app)/pedidos/actions";
 import { PageHeader } from "@/components/fiscal-ui";
-import { PedidoDeleteButton } from "@/components/pedido-delete-button";
+import { DeleteConfirmButton } from "@/components/delete-confirm-button";
 import { PedidoWizardDialog } from "@/components/pedido-wizard-dialog";
 import { Button } from "@/components/ui/button";
 import type { PedidoDto, ProductDto } from "@/lib/fiscal-types";
@@ -130,7 +130,7 @@ export function PedidosView({ pedidos, products }: Props) {
                               >
                                 <Receipt className="size-3.5" />
                               </Button>
-                              <PedidoDeleteButton pedido={p} />
+                              <DeleteConfirmButton variant="pedido" pedido={p} />
                             </>
                           ) : (
                             <>
@@ -144,7 +144,7 @@ export function PedidosView({ pedidos, products }: Props) {
                                   </Link>
                                 </Button>
                               )}
-                              <PedidoDeleteButton pedido={p} />
+                              <DeleteConfirmButton variant="pedido" pedido={p} />
                             </>
                           )}
                         </div>

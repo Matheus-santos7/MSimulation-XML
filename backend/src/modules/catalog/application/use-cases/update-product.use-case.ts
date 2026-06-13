@@ -39,17 +39,18 @@ export class UpdateProductUseCase {
 
     const mergedStock = command.estoque ?? existing.estoque;
     const origem = command.origem ?? existing.origem;
-    const patch: UpdateProductCommand & { estoque: number; nfci?: string | null } = {
+    const patch: UpdateProductCommand & { estoque: number } = {
       ...command,
       estoque: mergedStock,
     };
 
     if (command.origem !== undefined || command.nfci !== undefined) {
       try {
-        patch.nfci = resolveProductNfci(
-          origem,
-          command.nfci !== undefined ? command.nfci : existing.nfci,
-        ) ?? null;
+        patch.nfci =
+          resolveProductNfci(
+            origem,
+            command.nfci !== undefined ? command.nfci : existing.nfci,
+          ) ?? undefined;
       } catch (error) {
         throw new ProductValidationError(error instanceof Error ? error.message : "nFCI inválido");
       }

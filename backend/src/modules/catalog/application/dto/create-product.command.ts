@@ -11,6 +11,8 @@ export type CreateProductCommand = {
   ncm: string;
   cest: string;
   exTipi?: string;
+  /** Ficha de conteúdo de importação (`<nFCI>`) — obrigatório quando origem = 6. */
+  nfci?: string;
   origem: number;
   unidade: string;
   preco: number;

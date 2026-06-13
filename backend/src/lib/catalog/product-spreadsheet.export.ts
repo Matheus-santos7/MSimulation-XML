@@ -13,6 +13,7 @@ const EXAMPLE_ROW: Record<(typeof PRODUCT_SPREADSHEET_COLUMNS)[number], string> 
   cest: "2100100",
   ex_tipi: "",
   origem: "0",
+  nfci: "",
   unidade: "UNID",
   preco: "846,00",
   preco_custo: "520,00",

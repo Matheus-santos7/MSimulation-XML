@@ -156,14 +156,16 @@ function taxPayloadRedBc(rule: ResolvedTaxRule | null, tax: "pis" | "cofins"): n
 }
 
 function resolveIcmsCst(snapshotCst: string, ctx: BuildFiscalItemContext): string {
+  const emitterSettings = ctx.emitterSettings;
   if (
     ctx.operationTipo === "DEVOLUCAO" &&
-    ctx.emitterSettings?.taxes.cstDevolucao.mode !== "DEFAULT" &&
+    emitterSettings &&
+    emitterSettings.taxes.cstDevolucao.mode !== "DEFAULT" &&
     ctx.cstVendaReferencia?.icms
   ) {
     return mapCstDevolucao(
       ctx.cstVendaReferencia.icms,
-      ctx.emitterSettings.taxes.cstDevolucao.icms,
+      emitterSettings.taxes.cstDevolucao.icms,
     );
   }
   return snapshotCst;
@@ -175,13 +177,15 @@ function resolvePisCofinsCst(
   tax: "pis" | "cofins",
 ): string {
   const base = String(snapshotSt).slice(0, 2);
+  const emitterSettings = ctx.emitterSettings;
   if (
     ctx.operationTipo === "DEVOLUCAO" &&
-    ctx.emitterSettings?.taxes.cstDevolucao.mode !== "DEFAULT"
+    emitterSettings &&
+    emitterSettings.taxes.cstDevolucao.mode !== "DEFAULT"
   ) {
     const ref = tax === "pis" ? ctx.cstVendaReferencia?.pis : ctx.cstVendaReferencia?.cofins;
     if (ref) {
-      return mapCstDevolucao(ref, ctx.emitterSettings.taxes.cstDevolucao.pisCofins);
+      return mapCstDevolucao(ref, emitterSettings.taxes.cstDevolucao.pisCofins);
     }
   }
   return base;

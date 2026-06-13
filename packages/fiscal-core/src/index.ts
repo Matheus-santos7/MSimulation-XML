@@ -66,6 +66,10 @@ export type {
   SettingsMode,
 } from "./fiscal-emitter-settings-types.js";
 export {
+  PIS_COFINS_CST_SYMBOLIC_RETURN,
+  resolvePisCofinsCstFromSnapshot,
+} from "./pis-cofins-cst.js";
+export {
   buildEmitterSnapshot,
   calcTributoBase,
   composicaoChannel,

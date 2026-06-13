@@ -133,6 +133,7 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
       tenant.uf,
       destUf,
       aliqFallback,
+      { operationTipo: "RETORNO_SIMBOLICO", emitterSettings },
     );
 
     const autXmlCpfs = emitterSettings.nfe.autXmlCpfs?.filter(

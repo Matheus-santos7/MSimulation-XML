@@ -25,6 +25,7 @@ import type { ResolvedTaxRule } from "../../domain/entities/resolved-tax-rule.en
 import {
   composicaoChannel,
   mapCstDevolucao,
+  resolvePisCofinsCstFromSnapshot,
   resolveDifalMode,
   type FiscalEmitterSettingsData,
 } from "@msimulation-xml/fiscal-core";
@@ -58,6 +59,11 @@ export type InboundInvoiceResult = {
   valorIcms: number;
   aliqIcms: number;
   cfop: string;
+};
+
+export type CalculateInboundInvoiceOptions = {
+  operationTipo?: FiscalOperationTipo;
+  emitterSettings?: FiscalEmitterSettingsData | null;
 };
 
 /**
@@ -102,11 +108,18 @@ export function calculateInboundInvoice(
   originUf: string,
   destinationUf: string,
   fallbackIcmsRate: number,
+  options?: CalculateInboundInvoiceOptions,
 ): InboundInvoiceResult {
   const item = buildFiscalItem(
     line,
     rule,
-    { ufOrigem: originUf, ufDestino: destinationUf, customerType: "taxpayer" },
+    {
+      ufOrigem: originUf,
+      ufDestino: destinationUf,
+      customerType: "taxpayer",
+      operationTipo: options?.operationTipo,
+      emitterSettings: options?.emitterSettings,
+    },
     fallbackIcmsRate,
   );
   const nota = calcularNotaFiscal([item]);
@@ -176,7 +189,6 @@ function resolvePisCofinsCst(
   ctx: BuildFiscalItemContext,
   tax: "pis" | "cofins",
 ): string {
-  const base = String(snapshotSt).slice(0, 2);
   const emitterSettings = ctx.emitterSettings;
   if (
     ctx.operationTipo === "DEVOLUCAO" &&
@@ -188,7 +200,7 @@ function resolvePisCofinsCst(
       return mapCstDevolucao(ref, emitterSettings.taxes.cstDevolucao.pisCofins);
     }
   }
-  return base;
+  return resolvePisCofinsCstFromSnapshot(snapshotSt, ctx.operationTipo);
 }
 
 function shouldIncludeIpiInIcmsBase(ctx: BuildFiscalItemContext, isFinalConsumer: boolean): boolean {

@@ -75,6 +75,36 @@ describe("calculateInboundInvoice — envio de estoque interestadual", () => {
     assert.equal(result.nota.totais.vICMS, 0);
     assert.equal(result.nota.totais.vBC, 0);
   });
+
+  it("retorno simbólico usa CST 98 em PIS/COFINS (ML produção)", () => {
+    const ruleInboundSuspensao: ResolvedTaxRule = {
+      ...inboundRuleZero,
+      payload: {
+        taxes: {
+          icms: { st: "90 - Outras", aliquota: 0 },
+          pis: { st: "09 - Operação com Suspensão da Contribuição", aliquota: 0 },
+          cofins: { st: "09 - Operação com Suspensão da Contribuição", aliquota: 0 },
+          ipi: { st: "55 - Saída com Suspensão", aliquota: 0, codEnq: 103 },
+        },
+        icmsByUf: { ICMS_SC_PICMS_INTERNAL: 0, ICMS_SC_CST: "90 - Outras" },
+      },
+    };
+
+    const line = orderLineFromProduct(product, {
+      cfop: "2949",
+      quantidade: 1,
+      valorUnitario: 653.4,
+    });
+
+    const result = calculateInboundInvoice(line, ruleInboundSuspensao, "PR", "SC", 12, {
+      operationTipo: "RETORNO_SIMBOLICO",
+    });
+
+    assert.equal(result.nota.itens[0]!.pis.cst, "98");
+    assert.equal(result.nota.itens[0]!.cofins.cst, "98");
+    assert.equal(result.nota.itens[0]!.pis.vBC, 0);
+    assert.equal(result.nota.itens[0]!.cofins.vBC, 0);
+  });
 });
 
 const saleRule: ResolvedTaxRule = {

@@ -293,8 +293,8 @@ describe("buildNFeXML — REMESSA", () => {
               quantidade: 1,
               valorUnitario: 609,
               icms: { cst: "90", orig: 2, vBC: 0, pICMS: 0, vICMS: 0 },
-              pis: { cst: "09", vBC: 0, vPIS: 0 },
-              cofins: { cst: "09", vBC: 0, vCOFINS: 0 },
+              pis: { cst: "98", vBC: 0, vPIS: 0 },
+              cofins: { cst: "98", vBC: 0, vCOFINS: 0 },
               ipi: { cst: "55", cEnq: "103", vBC: 0, pIPI: 0, vIPI: 0 },
             },
           ],
@@ -340,10 +340,10 @@ describe("buildNFeXML — REMESSA", () => {
     assert.match(xml, /<infRespTec>/);
     assert.match(xml, /<EXTIPI>/);
     assert.match(xml, /<IPINT>\s*<CST>55<\/CST>\s*<\/IPINT>/);
-    assert.match(xml, /<PISNT>\s*<CST>09<\/CST>\s*<\/PISNT>/);
-    assert.match(xml, /<COFINSNT>\s*<CST>09<\/CST>\s*<\/COFINSNT>/);
+    assert.match(xml, /<PISOutr>\s*<CST>98<\/CST>/);
+    assert.match(xml, /<COFINSOutr>\s*<CST>98<\/CST>/);
+    assert.doesNotMatch(xml, /<PISNT>/);
     assert.doesNotMatch(xml, /<IPINT>\s*<CST>05<\/CST>/);
-    assert.doesNotMatch(xml, /<PISOutr>\s*<CST>98<\/CST>/);
 
     const doc = new DOMParser().parseFromString(xml, "text/xml");
     const err = doc.getElementsByTagName("parsererror");

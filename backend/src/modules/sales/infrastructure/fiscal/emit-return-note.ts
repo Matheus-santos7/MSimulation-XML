@@ -72,6 +72,7 @@ export async function emitReturnNote(
     tenant.uf,
     destUf,
     fallbackRate,
+    { operationTipo: "RETORNO_SIMBOLICO", emitterSettings },
   );
   const { valor, valorIcms, aliqIcms } = calc;
 

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { Download, ExternalLink } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   fiscalEventHasXml,
@@ -10,6 +11,7 @@ import {
   type FiscalXmlHref,
 } from "@/lib/fiscal-xml-routes";
 import { downloadFromApi, openXmlFromApi } from "@/lib/http/authenticated-fetch";
+import { toUserFacingError } from "@/lib/user-facing-error";
 import type { FiscalEventDto } from "@/lib/fiscal-types";
 
 export type FiscalXmlActionsVariant = "list" | "toolbar";
@@ -23,15 +25,16 @@ type XmlLinkPairProps = {
 /** Par ver/baixar reutilizável para qualquer documento fiscal XML. */
 export function XmlLinkPair({ label, hrefs, compact }: XmlLinkPairProps) {
   const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
 
   function run(action: () => Promise<void>) {
-    setError(null);
     startTransition(async () => {
       try {
         await action();
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Falha ao acessar XML");
+        const message = toUserFacingError(e instanceof Error ? e.message : undefined, {
+          fallback: "Não foi possível acessar o XML. Tente novamente.",
+        });
+        toast.error(message);
       }
     });
   }
@@ -68,7 +71,6 @@ export function XmlLinkPair({ label, hrefs, compact }: XmlLinkPairProps) {
             <span className="sr-only">Baixar XML {label}</span>
           </Button>
         </div>
-        {error && <span className="text-[10px] text-destructive max-w-[12rem] text-right">{error}</span>}
       </div>
     );
   }
@@ -98,7 +100,6 @@ export function XmlLinkPair({ label, hrefs, compact }: XmlLinkPairProps) {
           Baixar
         </Button>
       </div>
-      {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );
 }

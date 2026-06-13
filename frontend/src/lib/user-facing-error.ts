@@ -7,6 +7,9 @@ const TECHNICAL_ERROR_PATTERNS = [
   /unexpected token/i,
   /syntaxerror/i,
   /stack trace/i,
+  /server action/i,
+  /failed to fetch/i,
+  /was not found on the server/i,
 ];
 
 const DEFAULT_FALLBACK =

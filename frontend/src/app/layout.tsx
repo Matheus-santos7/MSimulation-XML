@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { Toaster } from "@/components/ui/sonner";
 import { BRAND } from "@/lib/brand";
 import "./globals.css";
 
@@ -33,7 +34,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className={`dark h-full ${inter.variable} ${jetbrainsMono.variable}`}>
-      <body className="min-h-full antialiased">{children}</body>
+      <body className="min-h-full antialiased">
+        {children}
+        <Toaster richColors closeButton position="top-right" />
+      </body>
     </html>
   );
 }

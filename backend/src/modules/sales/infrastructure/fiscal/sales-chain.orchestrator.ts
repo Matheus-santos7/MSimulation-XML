@@ -1,5 +1,5 @@
 import type { PrismaClient, Tenant } from "../../../../generated/prisma/client.js";
-import { FISCAL_TRANSACTION_OPTIONS } from "../../../../lib/db/prisma-tx.js";
+import { runFiscalTransaction } from "../../../../lib/db/prisma-tx.js";
 import { mapNfe } from "../../../fiscal-documents/presentation/mappers/fiscal-mappers.js";
 import { previewRemessaPrincipalFifoParaVenda } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
 import type { SalesChainResult } from "../../application/dto/sales-chain.dto.js";
@@ -35,7 +35,7 @@ export class SalesChainOrchestrator implements SalesChainPort {
     const ruleBaseId = assertProductWithTaxRule(order);
     const ctx = buildEmissionContext(order, ruleBaseId);
 
-    return prisma.$transaction(async (tx) => {
+    return runFiscalTransaction(prisma, order.tenantId, async (tx) => {
       const fifoPreview = await previewRemessaPrincipalFifoParaVenda(
         tx,
         order.tenant.id,
@@ -68,7 +68,7 @@ export class SalesChainOrchestrator implements SalesChainPort {
         cteVenda: saleCte,
         alocacoes: allocations,
       };
-    }, FISCAL_TRANSACTION_OPTIONS);
+    });
   }
 }
 

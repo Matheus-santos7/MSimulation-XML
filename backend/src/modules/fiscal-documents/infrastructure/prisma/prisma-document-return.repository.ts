@@ -18,6 +18,7 @@ import {
   Prisma,
   type PrismaClient,
 } from "../../../../generated/prisma/client.js";
+import { runFiscalTransaction } from "../../../../lib/db/prisma-tx.js";
 import { mapNfe, num } from "../../presentation/mappers/fiscal-mappers.js";
 import { buildChaveNFe } from "../../domain/services/nfe-chave.js";
 import { proximoNumeroNfe } from "../../domain/services/nfe-sequencia.js";
@@ -80,7 +81,7 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
     const unitValue = quantity > 0 ? totalValue / quantity : totalValue;
     const cfop = resolveReturnCfop(tenant.uf, sale.destUf);
 
-    return this.prisma.$transaction(async (tx) => {
+    return runFiscalTransaction(this.prisma, tenantId, async (tx) => {
       const emitterSettings = await loadEmitterSettings(tx, tenant.id);
 
       const saleTaxRule = await resolveTaxRule(tx, tenant.id, {

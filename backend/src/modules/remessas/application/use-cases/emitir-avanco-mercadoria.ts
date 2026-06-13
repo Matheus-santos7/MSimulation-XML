@@ -2,7 +2,7 @@ import { OperacaoFiscalTipo } from "../../../../generated/prisma/client.js";
 import type { PrismaClient } from "../../../../generated/prisma/client.js";
 import type { Product, Tenant } from "../../../../generated/prisma/client.js";
 import { gerarPedidoMl } from "../../../fiscal-documents/domain/services/nfe-chave.js";
-import { FISCAL_TRANSACTION_OPTIONS, type PrismaTx } from "../../../../lib/db/prisma-tx.js";
+import { runFiscalTransaction, type PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { emitirCteRemessa } from "../../infrastructure/fiscal/cte-remessa-service.js";
 import {
   debitarSaldoRemessaPorCd,
@@ -132,7 +132,7 @@ export class EmitirAvancoMercadoriaUseCase {
       serie: tenant.serieRemessa,
     };
 
-    const resultado = await prisma.$transaction(async (tx) => {
+    const resultado = await runFiscalTransaction(prisma, command.tenantId, async (tx) => {
       const { estoqueFifo, notaFiscal, emissorNota } = this.deps.createAdapters(tx);
 
       let alocacoesRaw;
@@ -270,9 +270,9 @@ export class EmitirAvancoMercadoriaUseCase {
         alocacoes,
         cte,
       };
-    }, FISCAL_TRANSACTION_OPTIONS);
+    });
 
-    await prisma.$transaction(async (tx) => {
+    await runFiscalTransaction(prisma, command.tenantId, async (tx) => {
       await this.deps.createAdapters(tx).movimentacao.registrar({
         tenantId: command.tenantId,
         productId: resolved.product.id,

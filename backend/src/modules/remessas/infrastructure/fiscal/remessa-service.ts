@@ -18,6 +18,7 @@ import {
   type Product,
   type Tenant,
 } from "../../../../generated/prisma/client.js";
+import { runFiscalTransaction } from "../../../../lib/db/prisma-tx.js";
 import { mapNfe } from "../../../fiscal-documents/presentation/mappers/fiscal-mappers.js";
 import { buildChaveNFe, gerarPedidoMl } from "../../../fiscal-documents/domain/services/nfe-chave.js";
 import { proximoNumeroNfe } from "../../../fiscal-documents/domain/services/nfe-sequencia.js";
@@ -170,7 +171,7 @@ async function emitirNFeRemessaComItens(
   const destData = destinoToNfeFields(destino);
 
   // --- Fases 6–9: transação atômica (payload, NF-e, XML, CT-e) ---
-  const { nfeRow, cteRow, itemRows } = await prisma.$transaction(async (tx) => {
+  const { nfeRow, cteRow, itemRows } = await runFiscalTransaction(prisma, tenant.id, async (tx) => {
     // Fase 6: configurações do emissor + snapshot para XML/payload.
     const emitterSettings = await loadEmitterSettings(tx, tenant.id);
     const fiscalPayload = enrichFiscalPayloadMlFulfillment(

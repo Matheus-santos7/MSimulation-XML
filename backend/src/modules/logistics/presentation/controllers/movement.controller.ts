@@ -65,8 +65,8 @@ function mapRemessaModuleError(e: unknown): { status: number; message: string } 
 }
 
 export const movementController: FastifyPluginAsync = async (app) => {
-  const logistics = () => createLogisticsModule(getDbClient());
-  const remessas = () => createRemessasModule(getDbClient());
+  const logistics = createLogisticsModule();
+  const remessas = createRemessasModule();
 
   app.post("/movimentacoes/remessa", async (req, reply) => {
     const tenantId = tenantIdFromRequest(req);
@@ -75,7 +75,7 @@ export const movementController: FastifyPluginAsync = async (app) => {
       return reply.status(400).send({ error: "Payload inválido", details: parsed.error.flatten() });
     }
     try {
-      return await remessas().emitirRemessaInicial.execute({
+      return await remessas.emitirRemessaInicial.execute({
         tenantId,
         unidadeDestinoId: parsed.data.unidadeDestinoId,
         items: parsed.data.items,
@@ -95,13 +95,13 @@ export const movementController: FastifyPluginAsync = async (app) => {
     }
 
     const productId = parsed.data.productId.trim();
-    const resolved = await logistics().resolveAdvanceProduct.execute(
+    const resolved = await logistics.resolveAdvanceProduct.execute(
       tenantId,
       productId,
       parsed.data.productSku,
     );
     if (!resolved) {
-      const hasStock = await logistics().hasAdvanceStock.execute(
+      const hasStock = await logistics.hasAdvanceStock.execute(
         tenantId,
         productId,
         parsed.data.productSku,
@@ -120,7 +120,7 @@ export const movementController: FastifyPluginAsync = async (app) => {
     }
 
     try {
-      const result = await remessas().emitirAvancoMercadoria.execute({
+      const result = await remessas.emitirAvancoMercadoria.execute({
         tenantId,
         productId,
         productSku: parsed.data.productSku,
@@ -139,7 +139,7 @@ export const movementController: FastifyPluginAsync = async (app) => {
   app.get("/movimentacoes-produto", async (req) => {
     const tenantId = tenantIdFromRequest(req);
     const q = productMovementsQuery.parse(req.query);
-    return logistics().listProductMovements.execute(tenantId, {
+    return logistics.listProductMovements.execute(tenantId, {
       productId: q.productId,
       limit: q.limit,
     });

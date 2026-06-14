@@ -1,4 +1,3 @@
-import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import { runInTransaction } from "../../../../lib/db/prisma-tx.js";
 import { mergeFiscalEmitterSettings } from "../../domain/services/fiscal-emitter-settings-defaults.js";
 import type { EmitterSettingsView } from "../../domain/entities/emitter-settings-view.entity.js";
@@ -6,6 +5,7 @@ import type {
   EmitterSettingsRepository,
   UpdateEmitterSettingsInput,
 } from "../../domain/ports/emitter-settings.repository.js";
+import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import {
   DEFAULT_FISCAL_EMITTER_SETTINGS,
   mergeEmitterSettingsPatch,
@@ -17,11 +17,13 @@ import {
  * Persiste JSON em `fiscal_emitter_settings.settings`; séries em `tenant`.
  */
 export class PrismaEmitterSettingsRepository implements EmitterSettingsRepository {
-  constructor(private readonly prisma: DbClient) {}
+  private get db() {
+    return getDbClient();
+  }
 
   /** @inheritdoc */
   async getByTenantId(tenantId: string): Promise<EmitterSettingsView | null> {
-    const tenant = await this.prisma.tenant.findUnique({
+    const tenant = await this.db.tenant.findUnique({
       where: { id: tenantId },
       include: { fiscalEmitterSettings: true },
     });
@@ -46,7 +48,7 @@ export class PrismaEmitterSettingsRepository implements EmitterSettingsRepositor
     tenantId: string,
     input: UpdateEmitterSettingsInput,
   ): Promise<EmitterSettingsView | null> {
-    const tenant = await this.prisma.tenant.findUnique({
+    const tenant = await this.db.tenant.findUnique({
       where: { id: tenantId },
       include: { fiscalEmitterSettings: true },
     });
@@ -59,7 +61,7 @@ export class PrismaEmitterSettingsRepository implements EmitterSettingsRepositor
     const nextSettings = mergeEmitterSettingsPatch(currentSettings, input);
     const { serieRemessa, serieCte } = input;
 
-    await runInTransaction(this.prisma, async (tx) => {
+    await runInTransaction(this.db, async (tx) => {
       if (serieRemessa != null || serieCte != null) {
         await tx.tenant.update({
           where: { id: tenantId },
@@ -82,7 +84,7 @@ export class PrismaEmitterSettingsRepository implements EmitterSettingsRepositor
 
   /** Conta grupos de regra por nome normalizado (sem sufixo UF). */
   private async countDistinctTaxRuleGroups(tenantId: string): Promise<number> {
-    const ruleRows = await this.prisma.taxRule.findMany({
+    const ruleRows = await this.db.taxRule.findMany({
       where: { tenantId },
       select: { nome: true },
     });

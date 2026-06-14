@@ -1,5 +1,6 @@
 import { OperacaoFiscalTipo, type Product, type Tenant } from "../../../../generated/prisma/client.js";
-import type { DbClient, PrismaTx } from "../../../../lib/db/prisma-tx.js";
+import { getDbClient } from "../../../../lib/db/tenant-rls.js";
+import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { gerarPedidoMl } from "../../../fiscal-documents/domain/services/nfe-chave.js";
 import { runFiscalTransaction } from "../../../../lib/db/prisma-tx.js";
 import { emitirCteRemessa } from "../../infrastructure/fiscal/cte-remessa-service.js";
@@ -14,7 +15,7 @@ import { quantidadeSaldo } from "../../domain/value-objects/quantidade-saldo.js"
 import { RemessaDomainError } from "../../domain/errors.js";
 import type { EstoqueFifoRepository } from "../../domain/ports/estoque-fifo-repository.js";
 import type { UnidadeLogisticaPort } from "../../domain/ports/unidade-logistica-port.js";
-import type { RemessasAdapters } from "../../infrastructure/factory/remessas-adapters.js";
+import { createRemessasAdapters } from "../../infrastructure/factory/remessas-adapters.js";
 import { ValidadorCadeiaFiscal } from "../../domain/services/validador-cadeia-fiscal.js";
 import type {
   EmitirAvancoMercadoriaCommand,
@@ -28,10 +29,8 @@ export type ResolverProdutoAvanco = (
 ) => Promise<{ product: Product; fifoProductId: string } | null>;
 
 export type EmitirAvancoMercadoriaDeps = {
-  prisma: DbClient;
   estoqueFifo: EstoqueFifoRepository;
   unidadeLogistica: UnidadeLogisticaPort;
-  createAdapters: (db: DbClient) => RemessasAdapters;
   resolverProduto: ResolverProdutoAvanco;
 };
 
@@ -69,8 +68,8 @@ export class EmitirAvancoMercadoriaUseCase {
     // Mesmo critério de GET /movimentacoes/saldo-cd (productId do formulário + SKU).
     const saldoProductId = command.productId.trim() || resolved.product.id;
 
-    const prisma = this.deps.prisma;
-    const logistics = createLogisticsModule(prisma);
+    const prisma = getDbClient();
+    const logistics = createLogisticsModule();
     const origemResolvida = await resolveOrigemFiscalParaAvanco(
       prisma,
       command.tenantId,
@@ -132,7 +131,7 @@ export class EmitirAvancoMercadoriaUseCase {
     };
 
     const resultado = await runFiscalTransaction(prisma, command.tenantId, async (tx) => {
-      const { estoqueFifo, notaFiscal, emissorNota } = this.deps.createAdapters(tx);
+      const { estoqueFifo, notaFiscal, emissorNota } = createRemessasAdapters();
 
       let alocacoesRaw;
       try {
@@ -271,8 +270,8 @@ export class EmitirAvancoMercadoriaUseCase {
       };
     });
 
-    await runFiscalTransaction(prisma, command.tenantId, async (tx) => {
-      await this.deps.createAdapters(tx).movimentacao.registrar({
+    await runFiscalTransaction(prisma, command.tenantId, async (_tx) => {
+      await createRemessasAdapters().movimentacao.registrar({
         tenantId: command.tenantId,
         productId: resolved.product.id,
         tipoOperacao: OperacaoFiscalTipo.AVANCO_CD,

@@ -35,18 +35,21 @@ import {
 } from "../../../remessas/infrastructure/fiscal/remessa-simbolica-fiscal.js";
 import type { ProcessReturnResult } from "../../domain/entities/lifecycle-result.entity.js";
 import { DocumentReturnError } from "../../domain/errors/document-return.error.js";
+import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import type {
   DocumentReturnPort,
   ProcessReturnInput,
 } from "../../domain/ports/fiscal-document-lifecycle.port.js";
 
 export class PrismaDocumentReturnRepository implements DocumentReturnPort {
-  constructor(private readonly prisma: DbClient) {}
+  private get db() {
+    return getDbClient();
+  }
 
   async processSaleReturn(input: ProcessReturnInput): Promise<ProcessReturnResult> {
     const { tenantId, saleNfeKey } = input;
 
-    const sale = await this.prisma.nFe.findFirst({
+    const sale = await this.db.nFe.findFirst({
       where: { chave: saleNfeKey, tenantId },
       include: { tenant: true, product: true, nfeReferencia: true },
     });
@@ -61,7 +64,7 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
       throw new DocumentReturnError("Venda sem produto vinculado; não é possível devolver.", 422);
     }
 
-    const existingReturn = await this.prisma.nFe.findFirst({
+    const existingReturn = await this.db.nFe.findFirst({
       where: { tipo: NFeTipo.DEVOLUCAO, nfeReferenciaId: sale.id, deletedAt: null },
       select: { id: true, numero: true, serie: true },
     });
@@ -81,7 +84,7 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
     const unitValue = quantity > 0 ? totalValue / quantity : totalValue;
     const cfop = resolveReturnCfop(tenant.uf, sale.destUf);
 
-    return runFiscalTransaction(this.prisma, tenantId, async (tx) => {
+    return runFiscalTransaction(this.db, tenantId, async (tx) => {
       const emitterSettings = await loadEmitterSettings(tx, tenant.id);
 
       const saleTaxRule = await resolveTaxRule(tx, tenant.id, {

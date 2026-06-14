@@ -2,7 +2,6 @@ import type { FastifyPluginAsync } from "fastify";
 import { tenantIdFromRequest } from "../../../../lib/auth/request-context.js";
 import { handleRouteError } from "../../../../lib/http/domain-errors.js";
 import { TenantConflictError } from "../../domain/errors/tenant-conflict.error.js";
-import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import { createOrgModule } from "../../infrastructure/factory/org-module.factory.js";
 import { tenantIdParam, tenantUpdateBody } from "../schemas/tenant.schemas.js";
 
@@ -25,12 +24,12 @@ const TENANT_ERROR_MAPPINGS = [{ type: TenantConflictError, status: 409 }] as co
  * | DELETE | `/tenants/:id` | 403 — exclusão não permitida |
  */
 export const tenantController: FastifyPluginAsync = async (app) => {
-  const org = () => createOrgModule(getDbClient());
+  const org = createOrgModule();
 
   /** Returns only the JWT tenant (compatible with UI expecting an array). */
   app.get("/tenants", async (request) => {
     const tenantId = tenantIdFromRequest(request);
-    const tenant = await org().getTenantById.execute(tenantId);
+    const tenant = await org.getTenantById.execute(tenantId);
     return tenant ? [tenant] : [];
   });
 
@@ -38,7 +37,7 @@ export const tenantController: FastifyPluginAsync = async (app) => {
     const tenantId = tenantIdFromRequest(request);
     const { id } = tenantIdParam.parse(request.params);
     if (id !== tenantId) return reply.status(404).send({ error: "Empresa não encontrada" });
-    const tenant = await org().getTenantById.execute(id);
+    const tenant = await org.getTenantById.execute(id);
     if (!tenant) return reply.status(404).send({ error: "Empresa não encontrada" });
     return tenant;
   });
@@ -53,7 +52,7 @@ export const tenantController: FastifyPluginAsync = async (app) => {
       const { id } = tenantIdParam.parse(request.params);
       if (id !== tenantId) return reply.status(404).send({ error: "Empresa não encontrada" });
       const body = tenantUpdateBody.parse(request.body);
-      const tenant = await org().updateTenant.execute(id, body);
+      const tenant = await org.updateTenant.execute(id, body);
       if (!tenant) return reply.status(404).send({ error: "Empresa não encontrada" });
       return tenant;
     } catch (error) {

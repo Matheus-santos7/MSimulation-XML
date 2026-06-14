@@ -3,7 +3,6 @@ import { tenantIdFromRequest } from "../../../../lib/auth/request-context.js";
 import { handleRouteError } from "../../../../lib/http/domain-errors.js";
 import { requireAdminHook } from "../../../../plugins/contexts/guards.js";
 import { TaxRuleError } from "../../domain/errors/tax-rule.error.js";
-import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import { createTaxModule } from "../../infrastructure/factory/tax-module.factory.js";
 import { resolveTaxRuleSpreadsheetUpload } from "../helpers/tax-rule-import.helper.js";
 import {
@@ -26,22 +25,22 @@ const TAX_RULE_ERROR_MAPPINGS = [{ type: TaxRuleError, status: 400 }] as const;
  * | DELETE | `/tax-rules` | DeleteAllTaxRulesUseCase (ADMIN) |
  */
 export const taxRuleController: FastifyPluginAsync = async (app) => {
-  const tax = () => createTaxModule(getDbClient());
+  const tax = createTaxModule();
 
   app.get("/tax-rules/catalog", async (req) => {
     const tenantId = tenantIdFromRequest(req);
-    return tax().getTaxRuleCatalog.execute(tenantId);
+    return tax.getTaxRuleCatalog.execute(tenantId);
   });
 
   app.get("/tax-rules", async (req) => {
     const tenantId = tenantIdFromRequest(req);
-    return tax().getTaxRules.execute(tenantId);
+    return tax.getTaxRules.execute(tenantId);
   });
 
   app.post("/tax-rules/bulk-upsert", async (req, reply) => {
     const tenantId = tenantIdFromRequest(req);
     const { rows } = taxRulesBulkBodySchema.parse(req.body);
-    const result = await tax().bulkUpsertTaxRules.execute(tenantId, rows);
+    const result = await tax.bulkUpsertTaxRules.execute(tenantId, rows);
     return reply.status(200).send(result);
   });
 
@@ -56,7 +55,7 @@ export const taxRuleController: FastifyPluginAsync = async (app) => {
     }
 
     try {
-      const result = await tax().importTaxRulesSpreadsheet.execute(tenantId, payload.buffer);
+      const result = await tax.importTaxRulesSpreadsheet.execute(tenantId, payload.buffer);
       return reply.status(200).send(result);
     } catch (error) {
       if (handleRouteError(reply, error, { mappings: [...TAX_RULE_ERROR_MAPPINGS] })) return;
@@ -67,7 +66,7 @@ export const taxRuleController: FastifyPluginAsync = async (app) => {
   app.delete("/tax-rules", { onRequest: [requireAdminHook] }, async (req, reply) => {
     const tenantId = tenantIdFromRequest(req);
     try {
-      return await tax().deleteAllTaxRules.execute(tenantId);
+      return await tax.deleteAllTaxRules.execute(tenantId);
     } catch (error) {
       if (handleRouteError(reply, error, { mappings: [...TAX_RULE_ERROR_MAPPINGS] })) return;
       throw error;

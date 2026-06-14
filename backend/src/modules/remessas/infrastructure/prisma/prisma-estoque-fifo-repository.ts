@@ -10,6 +10,7 @@ import {
   realignRemessaFifoProductIdsBySku,
   remessaSaldoItensWhere,
 } from "../fifo/remessa-fifo.js";
+import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 type Db = PrismaClient | PrismaTx;
 
 /**
@@ -17,7 +18,9 @@ type Db = PrismaClient | PrismaTx;
  * Migração incremental — delega persistência ao código existente.
  */
 export class PrismaEstoqueFifoRepository implements EstoqueFifoRepository {
-  constructor(private readonly db: Db) {}
+  private get db() {
+    return getDbClient();
+  }
 
   async listarLinhasComSaldo(filtro: ListarSaldoFifoFiltro) {
     const where = await remessaSaldoItensWhere(

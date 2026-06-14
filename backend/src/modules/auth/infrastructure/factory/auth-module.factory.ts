@@ -1,4 +1,3 @@
-import type { PrismaClient } from "../../../../generated/prisma/client.js";
 import {
   appPublicUrl,
   EMAIL_VERIFICATION_GENERIC_MESSAGE,
@@ -47,12 +46,12 @@ import { PrismaUserSessionRepository } from "../prisma/prisma-user-session.repos
 import { PrismaUserRepository } from "../prisma/prisma-user.repository.js";
 
 /** Composition root for the Auth module. */
-export function createAuthModule(prisma: PrismaClient) {
-  const userRepository = new PrismaUserRepository(prisma);
-  const userSessionRepository = new PrismaUserSessionRepository(prisma);
-  const emailVerificationRepository = new PrismaEmailVerificationRepository(prisma);
-  const passwordResetRepository = new PrismaPasswordResetRepository(prisma);
-  const onboardingRepository = new PrismaOnboardingRepository(prisma);
+export function createAuthModule() {
+  const userRepository = new PrismaUserRepository();
+  const userSessionRepository = new PrismaUserSessionRepository();
+  const emailVerificationRepository = new PrismaEmailVerificationRepository();
+  const passwordResetRepository = new PrismaPasswordResetRepository();
+  const onboardingRepository = new PrismaOnboardingRepository();
 
   const passwordHasher = new PasswordHasherAdapter();
   const refreshTokenPort = new RefreshTokenAdapter();

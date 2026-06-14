@@ -1,4 +1,3 @@
-import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import { CancelDocumentUseCase } from "../../application/use-cases/cancel-document.use-case.js";
 import { GetCteByKeyUseCase } from "../../application/use-cases/get-cte-by-key.use-case.js";
 import { GetCteXmlUseCase } from "../../application/use-cases/get-cte-xml.use-case.js";
@@ -18,13 +17,13 @@ import { PrismaNfeQueryRepository } from "../prisma/prisma-nfe-query.repository.
 import { PrismaNumberInutilizationRepository } from "../prisma/prisma-number-inutilization.repository.js";
 
 /** Composition root for the Fiscal Documents bounded context. */
-export function createFiscalDocumentsModule(db: DbClient) {
-  const cancellationRepository = new PrismaDocumentCancellationRepository(db);
-  const returnRepository = new PrismaDocumentReturnRepository(db);
-  const inutilizationRepository = new PrismaNumberInutilizationRepository(db);
-  const nfeQueryRepository = new PrismaNfeQueryRepository(db);
-  const cteQueryRepository = new PrismaCteQueryRepository(db);
-  const softDeleteRepository = new PrismaFiscalDocumentSoftDeleteRepository(db);
+export function createFiscalDocumentsModule() {
+  const cancellationRepository = new PrismaDocumentCancellationRepository();
+  const returnRepository = new PrismaDocumentReturnRepository();
+  const inutilizationRepository = new PrismaNumberInutilizationRepository();
+  const nfeQueryRepository = new PrismaNfeQueryRepository();
+  const cteQueryRepository = new PrismaCteQueryRepository();
+  const softDeleteRepository = new PrismaFiscalDocumentSoftDeleteRepository();
 
   return {
     cancelDocument: new CancelDocumentUseCase(cancellationRepository),

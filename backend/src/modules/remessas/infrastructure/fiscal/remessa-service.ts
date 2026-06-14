@@ -85,7 +85,7 @@ async function emitirNFeRemessaComItens(
   }
 
   // --- Fase 2: destinatário (CD ML) — define UF destino para regra e CFOP ---
-  const logistics = createLogisticsModule(db);
+  const logistics = createLogisticsModule();
   const destination = await logistics.resolveShipmentDestination.execute(
     tenant.id,
     options?.unidadeDestinoId,

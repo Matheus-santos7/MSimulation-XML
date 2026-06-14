@@ -1,9 +1,9 @@
 import type { PrismaClient } from "../../../../generated/prisma/client.js";
-import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import { CheckoutError } from "../../domain/errors/checkout.error.js";
 import { OrderLockedError } from "../../domain/errors/order-locked.error.js";
 import type { OrderCheckoutInput } from "../../domain/entities/order-checkout-input.entity.js";
 import type { OrderRepository } from "../../domain/ports/order.repository.js";
+import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import {
   buyerToDestColumns,
   mapOrderForEmitFromPrisma,
@@ -22,11 +22,13 @@ const orderInclude = {
  * e mapeia linhas Prisma para entidades de domínio via `order-prisma.mapper`.
  */
 export class PrismaOrderRepository implements OrderRepository {
-  constructor(private readonly prisma: DbClient) {}
+  private get db() {
+    return getDbClient();
+  }
 
   /** Lista pedidos do tenant com produto e NF-e vinculada (quando faturado). */
   async listByTenant(tenantId: string) {
-    const rows = await this.prisma.pedido.findMany({
+    const rows = await this.db.pedido.findMany({
       where: { tenantId },
       include: orderInclude,
       orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
@@ -36,7 +38,7 @@ export class PrismaOrderRepository implements OrderRepository {
 
   /** Busca pedido por ID com isolamento por tenant. */
   async findById(tenantId: string, id: string) {
-    const row = await this.prisma.pedido.findFirst({
+    const row = await this.db.pedido.findFirst({
       where: { id, tenantId },
       include: orderInclude,
     });
@@ -48,7 +50,7 @@ export class PrismaOrderRepository implements OrderRepository {
    * Usado por {@link InvoiceOrderUseCase}.
    */
   async findForEmit(tenantId: string, id: string) {
-    const row = await this.prisma.pedido.findFirst({
+    const row = await this.db.pedido.findFirst({
       where: { id, tenantId },
       include: { product: true, tenant: true },
     });
@@ -61,7 +63,7 @@ export class PrismaOrderRepository implements OrderRepository {
    */
   async createDraft(tenantId: string, input: OrderCheckoutInput) {
     const product = await this.assertProductBelongsToTenant(tenantId, input.productId);
-    const row = await this.prisma.pedido.create({
+    const row = await this.db.pedido.create({
       data: {
         tenantId,
         productId: product.id,
@@ -80,12 +82,12 @@ export class PrismaOrderRepository implements OrderRepository {
    * @throws {CheckoutError} Produto inválido
    */
   async updateDraft(id: string, tenantId: string, input: OrderCheckoutInput) {
-    const existing = await this.prisma.pedido.findFirst({ where: { id, tenantId } });
+    const existing = await this.db.pedido.findFirst({ where: { id, tenantId } });
     if (!existing) return null;
     if (existing.status === "FATURADO") throw new OrderLockedError();
 
     const product = await this.assertProductBelongsToTenant(tenantId, input.productId);
-    const row = await this.prisma.pedido.update({
+    const row = await this.db.pedido.update({
       where: { id },
       data: {
         productId: product.id,
@@ -99,7 +101,7 @@ export class PrismaOrderRepository implements OrderRepository {
 
   /** Marca pedido como `FATURADO` e associa NF-e de venda e referência ML. */
   async markInvoiced(id: string, pedidoMl: string, nfeId: string) {
-    const row = await this.prisma.pedido.update({
+    const row = await this.db.pedido.update({
       where: { id },
       data: { status: "FATURADO", pedidoMl, nfeId },
       include: orderInclude,
@@ -109,9 +111,9 @@ export class PrismaOrderRepository implements OrderRepository {
 
   /** Remove pedido do tenant; retorna `false` se não existir. */
   async delete(id: string, tenantId: string) {
-    const existing = await this.prisma.pedido.findFirst({ where: { id, tenantId } });
+    const existing = await this.db.pedido.findFirst({ where: { id, tenantId } });
     if (!existing) return false;
-    await this.prisma.pedido.delete({ where: { id } });
+    await this.db.pedido.delete({ where: { id } });
     return true;
   }
 
@@ -120,7 +122,7 @@ export class PrismaOrderRepository implements OrderRepository {
    * @throws {CheckoutError} Produto não encontrado nesta empresa
    */
   async assertProductBelongsToTenant(tenantId: string, productId: string) {
-    const product = await this.prisma.product.findFirst({
+    const product = await this.db.product.findFirst({
       where: { id: productId, tenantId },
     });
     if (!product) throw new CheckoutError("Produto não encontrado nesta empresa");
@@ -133,11 +135,11 @@ export class PrismaOrderRepository implements OrderRepository {
    * @throws {CheckoutError} Produto não encontrado nesta empresa
    */
   async loadCheckoutContext(tenantId: string, productId: string) {
-    const product = await this.prisma.product.findFirst({
+    const product = await this.db.product.findFirst({
       where: { id: productId, tenantId },
     });
     if (!product) throw new CheckoutError("Produto não encontrado nesta empresa");
-    const tenant = await this.prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } });
+    const tenant = await this.db.tenant.findUniqueOrThrow({ where: { id: tenantId } });
     return { product, tenant };
   }
 }

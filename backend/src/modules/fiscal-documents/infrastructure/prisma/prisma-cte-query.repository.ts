@@ -1,14 +1,16 @@
-import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import { mapCte } from "../../presentation/mappers/fiscal-mappers.js";
 import { fiscalNotDeleted } from "../../domain/constants/fiscal-not-deleted.js";
 import { resolveCteXml } from "../xml/cte-xml-service.js";
 import type { CteQueryPort } from "../../domain/ports/cte-query.port.js";
+import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 
 export class PrismaCteQueryRepository implements CteQueryPort {
-  constructor(private readonly prisma: DbClient) {}
+  private get db() {
+    return getDbClient();
+  }
 
   async list(tenantId: string) {
-    const rows = await this.prisma.cTe.findMany({
+    const rows = await this.db.cTe.findMany({
       where: { tenantId, ...fiscalNotDeleted },
       include: {
         nfeRemessa: { select: { chave: true } },
@@ -20,7 +22,7 @@ export class PrismaCteQueryRepository implements CteQueryPort {
   }
 
   async getByAccessKey(tenantId: string, accessKey: string) {
-    const row = await this.prisma.cTe.findFirst({
+    const row = await this.db.cTe.findFirst({
       where: { chave: accessKey, tenantId, ...fiscalNotDeleted },
       include: {
         nfeRemessa: { select: { chave: true } },
@@ -32,11 +34,11 @@ export class PrismaCteQueryRepository implements CteQueryPort {
   }
 
   async resolveXml(tenantId: string, accessKey: string) {
-    return resolveCteXml(this.prisma, tenantId, accessKey);
+    return resolveCteXml(this.db, tenantId, accessKey);
   }
 
   async exists(tenantId: string, accessKey: string) {
-    const row = await this.prisma.cTe.findFirst({
+    const row = await this.db.cTe.findFirst({
       where: { chave: accessKey, tenantId, ...fiscalNotDeleted },
       select: { id: true },
     });

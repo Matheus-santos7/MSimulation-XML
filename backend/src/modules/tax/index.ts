@@ -58,25 +58,24 @@ export async function resolveTaxRule(
   return resolveTaxRuleFromDb(prisma, tenantId, params);
 }
 
-export async function listTaxRuleCatalog(prisma: PrismaClient, tenantId: string) {
-  return createTaxModule(prisma).getTaxRuleCatalog.execute(tenantId);
+export async function listTaxRuleCatalog(tenantId: string) {
+  return createTaxModule().getTaxRuleCatalog.execute(tenantId);
 }
 
 export async function assertProductTaxRuleBaseId(
-  prisma: PrismaClient,
   tenantId: string,
   taxRuleBaseId: string,
   tenantUf?: string,
 ) {
-  return createTaxModule(prisma).assertProductTaxRuleBaseId.execute(
+  return createTaxModule().assertProductTaxRuleBaseId.execute(
     tenantId,
     taxRuleBaseId,
     tenantUf,
   );
 }
 
-export async function deleteAllTaxRules(prisma: PrismaClient, tenantId: string) {
-  return createTaxModule(prisma).deleteAllTaxRules.execute(tenantId);
+export async function deleteAllTaxRules(tenantId: string) {
+  return createTaxModule().deleteAllTaxRules.execute(tenantId);
 }
 
 /** @deprecated Use orderLineFromProduct */

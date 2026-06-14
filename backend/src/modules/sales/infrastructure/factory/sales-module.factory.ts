@@ -1,4 +1,3 @@
-import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import { CreateOrderDraftUseCase } from "../../application/use-cases/create-order-draft.use-case.js";
 import { EmitSalesChainUseCase } from "../../application/use-cases/emit-sales-chain.use-case.js";
 import { GetOrderByIdUseCase } from "../../application/use-cases/get-order-by-id.use-case.js";
@@ -11,8 +10,8 @@ import { SalesChainOrchestrator } from "../fiscal/sales-chain.orchestrator.js";
 import { PrismaOrderRepository } from "../prisma/prisma-order.repository.js";
 
 /** Composition root for the Sales bounded context. */
-export function createSalesModule(db: DbClient) {
-  const orderRepository = new PrismaOrderRepository(db);
+export function createSalesModule() {
+  const orderRepository = new PrismaOrderRepository();
   const salesChain = new SalesChainOrchestrator();
 
   return {
@@ -20,10 +19,10 @@ export function createSalesModule(db: DbClient) {
     getOrderById: new GetOrderByIdUseCase(orderRepository),
     createOrderDraft: new CreateOrderDraftUseCase(orderRepository),
     updateOrderDraft: new UpdateOrderDraftUseCase(orderRepository),
-    invoiceOrder: new InvoiceOrderUseCase(db, orderRepository, salesChain),
+    invoiceOrder: new InvoiceOrderUseCase(orderRepository, salesChain),
     removeOrder: new RemoveOrderUseCase(orderRepository),
-    processCheckout: new ProcessCheckoutUseCase(db, orderRepository, salesChain),
-    emitSalesChain: new EmitSalesChainUseCase(db, salesChain),
+    processCheckout: new ProcessCheckoutUseCase(orderRepository, salesChain),
+    emitSalesChain: new EmitSalesChainUseCase(salesChain),
     orderRepository,
     salesChain,
   };

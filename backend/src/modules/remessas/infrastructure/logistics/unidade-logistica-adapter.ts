@@ -1,12 +1,8 @@
-import type { PrismaClient } from "../../../../generated/prisma/client.js";
-import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { createLogisticsModule } from "../../../logistics/index.js";
 import type {
   UnidadeLogisticaAtiva,
   UnidadeLogisticaPort,
 } from "../../domain/ports/unidade-logistica-port.js";
-
-type Db = PrismaClient | PrismaTx;
 
 function mapUnidade(row: {
   id: string;
@@ -23,10 +19,8 @@ function mapUnidade(row: {
 }
 
 export class UnidadeLogisticaAdapter implements UnidadeLogisticaPort {
-  private readonly logistics;
-
-  constructor(private readonly db: Db) {
-    this.logistics = createLogisticsModule(this.db as PrismaClient);
+  private get logistics() {
+    return createLogisticsModule();
   }
 
   async obterAtiva(tenantId: string, unidadeId: string): Promise<UnidadeLogisticaAtiva | null> {

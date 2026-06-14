@@ -1,5 +1,4 @@
 import type { Prisma, PrismaClient } from "../../../../generated/prisma/client.js";
-import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import {
   normalizeTaxRuleDisplayName,
@@ -13,6 +12,7 @@ import type {
 } from "../../domain/ports/tax-rule.repository.js";
 import { mapTaxRuleFromPrisma } from "./tax-rule-prisma.mapper.js";
 import { resolveTaxRuleFromDb } from "./tax-rule-resolution.js";
+import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 
 type Db = PrismaClient | PrismaTx;
 
@@ -23,10 +23,12 @@ type Db = PrismaClient | PrismaTx;
  * {@link resolveTaxRuleFromDb}.
  */
 export class PrismaTaxRuleRepository implements TaxRuleRepository {
-  constructor(private readonly prisma: DbClient) {}
+  private get db() {
+    return getDbClient();
+  }
 
   async listByTenant(tenantId: string) {
-    const rows = await this.prisma.taxRule.findMany({
+    const rows = await this.db.taxRule.findMany({
       where: { tenantId },
       orderBy: { ruleId: "asc" },
     });
@@ -35,12 +37,12 @@ export class PrismaTaxRuleRepository implements TaxRuleRepository {
 
   async listCatalogEntries(tenantId: string) {
     const [rows, tenant] = await Promise.all([
-      this.prisma.taxRule.findMany({
+      this.db.taxRule.findMany({
         where: { tenantId, source: "xlsx" },
         select: { ruleId: true, nome: true, origin: true, uf: true },
         orderBy: { nome: "asc" },
       }),
-      this.prisma.tenant.findUnique({ where: { id: tenantId }, select: { uf: true } }),
+      this.db.tenant.findUnique({ where: { id: tenantId }, select: { uf: true } }),
     ]);
 
     const tenantOrigin = tenant?.uf.toUpperCase().slice(0, 2) ?? "";
@@ -70,12 +72,12 @@ export class PrismaTaxRuleRepository implements TaxRuleRepository {
     let updated = 0;
 
     for (const row of rows) {
-      const existing = await this.prisma.taxRule.findUnique({
+      const existing = await this.db.taxRule.findUnique({
         where: { tenantId_ruleId: { tenantId, ruleId: row.ruleId } },
         select: { id: true },
       });
 
-      await this.prisma.taxRule.upsert({
+      await this.db.taxRule.upsert({
         where: { tenantId_ruleId: { tenantId, ruleId: row.ruleId } },
         create: {
           tenantId,
@@ -113,11 +115,11 @@ export class PrismaTaxRuleRepository implements TaxRuleRepository {
   }
 
   async deleteAll(tenantId: string) {
-    const rulesCount = await this.prisma.taxRule.count({ where: { tenantId } });
+    const rulesCount = await this.db.taxRule.count({ where: { tenantId } });
     if (rulesCount === 0) {
       throw new TaxRuleError("Nenhuma regra cadastrada para esta empresa");
     }
-    const result = await this.prisma.taxRule.deleteMany({ where: { tenantId } });
+    const result = await this.db.taxRule.deleteMany({ where: { tenantId } });
     return { deleted: result.count };
   }
 
@@ -126,7 +128,7 @@ export class PrismaTaxRuleRepository implements TaxRuleRepository {
     if (!baseId) throw new TaxRuleError("Selecione a regra fiscal do produto");
 
     const tenantOrigin = tenantUf?.toUpperCase().slice(0, 2);
-    const rows = await this.prisma.taxRule.findMany({
+    const rows = await this.db.taxRule.findMany({
       where: {
         tenantId,
         ruleId: { startsWith: `${baseId}-` },
@@ -154,7 +156,7 @@ export class PrismaTaxRuleRepository implements TaxRuleRepository {
   }
 
   async resolve(tenantId: string, params: ResolveTaxRuleParams, db?: unknown) {
-    const client = (db ?? this.prisma) as Db;
+    const client = (db ?? this.db) as Db;
     return resolveTaxRuleFromDb(client as PrismaTx, tenantId, params);
   }
 }

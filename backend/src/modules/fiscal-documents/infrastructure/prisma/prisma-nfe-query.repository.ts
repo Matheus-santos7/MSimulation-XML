@@ -1,5 +1,4 @@
 import { NFeTipo, type PrismaClient } from "../../../../generated/prisma/client.js";
-import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import { mapNfe } from "../../presentation/mappers/fiscal-mappers.js";
 import { fiscalNotDeleted } from "../../domain/constants/fiscal-not-deleted.js";
 import { resolveNfeCancelamentoEventoXml, resolveNfeXml } from "../xml/nfe-xml-service.js";
@@ -8,6 +7,7 @@ import {
   saldoLiquidoRemessaNfe,
 } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
 import type { NfeDetail, NfeQueryPort } from "../../domain/ports/nfe-query.port.js";
+import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 
 const nfeListInclude = {
   nfeReferencia: { select: { chave: true } },
@@ -19,21 +19,23 @@ function isShipmentWithFifoBalance(tipo: NFeTipo): boolean {
 }
 
 export class PrismaNfeQueryRepository implements NfeQueryPort {
-  constructor(private readonly prisma: DbClient) {}
+  private get db() {
+    return getDbClient();
+  }
 
   async list(tenantId: string) {
-    const rows = await this.prisma.nFe.findMany({
+    const rows = await this.db.nFe.findMany({
       where: { tenantId, ...fiscalNotDeleted },
       include: nfeListInclude,
       orderBy: [{ emitidaEm: "desc" }, { serie: "desc" }, { numero: "desc" }],
     });
     if (rows.length === 0) return [];
 
-    await atualizarItensSaldoFifoParaNfes(this.prisma, tenantId, rows);
+    await atualizarItensSaldoFifoParaNfes(this.db, tenantId, rows);
     return Promise.all(
       rows.map(async (row) => {
         const fifoBalance = isShipmentWithFifoBalance(row.tipo)
-          ? await saldoLiquidoRemessaNfe(this.prisma, row.id, row.quantidade)
+          ? await saldoLiquidoRemessaNfe(this.db, row.id, row.quantidade)
           : undefined;
         return mapNfe(row, row.nfeReferencia?.chave, row.itens, fifoBalance) as Record<
           string,
@@ -44,7 +46,7 @@ export class PrismaNfeQueryRepository implements NfeQueryPort {
   }
 
   async getByAccessKey(tenantId: string, accessKey: string): Promise<NfeDetail | null> {
-    const row = await this.prisma.nFe.findFirst({
+    const row = await this.db.nFe.findFirst({
       where: { chave: accessKey, tenantId, ...fiscalNotDeleted },
       include: {
         cteRemessa: { select: { chave: true } },
@@ -57,10 +59,10 @@ export class PrismaNfeQueryRepository implements NfeQueryPort {
     if (!row) return null;
 
     if (isShipmentWithFifoBalance(row.tipo)) {
-      await atualizarItensSaldoFifoParaNfes(this.prisma, tenantId, [row]);
+      await atualizarItensSaldoFifoParaNfes(this.db, tenantId, [row]);
     }
     const fifoBalance = isShipmentWithFifoBalance(row.tipo)
-      ? await saldoLiquidoRemessaNfe(this.prisma, row.id, row.quantidade)
+      ? await saldoLiquidoRemessaNfe(this.db, row.id, row.quantidade)
       : undefined;
     const dto = mapNfe(row, row.nfeReferencia?.chave, row.itens, fifoBalance);
 
@@ -77,15 +79,15 @@ export class PrismaNfeQueryRepository implements NfeQueryPort {
   }
 
   async resolveXml(tenantId: string, accessKey: string) {
-    return resolveNfeXml(this.prisma, tenantId, accessKey);
+    return resolveNfeXml(this.db, tenantId, accessKey);
   }
 
   async resolveCancelamentoEventoXml(tenantId: string, accessKey: string) {
-    return resolveNfeCancelamentoEventoXml(this.prisma, tenantId, accessKey);
+    return resolveNfeCancelamentoEventoXml(this.db, tenantId, accessKey);
   }
 
   async getTipoWhenXmlMissing(tenantId: string, accessKey: string) {
-    const row = await this.prisma.nFe.findFirst({
+    const row = await this.db.nFe.findFirst({
       where: { chave: accessKey, tenantId, ...fiscalNotDeleted },
       select: { tipo: true },
     });

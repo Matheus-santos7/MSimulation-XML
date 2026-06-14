@@ -1,4 +1,3 @@
-import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import { BulkUpsertProductsUseCase } from "../../application/use-cases/bulk-upsert-products.use-case.js";
 import { ImportProductsSpreadsheetUseCase } from "../../application/use-cases/import-products-spreadsheet.use-case.js";
 import { CreateProductUseCase } from "../../application/use-cases/create-product.use-case.js";
@@ -10,9 +9,9 @@ import { TaxRuleValidatorAdapter } from "../fiscal/tax-rule-validator.adapter.js
 import { PrismaProductRepository } from "../prisma/prisma-product.repository.js";
 
 /** Composition root for the Catalog module. */
-export function createCatalogModule(db: DbClient) {
-  const productRepository = new PrismaProductRepository(db);
-  const taxRuleValidator = new TaxRuleValidatorAdapter(db);
+export function createCatalogModule() {
+  const productRepository = new PrismaProductRepository();
+  const taxRuleValidator = new TaxRuleValidatorAdapter();
   const bulkUpsertProducts = new BulkUpsertProductsUseCase(productRepository, taxRuleValidator);
 
   return {

@@ -1,4 +1,3 @@
-import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import { isPrismaUniqueError } from "../../../../lib/org/db-errors.js";
 import { runInTransaction } from "../../../../lib/db/prisma-tx.js";
 import type { OrgUser } from "../../domain/entities/org-user.entity.js";
@@ -9,12 +8,15 @@ import type {
   UpdateOrgUserData,
 } from "../../domain/ports/org-user.repository.js";
 import { mapOrgUserFromPrisma } from "./org-user-prisma.mapper.js";
+import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 
 export class PrismaOrgUserRepository implements OrgUserRepository {
-  constructor(private readonly prisma: DbClient) {}
+  private get db() {
+    return getDbClient();
+  }
 
   async listByTenant(tenantId: string): Promise<OrgUser[]> {
-    const rows = await this.prisma.user.findMany({
+    const rows = await this.db.user.findMany({
       where: { tenantId },
       orderBy: [{ createdAt: "asc" }, { email: "asc" }],
     });
@@ -22,13 +24,13 @@ export class PrismaOrgUserRepository implements OrgUserRepository {
   }
 
   async findById(id: string, tenantId: string): Promise<OrgUser | null> {
-    const row = await this.prisma.user.findFirst({ where: { id, tenantId } });
+    const row = await this.db.user.findFirst({ where: { id, tenantId } });
     return row ? mapOrgUserFromPrisma(row) : null;
   }
 
   async create(tenantId: string, data: CreateOrgUserData): Promise<OrgUser> {
     try {
-      const row = await this.prisma.user.create({
+      const row = await this.db.user.create({
         data: {
           tenantId,
           email: data.email,
@@ -46,11 +48,11 @@ export class PrismaOrgUserRepository implements OrgUserRepository {
   }
 
   async update(id: string, data: UpdateOrgUserData): Promise<OrgUser | null> {
-    const existing = await this.prisma.user.findUnique({ where: { id } });
+    const existing = await this.db.user.findUnique({ where: { id } });
     if (!existing) return null;
 
     try {
-      const row = await runInTransaction(this.prisma, async (tx) => {
+      const row = await runInTransaction(this.db, async (tx) => {
         const updated = await tx.user.update({
           where: { id },
           data: {
@@ -79,10 +81,10 @@ export class PrismaOrgUserRepository implements OrgUserRepository {
   }
 
   async countByTenant(tenantId: string): Promise<number> {
-    return this.prisma.user.count({ where: { tenantId } });
+    return this.db.user.count({ where: { tenantId } });
   }
 
   async delete(id: string): Promise<void> {
-    await this.prisma.user.delete({ where: { id } });
+    await this.db.user.delete({ where: { id } });
   }
 }

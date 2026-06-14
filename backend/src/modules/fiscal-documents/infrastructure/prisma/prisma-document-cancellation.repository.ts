@@ -17,6 +17,7 @@ import { fiscalNotDeleted } from "../../domain/constants/fiscal-not-deleted.js";
 import { estornarConsumosRemessa } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
 import type { CancelDocumentResult } from "../../domain/entities/lifecycle-result.entity.js";
 import { DocumentCancellationError } from "../../domain/errors/document-cancellation.error.js";
+import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import type {
   CancelDocumentInput,
   DocumentCancellationPort,
@@ -25,12 +26,14 @@ import type {
 const CANCELLATION_EVENT_TYPE = "110111";
 
 export class PrismaDocumentCancellationRepository implements DocumentCancellationPort {
-  constructor(private readonly prisma: DbClient) {}
+  private get db() {
+    return getDbClient();
+  }
 
   async cancelSale(input: CancelDocumentInput): Promise<CancelDocumentResult> {
     const { tenantId, nfeKey, justification } = input;
 
-    const sale = await this.prisma.nFe.findFirst({
+    const sale = await this.db.nFe.findFirst({
       where: { chave: nfeKey, tenantId },
       include: {
         tenant: true,
@@ -52,7 +55,7 @@ export class PrismaDocumentCancellationRepository implements DocumentCancellatio
       throw new DocumentCancellationError("Só NF-e autorizadas podem ser canceladas.", 422);
     }
 
-    const existingReturn = await this.prisma.nFe.findFirst({
+    const existingReturn = await this.db.nFe.findFirst({
       where: {
         tipo: NFeTipo.DEVOLUCAO,
         nfeReferenciaId: sale.id,
@@ -67,7 +70,7 @@ export class PrismaDocumentCancellationRepository implements DocumentCancellatio
       );
     }
 
-    const settings = await loadEmitterSettings(this.prisma, sale.tenantId);
+    const settings = await loadEmitterSettings(this.db, sale.tenantId);
     assertCancellationDeadline(
       sale.emitidaEm,
       settings.nfe.prazoCancelamento.horas,
@@ -79,7 +82,7 @@ export class PrismaDocumentCancellationRepository implements DocumentCancellatio
         ? justification!.trim()
         : "Cancelamento solicitado pelo emissor conforme operacao";
 
-    return runFiscalTransaction(this.prisma, sale.tenantId, async (tx) => {
+    return runFiscalTransaction(this.db, sale.tenantId, async (tx) => {
       const occurredAt = new Date();
       const symbolicReturn = sale.nfeReferencia;
 

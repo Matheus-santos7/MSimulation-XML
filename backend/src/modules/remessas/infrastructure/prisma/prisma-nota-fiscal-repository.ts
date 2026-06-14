@@ -14,6 +14,7 @@ import {
 } from "../../domain/ports/nota-fiscal-repository.js";
 import type { TipoNota } from "../../domain/value-objects/tipo-nota.js";
 import { persistirXmlFromEmission } from "./nfe-xml-persist.js";
+import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 
 type Db = PrismaClient | PrismaTx;
 
@@ -57,7 +58,9 @@ function mapRowToNota(row: {
 }
 
 export class PrismaNotaFiscalRepository implements NotaFiscalRepository {
-  constructor(private readonly db: Db) {}
+  private get db() {
+    return getDbClient();
+  }
 
   async buscarPorId(tenantId: string, notaId: string): Promise<NotaFiscal | null> {
     const row = await this.db.nFe.findFirst({

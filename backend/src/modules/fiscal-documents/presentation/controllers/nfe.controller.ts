@@ -1,16 +1,15 @@
 import { prepareFiscalXmlForDownload } from "@msimulation-xml/fiscal-core";
 import type { FastifyPluginAsync } from "fastify";
 import { tenantIdFromRequest } from "../../../../lib/auth/request-context.js";
-import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import { createFiscalDocumentsModule } from "../../infrastructure/factory/fiscal-documents-module.factory.js";
 import { nfeAccessKeyParamSchema } from "../schemas/fiscal-document.schemas.js";
 
 export const nfeController: FastifyPluginAsync = async (app) => {
-  const fiscalDocuments = () => createFiscalDocumentsModule(getDbClient());
+  const fiscalDocuments = createFiscalDocumentsModule();
 
   app.get("/nfes", async (req) => {
     const tenantId = tenantIdFromRequest(req);
-    return fiscalDocuments().listNfes.execute(tenantId);
+    return fiscalDocuments.listNfes.execute(tenantId);
   });
 
   app.get("/nfes/:chave/xml", async (req, reply) => {
@@ -18,12 +17,12 @@ export const nfeController: FastifyPluginAsync = async (app) => {
     const { chave } = nfeAccessKeyParamSchema.parse(req.params);
     const query = req.query as { download?: string; doc?: string };
     const doc = query.doc === "evento" || query.doc === "cancelamento" ? "evento" : undefined;
-    const result = await fiscalDocuments().getNfeXml.execute(tenantId, chave, { doc });
+    const result = await fiscalDocuments.getNfeXml.execute(tenantId, chave, { doc });
     if (!result) {
       if (doc === "evento") {
         return reply.status(404).send({ error: "Evento de cancelamento não encontrado para esta NF-e" });
       }
-      const tipo = await fiscalDocuments().getNfeXml.getTipoWhenMissing(tenantId, chave);
+      const tipo = await fiscalDocuments.getNfeXml.getTipoWhenMissing(tenantId, chave);
       if (!tipo) return reply.status(404).send({ error: "NF-e não encontrada" });
       return reply.status(409).send({
         error: `XML indisponível para NF-e tipo ${tipo}.`,
@@ -45,7 +44,7 @@ export const nfeController: FastifyPluginAsync = async (app) => {
   app.get("/nfes/:chave", async (req, reply) => {
     const tenantId = tenantIdFromRequest(req);
     const { chave } = nfeAccessKeyParamSchema.parse(req.params);
-    const nfe = await fiscalDocuments().getNfeByKey.execute(tenantId, chave);
+    const nfe = await fiscalDocuments.getNfeByKey.execute(tenantId, chave);
     if (!nfe) return reply.status(404).send({ error: "NF-e não encontrada" });
     return nfe;
   });
@@ -53,7 +52,7 @@ export const nfeController: FastifyPluginAsync = async (app) => {
   app.delete("/nfes/:chave", async (req, reply) => {
     const tenantId = tenantIdFromRequest(req);
     const { chave } = nfeAccessKeyParamSchema.parse(req.params);
-    const removed = await fiscalDocuments().softDeleteNfe.execute(chave, tenantId);
+    const removed = await fiscalDocuments.softDeleteNfe.execute(chave, tenantId);
     if (!removed) return reply.status(404).send({ error: "NF-e não encontrada" });
     return reply.status(204).send();
   });

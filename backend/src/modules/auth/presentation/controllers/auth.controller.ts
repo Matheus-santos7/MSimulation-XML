@@ -17,6 +17,7 @@ import {
 } from "../schemas/auth.schemas.js";
 import type { AccessTokenPayload } from "../../domain/entities/auth-session.entity.js";
 import { createAuthModule } from "../../infrastructure/factory/auth-module.factory.js";
+import { wrapRouteWithDbContext } from "../../../../lib/db/wrap-protected-route.js";
 import { buildAuthMeta, signAccessToken } from "../helpers/auth-request.helper.js";
 import { handleAuthError } from "../mappers/auth-error.handler.js";
 import { onboardingController } from "./onboarding.controller.js";
@@ -59,7 +60,14 @@ export const authController: FastifyPluginAsync = async (app) => {
     ban: 0,
   });
 
-  const auth = createAuthModule(app.prisma);
+  app.addHook("onRoute", (routeOptions) => {
+    wrapRouteWithDbContext(app, routeOptions, (request) => ({
+      userId: request.user?.userId,
+      tenantId: request.user?.tenantId ?? undefined,
+    }));
+  });
+
+  const auth = createAuthModule();
   const signAccess = signAccessToken(app);
   const signTwoFactorPending = signTwoFactorPendingToken((payload, options) =>
     (app.jwt.sign as unknown as (p: TwoFactorPendingPayload, o: { expiresIn: string }) => string)(

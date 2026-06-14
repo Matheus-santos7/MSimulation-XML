@@ -1,4 +1,5 @@
 import type { PrismaClient } from "../../../../generated/prisma/client.js";
+import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import type {
   ActiveUserSession,
   CreateUserSessionData,
@@ -11,11 +12,13 @@ import type {
  * Gere refresh tokens opacos: hash SHA-256 persistido, revogação e expiração.
  */
 export class PrismaUserSessionRepository implements UserSessionRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  private get db() {
+    return getDbClient();
+  }
 
   /** Cria sessão com hash do refresh token (nunca persiste o token em claro). */
   async createSession(data: CreateUserSessionData): Promise<void> {
-    await this.prisma.userSession.create({
+    await this.db.userSession.create({
       data: {
         userId: data.userId,
         refreshTokenHash: data.refreshTokenHash,
@@ -31,7 +34,7 @@ export class PrismaUserSessionRepository implements UserSessionRepository {
    * @returns `null` se revogada ou expirada
    */
   async findActiveByRefreshTokenHash(refreshTokenHash: string): Promise<ActiveUserSession | null> {
-    const session = await this.prisma.userSession.findUnique({
+    const session = await this.db.userSession.findUnique({
       where: { refreshTokenHash },
     });
     if (!session || session.revokedAt) return null;
@@ -41,7 +44,7 @@ export class PrismaUserSessionRepository implements UserSessionRepository {
 
   /** Revoga sessão específica (logout com refresh token). */
   async revokeByRefreshTokenHash(refreshTokenHash: string): Promise<void> {
-    await this.prisma.userSession.updateMany({
+    await this.db.userSession.updateMany({
       where: { refreshTokenHash, revokedAt: null },
       data: { revokedAt: new Date() },
     });
@@ -49,7 +52,7 @@ export class PrismaUserSessionRepository implements UserSessionRepository {
 
   /** Revoga sessão por ID (rotação no refresh: sessão antiga invalidada). */
   async revokeById(sessionId: string): Promise<void> {
-    await this.prisma.userSession.update({
+    await this.db.userSession.update({
       where: { id: sessionId },
       data: { revokedAt: new Date() },
     });
@@ -57,7 +60,7 @@ export class PrismaUserSessionRepository implements UserSessionRepository {
 
   /** Revoga todas as sessões do utilizador (logout global, reset de senha). */
   async revokeAllForUser(userId: string): Promise<void> {
-    await this.prisma.userSession.updateMany({
+    await this.db.userSession.updateMany({
       where: { userId, revokedAt: null },
       data: { revokedAt: new Date() },
     });

@@ -3,7 +3,7 @@ import {
   enrichFiscalPayloadWithXTexto,
   productUnitPrice,
 } from "@msimulation-xml/fiscal-core";
-import { NFeTipo, type PrismaClient } from "../../../../generated/prisma/client.js";
+import { NFeTipo } from "../../../../generated/prisma/client.js";
 import { buildChaveNFe } from "../../../fiscal-documents/domain/services/nfe-chave.js";
 import { enrichTaxSnapshot, loadEmitterSettings } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
@@ -32,8 +32,6 @@ import type {
 import { criarRetornoSimbolicoAvanco, criarRemessaSimbolicaAvanco } from "../../domain/entities/nota-fiscal.js";
 import { RemessaDomainError } from "../../domain/errors.js";
 
-type Db = PrismaClient | PrismaTx;
-
 function destinoFiscalParaCampos(destino: ReturnType<typeof unidadeParaDestinoFiscal>): CamposDestinoNfe {
   return {
     destNome: destino.nome,
@@ -59,8 +57,6 @@ function destIeFromUnidade(unidade: { ie: string | null }): string | undefined {
 }
 
 export class FiscalEmissorAdapter implements EmissorNotaPort {
-  constructor(private readonly db: Db) {}
-
   async prepararRetornoSimbolicoAvanco(
     tx: PrismaTx,
     ctx: ContextoFiscalEmissao,

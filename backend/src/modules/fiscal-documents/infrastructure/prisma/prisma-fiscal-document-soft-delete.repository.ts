@@ -1,14 +1,16 @@
 import type { PrismaClient } from "../../../../generated/prisma/client.js";
-import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import type { FiscalDocumentSoftDeletePort } from "../../domain/ports/fiscal-document-soft-delete.port.js";
+import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 
 export class PrismaFiscalDocumentSoftDeleteRepository implements FiscalDocumentSoftDeletePort {
-  constructor(private readonly prisma: DbClient) {}
+  private get db() {
+    return getDbClient();
+  }
 
   async softDeleteNfe(accessKey: string, tenantId: string): Promise<boolean> {
-    const existing = await this.prisma.nFe.findFirst({ where: { chave: accessKey, tenantId } });
+    const existing = await this.db.nFe.findFirst({ where: { chave: accessKey, tenantId } });
     if (!existing || existing.deletedAt) return false;
-    await this.prisma.nFe.update({
+    await this.db.nFe.update({
       where: { chave: accessKey },
       data: { deletedAt: new Date() },
     });
@@ -16,9 +18,9 @@ export class PrismaFiscalDocumentSoftDeleteRepository implements FiscalDocumentS
   }
 
   async softDeleteCte(accessKey: string, tenantId: string): Promise<boolean> {
-    const existing = await this.prisma.cTe.findFirst({ where: { chave: accessKey, tenantId } });
+    const existing = await this.db.cTe.findFirst({ where: { chave: accessKey, tenantId } });
     if (!existing || existing.deletedAt) return false;
-    await this.prisma.cTe.update({
+    await this.db.cTe.update({
       where: { chave: accessKey },
       data: { deletedAt: new Date() },
     });

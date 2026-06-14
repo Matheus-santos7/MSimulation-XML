@@ -2,18 +2,20 @@
  * NF-e number range inutilization (procInutNFe) — unused numbers in a series.
  */
 
-import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import { gerarProtocoloSefaz } from "../../domain/services/sefaz-protocol.js";
 import { fiscalNotDeleted } from "../../domain/constants/fiscal-not-deleted.js";
 import type { InutilizationResult } from "../../domain/entities/lifecycle-result.entity.js";
 import { NumberInutilizationError } from "../../domain/errors/number-inutilization.error.js";
+import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import type {
   InutilizeNumberInput,
   NumberInutilizationPort,
 } from "../../domain/ports/fiscal-document-lifecycle.port.js";
 
 export class PrismaNumberInutilizationRepository implements NumberInutilizationPort {
-  constructor(private readonly prisma: DbClient) {}
+  private get db() {
+    return getDbClient();
+  }
 
   async inutilizeRange(input: InutilizeNumberInput): Promise<InutilizationResult> {
     const { tenantId, series, numberStart, numberEnd } = input;
@@ -30,10 +32,10 @@ export class PrismaNumberInutilizationRepository implements NumberInutilizationP
         ? input.justification!.trim()
         : "Numero nao utilizado dentro do prazo legal";
 
-    const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
+    const tenant = await this.db.tenant.findUnique({ where: { id: tenantId } });
     if (!tenant) throw new NumberInutilizationError("Tenant não encontrado.", 404);
 
-    const existingNfes = await this.prisma.nFe.findMany({
+    const existingNfes = await this.db.nFe.findMany({
       where: {
         tenantId,
         serie: series,
@@ -50,7 +52,7 @@ export class PrismaNumberInutilizationRepository implements NumberInutilizationP
       );
     }
 
-    const previousInutilizations = await this.prisma.nfeInutilizacao.findMany({
+    const previousInutilizations = await this.db.nfeInutilizacao.findMany({
       where: { tenantId, serie: series },
     });
     for (const previous of previousInutilizations) {
@@ -63,7 +65,7 @@ export class PrismaNumberInutilizationRepository implements NumberInutilizationP
     }
 
     const occurredAt = new Date();
-    const row = await this.prisma.nfeInutilizacao.create({
+    const row = await this.db.nfeInutilizacao.create({
       data: {
         tenantId,
         serie: series,

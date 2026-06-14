@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { dbTransactionContext, type PrismaTransactionClient } from "../../../../lib/db/tenant-rls.js";
 import { AdvanceProductResolverAdapter } from "./advance-product-resolver.adapter.js";
 
 const tenantId = "tenant-b";
@@ -74,26 +75,34 @@ function createPrismaMock() {
         return null;
       },
     },
-  } as unknown as ConstructorParameters<typeof AdvanceProductResolverAdapter>[0];
+  } as unknown as PrismaTransactionClient;
+}
+
+async function withMockDb<T>(mock: PrismaTransactionClient, fn: () => Promise<T>): Promise<T> {
+  return dbTransactionContext.run(mock, fn);
 }
 
 describe("ResolveAdvanceProductUseCase (AdvanceProductResolverAdapter)", () => {
   it("resolve pelo SKU do tenant mesmo quando o saldo FIFO usa product_id legado", async () => {
-    const resolver = new AdvanceProductResolverAdapter(createPrismaMock());
-    const result = await resolver.resolveForAdvance(tenantId, productIdLegado, sku);
+    await withMockDb(createPrismaMock(), async () => {
+      const resolver = new AdvanceProductResolverAdapter();
+      const result = await resolver.resolveForAdvance(tenantId, productIdLegado, sku);
 
-    assert.ok(result);
-    assert.equal(result.fifoProductId, productIdLegado);
-    assert.equal(result.productId, productIdCadastro);
-    assert.equal(result.sku, sku);
+      assert.ok(result);
+      assert.equal(result.fifoProductId, productIdLegado);
+      assert.equal(result.productId, productIdCadastro);
+      assert.equal(result.sku, sku);
+    });
   });
 
   it("resolve pelo SKU quando o productId enviado é o do cadastro e o FIFO é legado", async () => {
-    const resolver = new AdvanceProductResolverAdapter(createPrismaMock());
-    const result = await resolver.resolveForAdvance(tenantId, productIdCadastro, sku);
+    await withMockDb(createPrismaMock(), async () => {
+      const resolver = new AdvanceProductResolverAdapter();
+      const result = await resolver.resolveForAdvance(tenantId, productIdCadastro, sku);
 
-    assert.ok(result);
-    assert.equal(result.fifoProductId, productIdLegado);
-    assert.equal(result.productId, productIdCadastro);
+      assert.ok(result);
+      assert.equal(result.fifoProductId, productIdLegado);
+      assert.equal(result.productId, productIdCadastro);
+    });
   });
 });

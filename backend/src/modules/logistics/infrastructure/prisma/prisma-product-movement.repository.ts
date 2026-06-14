@@ -1,5 +1,4 @@
 import type { OperacaoFiscalTipo, PrismaClient } from "../../../../generated/prisma/client.js";
-import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import type {
   ListProductMovementsFilter,
@@ -7,15 +6,18 @@ import type {
   RegisterProductMovementData,
 } from "../../domain/ports/product-movement.repository.js";
 import { mapProductMovementFromPrisma } from "./product-movement-prisma.mapper.js";
+import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 
 /**
  * Implementação Prisma de movimentações de produto (`movimentacao_produto`).
  */
 export class PrismaProductMovementRepository implements ProductMovementRepository {
-  constructor(private readonly prisma: DbClient) {}
+  private get db() {
+    return getDbClient();
+  }
 
   async listByTenant(tenantId: string, filter?: ListProductMovementsFilter) {
-    const rows = await this.prisma.movimentacaoProduto.findMany({
+    const rows = await this.db.movimentacaoProduto.findMany({
       where: {
         tenantId,
         ...(filter?.productId ? { productId: filter.productId } : {}),
@@ -33,7 +35,7 @@ export class PrismaProductMovementRepository implements ProductMovementRepositor
   }
 
   async register(data: RegisterProductMovementData, db?: unknown): Promise<void> {
-    const client = (db ?? this.prisma) as PrismaClient | PrismaTx;
+    const client = (db ?? getDbClient()) as PrismaClient | PrismaTx;
     await client.movimentacaoProduto.create({
       data: {
         tenantId: data.tenantId,

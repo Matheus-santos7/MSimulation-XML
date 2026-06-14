@@ -1,9 +1,8 @@
-import type { PrismaClient } from "../../../../generated/prisma/client.js";
-import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import {
   collectRemessaSaldoProductIds,
   remessaItemSaldoWhere,
 } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
+import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import type { AdvanceProductResolved } from "../../domain/entities/advance-product.entity.js";
 import type { AdvanceProductResolverPort } from "../../domain/ports/advance-product-resolver.port.js";
 
@@ -13,7 +12,9 @@ import type { AdvanceProductResolverPort } from "../../domain/ports/advance-prod
  * Alinha `productId` do UI com IDs legados em `nfe_item` via SKU e saldo remessa.
  */
 export class AdvanceProductResolverAdapter implements AdvanceProductResolverPort {
-  constructor(private readonly prisma: DbClient) {}
+  private get db() {
+    return getDbClient();
+  }
 
   /**
    * @inheritdoc
@@ -26,12 +27,12 @@ export class AdvanceProductResolverAdapter implements AdvanceProductResolverPort
     const sku = productSku?.trim();
     let product = await this.findProductInTenant(tenantId, { productId, sku });
 
-    const fifoIds = await collectRemessaSaldoProductIds(this.prisma, tenantId, productId, sku);
+    const fifoIds = await collectRemessaSaldoProductIds(this.db, tenantId, productId, sku);
     const fifoProductId =
       (await this.findFifoProductIdWithSaldo(tenantId, fifoIds)) ?? productId;
 
     if (!product && fifoProductId) {
-      const linha = await this.prisma.nfeItem.findFirst({
+      const linha = await this.db.nfeItem.findFirst({
         where: remessaItemSaldoWhere(tenantId, fifoProductId),
         include: { product: true },
       });
@@ -63,13 +64,13 @@ export class AdvanceProductResolverAdapter implements AdvanceProductResolverPort
     productSku?: string,
   ): Promise<boolean> {
     const fifoIds = await collectRemessaSaldoProductIds(
-      this.prisma,
+      this.db,
       tenantId,
       productId,
       productSku,
     );
     for (const fid of fifoIds) {
-      const linha = await this.prisma.nfeItem.findFirst({
+      const linha = await this.db.nfeItem.findFirst({
         where: remessaItemSaldoWhere(tenantId, fid),
         select: { id: true },
       });
@@ -85,11 +86,11 @@ export class AdvanceProductResolverAdapter implements AdvanceProductResolverPort
   ) {
     const sku = opts.sku?.trim();
     if (sku) {
-      const bySku = await this.prisma.product.findFirst({ where: { tenantId, sku } });
+      const bySku = await this.db.product.findFirst({ where: { tenantId, sku } });
       if (bySku) return bySku;
     }
     if (opts.productId) {
-      return this.prisma.product.findFirst({
+      return this.db.product.findFirst({
         where: { id: opts.productId, tenantId },
       });
     }
@@ -102,7 +103,7 @@ export class AdvanceProductResolverAdapter implements AdvanceProductResolverPort
     productIds: string[],
   ): Promise<string | null> {
     for (const fid of productIds) {
-      const linha = await this.prisma.nfeItem.findFirst({
+      const linha = await this.db.nfeItem.findFirst({
         where: remessaItemSaldoWhere(tenantId, fid),
         select: { productId: true },
         orderBy: [{ nfe: { emitidaEm: "asc" } }, { numeroItem: "asc" }],

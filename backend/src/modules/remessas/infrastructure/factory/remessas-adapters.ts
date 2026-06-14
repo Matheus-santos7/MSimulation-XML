@@ -1,5 +1,3 @@
-import type { PrismaClient } from "../../../../generated/prisma/client.js";
-import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import type { EmissorNotaPort } from "../../domain/ports/emissor-nota-port.js";
 import type { EstoqueFifoRepository } from "../../domain/ports/estoque-fifo-repository.js";
 import type { MovimentacaoLogisticaPort } from "../../domain/ports/movimentacao-logistica-port.js";
@@ -19,12 +17,12 @@ export type RemessasAdapters = {
   movimentacao: MovimentacaoLogisticaPort;
 };
 
-export function createRemessasAdapters(db: PrismaClient | PrismaTx): RemessasAdapters {
+export function createRemessasAdapters(): RemessasAdapters {
   return {
-    estoqueFifo: new PrismaEstoqueFifoRepository(db),
-    notaFiscal: new PrismaNotaFiscalRepository(db),
-    emissorNota: new FiscalEmissorAdapter(db),
-    unidadeLogistica: new UnidadeLogisticaAdapter(db),
-    movimentacao: new MovimentacaoLogisticaAdapter(db),
+    estoqueFifo: new PrismaEstoqueFifoRepository(),
+    notaFiscal: new PrismaNotaFiscalRepository(),
+    emissorNota: new FiscalEmissorAdapter(),
+    unidadeLogistica: new UnidadeLogisticaAdapter(),
+    movimentacao: new MovimentacaoLogisticaAdapter(),
   };
 }

@@ -1,5 +1,4 @@
 import type { Prisma } from "../../../../generated/prisma/client.js";
-import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import { isPrismaUniqueError } from "../../../../lib/org/db-errors.js";
 import { runInTransaction } from "../../../../lib/db/prisma-tx.js";
 import type { Product } from "../../domain/entities/product.entity.js";
@@ -10,6 +9,7 @@ import type {
   ProductWriteData,
 } from "../../domain/ports/product.repository.js";
 import { mapProductFromPrisma } from "./product-prisma.mapper.js";
+import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 
 function isPrismaFkError(error: unknown): boolean {
   return (
@@ -21,10 +21,12 @@ function isPrismaFkError(error: unknown): boolean {
 }
 
 export class PrismaProductRepository implements ProductRepository {
-  constructor(private readonly prisma: DbClient) {}
+  private get db() {
+    return getDbClient();
+  }
 
   async listByTenant(tenantId: string): Promise<Product[]> {
-    const rows = await this.prisma.product.findMany({
+    const rows = await this.db.product.findMany({
       where: { tenantId },
       orderBy: { sku: "asc" },
     });
@@ -32,18 +34,18 @@ export class PrismaProductRepository implements ProductRepository {
   }
 
   async findById(id: string, tenantId: string): Promise<Product | null> {
-    const row = await this.prisma.product.findFirst({ where: { id, tenantId } });
+    const row = await this.db.product.findFirst({ where: { id, tenantId } });
     return row ? mapProductFromPrisma(row) : null;
   }
 
   async getTenantUf(tenantId: string): Promise<string> {
-    const tenant = await this.prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } });
+    const tenant = await this.db.tenant.findUniqueOrThrow({ where: { id: tenantId } });
     return tenant.uf;
   }
 
   async create(tenantId: string, data: ProductWriteData): Promise<Product> {
     try {
-      const row = await this.prisma.product.create({
+      const row = await this.db.product.create({
         data: {
           tenantId,
           sku: data.sku,
@@ -72,7 +74,7 @@ export class PrismaProductRepository implements ProductRepository {
 
   async update(id: string, data: Partial<ProductWriteData>): Promise<Product> {
     try {
-      const row = await this.prisma.product.update({
+      const row = await this.db.product.update({
         where: { id },
         data: data as Prisma.ProductUpdateInput,
       });
@@ -86,7 +88,7 @@ export class PrismaProductRepository implements ProductRepository {
   }
 
   async listSkuIndex(tenantId: string): Promise<Map<string, ProductSkuIndexEntry>> {
-    const existing = await this.prisma.product.findMany({
+    const existing = await this.db.product.findMany({
       where: { tenantId },
       select: { id: true, sku: true, estoque: true },
     });
@@ -94,7 +96,7 @@ export class PrismaProductRepository implements ProductRepository {
   }
 
   async countInvoicedOrders(productId: string): Promise<number> {
-    const orders = await this.prisma.pedido.groupBy({
+    const orders = await this.db.pedido.groupBy({
       by: ["status"],
       where: { productId },
       _count: { _all: true },
@@ -104,7 +106,7 @@ export class PrismaProductRepository implements ProductRepository {
 
   async deleteProductAndDraftOrders(productId: string): Promise<void> {
     try {
-      await runInTransaction(this.prisma, async (tx) => {
+      await runInTransaction(this.db, async (tx) => {
         await tx.pedido.deleteMany({ where: { productId, status: "RASCUNHO" } });
         await tx.product.delete({ where: { id: productId } });
       });

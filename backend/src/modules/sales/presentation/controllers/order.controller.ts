@@ -5,7 +5,6 @@ import { SaldoRemessaInsuficienteError } from "../../../remessas/infrastructure/
 import { CheckoutError } from "../../domain/errors/checkout.error.js";
 import { OrderLockedError, PedidoLockedError } from "../../domain/errors/order-locked.error.js";
 import { SalesChainError, VendaChainError } from "../../domain/errors/sales-chain.error.js";
-import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import { createSalesModule } from "../../infrastructure/factory/sales-module.factory.js";
 import { orderCheckoutBody, orderIdParam } from "../schemas/order.schemas.js";
 
@@ -47,17 +46,17 @@ const ORDER_ERROR_MAPPINGS = [
  * | POST | `/pedidos/checkout` | ProcessCheckoutUseCase (Sales Chain direto) |
  */
 export const orderController: FastifyPluginAsync = async (app) => {
-  const sales = () => createSalesModule(getDbClient());
+  const sales = createSalesModule();
 
   app.get("/pedidos", async (req) => {
     const tenantId = tenantIdFromRequest(req);
-    return sales().listOrders.execute(tenantId);
+    return sales.listOrders.execute(tenantId);
   });
 
   app.get("/pedidos/:id", async (req, reply) => {
     const { id } = orderIdParam.parse(req.params);
     const tenantId = tenantIdFromRequest(req);
-    const order = await sales().getOrderById.execute(tenantId, id);
+    const order = await sales.getOrderById.execute(tenantId, id);
     if (!order) return reply.status(404).send({ error: "Pedido não encontrado" });
     return order;
   });
@@ -66,7 +65,7 @@ export const orderController: FastifyPluginAsync = async (app) => {
     try {
       const tenantId = tenantIdFromRequest(req);
       const body = orderCheckoutBody.parse(req.body);
-      const order = await sales().createOrderDraft.execute(tenantId, body);
+      const order = await sales.createOrderDraft.execute(tenantId, body);
       return reply.status(201).send(order);
     } catch (error) {
       if (handleRouteError(reply, error, { mappings: [...ORDER_ERROR_MAPPINGS] })) return;
@@ -79,7 +78,7 @@ export const orderController: FastifyPluginAsync = async (app) => {
       const { id } = orderIdParam.parse(req.params);
       const tenantId = tenantIdFromRequest(req);
       const body = orderCheckoutBody.parse(req.body);
-      const order = await sales().updateOrderDraft.execute(id, tenantId, body);
+      const order = await sales.updateOrderDraft.execute(id, tenantId, body);
       if (!order) return reply.status(404).send({ error: "Pedido não encontrado" });
       return order;
     } catch (error) {
@@ -92,7 +91,7 @@ export const orderController: FastifyPluginAsync = async (app) => {
     try {
       const { id } = orderIdParam.parse(req.params);
       const tenantId = tenantIdFromRequest(req);
-      const result = await sales().invoiceOrder.execute(tenantId, id);
+      const result = await sales.invoiceOrder.execute(tenantId, id);
       if (!result) return reply.status(404).send({ error: "Pedido não encontrado" });
       return reply.status(201).send(result);
     } catch (error) {
@@ -105,7 +104,7 @@ export const orderController: FastifyPluginAsync = async (app) => {
     try {
       const { id } = orderIdParam.parse(req.params);
       const tenantId = tenantIdFromRequest(req);
-      const removed = await sales().removeOrder.execute(tenantId, id);
+      const removed = await sales.removeOrder.execute(tenantId, id);
       if (!removed) return reply.status(404).send({ error: "Pedido não encontrado" });
       return reply.status(204).send();
     } catch (error) {
@@ -118,7 +117,7 @@ export const orderController: FastifyPluginAsync = async (app) => {
     try {
       const tenantId = tenantIdFromRequest(req);
       const body = orderCheckoutBody.parse(req.body);
-      const nfe = await sales().processCheckout.execute(tenantId, body);
+      const nfe = await sales.processCheckout.execute(tenantId, body);
       return reply.status(201).send(nfe);
     } catch (error) {
       if (handleRouteError(reply, error, { mappings: [...ORDER_ERROR_MAPPINGS] })) return;

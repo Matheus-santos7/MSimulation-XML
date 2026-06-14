@@ -1,9 +1,8 @@
-import type { PrismaClient } from "../../generated/prisma/client.js";
-import type { DbClient } from "../../lib/db/prisma-tx.js";
 import type { OrderCheckoutInput } from "./domain/entities/order-checkout-input.entity.js";
 import type { OrderForEmit } from "./domain/entities/order-for-emit.entity.js";
 import { emitSalesChain } from "./infrastructure/fiscal/sales-chain.orchestrator.js";
 import { createSalesModule } from "./infrastructure/factory/sales-module.factory.js";
+import { getDbClient } from "../../lib/db/tenant-rls.js";
 
 export { CheckoutError } from "./domain/errors/checkout.error.js";
 export { OrderLockedError, PedidoLockedError } from "./domain/errors/order-locked.error.js";
@@ -35,23 +34,19 @@ export { emitSaleCte, emitSaleCte as emitirCteVenda } from "./infrastructure/fis
 export type PedidoForEmit = OrderForEmit;
 export type PedidoCheckoutInput = OrderCheckoutInput;
 
-export async function emitirCadeiaVenda(prisma: PrismaClient, order: OrderForEmit) {
-  return emitSalesChain(prisma, order);
+export async function emitirCadeiaVenda(order: OrderForEmit) {
+  return emitSalesChain(getDbClient(), order);
 }
 
 export class CheckoutService {
-  constructor(private readonly prisma: DbClient) {}
-
   checkout(tenantId: string, input: OrderCheckoutInput) {
-    return createSalesModule(this.prisma).processCheckout.execute(tenantId, input);
+    return createSalesModule().processCheckout.execute(tenantId, input);
   }
 }
 
 export class PedidoService {
-  constructor(private readonly prisma: DbClient) {}
-
   private get sales() {
-    return createSalesModule(this.prisma);
+    return createSalesModule();
   }
 
   list(tenantId: string) {

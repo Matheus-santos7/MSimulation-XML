@@ -1,5 +1,4 @@
-import type { PrismaClient } from "../../../../generated/prisma/client.js";
-import type { DbClient } from "../../../../lib/db/prisma-tx.js";
+import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import { OrderLockedError } from "../../domain/errors/order-locked.error.js";
 import type { OrderRepository } from "../../domain/ports/order.repository.js";
 import type { SalesChainPort } from "../../domain/ports/sales-chain.port.js";
@@ -18,7 +17,6 @@ import type { SalesChainPort } from "../../domain/ports/sales-chain.port.js";
  */
 export class InvoiceOrderUseCase {
   constructor(
-    private readonly prisma: DbClient,
     private readonly orderRepository: OrderRepository,
     private readonly salesChain: SalesChainPort,
   ) {}
@@ -30,7 +28,7 @@ export class InvoiceOrderUseCase {
     const existing = await this.orderRepository.findById(tenantId, id);
     if (existing?.status === "FATURADO") throw new OrderLockedError();
 
-    const { venda: nfe } = await this.salesChain.emit(this.prisma, order);
+    const { venda: nfe } = await this.salesChain.emit(getDbClient(), order);
     const sale = nfe as { id: string; pedidoML?: string; pedidoMl?: string };
     const pedido = await this.orderRepository.markInvoiced(
       id,

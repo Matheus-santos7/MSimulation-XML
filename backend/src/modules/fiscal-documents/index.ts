@@ -1,4 +1,3 @@
-import type { PrismaClient } from "../../generated/prisma/client.js";
 import type { InutilizeNumberInput } from "./domain/ports/fiscal-document-lifecycle.port.js";
 import { createFiscalDocumentsModule } from "./infrastructure/factory/fiscal-documents-module.factory.js";
 
@@ -59,12 +58,11 @@ export type InutilizarNumeracaoInput = {
 };
 
 export async function cancelSaleNfe(
-  prisma: PrismaClient,
   saleNfeKey: string,
   tenantId: string,
   justification?: string,
 ) {
-  return createFiscalDocumentsModule(prisma).cancelDocument.execute({
+  return createFiscalDocumentsModule().cancelDocument.execute({
     tenantId,
     nfeKey: saleNfeKey,
     justification,
@@ -75,11 +73,10 @@ export async function cancelSaleNfe(
 export const cancelarVenda = cancelSaleNfe;
 
 export async function processSaleReturn(
-  prisma: PrismaClient,
   saleNfeKey: string,
   tenantId: string,
 ) {
-  return createFiscalDocumentsModule(prisma).processReturn.execute({
+  return createFiscalDocumentsModule().processReturn.execute({
     tenantId,
     saleNfeKey,
   });
@@ -89,18 +86,16 @@ export async function processSaleReturn(
 export const emitirDevolucaoVenda = processSaleReturn;
 
 export async function inutilizeNfeNumberRange(
-  prisma: PrismaClient,
   input: InutilizeNumberInput,
 ) {
-  return createFiscalDocumentsModule(prisma).inutilizeNumber.execute(input);
+  return createFiscalDocumentsModule().inutilizeNumber.execute(input);
 }
 
 /** @deprecated Use inutilizeNfeNumberRange */
 export async function inutilizarNumeracao(
-  prisma: PrismaClient,
   input: InutilizarNumeracaoInput,
 ) {
-  return inutilizeNfeNumberRange(prisma, {
+  return inutilizeNfeNumberRange({
     tenantId: input.tenantId,
     series: input.serie,
     numberStart: input.numeroIni,

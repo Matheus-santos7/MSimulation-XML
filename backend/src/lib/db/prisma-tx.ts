@@ -50,7 +50,7 @@ export async function runFiscalTransaction<T>(
     return db.$transaction(async (tx) => {
       await applyRlsContext(tx, { tenantId });
       try {
-        return await fn(tx);
+        return await dbTransactionContext.run(tx, () => fn(tx));
       } finally {
         await clearRlsContext(tx);
       }

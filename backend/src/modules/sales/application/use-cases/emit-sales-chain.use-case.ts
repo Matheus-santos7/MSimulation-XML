@@ -1,5 +1,4 @@
-import type { PrismaClient } from "../../../../generated/prisma/client.js";
-import type { DbClient } from "../../../../lib/db/prisma-tx.js";
+import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import type { OrderForEmit } from "../../domain/entities/order-for-emit.entity.js";
 import type { SalesChainPort } from "../../domain/ports/sales-chain.port.js";
 import type { SalesChainResult } from "../dto/sales-chain.dto.js";
@@ -15,12 +14,9 @@ import type { SalesChainResult } from "../dto/sales-chain.dto.js";
  * @throws {SaldoRemessaInsuficienteError} Saldo de remessa insuficiente
  */
 export class EmitSalesChainUseCase {
-  constructor(
-    private readonly prisma: DbClient,
-    private readonly salesChain: SalesChainPort,
-  ) {}
+  constructor(private readonly salesChain: SalesChainPort) {}
 
   execute(order: OrderForEmit): Promise<SalesChainResult> {
-    return this.salesChain.emit(this.prisma, order);
+    return this.salesChain.emit(getDbClient(), order);
   }
 }

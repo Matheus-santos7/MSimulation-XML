@@ -1,4 +1,5 @@
-import type { DbClient, PrismaTx } from "../../../../lib/db/prisma-tx.js";
+import { getDbClient } from "../../../../lib/db/tenant-rls.js";
+import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { RemessaDomainError } from "../../domain/errors.js";
 import { criarRemessaInicial } from "../../domain/entities/nota-fiscal.js";
 import type { EstoqueFifoRepository } from "../../domain/ports/estoque-fifo-repository.js";
@@ -10,7 +11,6 @@ import type {
 } from "../dto/emitir-remessa-inicial.command.js";
 
 export type EmitirRemessaInicialDeps = {
-  prisma: DbClient;
   estoqueFifo: EstoqueFifoRepository;
   unidadeLogistica: UnidadeLogisticaPort;
   emitirRemessaLegado: (
@@ -56,9 +56,6 @@ export class EmitirRemessaInicialUseCase {
       }
     }
 
-    return this.deps.emitirRemessaLegado(
-      this.deps.prisma as unknown as PrismaTx,
-      { ...command, unidadeDestinoId },
-    );
+    return this.deps.emitirRemessaLegado(getDbClient(), { ...command, unidadeDestinoId });
   }
 }

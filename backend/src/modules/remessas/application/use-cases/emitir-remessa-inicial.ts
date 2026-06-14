@@ -1,5 +1,4 @@
-import type { PrismaClient } from "../../../../generated/prisma/client.js";
-import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
+import type { DbClient, PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { RemessaDomainError } from "../../domain/errors.js";
 import { criarRemessaInicial } from "../../domain/entities/nota-fiscal.js";
 import type { EstoqueFifoRepository } from "../../domain/ports/estoque-fifo-repository.js";
@@ -11,7 +10,7 @@ import type {
 } from "../dto/emitir-remessa-inicial.command.js";
 
 export type EmitirRemessaInicialDeps = {
-  prisma: PrismaClient;
+  prisma: DbClient;
   estoqueFifo: EstoqueFifoRepository;
   unidadeLogistica: UnidadeLogisticaPort;
   emitirRemessaLegado: (

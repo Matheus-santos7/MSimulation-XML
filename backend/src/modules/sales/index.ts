@@ -1,4 +1,5 @@
 import type { PrismaClient } from "../../generated/prisma/client.js";
+import type { DbClient } from "../../lib/db/prisma-tx.js";
 import type { OrderCheckoutInput } from "./domain/entities/order-checkout-input.entity.js";
 import type { OrderForEmit } from "./domain/entities/order-for-emit.entity.js";
 import { emitSalesChain } from "./infrastructure/fiscal/sales-chain.orchestrator.js";
@@ -39,7 +40,7 @@ export async function emitirCadeiaVenda(prisma: PrismaClient, order: OrderForEmi
 }
 
 export class CheckoutService {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: DbClient) {}
 
   checkout(tenantId: string, input: OrderCheckoutInput) {
     return createSalesModule(this.prisma).processCheckout.execute(tenantId, input);
@@ -47,7 +48,7 @@ export class CheckoutService {
 }
 
 export class PedidoService {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: DbClient) {}
 
   private get sales() {
     return createSalesModule(this.prisma);

@@ -1,8 +1,9 @@
 import type { PrismaClient } from "../../../../generated/prisma/client.js";
+import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import type { FiscalDocumentSoftDeletePort } from "../../domain/ports/fiscal-document-soft-delete.port.js";
 
 export class PrismaFiscalDocumentSoftDeleteRepository implements FiscalDocumentSoftDeletePort {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: DbClient) {}
 
   async softDeleteNfe(accessKey: string, tenantId: string): Promise<boolean> {
     const existing = await this.prisma.nFe.findFirst({ where: { chave: accessKey, tenantId } });

@@ -1,11 +1,11 @@
-import type { PrismaClient } from "../../../../generated/prisma/client.js";
+import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import { mapCte } from "../../presentation/mappers/fiscal-mappers.js";
 import { fiscalNotDeleted } from "../../domain/constants/fiscal-not-deleted.js";
 import { resolveCteXml } from "../xml/cte-xml-service.js";
 import type { CteQueryPort } from "../../domain/ports/cte-query.port.js";
 
 export class PrismaCteQueryRepository implements CteQueryPort {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: DbClient) {}
 
   async list(tenantId: string) {
     const rows = await this.prisma.cTe.findMany({

@@ -1,4 +1,4 @@
-import type { PrismaClient } from "../../../../generated/prisma/client.js";
+import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import { emitirRemessaManual } from "../fiscal/remessa-service.js";
 import { createLogisticsModule } from "../../../logistics/index.js";
 import { EmitirAvancoMercadoriaUseCase } from "../../application/use-cases/emitir-avanco-mercadoria.js";
@@ -8,16 +8,16 @@ import { createRemessasAdapters } from "./remessas-adapters.js";
 /**
  * Composition Root do módulo Remessas.
  */
-export function createRemessasModule(prisma: PrismaClient) {
-  const logistics = createLogisticsModule(prisma);
-  const adapters = createRemessasAdapters(prisma);
+export function createRemessasModule(db: DbClient) {
+  const logistics = createLogisticsModule(db);
+  const adapters = createRemessasAdapters(db);
 
   const emitirRemessaInicial = new EmitirRemessaInicialUseCase({
-    prisma,
+    prisma: db,
     estoqueFifo: adapters.estoqueFifo,
     unidadeLogistica: adapters.unidadeLogistica,
     emitirRemessaLegado: async (_tx, command) => {
-      return emitirRemessaManual(prisma, {
+      return emitirRemessaManual(db, {
         tenantId: command.tenantId,
         unidadeDestinoId: command.unidadeDestinoId!,
         items: command.items.map((i) => ({
@@ -29,7 +29,7 @@ export function createRemessasModule(prisma: PrismaClient) {
   });
 
   const emitirAvancoMercadoria = new EmitirAvancoMercadoriaUseCase({
-    prisma,
+    prisma: db,
     estoqueFifo: adapters.estoqueFifo,
     unidadeLogistica: adapters.unidadeLogistica,
     createAdapters: createRemessasAdapters,
@@ -40,7 +40,7 @@ export function createRemessasModule(prisma: PrismaClient) {
         productSku,
       );
       if (!resolved) return null;
-      const product = await prisma.product.findFirst({
+      const product = await db.product.findFirst({
         where: { id: resolved.productId, tenantId },
       });
       if (!product) return null;

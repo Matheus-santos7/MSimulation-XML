@@ -1,4 +1,5 @@
-import type { PrismaClient } from "../../../../generated/prisma/client.js";
+import type { DbClient } from "../../../../lib/db/prisma-tx.js";
+import { runInTransaction } from "../../../../lib/db/prisma-tx.js";
 import { mergeFiscalEmitterSettings } from "../../domain/services/fiscal-emitter-settings-defaults.js";
 import type { EmitterSettingsView } from "../../domain/entities/emitter-settings-view.entity.js";
 import type {
@@ -16,7 +17,7 @@ import {
  * Persiste JSON em `fiscal_emitter_settings.settings`; séries em `tenant`.
  */
 export class PrismaEmitterSettingsRepository implements EmitterSettingsRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: DbClient) {}
 
   /** @inheritdoc */
   async getByTenantId(tenantId: string): Promise<EmitterSettingsView | null> {
@@ -58,7 +59,7 @@ export class PrismaEmitterSettingsRepository implements EmitterSettingsRepositor
     const nextSettings = mergeEmitterSettingsPatch(currentSettings, input);
     const { serieRemessa, serieCte } = input;
 
-    await this.prisma.$transaction(async (tx) => {
+    await runInTransaction(this.prisma, async (tx) => {
       if (serieRemessa != null || serieCte != null) {
         await tx.tenant.update({
           where: { id: tenantId },

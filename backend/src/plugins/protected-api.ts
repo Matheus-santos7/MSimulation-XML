@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import rateLimit from "@fastify/rate-limit";
-import { applyRlsContext, clearRlsContext, dbRequestContext } from "../lib/db/tenant-rls.js";
+import { wrapProtectedRouteWithDbContext } from "../lib/db/wrap-protected-route.js";
 import { catalogContextPlugin } from "./contexts/catalog.plugin.js";
 import { fiscalContextPlugin } from "./contexts/fiscal.plugin.js";
 import { requireEmailVerifiedHook, requireTenantHook } from "./contexts/guards.js";
@@ -30,17 +30,8 @@ export const protectedApiPlugin: FastifyPluginAsync = async (app) => {
 
   app.addHook("onRequest", app.authenticate);
 
-  app.addHook("onRequest", async (req) => {
-    const ctx = {
-      userId: req.user.userId,
-      tenantId: req.user.tenantId ?? undefined,
-    };
-    dbRequestContext.enterWith(ctx);
-    await applyRlsContext(app.prisma, ctx);
-  });
-
-  app.addHook("onResponse", async () => {
-    await clearRlsContext(app.prisma);
+  app.addHook("onRoute", (routeOptions) => {
+    wrapProtectedRouteWithDbContext(app, routeOptions);
   });
 
   app.addHook("onRequest", requireTenantHook);

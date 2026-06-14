@@ -1,4 +1,5 @@
-import { NFeTipo, type PrismaClient } from "../../../../generated/prisma/client.js";
+import { NFeTipo } from "../../../../generated/prisma/client.js";
+import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import { labelNfeTipo } from "../../presentation/mappers/fiscal-mappers.js";
 import { fiscalNotDeleted } from "../../domain/constants/fiscal-not-deleted.js";
 
@@ -118,10 +119,10 @@ function buildChainFromVenda(venda: ChainNode, byId: Map<string, ChainNode>): Ti
  * (com saldo atual) e os cenários que dela derivam.
  */
 export async function listTimelineChains(
-  prisma: PrismaClient,
+  db: DbClient,
   tenantId: string,
 ): Promise<TimelineRemessaGroupDto[]> {
-  const nfes = await prisma.nFe.findMany({
+  const nfes = await db.nFe.findMany({
     where: { tenantId, ...fiscalNotDeleted },
     include: {
       nfeReferencia: { select: { chave: true } },

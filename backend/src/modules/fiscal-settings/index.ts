@@ -4,6 +4,7 @@
  * @see ./README.md — gestão de Emitter Settings e uso na emissão
  */
 import type { PrismaClient } from "../../generated/prisma/client.js";
+import type { DbClient } from "../../lib/db/prisma-tx.js";
 import type { UpdateEmitterSettingsInput } from "./domain/ports/emitter-settings.repository.js";
 import { createFiscalSettingsModule } from "./infrastructure/factory/fiscal-settings-module.factory.js";
 
@@ -29,7 +30,7 @@ export {
  * @deprecated Use `createFiscalSettingsModule` e os use cases
  */
 export class FiscalEmitterSettingsService {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: DbClient) {}
 
   private get module() {
     return createFiscalSettingsModule(this.prisma);

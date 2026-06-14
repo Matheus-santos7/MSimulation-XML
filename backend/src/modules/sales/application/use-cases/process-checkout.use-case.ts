@@ -1,4 +1,5 @@
 import type { PrismaClient } from "../../../../generated/prisma/client.js";
+import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import type { OrderCheckoutInput } from "../../domain/entities/order-checkout-input.entity.js";
 import type { OrderForEmit } from "../../domain/entities/order-for-emit.entity.js";
 import type { OrderRepository } from "../../domain/ports/order.repository.js";
@@ -19,7 +20,7 @@ import type { SalesChainPort } from "../../domain/ports/sales-chain.port.js";
  */
 export class ProcessCheckoutUseCase {
   constructor(
-    private readonly prisma: PrismaClient,
+    private readonly prisma: DbClient,
     private readonly orderRepository: OrderRepository,
     private readonly salesChain: SalesChainPort,
   ) {}

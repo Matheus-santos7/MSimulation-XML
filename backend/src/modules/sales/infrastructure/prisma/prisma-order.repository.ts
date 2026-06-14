@@ -1,4 +1,5 @@
 import type { PrismaClient } from "../../../../generated/prisma/client.js";
+import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import { CheckoutError } from "../../domain/errors/checkout.error.js";
 import { OrderLockedError } from "../../domain/errors/order-locked.error.js";
 import type { OrderCheckoutInput } from "../../domain/entities/order-checkout-input.entity.js";
@@ -21,7 +22,7 @@ const orderInclude = {
  * e mapeia linhas Prisma para entidades de domínio via `order-prisma.mapper`.
  */
 export class PrismaOrderRepository implements OrderRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: DbClient) {}
 
   /** Lista pedidos do tenant com produto e NF-e vinculada (quando faturado). */
   async listByTenant(tenantId: string) {

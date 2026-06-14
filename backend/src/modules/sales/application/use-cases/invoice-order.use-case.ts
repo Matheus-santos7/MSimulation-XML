@@ -1,4 +1,5 @@
 import type { PrismaClient } from "../../../../generated/prisma/client.js";
+import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import { OrderLockedError } from "../../domain/errors/order-locked.error.js";
 import type { OrderRepository } from "../../domain/ports/order.repository.js";
 import type { SalesChainPort } from "../../domain/ports/sales-chain.port.js";
@@ -17,7 +18,7 @@ import type { SalesChainPort } from "../../domain/ports/sales-chain.port.js";
  */
 export class InvoiceOrderUseCase {
   constructor(
-    private readonly prisma: PrismaClient,
+    private readonly prisma: DbClient,
     private readonly orderRepository: OrderRepository,
     private readonly salesChain: SalesChainPort,
   ) {}

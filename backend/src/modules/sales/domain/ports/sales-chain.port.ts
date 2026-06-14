@@ -1,4 +1,4 @@
-import type { PrismaClient } from "../../../../generated/prisma/client.js";
+import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import type { SalesChainResult } from "../../application/dto/sales-chain.dto.js";
 import type { OrderForEmit } from "../entities/order-for-emit.entity.js";
 
@@ -17,5 +17,5 @@ export interface SalesChainPort {
    * @throws {SalesChainError} Validações de negócio
    * @throws {SaldoRemessaInsuficienteError} Saldo de remessa insuficiente
    */
-  emit(prisma: PrismaClient, order: OrderForEmit): Promise<SalesChainResult>;
+  emit(db: DbClient, order: OrderForEmit): Promise<SalesChainResult>;
 }

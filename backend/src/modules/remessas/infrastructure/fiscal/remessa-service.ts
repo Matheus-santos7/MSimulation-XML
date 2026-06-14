@@ -14,10 +14,10 @@ import {
   NFeTipo,
   OperacaoFiscalTipo,
   Prisma,
-  type PrismaClient,
   type Product,
   type Tenant,
 } from "../../../../generated/prisma/client.js";
+import type { DbClient, PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { runFiscalTransaction } from "../../../../lib/db/prisma-tx.js";
 import { mapNfe } from "../../../fiscal-documents/presentation/mappers/fiscal-mappers.js";
 import { buildChaveNFe, gerarPedidoMl } from "../../../fiscal-documents/domain/services/nfe-chave.js";
@@ -58,7 +58,7 @@ type RemessaLinhaInput = {
 
 /** Atalho para remessa de um único produto; delega a `emitirNFeRemessaComItens`. */
 export async function emitirNFeRemessa(
-  prisma: PrismaClient,
+  db: DbClient,
   tenant: Tenant,
   product: Product,
   quantidade: number,
@@ -67,7 +67,7 @@ export async function emitirNFeRemessa(
   if (quantidade < 1) {
     throw new RemessaError("Quantidade para remessa deve ser pelo menos 1");
   }
-  return emitirNFeRemessaComItens(prisma, tenant, [{ product, quantidade }], options);
+  return emitirNFeRemessaComItens(db, tenant, [{ product, quantidade }], options);
 }
 
 /**
@@ -75,7 +75,7 @@ export async function emitirNFeRemessa(
  * Ver docs/remessa-fisica.md para mapa função-a-função.
  */
 async function emitirNFeRemessaComItens(
-  prisma: PrismaClient,
+  db: DbClient,
   tenant: Tenant,
   linhas: RemessaLinhaInput[],
   options?: EmitirRemessaOptions,
@@ -85,7 +85,7 @@ async function emitirNFeRemessaComItens(
   }
 
   // --- Fase 2: destinatário (CD ML) — define UF destino para regra e CFOP ---
-  const logistics = createLogisticsModule(prisma);
+  const logistics = createLogisticsModule(db);
   const destination = await logistics.resolveShipmentDestination.execute(
     tenant.id,
     options?.unidadeDestinoId,
@@ -97,7 +97,7 @@ async function emitirNFeRemessaComItens(
     idCadIntTran: destination.idCadIntTran ?? null,
   };
 
-  const emitterSettings = await loadEmitterSettings(prisma, tenant.id);
+  const emitterSettings = await loadEmitterSettings(db, tenant.id);
   const aliqFallback = inferAliqIcmsRemessa(tenant.uf, destino.uf, emitterSettings);
   const pedidoMl = options?.pedidoMl ?? gerarPedidoMl();
 
@@ -121,7 +121,7 @@ async function emitirNFeRemessaComItens(
     }
 
     // Planilha: {ruleBaseId}-taxpayer-inbound, colunas ICMS_{UF_DESTINO}_*.
-    const remessaTaxRule = await resolveTaxRule(prisma, tenant.id, {
+    const remessaTaxRule = await resolveTaxRule(db, tenant.id, {
       originUf: tenant.uf,
       destinationUf: destino.uf,
       transactionType: "inbound",
@@ -165,13 +165,13 @@ async function emitirNFeRemessaComItens(
 
   // --- Fase 5: chave e numeração NF-e (série remessa do tenant) ---
   const serie = tenant.serieRemessa;
-  const numero = await proximoNumeroNfe(prisma, tenant.id, serie);
+  const numero = await proximoNumeroNfe(db, tenant.id, serie);
   const chave = buildChaveNFe({ uf: tenant.uf, cnpj: tenant.cnpj, serie, numero });
   const emitidaEm = new Date();
   const destData = destinoToNfeFields(destino);
 
   // --- Fases 6–9: transação atômica (payload, NF-e, XML, CT-e) ---
-  const { nfeRow, cteRow, itemRows } = await runFiscalTransaction(prisma, tenant.id, async (tx) => {
+  const { nfeRow, cteRow, itemRows } = await runFiscalTransaction(db, tenant.id, async (tx) => {
     // Fase 6: configurações do emissor + snapshot para XML/payload.
     const emitterSettings = await loadEmitterSettings(tx, tenant.id);
     const fiscalPayload = enrichFiscalPayloadMlFulfillment(
@@ -305,7 +305,7 @@ export type RemessaManualItemInput = {
  * Carrega tenant e produtos; não altera estoque cadastral do produto.
  */
 export async function emitirRemessaManual(
-  prisma: PrismaClient,
+  db: DbClient,
   input: {
     tenantId: string;
     unidadeDestinoId: string;
@@ -316,11 +316,11 @@ export async function emitirRemessaManual(
     throw new RemessaError("Informe ao menos um produto na remessa");
   }
 
-  const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: input.tenantId } });
+  const tenant = await db.tenant.findUniqueOrThrow({ where: { id: input.tenantId } });
 
   const linhas: RemessaLinhaInput[] = [];
   for (const [index, item] of input.items.entries()) {
-    const product = await findProductInTenant(prisma, input.tenantId, {
+    const product = await findProductInTenant(db, input.tenantId, {
       productId: item.productId,
       sku: item.productSku,
     });
@@ -330,14 +330,14 @@ export async function emitirRemessaManual(
         `Produto não encontrado (linha ${index + 1})${skuHint}. Confira o cadastro em Produtos.`,
       );
     }
-    await realignRemessaFifoProductIdsBySku(prisma, input.tenantId, product.sku);
+    await realignRemessaFifoProductIdsBySku(db, input.tenantId, product.sku);
     if (item.quantidade < 1) {
       throw new RemessaError(`Quantidade inválida na linha ${index + 1}`);
     }
     linhas.push({ product, quantidade: item.quantidade });
   }
 
-  return emitirNFeRemessaComItens(prisma, tenant, linhas, {
+  return emitirNFeRemessaComItens(db, tenant, linhas, {
     unidadeDestinoId: input.unidadeDestinoId,
   });
 }

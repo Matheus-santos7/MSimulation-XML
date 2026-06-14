@@ -1,4 +1,4 @@
-import type { PrismaClient } from "../../../../generated/prisma/client.js";
+import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import { GetEmitterSettingsUseCase } from "../../application/use-cases/get-emitter-settings.use-case.js";
 import { UpdateEmitterSettingsUseCase } from "../../application/use-cases/update-emitter-settings.use-case.js";
 import { PrismaEmitterSettingsRepository } from "../prisma/prisma-emitter-settings.repository.js";
@@ -9,8 +9,8 @@ import { PrismaEmitterSettingsRepository } from "../prisma/prisma-emitter-settin
  * @param prisma - Cliente Prisma da aplicação
  * @returns Use cases e repository para controller e testes
  */
-export function createFiscalSettingsModule(prisma: PrismaClient) {
-  const emitterSettingsRepository = new PrismaEmitterSettingsRepository(prisma);
+export function createFiscalSettingsModule(db: DbClient) {
+  const emitterSettingsRepository = new PrismaEmitterSettingsRepository(db);
 
   return {
     getEmitterSettings: new GetEmitterSettingsUseCase(emitterSettingsRepository),

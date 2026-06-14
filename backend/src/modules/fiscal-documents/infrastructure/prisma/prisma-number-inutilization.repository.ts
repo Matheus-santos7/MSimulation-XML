@@ -2,7 +2,7 @@
  * NF-e number range inutilization (procInutNFe) — unused numbers in a series.
  */
 
-import type { PrismaClient } from "../../../../generated/prisma/client.js";
+import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import { gerarProtocoloSefaz } from "../../domain/services/sefaz-protocol.js";
 import { fiscalNotDeleted } from "../../domain/constants/fiscal-not-deleted.js";
 import type { InutilizationResult } from "../../domain/entities/lifecycle-result.entity.js";
@@ -13,7 +13,7 @@ import type {
 } from "../../domain/ports/fiscal-document-lifecycle.port.js";
 
 export class PrismaNumberInutilizationRepository implements NumberInutilizationPort {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: DbClient) {}
 
   async inutilizeRange(input: InutilizeNumberInput): Promise<InutilizationResult> {
     const { tenantId, series, numberStart, numberEnd } = input;

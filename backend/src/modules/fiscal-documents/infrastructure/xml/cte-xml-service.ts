@@ -10,7 +10,7 @@ import {
   type CteVinculo,
 } from "@msimulation-xml/fiscal-core";
 import type { CTe, NFe, Prisma, PrismaClient, Tenant } from "../../../../generated/prisma/client.js";
-import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
+import type { DbClient, PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import {
   montarDadosCteFromNfe,
   type DadosCteEmissao,
@@ -155,11 +155,11 @@ function dadosFromPersistedRow(row: CteWithNfe, fiscalPayload: CteFiscalPayload)
 }
 
 export async function resolveCteXml(
-  prisma: PrismaClient,
+  db: DbClient,
   tenantId: string,
   chave: string,
 ): Promise<CteXmlResult | null> {
-  const row = await prisma.cTe.findFirst({
+  const row = await db.cTe.findFirst({
     where: { chave, tenantId, deletedAt: null },
     include: {
       tenant: true,
@@ -180,13 +180,13 @@ export async function resolveCteXml(
   if (fp?.nfeChaveRef && fp.destinatario) {
     dados = dadosFromPersistedRow(row, fp);
   } else {
-    dados = await backfillCteLegado(prisma, row);
+    dados = await backfillCteLegado(db, row);
   }
 
   if (!dados) return null;
 
   const xml = buildCteXmlAutorizado(dados, row.tenant);
-  await prisma.cTe.update({
+  await db.cTe.update({
     where: { id: row.id },
     data: { xmlAutorizado: xml },
   });

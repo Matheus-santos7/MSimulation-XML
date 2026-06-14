@@ -1,4 +1,5 @@
 import type { PrismaClient } from "../../../../generated/prisma/client.js";
+import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import {
   collectRemessaSaldoProductIds,
   remessaItemSaldoWhere,
@@ -12,7 +13,7 @@ import type { AdvanceProductResolverPort } from "../../domain/ports/advance-prod
  * Alinha `productId` do UI com IDs legados em `nfe_item` via SKU e saldo remessa.
  */
 export class AdvanceProductResolverAdapter implements AdvanceProductResolverPort {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: DbClient) {}
 
   /**
    * @inheritdoc

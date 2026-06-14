@@ -1,4 +1,6 @@
 import type { Prisma, PrismaClient } from "../../../../generated/prisma/client.js";
+import type { DbClient } from "../../../../lib/db/prisma-tx.js";
+import { runInTransaction } from "../../../../lib/db/prisma-tx.js";
 import {
   extractCodigoUnidade,
   normalizeCepMeli,
@@ -45,7 +47,7 @@ function unitCnpjFilter(cnpj: string): Prisma.MeliUnidadeLogisticaWhereInput | u
  */
 export class PrismaLogisticsUnitRepository implements LogisticsUnitRepository {
   constructor(
-    private readonly prisma: PrismaClient,
+    private readonly prisma: DbClient,
     private readonly cepLookup: CepLookupPort,
   ) {}
 
@@ -157,16 +159,16 @@ export class PrismaLogisticsUnitRepository implements LogisticsUnitRepository {
       include: { unidade: true },
     });
 
-    await this.prisma.$transaction([
-      this.prisma.tenantUnidadeLogistica.updateMany({
+    await runInTransaction(this.prisma, async (tx) => {
+      await tx.tenantUnidadeLogistica.updateMany({
         where: { tenantId, padrao: true },
         data: { padrao: false },
-      }),
-      this.prisma.tenantUnidadeLogistica.update({
+      });
+      await tx.tenantUnidadeLogistica.update({
         where: { id: link.id },
         data: { padrao: true },
-      }),
-    ]);
+      });
+    });
 
     return mapLogisticsUnitFromPrisma(link.unidade, tenantId, { padrao: true });
   }

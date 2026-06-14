@@ -9,7 +9,7 @@
  */
 
 import { FiscalStatus, NFeTipo, type PrismaClient } from "../../../../generated/prisma/client.js";
-import { runFiscalTransaction, type PrismaTx } from "../../../../lib/db/prisma-tx.js";
+import { runFiscalTransaction, type DbClient, type PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { mapNfe } from "../../presentation/mappers/fiscal-mappers.js";
 import { loadEmitterSettings } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
 import { gerarProtocoloSefaz } from "../../domain/services/sefaz-protocol.js";
@@ -25,7 +25,7 @@ import type {
 const CANCELLATION_EVENT_TYPE = "110111";
 
 export class PrismaDocumentCancellationRepository implements DocumentCancellationPort {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: DbClient) {}
 
   async cancelSale(input: CancelDocumentInput): Promise<CancelDocumentResult> {
     const { tenantId, nfeKey, justification } = input;

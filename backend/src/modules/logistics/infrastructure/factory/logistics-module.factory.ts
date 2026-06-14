@@ -1,4 +1,4 @@
-import type { PrismaClient } from "../../../../generated/prisma/client.js";
+import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import { BulkImportLogisticsUnitsUseCase } from "../../application/use-cases/bulk-import-logistics-units.use-case.js";
 import { GetActiveLogisticsUnitByCodeUseCase } from "../../application/use-cases/get-active-logistics-unit-by-code.use-case.js";
 import { GetActiveLogisticsUnitUseCase } from "../../application/use-cases/get-active-logistics-unit.use-case.js";
@@ -16,11 +16,11 @@ import { PrismaLogisticsUnitRepository } from "../prisma/prisma-logistics-unit.r
 import { PrismaProductMovementRepository } from "../prisma/prisma-product-movement.repository.js";
 
 /** Composition root for the Logistics module. */
-export function createLogisticsModule(prisma: PrismaClient) {
+export function createLogisticsModule(db: DbClient) {
   const cepLookup = new CepLookupAdapter();
-  const logisticsUnitRepository = new PrismaLogisticsUnitRepository(prisma, cepLookup);
-  const productMovementRepository = new PrismaProductMovementRepository(prisma);
-  const advanceProductResolver = new AdvanceProductResolverAdapter(prisma);
+  const logisticsUnitRepository = new PrismaLogisticsUnitRepository(db, cepLookup);
+  const productMovementRepository = new PrismaProductMovementRepository(db);
+  const advanceProductResolver = new AdvanceProductResolverAdapter(db);
 
   return {
     listLogisticsUnits: new ListLogisticsUnitsUseCase(logisticsUnitRepository),

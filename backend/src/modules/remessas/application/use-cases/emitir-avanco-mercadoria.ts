@@ -1,8 +1,7 @@
-import { OperacaoFiscalTipo } from "../../../../generated/prisma/client.js";
-import type { PrismaClient } from "../../../../generated/prisma/client.js";
-import type { Product, Tenant } from "../../../../generated/prisma/client.js";
+import { OperacaoFiscalTipo, type Product, type Tenant } from "../../../../generated/prisma/client.js";
+import type { DbClient, PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { gerarPedidoMl } from "../../../fiscal-documents/domain/services/nfe-chave.js";
-import { runFiscalTransaction, type PrismaTx } from "../../../../lib/db/prisma-tx.js";
+import { runFiscalTransaction } from "../../../../lib/db/prisma-tx.js";
 import { emitirCteRemessa } from "../../infrastructure/fiscal/cte-remessa-service.js";
 import {
   debitarSaldoRemessaPorCd,
@@ -29,10 +28,10 @@ export type ResolverProdutoAvanco = (
 ) => Promise<{ product: Product; fifoProductId: string } | null>;
 
 export type EmitirAvancoMercadoriaDeps = {
-  prisma: PrismaClient;
+  prisma: DbClient;
   estoqueFifo: EstoqueFifoRepository;
   unidadeLogistica: UnidadeLogisticaPort;
-  createAdapters: (db: PrismaClient | PrismaTx) => RemessasAdapters;
+  createAdapters: (db: DbClient) => RemessasAdapters;
   resolverProduto: ResolverProdutoAvanco;
 };
 

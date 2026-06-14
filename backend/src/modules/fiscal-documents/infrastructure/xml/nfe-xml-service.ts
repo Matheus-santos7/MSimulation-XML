@@ -20,7 +20,7 @@ import {
   type PrismaClient,
   type Product,
 } from "../../../../generated/prisma/client.js";
-import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
+import type { DbClient, PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { mapNfe } from "../../presentation/mappers/fiscal-mappers.js";
 import { mapProduct, type ProductDto } from "../../../../lib/catalog/product-mapper.js";
 import { mapEmitente } from "../../../../lib/org/tenant-mapper.js";
@@ -136,11 +136,11 @@ export async function persistNfeXmlFromEmission(
 }
 
 export async function resolveNfeXml(
-  prisma: PrismaClient,
+  db: DbClient,
   tenantId: string,
   chave: string,
 ): Promise<NfeXmlResult | null> {
-  const row = await prisma.nFe.findFirst({
+  const row = await db.nFe.findFirst({
     where: { chave, tenantId, deletedAt: null },
     include: {
       nfeReferencia: { select: { chave: true } },
@@ -162,7 +162,7 @@ export async function resolveNfeXml(
     return null;
   }
 
-  const settings = await loadEmitterSettings(prisma, tenantId);
+  const settings = await loadEmitterSettings(db, tenantId);
   const dto = mapNfe(row, row.nfeReferencia?.chave, row.itens);
   const products = row.itens.length
     ? row.itens.map((i) => mapProduct(i.product))
@@ -181,11 +181,11 @@ export async function resolveNfeXml(
 }
 
 export async function resolveNfeCancelamentoEventoXml(
-  prisma: PrismaClient,
+  db: DbClient,
   tenantId: string,
   chave: string,
 ): Promise<NfeXmlResult | null> {
-  const row = await prisma.nFe.findFirst({
+  const row = await db.nFe.findFirst({
     where: { chave, tenantId, deletedAt: null },
     include: {
       tenant: true,

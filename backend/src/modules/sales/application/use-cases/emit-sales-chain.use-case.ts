@@ -1,4 +1,5 @@
 import type { PrismaClient } from "../../../../generated/prisma/client.js";
+import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import type { OrderForEmit } from "../../domain/entities/order-for-emit.entity.js";
 import type { SalesChainPort } from "../../domain/ports/sales-chain.port.js";
 import type { SalesChainResult } from "../dto/sales-chain.dto.js";
@@ -15,7 +16,7 @@ import type { SalesChainResult } from "../dto/sales-chain.dto.js";
  */
 export class EmitSalesChainUseCase {
   constructor(
-    private readonly prisma: PrismaClient,
+    private readonly prisma: DbClient,
     private readonly salesChain: SalesChainPort,
   ) {}
 

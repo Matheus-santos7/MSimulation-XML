@@ -1,4 +1,4 @@
-import type { PrismaClient } from "../../../../generated/prisma/client.js";
+import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import { CreateTenantUseCase } from "../../application/use-cases/create-tenant.use-case.js";
 import { CreateUserUseCase } from "../../application/use-cases/create-user.use-case.js";
 import { DeleteTenantUseCase } from "../../application/use-cases/delete-tenant.use-case.js";
@@ -14,9 +14,9 @@ import { PrismaOrgUserRepository } from "../prisma/prisma-org-user.repository.js
 import { PrismaTenantRepository } from "../prisma/prisma-tenant.repository.js";
 
 /** Composition root for the Org module. */
-export function createOrgModule(prisma: PrismaClient) {
-  const tenantRepository = new PrismaTenantRepository(prisma);
-  const orgUserRepository = new PrismaOrgUserRepository(prisma);
+export function createOrgModule(db: DbClient) {
+  const tenantRepository = new PrismaTenantRepository(db);
+  const orgUserRepository = new PrismaOrgUserRepository(db);
   const passwordHasher = new PasswordHasherAdapter();
 
   return {

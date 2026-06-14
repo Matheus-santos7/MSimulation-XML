@@ -1,4 +1,5 @@
 import type { Prisma, PrismaClient } from "../../../../generated/prisma/client.js";
+import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import { isPrismaUniqueError } from "../../../../lib/org/db-errors.js";
 import type { Tenant } from "../../domain/entities/tenant.entity.js";
 import { TenantConflictError } from "../../domain/errors/tenant-conflict.error.js";
@@ -6,7 +7,7 @@ import type { TenantRepository, TenantWriteData } from "../../domain/ports/tenan
 import { mapTenantFromPrisma } from "./tenant-prisma.mapper.js";
 
 export class PrismaTenantRepository implements TenantRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: DbClient) {}
 
   async list(): Promise<Tenant[]> {
     const rows = await this.prisma.tenant.findMany({ orderBy: { createdAt: "asc" } });

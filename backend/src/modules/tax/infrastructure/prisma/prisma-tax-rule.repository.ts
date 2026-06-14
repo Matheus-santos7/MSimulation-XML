@@ -1,4 +1,5 @@
 import type { Prisma, PrismaClient } from "../../../../generated/prisma/client.js";
+import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import {
   normalizeTaxRuleDisplayName,
@@ -22,7 +23,7 @@ type Db = PrismaClient | PrismaTx;
  * {@link resolveTaxRuleFromDb}.
  */
 export class PrismaTaxRuleRepository implements TaxRuleRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: DbClient) {}
 
   async listByTenant(tenantId: string) {
     const rows = await this.prisma.taxRule.findMany({

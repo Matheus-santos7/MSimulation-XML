@@ -1,4 +1,5 @@
-import type { PrismaClient, Tenant } from "../../../../generated/prisma/client.js";
+import type { Tenant } from "../../../../generated/prisma/client.js";
+import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import { runFiscalTransaction } from "../../../../lib/db/prisma-tx.js";
 import { mapNfe } from "../../../fiscal-documents/presentation/mappers/fiscal-mappers.js";
 import { previewRemessaPrincipalFifoParaVenda } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
@@ -31,11 +32,11 @@ import { resolveSalesChainRules } from "./resolve-sales-chain-rules.js";
  * Rollback atómico em qualquer falha (`FISCAL_TRANSACTION_OPTIONS`).
  */
 export class SalesChainOrchestrator implements SalesChainPort {
-  async emit(prisma: PrismaClient, order: OrderForEmit): Promise<SalesChainResult> {
+  async emit(db: DbClient, order: OrderForEmit): Promise<SalesChainResult> {
     const ruleBaseId = assertProductWithTaxRule(order);
     const ctx = buildEmissionContext(order, ruleBaseId);
 
-    return runFiscalTransaction(prisma, order.tenantId, async (tx) => {
+    return runFiscalTransaction(db, order.tenantId, async (tx) => {
       const fifoPreview = await previewRemessaPrincipalFifoParaVenda(
         tx,
         order.tenant.id,
@@ -73,6 +74,6 @@ export class SalesChainOrchestrator implements SalesChainPort {
 }
 
 /** Fachada funcional legada para `emitSalesChain`. */
-export async function emitSalesChain(prisma: PrismaClient, order: OrderForEmit) {
-  return new SalesChainOrchestrator().emit(prisma, order);
+export async function emitSalesChain(db: DbClient, order: OrderForEmit) {
+  return new SalesChainOrchestrator().emit(db, order);
 }

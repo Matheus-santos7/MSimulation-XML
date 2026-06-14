@@ -1,4 +1,5 @@
 import { NFeTipo, type PrismaClient } from "../../../../generated/prisma/client.js";
+import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import { mapNfe } from "../../presentation/mappers/fiscal-mappers.js";
 import { fiscalNotDeleted } from "../../domain/constants/fiscal-not-deleted.js";
 import { resolveNfeCancelamentoEventoXml, resolveNfeXml } from "../xml/nfe-xml-service.js";
@@ -18,7 +19,7 @@ function isShipmentWithFifoBalance(tipo: NFeTipo): boolean {
 }
 
 export class PrismaNfeQueryRepository implements NfeQueryPort {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: DbClient) {}
 
   async list(tenantId: string) {
     const rows = await this.prisma.nFe.findMany({

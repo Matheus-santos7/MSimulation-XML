@@ -1,4 +1,5 @@
 import type { OperacaoFiscalTipo, PrismaClient } from "../../../../generated/prisma/client.js";
+import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import type {
   ListProductMovementsFilter,
@@ -11,7 +12,7 @@ import { mapProductMovementFromPrisma } from "./product-movement-prisma.mapper.j
  * Implementação Prisma de movimentações de produto (`movimentacao_produto`).
  */
 export class PrismaProductMovementRepository implements ProductMovementRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: DbClient) {}
 
   async listByTenant(tenantId: string, filter?: ListProductMovementsFilter) {
     const rows = await this.prisma.movimentacaoProduto.findMany({

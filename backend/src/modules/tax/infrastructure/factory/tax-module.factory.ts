@@ -1,4 +1,4 @@
-import type { PrismaClient } from "../../../../generated/prisma/client.js";
+import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import { AssertProductTaxRuleBaseIdUseCase } from "../../application/use-cases/assert-product-tax-rule-base-id.use-case.js";
 import { BulkUpsertTaxRulesUseCase } from "../../application/use-cases/bulk-upsert-tax-rules.use-case.js";
 import { ImportTaxRulesSpreadsheetUseCase } from "../../application/use-cases/import-tax-rules-spreadsheet.use-case.js";
@@ -11,8 +11,8 @@ import { ResolveTaxRuleUseCase } from "../../application/use-cases/resolve-tax-r
 import { PrismaTaxRuleRepository } from "../prisma/prisma-tax-rule.repository.js";
 
 /** Composition root for the Tax bounded context. */
-export function createTaxModule(prisma: PrismaClient) {
-  const taxRuleRepository = new PrismaTaxRuleRepository(prisma);
+export function createTaxModule(db: DbClient) {
+  const taxRuleRepository = new PrismaTaxRuleRepository(db);
 
   return {
     getTaxRules: new GetTaxRulesUseCase(taxRuleRepository),

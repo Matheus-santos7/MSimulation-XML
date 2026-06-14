@@ -1,5 +1,7 @@
-import type { Prisma, PrismaClient } from "../../../../generated/prisma/client.js";
+import type { Prisma } from "../../../../generated/prisma/client.js";
+import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import { isPrismaUniqueError } from "../../../../lib/org/db-errors.js";
+import { runInTransaction } from "../../../../lib/db/prisma-tx.js";
 import type { Product } from "../../domain/entities/product.entity.js";
 import { ProductConflictError } from "../../domain/errors/product-conflict.error.js";
 import type {
@@ -19,7 +21,7 @@ function isPrismaFkError(error: unknown): boolean {
 }
 
 export class PrismaProductRepository implements ProductRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: DbClient) {}
 
   async listByTenant(tenantId: string): Promise<Product[]> {
     const rows = await this.prisma.product.findMany({
@@ -102,10 +104,10 @@ export class PrismaProductRepository implements ProductRepository {
 
   async deleteProductAndDraftOrders(productId: string): Promise<void> {
     try {
-      await this.prisma.$transaction([
-        this.prisma.pedido.deleteMany({ where: { productId, status: "RASCUNHO" } }),
-        this.prisma.product.delete({ where: { id: productId } }),
-      ]);
+      await runInTransaction(this.prisma, async (tx) => {
+        await tx.pedido.deleteMany({ where: { productId, status: "RASCUNHO" } });
+        await tx.product.delete({ where: { id: productId } });
+      });
     } catch (error) {
       if (isPrismaFkError(error)) {
         throw new ProductConflictError(

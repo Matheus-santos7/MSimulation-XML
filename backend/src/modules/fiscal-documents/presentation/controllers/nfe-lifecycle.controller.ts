@@ -4,6 +4,7 @@ import { handleRouteError } from "../../../../lib/http/domain-errors.js";
 import { DocumentCancellationError } from "../../domain/errors/document-cancellation.error.js";
 import { DocumentReturnError } from "../../domain/errors/document-return.error.js";
 import { NumberInutilizationError } from "../../domain/errors/number-inutilization.error.js";
+import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import { createFiscalDocumentsModule } from "../../infrastructure/factory/fiscal-documents-module.factory.js";
 import {
   cancelDocumentBodySchema,
@@ -22,13 +23,13 @@ const NFE_LIFECYCLE_ERRORS = [
  * Static `/nfes/inutilizar` is registered before parameterized routes.
  */
 export const nfeLifecycleController: FastifyPluginAsync = async (app) => {
-  const fiscalDocuments = createFiscalDocumentsModule(app.prisma);
+  const fiscalDocuments = () => createFiscalDocumentsModule(getDbClient());
 
   app.post("/nfes/inutilizar", async (req, reply) => {
     try {
       const tenantId = tenantIdFromRequest(req);
       const body = inutilizeNumberBodySchema.parse(req.body ?? {});
-      const result = await fiscalDocuments.inutilizeNumber.execute({
+      const result = await fiscalDocuments().inutilizeNumber.execute({
         tenantId,
         series: body.serie,
         numberStart: body.numeroIni,
@@ -46,7 +47,7 @@ export const nfeLifecycleController: FastifyPluginAsync = async (app) => {
     try {
       const tenantId = tenantIdFromRequest(req);
       const { chave } = nfeAccessKeyParamSchema.parse(req.params);
-      const result = await fiscalDocuments.processReturn.execute({
+      const result = await fiscalDocuments().processReturn.execute({
         tenantId,
         saleNfeKey: chave,
       });
@@ -62,7 +63,7 @@ export const nfeLifecycleController: FastifyPluginAsync = async (app) => {
       const tenantId = tenantIdFromRequest(req);
       const { chave } = nfeAccessKeyParamSchema.parse(req.params);
       const body = cancelDocumentBodySchema.parse(req.body ?? {});
-      const result = await fiscalDocuments.cancelDocument.execute({
+      const result = await fiscalDocuments().cancelDocument.execute({
         tenantId,
         nfeKey: chave,
         justification: body.xJust,

@@ -18,7 +18,7 @@ import {
   Prisma,
   type PrismaClient,
 } from "../../../../generated/prisma/client.js";
-import { runFiscalTransaction } from "../../../../lib/db/prisma-tx.js";
+import { runFiscalTransaction, type DbClient } from "../../../../lib/db/prisma-tx.js";
 import { mapNfe, num } from "../../presentation/mappers/fiscal-mappers.js";
 import { buildChaveNFe } from "../../domain/services/nfe-chave.js";
 import { proximoNumeroNfe } from "../../domain/services/nfe-sequencia.js";
@@ -41,7 +41,7 @@ import type {
 } from "../../domain/ports/fiscal-document-lifecycle.port.js";
 
 export class PrismaDocumentReturnRepository implements DocumentReturnPort {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: DbClient) {}
 
   async processSaleReturn(input: ProcessReturnInput): Promise<ProcessReturnResult> {
     const { tenantId, saleNfeKey } = input;

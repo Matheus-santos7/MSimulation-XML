@@ -1,5 +1,6 @@
-import type { PrismaClient } from "../../../../generated/prisma/client.js";
+import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import { isPrismaUniqueError } from "../../../../lib/org/db-errors.js";
+import { runInTransaction } from "../../../../lib/db/prisma-tx.js";
 import type { OrgUser } from "../../domain/entities/org-user.entity.js";
 import { UserConflictError } from "../../domain/errors/user-conflict.error.js";
 import type {
@@ -10,7 +11,7 @@ import type {
 import { mapOrgUserFromPrisma } from "./org-user-prisma.mapper.js";
 
 export class PrismaOrgUserRepository implements OrgUserRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: DbClient) {}
 
   async listByTenant(tenantId: string): Promise<OrgUser[]> {
     const rows = await this.prisma.user.findMany({
@@ -49,7 +50,7 @@ export class PrismaOrgUserRepository implements OrgUserRepository {
     if (!existing) return null;
 
     try {
-      const row = await this.prisma.$transaction(async (tx) => {
+      const row = await runInTransaction(this.prisma, async (tx) => {
         const updated = await tx.user.update({
           where: { id },
           data: {

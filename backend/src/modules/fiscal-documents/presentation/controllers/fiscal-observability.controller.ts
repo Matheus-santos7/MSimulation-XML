@@ -3,6 +3,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { tenantIdFromRequest } from "../../../../lib/auth/request-context.js";
 import { buildProcInutNFeXML, infInutId } from "../../domain/services/inutilizacao-xml.js";
+import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import { mapTimeline } from "../mappers/fiscal-mappers.js";
 import { ufToCodigo } from "../../domain/services/nfe-chave.js";
 import { mapEmitente } from "../../../../lib/org/tenant-mapper.js";
@@ -56,7 +57,7 @@ async function listFiscalEventsForTenant(
 export const fiscalObservabilityController: FastifyPluginAsync = async (app) => {
   app.get("/fiscal-events", async (req) => {
     const tenantId = tenantIdFromRequest(req);
-    return listFiscalEventsForTenant(app.prisma, tenantId);
+    return listFiscalEventsForTenant(getDbClient(), tenantId);
   });
 
   app.get("/fiscal-events/:id/xml", async (req, reply) => {
@@ -64,14 +65,14 @@ export const fiscalObservabilityController: FastifyPluginAsync = async (app) => 
     const { id } = fiscalEventIdParam.parse(req.params);
     const query = req.query as { download?: string };
 
-    const inut = await app.prisma.nfeInutilizacao.findFirst({
+    const inut = await getDbClient().nfeInutilizacao.findFirst({
       where: { id, tenantId },
     });
     if (!inut) {
       return reply.status(404).send({ error: "Inutilização não encontrada" });
     }
 
-    const tenant = await app.prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } });
+    const tenant = await getDbClient().tenant.findUniqueOrThrow({ where: { id: tenantId } });
     const emit = mapEmitente(tenant);
     const xml = buildProcInutNFeXML(
       { emitenteUf: emit.uf, emitenteCnpj: emit.cnpj },
@@ -106,7 +107,7 @@ export const fiscalObservabilityController: FastifyPluginAsync = async (app) => 
 
   app.get("/audit-logs", async (req) => {
     const tenantId = tenantIdFromRequest(req);
-    const rows = await app.prisma.auditLog.findMany({
+    const rows = await getDbClient().auditLog.findMany({
       where: { tenantId },
       orderBy: { ocorridoEm: "desc" },
     });
@@ -122,12 +123,12 @@ export const fiscalObservabilityController: FastifyPluginAsync = async (app) => 
 
   app.get("/timeline", async (req) => {
     const tenantId = tenantIdFromRequest(req);
-    return listTimelineChains(app.prisma, tenantId);
+    return listTimelineChains(getDbClient(), tenantId);
   });
 
   app.get("/timeline/steps", async (req) => {
     const tenantId = tenantIdFromRequest(req);
-    const rows = await app.prisma.timelineStep.findMany({
+    const rows = await getDbClient().timelineStep.findMany({
       where: { tenantId },
       orderBy: { sortOrder: "asc" },
     });

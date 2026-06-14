@@ -2,11 +2,12 @@
  * Controle de saldo de remessas físicas (FIFO) por linha de NF-e (`nfe_itens`).
  */
 import { NFeTipo, type Prisma, type PrismaClient } from "../../../../generated/prisma/client.js";
+import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { fiscalNotDeleted } from "../../../fiscal-documents/domain/constants/fiscal-not-deleted.js";
 
-type Tx = Pick<PrismaClient, "nfeItem" | "nfeRemessaConsumo" | "product" | "nFe">;
+type Tx = Pick<PrismaTx, "nfeItem" | "nfeRemessaConsumo" | "product" | "nFe">;
 type FifoPrisma = Pick<
-  PrismaClient,
+  PrismaTx,
   "nfeItem" | "product" | "nFe" | "meliUnidadeLogistica" | "nfeRemessaConsumo"
 >;
 
@@ -122,20 +123,20 @@ export async function collectRemessaSaldoProductIds(
  * Corrige saldo FIFO legado após reimportação de produtos ou troca de tenant.
  */
 export async function realignRemessaFifoProductIdsBySku(
-  prisma: Pick<PrismaClient, "product" | "nfeItem">,
+  db: Pick<PrismaTx, "product" | "nfeItem">,
   tenantId: string,
   sku: string,
 ): Promise<{ atualizados: number; productId: string | null }> {
   const skuNorm = sku.trim();
   if (!skuNorm) return { atualizados: 0, productId: null };
 
-  const cadastro = await prisma.product.findFirst({
+  const cadastro = await db.product.findFirst({
     where: { tenantId, sku: skuNorm },
     select: { id: true },
   });
   if (!cadastro) return { atualizados: 0, productId: null };
 
-  const result = await prisma.nfeItem.updateMany({
+  const result = await db.nfeItem.updateMany({
     where: {
       tenantId,
       productId: { not: cadastro.id },
@@ -150,21 +151,21 @@ export async function realignRemessaFifoProductIdsBySku(
 }
 
 export async function saldoRemessaDisponivel(
-  prisma: PrismaClient,
+  db: FifoPrisma,
   tenantId: string,
   productId: string,
   unidadeDestinoId?: string,
   productSku?: string,
 ): Promise<number> {
-  await prepararSaldoFifoParaOperacao(prisma, tenantId, productId, productSku);
+  await prepararSaldoFifoParaOperacao(db, tenantId, productId, productSku);
   const where = await remessaSaldoItensWhere(
-    prisma,
+    db,
     tenantId,
     productId,
     productSku,
     unidadeDestinoId,
   );
-  const rows = await prisma.nfeItem.findMany({
+  const rows = await db.nfeItem.findMany({
     where,
     select: { saldoDisponivel: true },
   });
@@ -195,7 +196,7 @@ export type SaldoRemessaCdRow = {
  * O saldo FIFO pode estar em NF-es com `unidade_destino_id` legado/inativo.
  */
 export async function resolveOrigemFiscalParaAvanco(
-  prisma: PrismaClient,
+  db: FifoPrisma,
   tenantId: string,
   productId: string,
   unidadeOrigemId: string,
@@ -203,14 +204,14 @@ export async function resolveOrigemFiscalParaAvanco(
   obterAtiva: (id: string) => Promise<{ id: string; codigo: string; uf: string; nome: string } | null>,
   obterAtivaPorCodigo: (codigo: string) => Promise<{ id: string; codigo: string; uf: string; nome: string } | null>,
 ): Promise<{ origem: { id: string; codigo: string; uf: string; nome: string }; fifoOrigemId: string } | null> {
-  const saldos = await listarSaldoRemessaPorCd(prisma, tenantId, productId, productSku);
+  const saldos = await listarSaldoRemessaPorCd(db, tenantId, productId, productSku);
 
   const direta = await obterAtiva(unidadeOrigemId);
   const codigoDireto = direta?.codigo;
   let fifoOrigemId: string;
   try {
     fifoOrigemId = await resolveUnidadeFifoOrigemId(
-      prisma,
+      db,
       tenantId,
       productId,
       unidadeOrigemId,
@@ -247,14 +248,14 @@ export async function resolveOrigemFiscalParaAvanco(
 }
 
 export async function resolveUnidadeFifoOrigemId(
-  prisma: PrismaClient,
+  db: FifoPrisma,
   tenantId: string,
   productId: string,
   unidadeOrigemId: string,
   unidadeOrigemCodigo: string,
   productSku?: string,
 ): Promise<string> {
-  const saldos = await listarSaldoRemessaPorCd(prisma, tenantId, productId, productSku);
+  const saldos = await listarSaldoRemessaPorCd(db, tenantId, productId, productSku);
   const direct = saldos.find((s) => s.unidadeDestinoId === unidadeOrigemId && s.saldo > 0);
   if (direct) return direct.fifoUnidadeDestinoId;
 
@@ -442,7 +443,7 @@ type NfeRemessaSaldoRow = {
 
 /** Reconcilia FIFO e atualiza `itens` em memória antes de mapear NF-es para a UI. */
 export async function atualizarItensSaldoFifoParaNfes(
-  prisma: PrismaClient,
+  db: FifoPrisma,
   tenantId: string,
   nfes: NfeRemessaSaldoRow[],
 ): Promise<void> {
@@ -458,14 +459,14 @@ export async function atualizarItensSaldoFifoParaNfes(
   if (remessaIds.length === 0) return;
 
   for (const productId of productIds) {
-    const cadastro = await prisma.product.findFirst({
+    const cadastro = await db.product.findFirst({
       where: { tenantId, id: productId },
       select: { sku: true },
     });
-    await prepararSaldoFifoParaOperacao(prisma, tenantId, productId, cadastro?.sku);
+    await prepararSaldoFifoParaOperacao(db, tenantId, productId, cadastro?.sku);
   }
 
-  const refreshed = await prisma.nfeItem.findMany({
+  const refreshed = await db.nfeItem.findMany({
     where: { nfeId: { in: remessaIds } },
     include: { product: true },
     orderBy: [{ nfeId: "asc" }, { numeroItem: "asc" }],
@@ -487,31 +488,31 @@ export async function atualizarItensSaldoFifoParaNfes(
 
 /** Saldo exibido na listagem/detalhe de NF-e de remessa (soma itens ou quantidade − consumos). */
 export async function saldoLiquidoRemessaNfe(
-  prisma: Pick<PrismaClient, "nfeItem" | "nfeRemessaConsumo">,
+  db: Pick<PrismaTx, "nfeItem" | "nfeRemessaConsumo">,
   nfeId: string,
   quantidade: number,
 ): Promise<number> {
-  const itens = await prisma.nfeItem.findMany({
+  const itens = await db.nfeItem.findMany({
     where: { nfeId },
     select: { saldoDisponivel: true },
   });
   if (itens.length > 0) {
     return itens.reduce((acc, item) => acc + (item.saldoDisponivel ?? 0), 0);
   }
-  return saldoLiquidoNotaSemItens(prisma, nfeId, quantidade);
+  return saldoLiquidoNotaSemItens(db, nfeId, quantidade);
 }
 
 /** Saldo FIFO agregado por CD (unidade destino da remessa física ou simbólica). */
 export async function listarSaldoRemessaPorCd(
-  prisma: PrismaClient,
+  db: FifoPrisma,
   tenantId: string,
   productId: string,
   productSku?: string,
 ): Promise<SaldoRemessaCdRow[]> {
-  const sku = await prepararSaldoFifoParaOperacao(prisma, tenantId, productId, productSku);
+  const sku = await prepararSaldoFifoParaOperacao(db, tenantId, productId, productSku);
 
-  const where = await remessaSaldoItensWhere(prisma, tenantId, productId, sku ?? productSku);
-  const rows = await prisma.nfeItem.findMany({
+  const where = await remessaSaldoItensWhere(db, tenantId, productId, sku ?? productSku);
+  const rows = await db.nfeItem.findMany({
     where,
     select: {
       productId: true,
@@ -539,7 +540,7 @@ export async function listarSaldoRemessaPorCd(
     ),
   ];
   if (codigos.length > 0) {
-    const unidades = await prisma.meliUnidadeLogistica.findMany({
+    const unidades = await db.meliUnidadeLogistica.findMany({
       where: { codigo: { in: codigos }, ativa: true },
       select: { id: true, codigo: true, nome: true, uf: true },
     });

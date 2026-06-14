@@ -1,18 +1,18 @@
-import type { PrismaClient } from "../../../generated/prisma/client.js";
+import type { DbClient } from "../../../lib/db/prisma-tx.js";
 import { mapNfe } from "../../fiscal-documents/presentation/mappers/fiscal-mappers.js";
 import type { EmitirAvancoMercadoriaResult } from "../application/dto/emitir-avanco-mercadoria.command.js";
 
 /** Mantém contrato legado da API POST /movimentacoes/avanco-cd. */
 export async function mapAvancoMercadoriaParaApi(
-  prisma: PrismaClient,
+  db: DbClient,
   result: EmitirAvancoMercadoriaResult,
 ) {
-  const remessaSimbRow = await prisma.nFe.findUniqueOrThrow({
+  const remessaSimbRow = await db.nFe.findUniqueOrThrow({
     where: { id: result.remessaSimbolica.id },
     include: { nfeReferencia: { select: { chave: true } } },
   });
 
-  const retornoRow = await prisma.nFe.findUniqueOrThrow({
+  const retornoRow = await db.nFe.findUniqueOrThrow({
     where: { id: result.retornoSimbolico.id },
     include: { nfeReferencia: { select: { chave: true } } },
   });

@@ -8,6 +8,7 @@ const TIPO_LABELS: Record<NfeTipoDisplay, string> = {
   RETORNO_SIMBOLICO: "Retorno",
   VENDA: "Venda",
   DEVOLUCAO: "Devolução",
+  TRANSFERENCIA_FILIAL: "Transf. filial",
   INUTILIZACAO: "Inutilização",
 };
 

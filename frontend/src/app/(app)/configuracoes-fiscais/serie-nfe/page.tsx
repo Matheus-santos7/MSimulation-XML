@@ -11,6 +11,7 @@ export default async function SerieNfePage() {
   return (
     <SerieNfeForm
       serieRemessa={cfg?.serieRemessa ?? 5}
+      serieTransferencia={cfg?.serieTransferencia ?? 8}
       serieCte={cfg?.serieCte ?? 1}
     />
   );

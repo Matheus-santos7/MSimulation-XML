@@ -47,6 +47,17 @@ export const manualShipmentBody = z.object({
   items: z.array(manualShipmentItemBody).min(1),
 });
 
+export const transferenciaFilialItemBody = z.object({
+  productId: z.string().uuid(),
+  productSku: z.string().trim().min(1).optional(),
+  quantidade: z.number().int().min(1),
+});
+
+export const transferenciaFilialBody = z.object({
+  filialId: z.string().uuid(),
+  items: z.array(transferenciaFilialItemBody).min(1),
+});
+
 export const realignFifoBody = z.object({
   productSku: z.string().trim().min(1),
 });

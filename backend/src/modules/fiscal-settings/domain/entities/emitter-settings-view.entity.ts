@@ -10,6 +10,8 @@ export interface EmitterSettingsView {
   tenantId: string;
   /** Série NF-e de remessa / retorno / venda (coluna `tenant.serie_remessa`). */
   serieRemessa: number;
+  /** Série NF-e de transferência entre filiais (coluna `tenant.serie_transferencia`). */
+  serieTransferencia: number;
   /** Série CT-e (coluna `tenant.serie_cte`). */
   serieCte: number;
   /** Grupos distintos de regras importadas (indicador de catálogo tax). */

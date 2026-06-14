@@ -56,7 +56,10 @@ export const tenantCreateBody = z.object({
   ambiente: environmentKind,
 });
 
-export const tenantUpdateBody = tenantCreateBody.partial();
+export const tenantUpdateBody = tenantCreateBody.partial().extend({
+  emitenteFiscalPrincipal: z.boolean().optional(),
+  emitenteFiscalMatriz: z.boolean().optional(),
+});
 
 export const tenantIdParam = z.object({
   id: z.string().uuid(),

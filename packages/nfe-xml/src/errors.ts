@@ -7,6 +7,7 @@ export const NFE_XML_PERSIST_SUPPORTED: readonly NFeTipoXml[] = [
   "RETORNO_SIMBOLICO",
   "VENDA",
   "DEVOLUCAO",
+  "TRANSFERENCIA_FILIAL",
 ];
 
 export function isNfeXmlPersistSupported(tipo: NFeTipoXml): boolean {

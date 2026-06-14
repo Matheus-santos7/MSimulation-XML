@@ -5,6 +5,7 @@ export const NFeTipo = {
   RETORNO_SIMBOLICO: "RETORNO_SIMBOLICO",
   DEVOLUCAO: "DEVOLUCAO",
   REMESSA_SIMBOLICA: "REMESSA_SIMBOLICA",
+  TRANSFERENCIA_FILIAL: "TRANSFERENCIA_FILIAL",
 } as const;
 
 export type NFeTipoValue = (typeof NFeTipo)[keyof typeof NFeTipo];

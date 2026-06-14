@@ -29,6 +29,8 @@ export type TenantDto = {
   nomePais: string;
   telefone?: string;
   ambiente: EnvironmentType;
+  emitenteFiscalPrincipal?: boolean;
+  emitenteFiscalMatriz?: boolean;
 };
 
 export type TenantInput = {
@@ -50,7 +52,37 @@ export type TenantInput = {
   nomePais?: string;
   telefone?: string;
   ambiente: EnvironmentType;
+  emitenteFiscalPrincipal?: boolean;
+  emitenteFiscalMatriz?: boolean;
 };
+
+export type TenantFilialDto = {
+  id: string;
+  tenantId: string;
+  razaoSocial: string;
+  nomeFantasia: string;
+  cnpj: string;
+  ie: string;
+  crt: number;
+  logradouro: string;
+  numero: string;
+  complemento?: string;
+  bairro: string;
+  codigoMunicipio: string;
+  municipio: string;
+  uf: string;
+  cep: string;
+  telefone?: string;
+  serieRemessa: number;
+  serieTransferencia?: number;
+  unidadeLogisticaPadraoId?: string;
+  emitenteFiscalPrincipal: boolean;
+  emitenteFiscalMatriz: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TenantFilialInput = Omit<TenantFilialDto, "id" | "tenantId" | "createdAt" | "updatedAt">;
 
 export type UserDto = {
   id: string;
@@ -201,7 +233,7 @@ export type NFeDto = {
   emitidaEm: string;
   pedidoML: string;
   quantidade: number;
-  tipo: "VENDA" | "REMESSA" | "RETORNO_SIMBOLICO" | "DEVOLUCAO" | "REMESSA_SIMBOLICA";
+  tipo: "VENDA" | "REMESSA" | "RETORNO_SIMBOLICO" | "DEVOLUCAO" | "REMESSA_SIMBOLICA" | "TRANSFERENCIA_FILIAL";
   saldoDisponivel?: number;
   itens?: NFeItemDto[];
   /** Chave da NF-e referenciada por esta nota (pai na cadeia → vai no XML refNFe). */

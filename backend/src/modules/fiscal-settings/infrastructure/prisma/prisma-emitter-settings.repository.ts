@@ -37,6 +37,7 @@ export class PrismaEmitterSettingsRepository implements EmitterSettingsRepositor
     return {
       tenantId,
       serieRemessa: tenant.serieRemessa,
+      serieTransferencia: tenant.serieTransferencia,
       serieCte: tenant.serieCte,
       taxRulesCount,
       settings,
@@ -59,14 +60,15 @@ export class PrismaEmitterSettingsRepository implements EmitterSettingsRepositor
       : DEFAULT_FISCAL_EMITTER_SETTINGS;
 
     const nextSettings = mergeEmitterSettingsPatch(currentSettings, input);
-    const { serieRemessa, serieCte } = input;
+    const { serieRemessa, serieTransferencia, serieCte } = input;
 
     await runInTransaction(this.db, async (tx) => {
-      if (serieRemessa != null || serieCte != null) {
+      if (serieRemessa != null || serieTransferencia != null || serieCte != null) {
         await tx.tenant.update({
           where: { id: tenantId },
           data: {
             ...(serieRemessa != null ? { serieRemessa } : {}),
+            ...(serieTransferencia != null ? { serieTransferencia } : {}),
             ...(serieCte != null ? { serieCte } : {}),
           },
         });

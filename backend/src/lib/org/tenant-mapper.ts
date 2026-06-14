@@ -21,6 +21,8 @@ export function mapTenant(row: Tenant) {
     nomePais: row.nomePais,
     telefone: row.telefone ?? undefined,
     ambiente: row.ambiente as EnvironmentKind,
+    emitenteFiscalPrincipal: row.emitenteFiscalPrincipal,
+    emitenteFiscalMatriz: row.emitenteFiscalMatriz,
   };
 }
 

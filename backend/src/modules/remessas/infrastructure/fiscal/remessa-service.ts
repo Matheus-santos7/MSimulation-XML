@@ -43,12 +43,19 @@ import {
   findProductInTenant,
 } from "../../../logistics/index.js";
 import { persistNfeXmlAutorizado } from "../../../fiscal-documents/infrastructure/xml/nfe-xml-service.js";
+import { chaveEmissaoFromOverride, type EmitenteEmissaoOverride } from "./emitente-emissao-override.js";
 import { realignRemessaFifoProductIdsBySku } from "../fifo/remessa-fifo.js";
+import {
+  EmitenteFiscalConfigError,
+  resolveEmitenteFiscal,
+} from "../../../../lib/org/emitente-fiscal-resolver.js";
 
 export type EmitirRemessaOptions = {
   unidadeDestinoId?: string;
   pedidoMl?: string;
   observacaoAvanco?: string;
+  emitenteOverride?: EmitenteEmissaoOverride;
+  nfeReferenciaId?: string;
 };
 
 type RemessaLinhaInput = {
@@ -70,6 +77,19 @@ export async function emitirNFeRemessa(
   return emitirNFeRemessaComItens(db, tenant, [{ product, quantidade }], options);
 }
 
+/** Emissão multi-item com opções avançadas (ex.: emitente filial). */
+export async function emitirRemessaComItens(
+  db: DbClient,
+  tenant: Tenant,
+  linhas: RemessaLinhaInput[],
+  options?: EmitirRemessaOptions,
+) {
+  if (linhas.length === 0) {
+    throw new RemessaError("Informe ao menos um produto na remessa");
+  }
+  return emitirNFeRemessaComItens(db, tenant, linhas, options);
+}
+
 /**
  * Núcleo da emissão: resolve destino, tributos, persiste NF-e + itens + XML + CT-e.
  * Ver docs/remessa-fisica.md para mapa função-a-função.
@@ -83,6 +103,9 @@ async function emitirNFeRemessaComItens(
   if (linhas.length === 0) {
     throw new RemessaError("Informe ao menos um produto na remessa");
   }
+
+  const emitenteOverride =
+    options?.emitenteOverride ?? (await resolveEmitenteFiscal(db, tenant, "principal"));
 
   // --- Fase 2: destinatário (CD ML) — define UF destino para regra e CFOP ---
   const logistics = createLogisticsModule();
@@ -98,7 +121,8 @@ async function emitirNFeRemessaComItens(
   };
 
   const emitterSettings = await loadEmitterSettings(db, tenant.id);
-  const aliqFallback = inferAliqIcmsRemessa(tenant.uf, destino.uf, emitterSettings);
+  const emitUf = emitenteOverride.uf;
+  const aliqFallback = inferAliqIcmsRemessa(emitUf, destino.uf, emitterSettings);
   const pedidoMl = options?.pedidoMl ?? gerarPedidoMl();
 
   // --- Fase 3: por item — regra tributária inbound + linha fiscal ---
@@ -122,7 +146,7 @@ async function emitirNFeRemessaComItens(
 
     // Planilha: {ruleBaseId}-taxpayer-inbound, colunas ICMS_{UF_DESTINO}_*.
     const remessaTaxRule = await resolveTaxRule(db, tenant.id, {
-      originUf: tenant.uf,
+      originUf: emitUf,
       destinationUf: destino.uf,
       transactionType: "inbound",
       customerType: "taxpayer",
@@ -130,12 +154,12 @@ async function emitirNFeRemessaComItens(
     });
     if (!remessaTaxRule) {
       throw new RemessaError(
-        `Regra "${ruleBaseId}" sem linha de remessa (origem ${tenant.uf} → ${destino.uf}) para "${linha.product.sku}".`,
+        `Regra "${ruleBaseId}" sem linha de remessa (origem ${emitUf} → ${destino.uf}) para "${linha.product.sku}".`,
       );
     }
 
     // CFOP 5949 (mesma UF) ou 6949 (interestadual) — alinhado a idDest no XML.
-    const cfopRemessa = resolveRemessaCfop(tenant.uf, destino.uf);
+    const cfopRemessa = resolveRemessaCfop(emitUf, destino.uf);
     linhasComRegras.push({
       linha: {
         ...linhaPedidoFromProduto(linha.product, {
@@ -152,7 +176,7 @@ async function emitirNFeRemessaComItens(
   // --- Fase 4: engine tributária (ICMS, PIS, COFINS, totais) ---
   const nota = calcularImpostosNota(
     linhasComRegras,
-    { ufOrigem: tenant.uf, ufDestino: destino.uf, customerType: "taxpayer" },
+    { ufOrigem: emitUf, ufDestino: destino.uf, customerType: "taxpayer" },
     aliqFallback,
   );
 
@@ -164,9 +188,10 @@ async function emitirNFeRemessaComItens(
   const aliqIcms = valor > 0 ? Math.round((valorIcms / valor) * 10000) / 100 : aliqFallback;
 
   // --- Fase 5: chave e numeração NF-e (série remessa do tenant) ---
-  const serie = tenant.serieRemessa;
+  const chaveParams = chaveEmissaoFromOverride(emitenteOverride);
+  const serie = chaveParams.serie;
   const numero = await proximoNumeroNfe(db, tenant.id, serie);
-  const chave = buildChaveNFe({ uf: tenant.uf, cnpj: tenant.cnpj, serie, numero });
+  const chave = buildChaveNFe({ uf: chaveParams.uf, cnpj: chaveParams.cnpj, serie, numero });
   const emitidaEm = new Date();
   const destData = destinoToNfeFields(destino);
 
@@ -174,7 +199,7 @@ async function emitirNFeRemessaComItens(
   const { nfeRow, cteRow, itemRows } = await runFiscalTransaction(db, tenant.id, async (tx) => {
     // Fase 6: configurações do emissor + snapshot para XML/payload.
     const emitterSettings = await loadEmitterSettings(tx, tenant.id);
-    const fiscalPayload = enrichFiscalPayloadMlFulfillment(
+    const fiscalPayloadBase = enrichFiscalPayloadMlFulfillment(
       enrichFiscalPayloadWithXTexto(
         {
           ...enrichTaxSnapshot(taxSnapshotFromRule(linhasComRegras[0]!.rule, aliqFallback, emitterSettings), {
@@ -182,7 +207,7 @@ async function emitirNFeRemessaComItens(
             tipo: NFeTipo.REMESSA,
             valor,
             valorIcms,
-            emitUf: tenant.uf,
+            emitUf,
             destUf: destino.uf,
             indFinal: 0,
           }),
@@ -205,6 +230,10 @@ async function emitirNFeRemessaComItens(
         withLogistics: true,
       },
     );
+    const fiscalPayload = {
+      ...fiscalPayloadBase,
+      emitSnapshot: emitenteOverride.emitSnapshot,
+    };
 
     // Fase 7: cabeçalho NF-e.
     const nfeRow = await tx.nFe.create({
@@ -228,6 +257,7 @@ async function emitirNFeRemessaComItens(
         tipo: NFeTipo.REMESSA,
         saldoDisponivel: null,
         unidadeDestinoId: unidade?.id ?? undefined,
+        nfeReferenciaId: options?.nfeReferenciaId ?? undefined,
         fiscalPayload: fiscalPayload as Prisma.InputJsonValue,
       },
     });
@@ -367,3 +397,5 @@ export class RemessaError extends Error {
     this.name = "RemessaError";
   }
 }
+
+export { EmitenteFiscalConfigError };

@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import { OperacoesTabs } from "@/components/operacoes-tabs";
 import { PageHeader } from "@/components/fiscal-ui";
-import { listProducts, listUnidadesLogisticas } from "@/lib/fiscal-api";
+import { listFiliais, listProducts, listUnidadesLogisticas } from "@/lib/fiscal-api";
 
 export const metadata: Metadata = { title: "Operações de fulfillment" };
 
 export default async function OperacoesPage() {
-  const [products, unidades] = await Promise.all([
+  const [products, unidades, filiais] = await Promise.all([
     listProducts(),
     listUnidadesLogisticas({ ativa: true }),
+    listFiliais(),
   ]);
 
   return (
@@ -18,7 +19,7 @@ export default async function OperacoesPage() {
         subtitle="Remessas físicas, transferências entre filiais, avanço de CD e remessas simbólicas"
       />
 
-      <OperacoesTabs products={products} unidades={unidades} />
+      <OperacoesTabs products={products} unidades={unidades} filiais={filiais} />
     </div>
   );
 }

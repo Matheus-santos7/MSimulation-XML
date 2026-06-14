@@ -1,5 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { tenantIdFromRequest } from "../../../../lib/auth/request-context.js";
+import { getDbClient } from "../../../../lib/db/tenant-rls.js";
+import { aplicarPapelEmitenteTenant } from "../../../../lib/org/emitente-fiscal-papeis.js";
 import { handleRouteError } from "../../../../lib/http/domain-errors.js";
 import { TenantConflictError } from "../../domain/errors/tenant-conflict.error.js";
 import { createOrgModule } from "../../infrastructure/factory/org-module.factory.js";
@@ -53,8 +55,14 @@ export const tenantController: FastifyPluginAsync = async (app) => {
       if (id !== tenantId) return reply.status(404).send({ error: "Empresa não encontrada" });
       const body = tenantUpdateBody.parse(request.body);
       const tenant = await org.updateTenant.execute(id, body);
+      if (body.emitenteFiscalPrincipal === true || body.emitenteFiscalMatriz === true) {
+        await aplicarPapelEmitenteTenant(getDbClient(), id, {
+          emitenteFiscalPrincipal: body.emitenteFiscalPrincipal,
+          emitenteFiscalMatriz: body.emitenteFiscalMatriz,
+        });
+      }
       if (!tenant) return reply.status(404).send({ error: "Empresa não encontrada" });
-      return tenant;
+      return org.getTenantById.execute(id);
     } catch (error) {
       if (handleRouteError(reply, error, { mappings: [...TENANT_ERROR_MAPPINGS] })) return;
       throw error;

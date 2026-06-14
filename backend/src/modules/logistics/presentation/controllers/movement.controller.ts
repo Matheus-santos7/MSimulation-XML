@@ -24,6 +24,11 @@ import {
   listarSaldoRemessaPorCd,
   realignRemessaFifoProductIdsBySku,
 } from "../../../remessas/index.js";
+import { EmitenteFiscalConfigError } from "../../../remessas/infrastructure/fiscal/remessa-service.js";
+import {
+  TransferenciaFilialError,
+  emitirTransferenciaFilial,
+} from "../../../remessas/infrastructure/fiscal/transferencia-filial-service.js";
 import { mapAvancoMercadoriaParaApi } from "../../../remessas/presentation/avanco-api.mapper.js";
 import { LogisticsUnitError } from "../../domain/errors/logistics-unit.error.js";
 import { createLogisticsModule } from "../../infrastructure/factory/logistics-module.factory.js";
@@ -32,6 +37,7 @@ import {
   manualShipmentBody,
   productMovementsQuery,
   realignFifoBody,
+  transferenciaFilialBody,
   warehouseBalanceQuery,
 } from "../schemas/logistics.schemas.js";
 
@@ -44,6 +50,9 @@ function mapRemessaModuleError(e: unknown): { status: number; message: string } 
     return { status: 400, message: e.message };
   }
   if (e instanceof RemessaError || e instanceof RemessaSimbolicaFiscalError) {
+    return { status: 400, message: e.message };
+  }
+  if (e instanceof TransferenciaFilialError || e instanceof EmitenteFiscalConfigError) {
     return { status: 400, message: e.message };
   }
   if (e instanceof LogisticsUnitError) {
@@ -78,6 +87,25 @@ export const movementController: FastifyPluginAsync = async (app) => {
       return await remessas.emitirRemessaInicial.execute({
         tenantId,
         unidadeDestinoId: parsed.data.unidadeDestinoId,
+        items: parsed.data.items,
+      });
+    } catch (e) {
+      const mapped = mapRemessaModuleError(e);
+      if (mapped) return reply.status(mapped.status).send({ error: mapped.message });
+      throw e;
+    }
+  });
+
+  app.post("/movimentacoes/transferencia-filial", async (req, reply) => {
+    const tenantId = tenantIdFromRequest(req);
+    const parsed = transferenciaFilialBody.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: "Payload inválido", details: parsed.error.flatten() });
+    }
+    try {
+      return await emitirTransferenciaFilial(getDbClient(), {
+        tenantId,
+        filialId: parsed.data.filialId,
         items: parsed.data.items,
       });
     } catch (e) {

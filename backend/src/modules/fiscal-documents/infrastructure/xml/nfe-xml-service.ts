@@ -59,7 +59,10 @@ export function buildNfeXmlAutorizado(
   if (!isNfeXmlPersistSupported(nfe.tipo)) {
     throw new UnsupportedNfeXmlTipoError(nfe.tipo);
   }
-  return buildNFeXML(nfe, mapEmitente(tenant), product, settings, products);
+  const fiscalPayload = (nfe.fiscalPayload ?? {}) as Record<string, unknown>;
+  const emitSnapshot = fiscalPayload.emitSnapshot as Parameters<typeof buildNFeXML>[1] | undefined;
+  const emit = emitSnapshot ?? mapEmitente(tenant);
+  return buildNFeXML(nfe, emit, product, settings, products);
 }
 
 export async function persistNfeXmlAutorizado(

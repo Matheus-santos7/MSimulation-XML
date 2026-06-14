@@ -424,7 +424,7 @@ export function buildNFeXML(
   products?: ProductXmlInput[],
 ): string {
   let xml: string;
-  if (nfe.tipo === "REMESSA") {
+  if (nfe.tipo === "REMESSA" || nfe.tipo === "TRANSFERENCIA_FILIAL") {
     xml = buildRemessaNFeXML(nfe, emit, product, emitterSettings, products);
   } else if (nfe.tipo === "REMESSA_SIMBOLICA") {
     xml = buildRemessaSimbolicaNFeXML(nfe, emit, product, emitterSettings);

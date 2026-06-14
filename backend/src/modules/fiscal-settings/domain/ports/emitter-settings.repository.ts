@@ -11,6 +11,7 @@ export interface UpdateEmitterSettingsInput {
   taxes?: Record<string, unknown>;
   nfe?: Record<string, unknown>;
   serieRemessa?: number;
+  serieTransferencia?: number;
   serieCte?: number;
 }
 

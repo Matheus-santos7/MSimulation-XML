@@ -22,7 +22,7 @@ export type PrismaTransactionClient = Omit<
 export function getDbClient(): PrismaTransactionClient {
   const tx = dbTransactionContext.getStore();
   if (!tx) {
-    throw new Error("Database client accessed outside of runWithDbContext");
+    throw new Error("Database client accessed outside of an active transaction");
   }
   return tx;
 }

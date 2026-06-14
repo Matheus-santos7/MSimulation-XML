@@ -15,6 +15,7 @@ const ML_DEFAULT_MOD_FRETE: Record<NFeTipoValue, string> = {
   RETORNO_SIMBOLICO: "9",
   REMESSA_SIMBOLICA: "2",
   DEVOLUCAO: "9",
+  TRANSFERENCIA_FILIAL: "2",
 };
 
 function pickTaxStCode(snapshotSt: string): string {

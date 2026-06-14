@@ -84,6 +84,7 @@ export type FiscalEmitterSettingsData = {
 export type FiscalEmitterSettingsView = {
   tenantId: string;
   serieRemessa: number;
+  serieTransferencia: number;
   serieCte: number;
   taxRulesCount: number;
   settings: FiscalEmitterSettingsData;
@@ -94,5 +95,6 @@ export type FiscalEmitterSettingsPatch = {
   taxes?: Partial<FiscalEmitterSettingsData["taxes"]>;
   nfe?: Partial<FiscalEmitterSettingsData["nfe"]>;
   serieRemessa?: number;
+  serieTransferencia?: number;
   serieCte?: number;
 };

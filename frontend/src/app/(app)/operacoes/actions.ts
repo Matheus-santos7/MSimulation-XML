@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { emitirRemessaManual } from "@/lib/fiscal-api";
+import { emitirRemessaManual, emitirTransferenciaFilial } from "@/lib/fiscal-api";
 
 export type RemessaManualState = {
   error?: string;
@@ -65,5 +65,62 @@ export async function emitirRemessaManualAction(
     };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Erro ao emitir remessa" };
+  }
+}
+
+export type TransferenciaFilialState = {
+  error?: string;
+  success?: boolean;
+  chaveTransferencia?: string;
+  chaveRemessa?: string;
+  chaveCte?: string;
+  totalItens?: number;
+};
+
+export async function emitirTransferenciaFilialAction(
+  _prev: TransferenciaFilialState,
+  formData: FormData,
+): Promise<TransferenciaFilialState> {
+  const filialId = String(formData.get("filialId") ?? "");
+  const productIds = formData.getAll("productId").map(String);
+  const productSkus = formData.getAll("productSku").map(String);
+  const quantidades = formData.getAll("quantidade").map((v) => Number(v));
+
+  if (!filialId) {
+    return { error: "Selecione a filial destino" };
+  }
+  if (productIds.length === 0) {
+    return { error: "Adicione ao menos um produto" };
+  }
+
+  const items: { productId: string; productSku?: string; quantidade: number }[] = [];
+  for (let i = 0; i < productIds.length; i++) {
+    const productId = productIds[i]?.trim() ?? "";
+    const productSku = productSkus[i]?.trim() ?? "";
+    const quantidade = quantidades[i] ?? 0;
+    if (!productId) {
+      return { error: `Selecione o produto na linha ${i + 1}` };
+    }
+    if (!Number.isFinite(quantidade) || quantidade < 1) {
+      return { error: `Quantidade inválida na linha ${i + 1}` };
+    }
+    items.push({ productId, productSku: productSku || undefined, quantidade });
+  }
+
+  try {
+    const result = await emitirTransferenciaFilial({ filialId, items });
+    revalidatePath("/operacoes");
+    revalidatePath("/nfe");
+    revalidatePath("/cte");
+    revalidatePath("/");
+    return {
+      success: true,
+      chaveTransferencia: result.transferencia.chave,
+      chaveRemessa: result.remessa.chave,
+      chaveCte: result.cte.chave,
+      totalItens: result.totalItens,
+    };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Erro ao emitir transferência" };
   }
 }

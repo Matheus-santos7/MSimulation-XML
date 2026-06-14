@@ -43,6 +43,7 @@ enum NFeTipo {
   RETORNO_SIMBOLICO
   DEVOLUCAO
   REMESSA_SIMBOLICA
+  TRANSFERENCIA_FILIAL
 }
 
 enum OperacaoFiscalTipo {
@@ -52,6 +53,7 @@ enum OperacaoFiscalTipo {
   VENDA
   DEVOLUCAO
   REMESSA_SIMBOLICA
+  TRANSFERENCIA_FILIAL
 }
 
 enum UserRole {
@@ -80,11 +82,17 @@ model Tenant {
   nomePais        String          @default("Brasil") @map("nome_pais")
   telefone        String?         @map("telefone")
   ambiente        EnvironmentKind
-  serieRemessa    Int             @default(5) @map("serie_remessa")
-  serieCte        Int             @default(1) @map("serie_cte")
-  createdAt       DateTime        @default(now()) @map("created_at")
-  updatedAt       DateTime        @updatedAt @map("updated_at")
-  products        Product[]
+  serieRemessa        Int             @default(5) @map("serie_remessa")
+  serieTransferencia  Int             @default(8) @map("serie_transferencia")
+  serieCte            Int             @default(1) @map("serie_cte")
+  /// Emite remessas, vendas e demais NF-e (exceto transferência interna quando há matriz dedicada).
+  emitenteFiscalPrincipal Boolean     @default(true) @map("emitente_fiscal_principal")
+  /// Emite apenas NF-e de transferência para filial (quando não há filial com este papel).
+  emitenteFiscalMatriz    Boolean     @default(true) @map("emitente_fiscal_matriz")
+  createdAt           DateTime        @default(now()) @map("created_at")
+  updatedAt           DateTime        @updatedAt @map("updated_at")
+  filiais             TenantFilial[]
+  products            Product[]
   pedidos         Pedido[]
   nfes            NFe[]
   nfeItens        NfeItem[]
@@ -101,6 +109,41 @@ model Tenant {
 
   @@unique([cnpj])
   @@map("tenants")
+}
+
+/// Filial vinculada à matriz (emitente) — destinatário da NF-e de transferência interna.
+model TenantFilial {
+  id                     String                @id @default(uuid())
+  tenantId               String                @map("tenant_id")
+  tenant                 Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  razaoSocial            String                @map("razao_social")
+  nomeFantasia           String                @map("nome_fantasia")
+  cnpj                   String                @db.VarChar(14)
+  ie                     String
+  crt                    Int                   @default(3)
+  logradouro             String                @map("logradouro")
+  numero                 String                @default("SN") @map("numero")
+  complemento            String?               @map("complemento")
+  bairro                 String                @map("bairro")
+  codigoMunicipio        String                @map("codigo_municipio") @db.VarChar(7)
+  municipio              String                @map("municipio")
+  uf                     String                @db.VarChar(2)
+  cep                    String                @db.VarChar(8)
+  telefone               String?               @map("telefone")
+  /// Série NF-e usada na remessa automática emitida pela filial após a transferência.
+  serieRemessa           Int                   @map("serie_remessa")
+  /// Série NF-e de transferência quando esta filial é emitente matriz.
+  serieTransferencia     Int?                  @map("serie_transferencia")
+  unidadeLogisticaPadraoId String?             @map("unidade_logistica_padrao_id")
+  unidadeLogisticaPadrao MeliUnidadeLogistica? @relation(fields: [unidadeLogisticaPadraoId], references: [id], onDelete: SetNull)
+  emitenteFiscalPrincipal Boolean              @default(false) @map("emitente_fiscal_principal")
+  emitenteFiscalMatriz    Boolean              @default(false) @map("emitente_fiscal_matriz")
+  createdAt              DateTime              @default(now()) @map("created_at")
+  updatedAt              DateTime              @updatedAt @map("updated_at")
+
+  @@unique([tenantId, cnpj])
+  @@index([tenantId])
+  @@map("tenant_filiais")
 }
 
 /// Usuário (autenticação JWT). `tenantId` nulo até cadastrar a empresa no onboarding.
@@ -202,6 +245,7 @@ model MeliUnidadeLogistica {
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   tenantLinks              TenantUnidadeLogistica[]
+  filiaisPadrao            TenantFilial[]
   nfesDestino              NFe[]                 @relation("NfeUnidadeDestino")
   nfesOrigem               NFe[]                 @relation("NfeUnidadeOrigem")
   movimentacoesOrigem      MovimentacaoProduto[] @relation("MovUnidadeOrigem")

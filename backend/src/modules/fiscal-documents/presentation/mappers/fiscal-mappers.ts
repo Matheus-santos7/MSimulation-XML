@@ -145,6 +145,7 @@ const NFE_TIPO_LABEL: Record<NFeTipo, string> = {
   RETORNO_SIMBOLICO: "Retorno simbólico",
   DEVOLUCAO: "Devolução",
   REMESSA_SIMBOLICA: "Remessa simbólica",
+  TRANSFERENCIA_FILIAL: "Transferência filial",
 };
 
 export function labelNfeTipo(tipo: NFeTipo): string {

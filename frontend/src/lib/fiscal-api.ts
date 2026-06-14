@@ -14,6 +14,8 @@ import type {
   TaxRuleCatalogEntry,
   TaxRuleDto,
   TenantDto,
+  TenantFilialDto,
+  TenantFilialInput,
   TenantInput,
   UserDto,
   UserInput,
@@ -692,6 +694,41 @@ export async function emitirRemessaManual(body: {
     "POST",
     body,
   ) as Promise<RemessaManualResult>;
+}
+
+export async function listFiliais(): Promise<TenantFilialDto[]> {
+  return getJson<TenantFilialDto[]>(url("/api/filiais"));
+}
+
+export async function createFilial(input: TenantFilialInput): Promise<TenantFilialDto> {
+  return mutateJson<TenantFilialDto>(url("/api/filiais"), "POST", input) as Promise<TenantFilialDto>;
+}
+
+export async function updateFilial(
+  id: string,
+  input: Partial<TenantFilialInput>,
+): Promise<TenantFilialDto> {
+  return mutateJson<TenantFilialDto>(url(`/api/filiais/${id}`), "PATCH", input) as Promise<TenantFilialDto>;
+}
+
+export type TransferenciaFilialResult = {
+  transferencia: NFeDto;
+  remessa: NFeDto;
+  cte: CTeDto;
+  totalItens: number;
+  filial: { id: string; cnpj: string; uf: string; serieRemessa: number };
+  unidadeDestinoId: string;
+};
+
+export async function emitirTransferenciaFilial(body: {
+  filialId: string;
+  items: RemessaManualItemInput[];
+}): Promise<TransferenciaFilialResult> {
+  return mutateJson<TransferenciaFilialResult>(
+    url("/api/movimentacoes/transferencia-filial"),
+    "POST",
+    body,
+  ) as Promise<TransferenciaFilialResult>;
 }
 
 export async function realignRemessaFifo(productSku: string): Promise<{

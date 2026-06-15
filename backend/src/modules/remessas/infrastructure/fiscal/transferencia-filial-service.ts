@@ -48,6 +48,7 @@ import { chaveEmissaoFromOverride } from "./emitente-emissao-override.js";
 import {
   EmitenteFiscalConfigError,
   resolveEmitenteFiscal,
+  resolveTransferenciaEmitenteId,
 } from "../../../../lib/org/emitente-fiscal-resolver.js";
 
 export type TransferenciaFilialItemInput = {
@@ -131,16 +132,15 @@ async function validarRegraProduto(
   return rule;
 }
 
-/** Impede transferência quando matriz e filial destino são a mesma entidade fiscal. */
 async function validarMatrizDistintaDaFilialDestino(
-  db: DbClient,
   tenant: Tenant,
   filialDestino: TenantFilial,
   matrizEmitente: EmitenteEmissaoOverride,
 ): Promise<void> {
-  if (filialDestino.emitenteFiscalMatriz) {
+  const transferenciaEmitenteId = resolveTransferenciaEmitenteId(tenant);
+  if (transferenciaEmitenteId && transferenciaEmitenteId === filialDestino.id) {
     throw new TransferenciaFilialError(
-      `A filial "${filialDestino.nomeFantasia}" é emitente matriz e não pode ser destino da transferência. Selecione a filial operacional que receberá o estoque.`,
+      `A filial "${filialDestino.nomeFantasia}" é o emitente de transferências e não pode ser destino. Selecione a filial operacional que receberá o estoque.`,
     );
   }
 
@@ -148,23 +148,7 @@ async function validarMatrizDistintaDaFilialDestino(
   const destCnpj = filialDestino.cnpj.replace(/\D/g, "");
   if (matrizCnpj === destCnpj) {
     throw new TransferenciaFilialError(
-      `O emitente matriz (CNPJ ${matrizCnpj}) coincide com a filial destino "${filialDestino.nomeFantasia}". Selecione outra filial ou revise os papéis em Empresas → Filiais.`,
-    );
-  }
-
-  const filialMatriz = await db.tenantFilial.findFirst({
-    where: { tenantId: tenant.id, emitenteFiscalMatriz: true },
-    select: { id: true },
-  });
-  if (filialMatriz && filialMatriz.id === filialDestino.id) {
-    throw new TransferenciaFilialError(
-      `A filial "${filialDestino.nomeFantasia}" é a emitente matriz — não pode ser destino da própria transferência.`,
-    );
-  }
-
-  if (tenant.emitenteFiscalMatriz && !filialMatriz && destCnpj === tenant.cnpj.replace(/\D/g, "")) {
-    throw new TransferenciaFilialError(
-      "O cadastro principal é emitente matriz e coincide com a filial destino. Cadastre filiais com CNPJs distintos.",
+      `O emitente de transferência (CNPJ ${matrizCnpj}) coincide com a filial destino "${filialDestino.nomeFantasia}". Selecione outra filial ou revise os papéis em Empresas.`,
     );
   }
 }
@@ -430,7 +414,7 @@ export async function emitirTransferenciaFilial(
   }
 
   const matrizEmitente = await resolveEmitenteFiscal(db, tenant, "matriz");
-  await validarMatrizDistintaDaFilialDestino(db, tenant, filial, matrizEmitente);
+  await validarMatrizDistintaDaFilialDestino(tenant, filial, matrizEmitente);
   const unidadeDestinoId = await resolverCdPadraoFilial(db, input.tenantId, filial);
   const logistics = createLogisticsModule();
   const cdDestino = await logistics.resolveShipmentDestination.execute(input.tenantId, unidadeDestinoId);

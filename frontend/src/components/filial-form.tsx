@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { createFilialAction, updateFilialAction } from "@/app/(app)/empresas/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createFilialAction, updateFilialAction } from "@/app/(app)/empresas/actions";
 import type { UnidadeLogisticaDto } from "@/lib/fiscal-api";
 import type { TenantFilialDto, TenantFilialInput } from "@/lib/fiscal-types";
 
@@ -21,15 +21,13 @@ export function FilialForm({ unidades, filial, onCancel, onSaved }: Props) {
   const isEdit = Boolean(filial);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [emitentePrincipal, setEmitentePrincipal] = useState(filial?.emitenteFiscalPrincipal ?? false);
-  const [emitenteMatriz, setEmitenteMatriz] = useState(filial?.emitenteFiscalMatriz ?? false);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setPending(true);
     const fd = new FormData(e.currentTarget);
-    const payload = parseFilialFormData(fd, emitentePrincipal, emitenteMatriz);
+    const payload = parseFilialFormData(fd);
     try {
       const result = filial
         ? await updateFilialAction(filial.id, payload)
@@ -42,10 +40,9 @@ export function FilialForm({ unidades, filial, onCancel, onSaved }: Props) {
         onSaved?.();
       } else {
         e.currentTarget.reset();
-        setEmitentePrincipal(false);
-        setEmitenteMatriz(false);
       }
       router.refresh();
+      onSaved?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : isEdit ? "Erro ao atualizar filial" : "Erro ao cadastrar filial");
     } finally {
@@ -59,10 +56,6 @@ export function FilialForm({ unidades, filial, onCancel, onSaved }: Props) {
     <form onSubmit={onSubmit} className="border border-border rounded-lg bg-card p-4 space-y-3 max-w-xl">
       <p className="text-sm font-medium text-foreground">
         {isEdit ? `Editar filial — ${filial!.nomeFantasia}` : "Nova filial"}
-      </p>
-      <p className="text-sm text-muted-foreground">
-        Marque os papéis fiscais: a matriz só emite transferência; o emitente principal emite remessas. A filial
-        matriz não pode ser destino da transferência.
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field
@@ -130,34 +123,6 @@ export function FilialForm({ unidades, filial, onCancel, onSaved }: Props) {
         <Field label="Telefone" name="telefone" inputId={fieldId("telefone")} defaultValue={filial?.telefone} />
         <input type="hidden" name="crt" value={String(filial?.crt ?? 3)} />
       </div>
-      <div className="space-y-2 rounded-md border border-border/60 p-3">
-        <p className="text-xs font-medium text-muted-foreground">Papéis fiscais desta filial</p>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={emitentePrincipal}
-            onChange={(e) => setEmitentePrincipal(e.target.checked)}
-          />
-          Emitente fiscal principal (remessas e demais NF-e operacionais)
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={emitenteMatriz}
-            onChange={(e) => setEmitenteMatriz(e.target.checked)}
-          />
-          Emitente fiscal matriz (somente transferência para outra filial)
-        </label>
-        {emitenteMatriz && (
-          <Field
-            label="Série transferência (filial matriz)"
-            name="serieTransferencia"
-            inputId={fieldId("serieTransferencia")}
-            type="number"
-            defaultValue={String(filial?.serieTransferencia ?? filial?.serieRemessa ?? 8)}
-          />
-        )}
-      </div>
       <label className="block space-y-1">
         <span className="text-xs text-muted-foreground">CD padrão da filial (opcional)</span>
         <select
@@ -177,7 +142,7 @@ export function FilialForm({ unidades, filial, onCancel, onSaved }: Props) {
         <Button type="submit" disabled={pending}>
           {pending ? "Salvando…" : isEdit ? "Salvar alterações" : "Cadastrar filial"}
         </Button>
-        {isEdit && onCancel && (
+        {onCancel && (
           <Button type="button" variant="outline" onClick={onCancel} disabled={pending}>
             Cancelar
           </Button>
@@ -188,11 +153,8 @@ export function FilialForm({ unidades, filial, onCancel, onSaved }: Props) {
   );
 }
 
-function parseFilialFormData(
-  fd: FormData,
-  emitentePrincipal: boolean,
-  emitenteMatriz: boolean,
-): TenantFilialInput {
+function parseFilialFormData(fd: FormData): TenantFilialInput {
+  const serieTransferenciaRaw = String(fd.get("serieTransferencia") ?? "").trim();
   return {
     razaoSocial: String(fd.get("razaoSocial") ?? ""),
     nomeFantasia: String(fd.get("nomeFantasia") ?? ""),
@@ -209,12 +171,8 @@ function parseFilialFormData(
     cep: String(fd.get("cep") ?? ""),
     telefone: String(fd.get("telefone") ?? "") || undefined,
     serieRemessa: Number(fd.get("serieRemessa") ?? 8),
-    serieTransferencia: emitenteMatriz
-      ? Number(fd.get("serieTransferencia") ?? fd.get("serieRemessa") ?? 8)
-      : undefined,
+    serieTransferencia: serieTransferenciaRaw ? Number(serieTransferenciaRaw) : undefined,
     unidadeLogisticaPadraoId: String(fd.get("unidadeLogisticaPadraoId") ?? "") || undefined,
-    emitenteFiscalPrincipal: emitentePrincipal,
-    emitenteFiscalMatriz: emitenteMatriz,
   };
 }
 

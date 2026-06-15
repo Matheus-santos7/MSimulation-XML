@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { deleteFilialAction } from "@/app/(app)/empresas/actions";
 import { FilialForm } from "@/components/filial-form";
 import { Button } from "@/components/ui/button";
 import type { UnidadeLogisticaDto } from "@/lib/fiscal-api";
@@ -12,42 +14,83 @@ type Props = {
 };
 
 export function FilialList({ filiais, unidades }: Props) {
+  const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  if (filiais.length === 0) return null;
+  async function excluir(id: string) {
+    if (!confirm("Excluir esta filial? Esta ação não pode ser desfeita.")) return;
+    setDeletingId(id);
+    const result = await deleteFilialAction(id);
+    if (result.error) {
+      alert(result.error);
+    } else {
+      router.refresh();
+    }
+    setDeletingId(null);
+  }
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-sm font-medium">Filiais cadastradas</h2>
-      <ul className="divide-y divide-border rounded-lg border border-border">
-        {filiais.map((f) => (
-          <li key={f.id} className="px-4 py-3 text-sm space-y-3">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div>
+    <div className="rounded-lg border border-border overflow-hidden">
+      <table className="w-full text-sm">
+        <thead className="bg-muted/40 text-left text-xs uppercase tracking-wider text-muted-foreground">
+          <tr>
+            <th className="px-4 py-2 font-medium">Estabelecimento</th>
+            <th className="px-4 py-2 font-medium">CNPJ</th>
+            <th className="px-4 py-2 font-medium">Local</th>
+            <th className="px-4 py-2 font-medium">Série remessa</th>
+            <th className="px-4 py-2 font-medium text-right">Ações</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border">
+          {filiais.map((f) => (
+            <tr key={f.id}>
+              <td className="px-4 py-3">
                 <div className="font-medium">{f.nomeFantasia}</div>
-                <div className="text-muted-foreground">
-                  {f.cnpj} · {f.municipio}/{f.uf} · série remessa {f.serieRemessa}
-                  {f.emitenteFiscalPrincipal ? " · emitente principal" : ""}
-                  {f.emitenteFiscalMatriz ? " · emitente matriz" : ""}
+                <div className="text-xs text-muted-foreground">{f.razaoSocial}</div>
+              </td>
+              <td className="px-4 py-3 font-mono text-xs">{f.cnpj}</td>
+              <td className="px-4 py-3 text-muted-foreground">
+                {f.municipio}/{f.uf}
+              </td>
+              <td className="px-4 py-3">{f.serieRemessa}</td>
+              <td className="px-4 py-3">
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditingId(editingId === f.id ? null : f.id)}
+                  >
+                    {editingId === f.id ? "Fechar" : "Editar"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    disabled={deletingId === f.id}
+                    onClick={() => excluir(f.id)}
+                  >
+                    {deletingId === f.id ? "…" : "Excluir"}
+                  </Button>
                 </div>
-              </div>
-              {editingId !== f.id && (
-                <Button type="button" variant="outline" size="sm" onClick={() => setEditingId(f.id)}>
-                  Editar
-                </Button>
-              )}
-            </div>
-            {editingId === f.id && (
-              <FilialForm
-                unidades={unidades}
-                filial={f}
-                onCancel={() => setEditingId(null)}
-                onSaved={() => setEditingId(null)}
-              />
-            )}
-          </li>
-        ))}
-      </ul>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {editingId && (
+        <div className="border-t border-border p-4 bg-muted/20">
+          <FilialForm
+            unidades={unidades}
+            filial={filiais.find((f) => f.id === editingId)}
+            onCancel={() => setEditingId(null)}
+            onSaved={() => setEditingId(null)}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -89,6 +89,10 @@ model Tenant {
   emitenteFiscalPrincipal Boolean     @default(true) @map("emitente_fiscal_principal")
   /// Emite apenas NF-e de transferência para filial (quando não há filial com este papel).
   emitenteFiscalMatriz    Boolean     @default(true) @map("emitente_fiscal_matriz")
+  /// ID do estabelecimento que emite remessas (null ou próprio id = matriz).
+  emitenteRemessaId       String?     @map("emitente_remessa_id")
+  /// ID do estabelecimento que emite transferências (null ou próprio id = matriz).
+  emitenteTransferenciaId String?     @map("emitente_transferencia_id")
   createdAt           DateTime        @default(now()) @map("created_at")
   updatedAt           DateTime        @updatedAt @map("updated_at")
   filiais             TenantFilial[]

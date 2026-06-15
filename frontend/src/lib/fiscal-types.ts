@@ -31,6 +31,9 @@ export type TenantDto = {
   ambiente: EnvironmentType;
   emitenteFiscalPrincipal?: boolean;
   emitenteFiscalMatriz?: boolean;
+  emitenteRemessaId?: string | null;
+  emitenteTransferenciaId?: string | null;
+  filiais?: TenantFilialDto[];
 };
 
 export type TenantInput = {
@@ -76,13 +79,19 @@ export type TenantFilialDto = {
   serieRemessa: number;
   serieTransferencia?: number;
   unidadeLogisticaPadraoId?: string;
-  emitenteFiscalPrincipal: boolean;
-  emitenteFiscalMatriz: boolean;
   createdAt: string;
   updatedAt: string;
 };
 
-export type TenantFilialInput = Omit<TenantFilialDto, "id" | "tenantId" | "createdAt" | "updatedAt">;
+export type TenantFilialInput = Omit<
+  TenantFilialDto,
+  "id" | "tenantId" | "createdAt" | "updatedAt"
+>;
+
+export type TenantFiscalRolesInput = {
+  emitenteRemessaId?: string | null;
+  emitenteTransferenciaId?: string | null;
+};
 
 export type UserDto = {
   id: string;

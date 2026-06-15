@@ -40,29 +40,34 @@ function overrideFromFilial(
   };
 }
 
+function resolveEmitenteId(tenant: Tenant, papel: EmitenteFiscalPapel): string | null {
+  return papel === "principal" ? tenant.emitenteRemessaId : tenant.emitenteTransferenciaId;
+}
+
 /**
  * Resolve o emitente fiscal por papel dentro do tenant.
  *
- * - **principal**: remessas, vendas e demais NF-e operacionais.
- * - **matriz**: apenas transferência interna para filial.
+ * - **principal**: remessas, vendas e demais NF-e operacionais (`emitenteRemessaId`).
+ * - **matriz**: transferência interna para filial (`emitenteTransferenciaId`).
  *
- * Prioridade: filial com flag do papel → cadastro do tenant com flag.
+ * `null` ou id da matriz → usa cadastro do tenant.
  */
 export async function resolveEmitenteFiscal(
   db: DbClient,
   tenant: Tenant,
   papel: EmitenteFiscalPapel,
 ): Promise<EmitenteEmissaoOverride> {
-  const filialComPapel = await db.tenantFilial.findFirst({
-    where: {
-      tenantId: tenant.id,
-      ...(papel === "principal"
-        ? { emitenteFiscalPrincipal: true }
-        : { emitenteFiscalMatriz: true }),
-    },
-  });
+  const emitenteId = resolveEmitenteId(tenant, papel);
 
-  if (filialComPapel) {
+  if (emitenteId) {
+    const filialComPapel = await db.tenantFilial.findFirst({
+      where: { id: emitenteId, tenantId: tenant.id },
+    });
+    if (!filialComPapel) {
+      throw new EmitenteFiscalConfigError(
+        "Emitente fiscal configurado não encontrado. Revise os papéis em Empresas.",
+      );
+    }
     const serie =
       papel === "principal"
         ? filialComPapel.serieRemessa
@@ -71,20 +76,10 @@ export async function resolveEmitenteFiscal(
       throw new EmitenteFiscalConfigError(
         papel === "principal"
           ? `Filial "${filialComPapel.nomeFantasia}" sem série de remessa configurada.`
-          : `Filial matriz "${filialComPapel.nomeFantasia}" sem série de transferência (defina na filial ou em Configurações fiscais).`,
+          : `Filial "${filialComPapel.nomeFantasia}" sem série de transferência (defina na filial ou em Configurações fiscais).`,
       );
     }
     return overrideFromFilial(filialComPapel, serie);
-  }
-
-  const tenantAtivo =
-    papel === "principal" ? tenant.emitenteFiscalPrincipal : tenant.emitenteFiscalMatriz;
-
-  if (!tenantAtivo) {
-    const label = papel === "principal" ? "emitente fiscal principal" : "emitente fiscal matriz";
-    throw new EmitenteFiscalConfigError(
-      `Nenhum ${label} configurado. Marque o tenant em Empresas ou uma filial em Empresas → Filiais.`,
-    );
   }
 
   const serie = papel === "principal" ? tenant.serieRemessa : tenant.serieTransferencia;
@@ -96,11 +91,15 @@ export async function resolveEmitenteFiscal(
     );
   }
 
-  const emitSnapshot = mapEmitente(tenant);
   return {
     uf: tenant.uf.toUpperCase(),
     cnpj: tenant.cnpj.replace(/\D/g, ""),
     serie,
-    emitSnapshot,
+    emitSnapshot: mapEmitente(tenant),
   };
+}
+
+/** Retorna o id do estabelecimento configurado para transferências (null = matriz). */
+export function resolveTransferenciaEmitenteId(tenant: Tenant): string | null {
+  return tenant.emitenteTransferenciaId;
 }

@@ -11,6 +11,7 @@ import type { ProductDto } from "@/lib/fiscal-types";
 type Props = {
   products: ProductDto[];
   filiais: TenantFilialDto[];
+  emitenteTransferenciaId?: string | null;
 };
 
 type LinhaProduto = {
@@ -23,21 +24,21 @@ function novaLinha(): LinhaProduto {
   return { rowKey: crypto.randomUUID(), productId: "", quantidade: 1 };
 }
 
-export function TransferenciaFilialForm({ products, filiais }: Props) {
+export function TransferenciaFilialForm({ products, filiais, emitenteTransferenciaId }: Props) {
   const [state, action, pending] = useActionState<TransferenciaFilialState, FormData>(
     emitirTransferenciaFilialAction,
     {},
   );
   const [linhas, setLinhas] = useState<LinhaProduto[]>(() => [novaLinha()]);
-  const filiaisDestino = filiais.filter((f) => !f.emitenteFiscalMatriz);
+  const filiaisDestino = filiais.filter((f) => f.id !== emitenteTransferenciaId);
   const [filialId, setFilialId] = useState(filiaisDestino[0]?.id ?? "");
 
   if (filiais.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
         Cadastre ao menos uma filial em{" "}
-        <Link href="/empresas/filiais" className="text-accent underline">
-          Empresas → Filiais
+        <Link href="/empresas" className="text-accent underline">
+          Empresas
         </Link>{" "}
         antes de emitir a transferência.
       </p>
@@ -49,8 +50,8 @@ export function TransferenciaFilialForm({ products, filiais }: Props) {
       <p className="text-sm text-muted-foreground">
         Nenhuma filial disponível como destino. A emitente matriz não pode receber a transferência — cadastre outra
         filial operacional em{" "}
-        <Link href="/empresas/filiais" className="text-accent underline">
-          Empresas → Filiais
+        <Link href="/empresas" className="text-accent underline">
+          Empresas
         </Link>
         .
       </p>

@@ -16,6 +16,7 @@ import type {
   TenantDto,
   TenantFilialDto,
   TenantFilialInput,
+  TenantFiscalRolesInput,
   TenantInput,
   UserDto,
   UserInput,
@@ -127,7 +128,7 @@ export async function getTenant(id: string): Promise<TenantDto | null> {
 
 async function mutateJson<T>(
   href: string,
-  method: "POST" | "PATCH" | "DELETE",
+  method: "POST" | "PUT" | "PATCH" | "DELETE",
   body?: unknown,
 ): Promise<T | void> {
   let res: Response;
@@ -697,18 +698,37 @@ export async function emitirRemessaManual(body: {
 }
 
 export async function listFiliais(): Promise<TenantFilialDto[]> {
-  return getJson<TenantFilialDto[]>(url("/api/filiais"));
+  return getJson<TenantFilialDto[]>(url("/api/empresas/filiais"));
 }
 
 export async function createFilial(input: TenantFilialInput): Promise<TenantFilialDto> {
-  return mutateJson<TenantFilialDto>(url("/api/filiais"), "POST", input) as Promise<TenantFilialDto>;
+  return mutateJson<TenantFilialDto>(url("/api/empresas/filiais"), "POST", input) as Promise<TenantFilialDto>;
 }
 
 export async function updateFilial(
   id: string,
   input: Partial<TenantFilialInput>,
 ): Promise<TenantFilialDto> {
-  return mutateJson<TenantFilialDto>(url(`/api/filiais/${id}`), "PATCH", input) as Promise<TenantFilialDto>;
+  return mutateJson<TenantFilialDto>(
+    url(`/api/empresas/filiais/${id}`),
+    "PUT",
+    input,
+  ) as Promise<TenantFilialDto>;
+}
+
+export async function deleteFilial(id: string): Promise<void> {
+  const res = await fetch(url(`/api/empresas/filiais/${id}`), {
+    method: "DELETE",
+    headers: await authHeaders(),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(await readApiError(res));
+  }
+}
+
+export async function updatePapeisFiscais(input: TenantFiscalRolesInput): Promise<TenantDto> {
+  return mutateJson<TenantDto>(url("/api/empresas/papeis-fiscais"), "PATCH", input) as Promise<TenantDto>;
 }
 
 export type TransferenciaFilialResult = {

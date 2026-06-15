@@ -12,12 +12,14 @@ import {
   ApiValidationError,
   createFilial,
   createTenant,
+  deleteFilial,
   deleteTenant,
   updateFilial,
+  updatePapeisFiscais,
   updateTenant,
 } from "@/lib/fiscal-api";
 import { parseEmpresaForm } from "@/lib/parse-empresa-form";
-import type { TenantFilialInput } from "@/lib/fiscal-types";
+import type { TenantFilialInput, TenantFiscalRolesInput } from "@/lib/fiscal-types";
 
 function failureState(e: unknown, values: ReturnType<typeof inputToFormValues>): EmpresaFormState {
   const fieldErrors = e instanceof ApiValidationError ? e.fieldErrors : undefined;
@@ -72,17 +74,28 @@ export async function deleteEmpresaAction(id: string): Promise<EmpresaFormState>
   }
 }
 
-export async function updateTenantPapeisAction(
-  tenantId: string,
-  input: { emitenteFiscalPrincipal: boolean; emitenteFiscalMatriz: boolean },
+export async function updatePapeisFiscaisAction(
+  input: TenantFiscalRolesInput,
 ): Promise<{ error?: string; success?: boolean }> {
   try {
-    await updateTenant(tenantId, input);
+    await updatePapeisFiscais(input);
     revalidatePath("/empresas");
-    revalidatePath("/");
+    revalidatePath("/empresas/filiais");
+    revalidatePath("/operacoes");
     return { success: true };
   } catch (e) {
-    return { error: e instanceof Error ? e.message : "Erro ao salvar papéis" };
+    return { error: e instanceof Error ? e.message : "Erro ao salvar papéis fiscais" };
+  }
+}
+
+export async function deleteFilialAction(id: string): Promise<{ error?: string }> {
+  try {
+    await deleteFilial(id);
+    revalidatePath("/empresas");
+    revalidatePath("/empresas/filiais");
+    return {};
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Erro ao excluir filial" };
   }
 }
 

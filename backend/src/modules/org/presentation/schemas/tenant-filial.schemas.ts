@@ -7,11 +7,14 @@ export const tenantFilialCreateBody = filialBaseFields.extend({
   serieRemessa: z.coerce.number().int().min(1).max(999),
   serieTransferencia: z.coerce.number().int().min(1).max(999).optional(),
   unidadeLogisticaPadraoId: z.string().uuid().optional(),
-  emitenteFiscalPrincipal: z.boolean().optional().default(false),
-  emitenteFiscalMatriz: z.boolean().optional().default(false),
 });
 
 export const tenantFilialUpdateBody = tenantFilialCreateBody.partial();
+
+export const tenantFiscalRolesBody = z.object({
+  emitenteRemessaId: z.string().uuid().nullable().optional(),
+  emitenteTransferenciaId: z.string().uuid().nullable().optional(),
+});
 
 export const tenantFilialIdParam = z.object({
   id: z.string().uuid(),

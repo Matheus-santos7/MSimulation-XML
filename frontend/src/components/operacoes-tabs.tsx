@@ -17,9 +17,10 @@ type Props = {
   products: ProductDto[];
   unidades: UnidadeLogisticaDto[];
   filiais: TenantFilialDto[];
+  emitenteTransferenciaId?: string | null;
 };
 
-export function OperacoesTabs({ products, unidades, filiais }: Props) {
+export function OperacoesTabs({ products, unidades, filiais, emitenteTransferenciaId }: Props) {
   return (
     <Tabs defaultValue="transferencia" className="space-y-4">
       <TabsList className="flex h-auto flex-wrap justify-start">
@@ -31,7 +32,11 @@ export function OperacoesTabs({ products, unidades, filiais }: Props) {
       </TabsList>
 
       <TabsContent value="transferencia">
-        <TransferenciaFilialForm products={products} filiais={filiais} />
+        <TransferenciaFilialForm
+          products={products}
+          filiais={filiais}
+          emitenteTransferenciaId={emitenteTransferenciaId}
+        />
       </TabsContent>
 
       <TabsContent value="remessa">

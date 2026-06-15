@@ -23,6 +23,8 @@ export function mapTenant(row: Tenant) {
     ambiente: row.ambiente as EnvironmentKind,
     emitenteFiscalPrincipal: row.emitenteFiscalPrincipal,
     emitenteFiscalMatriz: row.emitenteFiscalMatriz,
+    emitenteRemessaId: row.emitenteRemessaId ?? null,
+    emitenteTransferenciaId: row.emitenteTransferenciaId ?? null,
   };
 }
 

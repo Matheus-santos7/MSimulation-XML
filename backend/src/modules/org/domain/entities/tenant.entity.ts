@@ -1,3 +1,5 @@
+import type { TenantFilial } from "./tenant-filial.entity.js";
+
 /** Ambiente fiscal do emitente (homologação ou produção SEFAZ). */
 export type EnvironmentKind = "HOMOLOGACAO" | "PRODUCAO";
 
@@ -31,4 +33,13 @@ export type Tenant = {
   nomePais: string;
   telefone?: string;
   ambiente: EnvironmentKind;
+  /** @deprecated Sincronizado a partir de `emitenteRemessaId`. */
+  emitenteFiscalPrincipal?: boolean;
+  /** @deprecated Sincronizado a partir de `emitenteTransferenciaId`. */
+  emitenteFiscalMatriz?: boolean;
+  /** null ou id da matriz = matriz emite remessas. */
+  emitenteRemessaId?: string | null;
+  /** null ou id da matriz = matriz emite transferências. */
+  emitenteTransferenciaId?: string | null;
+  filiais?: TenantFilial[];
 };

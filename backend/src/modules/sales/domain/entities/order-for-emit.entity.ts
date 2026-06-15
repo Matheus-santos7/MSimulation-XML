@@ -8,7 +8,7 @@ export type OrderProductForEmit = {
   nome?: string;
   sku?: string;
   ean?: string | null;
-  cest?: string;
+  cest?: string | null;
   exTipi?: string | null;
   unidade?: string;
   origem?: number;

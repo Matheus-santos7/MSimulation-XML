@@ -5,6 +5,7 @@ import {
   dbTransactionContext,
   type PrismaTransactionClient,
 } from "./tenant-rls.js";
+import { DB_TRANSACTION_OPTIONS } from "./transaction-options.js";
 
 /**
  * Cliente Prisma dentro de `$transaction` interativo.
@@ -21,16 +22,13 @@ export async function runInTransaction<T>(
   fn: (tx: PrismaTx) => Promise<T>,
 ): Promise<T> {
   if ("$transaction" in db && typeof db.$transaction === "function") {
-    return db.$transaction(fn);
+    return db.$transaction(fn, DB_TRANSACTION_OPTIONS);
   }
   return fn(db);
 }
 
 /** Transações fiscais com múltiplas notas (avanço CD, cadeia de venda). */
-export const FISCAL_TRANSACTION_OPTIONS = {
-  maxWait: 10_000,
-  timeout: 60_000,
-} as const;
+export const FISCAL_TRANSACTION_OPTIONS = DB_TRANSACTION_OPTIONS;
 
 /**
  * Transação fiscal com RLS do tenant na mesma conexão.

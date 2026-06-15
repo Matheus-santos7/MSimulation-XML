@@ -9,7 +9,7 @@ export type CreateProductCommand = {
   ean?: string;
   nome: string;
   ncm: string;
-  cest: string;
+  cest?: string | null;
   exTipi?: string;
   /** Ficha de conteúdo de importação (`<nFCI>`) — obrigatório quando origem = 6. */
   nfci?: string;

@@ -368,7 +368,7 @@ export type ProductDto = {
   ean?: string;
   nome: string;
   ncm: string;
-  cest: string;
+  cest?: string | null;
   exTipi?: string;
   origem: number;
   nfci?: string;
@@ -391,7 +391,7 @@ export type ProductInput = {
   ean?: string;
   nome: string;
   ncm: string;
-  cest: string;
+  cest?: string | null;
   exTipi?: string;
   origem: number;
   nfci?: string;

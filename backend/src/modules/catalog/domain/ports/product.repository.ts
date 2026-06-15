@@ -9,7 +9,7 @@ export type ProductWriteData = {
   ean?: string;
   nome: string;
   ncm: string;
-  cest: string;
+  cest?: string | null;
   exTipi?: string;
   nfci?: string | null;
   origem: number;

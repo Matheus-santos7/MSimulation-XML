@@ -9,7 +9,7 @@ export function mapProductFromPrisma(row: PrismaProduct): Product {
     ean: row.ean ?? undefined,
     nome: row.nome,
     ncm: row.ncm,
-    cest: row.cest,
+    cest: row.cest ?? undefined,
     exTipi: row.exTipi ?? undefined,
     nfci: row.nfci ?? undefined,
     origem: row.origem,

@@ -127,7 +127,16 @@ export function ProductFormFields({
         />
         <div className="grid grid-cols-2 gap-3">
           <Field id={`${idPrefix}-ncm`} label="NCM" name="ncm" value={form.ncm} onChange={setField} required mono error={err("ncm")} />
-          <Field id={`${idPrefix}-cest`} label="CEST" name="cest" value={form.cest} onChange={setField} required mono error={err("cest")} />
+          <Field
+            id={`${idPrefix}-cest`}
+            label="CEST"
+            name="cest"
+            value={form.cest}
+            onChange={setField}
+            mono
+            error={err("cest")}
+            hint="Opcional. Obrigatório apenas para produtos sujeitos a ST."
+          />
         </div>
         <Field
           id={`${idPrefix}-exTipi`}

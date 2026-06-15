@@ -107,7 +107,7 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
           ncm: product.ncm,
           cfop,
           unidade: product.unidade ?? "UN",
-          cest: product.cest,
+          cest: product.cest ?? undefined,
           ean: product.ean ?? undefined,
           exTipi: product.exTipi ?? undefined,
           origem: product.origem ?? 0,

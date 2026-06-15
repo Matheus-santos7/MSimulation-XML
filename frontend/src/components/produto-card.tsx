@@ -87,9 +87,11 @@ export function ProdutoCard({
           <div>
             <span className="text-muted-foreground">NCM:</span> {product.ncm}
           </div>
-          <div>
-            <span className="text-muted-foreground">CEST:</span> {product.cest}
-          </div>
+          {product.cest ? (
+            <div>
+              <span className="text-muted-foreground">CEST:</span> {product.cest}
+            </div>
+          ) : null}
           <div>
             <span className="text-muted-foreground">Orig.:</span> {product.origem}
           </div>

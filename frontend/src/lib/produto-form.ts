@@ -47,7 +47,7 @@ export function inputToFormValues(input: ProductInput): ProdutoFormValues {
     ean: input.ean ?? "",
     nome: input.nome,
     ncm: input.ncm,
-    cest: input.cest,
+    cest: input.cest ?? "",
     exTipi: input.exTipi ?? "",
     origem: String(input.origem),
     nfci: input.nfci ?? "",
@@ -64,7 +64,7 @@ export function productToFormValues(p: {
   ean?: string;
   nome: string;
   ncm: string;
-  cest: string;
+  cest?: string | null;
   exTipi?: string;
   origem: number;
   nfci?: string;
@@ -79,7 +79,7 @@ export function productToFormValues(p: {
     ean: p.ean,
     nome: p.nome,
     ncm: p.ncm,
-    cest: p.cest,
+    cest: p.cest ?? "",
     exTipi: p.exTipi,
     origem: p.origem,
     unidade: p.unidade,
@@ -102,12 +102,15 @@ export function parseProductForm(formData: FormData): ProductInput {
     return v.length > 0 ? v : undefined;
   };
 
+  const cestRaw = opt("cest");
+  const cestDigits = cestRaw ? cestRaw.replace(/\D/g, "") : undefined;
+
   return {
     sku: String(formData.get("sku") ?? "").trim(),
     ean: opt("ean"),
     nome: String(formData.get("nome") ?? "").trim(),
     ncm: String(formData.get("ncm") ?? "").replace(/\D/g, ""),
-    cest: String(formData.get("cest") ?? "").replace(/\D/g, ""),
+    cest: cestDigits ?? null,
     exTipi: opt("exTipi"),
     origem: Number(formData.get("origem") ?? 0),
     nfci: opt("nfci"),

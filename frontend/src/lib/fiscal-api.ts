@@ -414,7 +414,7 @@ export type ProductImportRawRow = {
   ean?: string;
   nome: string;
   ncm: string;
-  cest: string;
+  cest?: string | null;
   exTipi?: string;
   origem?: string | number;
   nfci?: string;

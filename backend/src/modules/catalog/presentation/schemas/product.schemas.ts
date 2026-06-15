@@ -29,11 +29,23 @@ const ncmField = z
   .transform((v) => digitsOnly(v))
   .refine((v) => v.length === 8, "NCM deve ter 8 dígitos");
 
-const cestField = z
-  .string()
-  .trim()
-  .transform((v) => digitsOnly(v))
-  .refine((v) => v.length === 7, "CEST deve ter 7 dígitos");
+const cestField = z.preprocess(
+  (v) => {
+    if (v === "" || v === undefined) return undefined;
+    if (v === null) return null;
+    return v;
+  },
+  z
+    .union([
+      z.null(),
+      z
+        .string()
+        .trim()
+        .transform((v) => digitsOnly(v))
+        .refine((v) => v.length === 7, "CEST deve ter 7 dígitos"),
+    ])
+    .optional(),
+);
 
 const exTipiField = z.preprocess(
   (v) => (v === "" || v === null || v === undefined ? undefined : v),
@@ -99,7 +111,7 @@ export const productImportRawRowSchema = z.object({
   ean: z.string().optional(),
   nome: z.string(),
   ncm: z.string(),
-  cest: z.string(),
+  cest: z.string().optional(),
   exTipi: z.string().optional(),
   origem: z.union([z.string(), z.number()]).optional(),
   nfci: z.string().optional(),

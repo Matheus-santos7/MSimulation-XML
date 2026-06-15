@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { PrismaClient } from "../../generated/prisma/client.js";
+import { DB_TRANSACTION_OPTIONS } from "./transaction-options.js";
 
 export type DbRequestContext = {
   tenantId?: string;
@@ -40,8 +41,20 @@ export async function applyRlsContext(
 }
 
 export async function clearRlsContext(tx: PrismaTransactionClient): Promise<void> {
-  await tx.$executeRaw`SELECT set_config('app.tenant_id', '', false)`;
-  await tx.$executeRaw`SELECT set_config('app.user_id', '', false)`;
+  try {
+    await tx.$executeRaw`SELECT set_config('app.tenant_id', '', false)`;
+    await tx.$executeRaw`SELECT set_config('app.user_id', '', false)`;
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code: string }).code === "P2028"
+    ) {
+      return;
+    }
+    throw error;
+  }
 }
 
 export async function runWithDbContext<T>(
@@ -57,6 +70,6 @@ export async function runWithDbContext<T>(
       } finally {
         await clearRlsContext(tx);
       }
-    });
+    }, DB_TRANSACTION_OPTIONS);
   });
 }

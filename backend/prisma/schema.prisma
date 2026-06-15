@@ -320,7 +320,7 @@ model Product {
   ean       String?  @map("ean")
   nome      String   @map("nome")
   ncm       String   @map("ncm")
-  cest      String   @map("cest")
+  cest      String?  @map("cest")
   exTipi    String?  @map("ex_tipi") @db.VarChar(3)
   /// Ficha de conteúdo de importação (`<nFCI>`) quando aplicável.
   nfci            String?  @map("nfci") @db.VarChar(36)

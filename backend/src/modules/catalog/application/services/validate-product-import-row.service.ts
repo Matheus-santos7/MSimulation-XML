@@ -54,7 +54,7 @@ function mapRawRowToCreateInput(raw: ProductImportRawRow): Record<string, unknow
     ean: raw.ean,
     nome: raw.nome,
     ncm: raw.ncm,
-    cest: raw.cest,
+    cest: raw.cest?.trim() || undefined,
     exTipi: raw.exTipi,
     origem,
     nfci: raw.nfci,

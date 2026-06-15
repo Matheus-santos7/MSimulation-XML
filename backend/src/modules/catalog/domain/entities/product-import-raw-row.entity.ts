@@ -8,7 +8,7 @@ export type ProductImportRawRow = {
   ean?: string;
   nome: string;
   ncm: string;
-  cest: string;
+  cest?: string;
   exTipi?: string;
   /** UUID da Ficha de Conteúdo de Importação — obrigatório para origem 3, 5 ou 8. */
   nfci?: string | number | null;

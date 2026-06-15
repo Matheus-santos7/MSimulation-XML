@@ -31,6 +31,14 @@ describe("validateProductImportRow", () => {
     if (!result.ok) assert.match(result.message, /NCM/);
   });
 
+  it("aceita linha sem CEST", () => {
+    const result = validateProductImportRow({ ...base, cest: "" });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      assert.equal(result.row.cest, undefined);
+    }
+  });
+
   it("rejeita CEST com tamanho inválido", () => {
     const result = validateProductImportRow({ ...base, cest: "12345" });
     assert.equal(result.ok, false);

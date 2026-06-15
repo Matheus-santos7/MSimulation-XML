@@ -150,7 +150,7 @@ function rowToRawDto(line: number, row: Record<ProductSpreadsheetColumn, string>
     ean: cell(row, "ean") || undefined,
     nome: cell(row, "nome"),
     ncm: cell(row, "ncm"),
-    cest: cell(row, "cest"),
+    cest: cell(row, "cest") || undefined,
     exTipi: cell(row, "ex_tipi") || undefined,
     origem: cell(row, "origem") || undefined,
     nfci: cell(row, "nfci") || undefined,
@@ -178,6 +178,7 @@ function parseProductSpreadsheetMatrix(matrix: string[][]): ProductSpreadsheetPa
   const missing = PRODUCT_SPREADSHEET_COLUMNS.filter(
     (c) =>
       c !== "ean" &&
+      c !== "cest" &&
       c !== "ex_tipi" &&
       c !== "nfci" &&
       c !== "tax_rule_base_id" &&

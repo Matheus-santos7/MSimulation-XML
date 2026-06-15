@@ -2,11 +2,8 @@
 
 import { Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition, useActionState } from "react";
-import {
-  deleteEmpresaAction,
-  updateEmpresaModalAction,
-} from "@/app/(app)/empresas/actions";
+import { useState, useTransition } from "react";
+import { deleteFilialAction } from "@/app/(app)/empresas/actions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,35 +22,33 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { TenantFormFields } from "@/components/tenant-form-fields";
-import type { TenantDto } from "@/lib/fiscal-types";
+import { FilialForm } from "@/components/filial-form";
+import type { UnidadeLogisticaDto } from "@/lib/fiscal-api";
+import type { TenantFilialDto } from "@/lib/fiscal-types";
 
-export function EmpresaCard({ tenant }: { tenant: TenantDto }) {
+type Props = {
+  filial: TenantFilialDto;
+  unidades: UnidadeLogisticaDto[];
+  /** Destaque quando esta filial é emitente de remessa ou transferência */
+  papeis?: { remessa?: boolean; transferencia?: boolean };
+};
+
+export function FilialCard({ filial, unidades, papeis }: Props) {
   const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deletePending, startDelete] = useTransition();
 
-  const boundUpdate = updateEmpresaModalAction.bind(null, tenant.id);
-  const [editState, editAction, editPending] = useActionState(boundUpdate, {});
-
-  useEffect(() => {
-    if (editState.success) {
-      setEditOpen(false);
-      router.refresh();
-    }
-  }, [editState.success, router]);
-
   return (
     <>
-      <div className="relative border border-border rounded-lg bg-card p-5 space-y-3">
+      <div className="relative border border-border rounded-lg bg-card p-5 space-y-3 h-full">
         <div className="absolute top-3 right-3 flex items-center gap-0.5">
           <Button
             type="button"
             variant="ghost"
             size="icon"
             className="size-8 text-muted-foreground hover:text-foreground"
-            aria-label={`Editar ${tenant.nomeFantasia}`}
+            aria-label={`Editar ${filial.nomeFantasia}`}
             onClick={() => setEditOpen(true)}
           >
             <Pencil className="size-3.5" />
@@ -63,7 +58,7 @@ export function EmpresaCard({ tenant }: { tenant: TenantDto }) {
             variant="ghost"
             size="icon"
             className="size-8 text-muted-foreground hover:text-destructive"
-            aria-label={`Excluir ${tenant.nomeFantasia}`}
+            aria-label={`Excluir ${filial.nomeFantasia}`}
             onClick={() => setDeleteOpen(true)}
           >
             <Trash2 className="size-3.5" />
@@ -73,73 +68,63 @@ export function EmpresaCard({ tenant }: { tenant: TenantDto }) {
         <div className="pr-16 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[12px] uppercase font-bold tracking-widest text-muted-foreground">
-              {tenant.uf}
+              {filial.uf}
             </span>
-            <span className="rounded-full bg-accent/10 border border-accent/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent">
-              Matriz
+            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Filial
             </span>
           </div>
-          <div className="text-base font-bold">{tenant.razaoSocial}</div>
-          <div className="text-[13px] text-muted-foreground">{tenant.nomeFantasia}</div>
+          <div className="text-base font-bold">{filial.nomeFantasia}</div>
+          <div className="text-[13px] text-muted-foreground line-clamp-2">{filial.razaoSocial}</div>
         </div>
 
         <div className="space-y-1 font-mono text-[13px]">
           <div>
-            <span className="text-muted-foreground">CNPJ:</span> {tenant.cnpj}
+            <span className="text-muted-foreground">CNPJ:</span> {filial.cnpj}
           </div>
           <div>
-            <span className="text-muted-foreground">IE:</span> {tenant.ie}
+            <span className="text-muted-foreground">IE:</span> {filial.ie}
           </div>
           <div className="text-muted-foreground truncate">
-            {tenant.logradouro}, {tenant.numero} — {tenant.municipio}/{tenant.uf}
+            {filial.logradouro}, {filial.numero} — {filial.municipio}/{filial.uf}
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border">
-          <span className="size-1.5 rounded-full bg-accent animate-pulse" />
-          <span className="text-[12px] font-bold uppercase tracking-widest text-accent">{tenant.ambiente}</span>
-          {(!tenant.emitenteRemessaId || tenant.emitenteRemessaId === tenant.id) && (
-            <PapelBadge label="Emite remessas" />
-          )}
-          {(!tenant.emitenteTransferenciaId || tenant.emitenteTransferenciaId === tenant.id) && (
-            <PapelBadge label="Emite transferências" />
-          )}
+          <span className="text-[12px] text-muted-foreground">
+            Série remessa <span className="font-mono font-medium text-foreground">{filial.serieRemessa}</span>
+          </span>
+          {papeis?.remessa && <PapelBadge label="Emite remessas" />}
+          {papeis?.transferencia && <PapelBadge label="Emite transferências" />}
         </div>
       </div>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Editar empresa</DialogTitle>
-            <DialogDescription>Dados do emitente NF-e — {tenant.razaoSocial}</DialogDescription>
+            <DialogTitle>Editar filial</DialogTitle>
+            <DialogDescription>{filial.razaoSocial}</DialogDescription>
           </DialogHeader>
-          <form action={editAction} className="space-y-4">
-            {editState.error && <FormError error={editState.error} />}
-            <TenantFormFields
-              tenant={tenant}
-              draft={editState.values}
-              fieldErrors={editState.fieldErrors}
-              idPrefix={`edit-${tenant.id}`}
-            />
-            <div className="flex gap-3 pt-2">
-              <Button type="submit" disabled={editPending}>
-                {editPending ? "Salvando…" : "Salvar"}
-              </Button>
-              <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
-                Cancelar
-              </Button>
-            </div>
-          </form>
+          <FilialForm
+            embedded
+            unidades={unidades}
+            filial={filial}
+            onCancel={() => setEditOpen(false)}
+            onSaved={() => {
+              setEditOpen(false);
+              router.refresh();
+            }}
+          />
         </DialogContent>
       </Dialog>
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir empresa?</AlertDialogTitle>
+            <AlertDialogTitle>Excluir filial?</AlertDialogTitle>
             <AlertDialogDescription>
-              <strong>{tenant.razaoSocial}</strong> e todos os dados vinculados (produtos, NF-e, CT-e, eventos, etc.)
-              serão removidos permanentemente.
+              <strong>{filial.nomeFantasia}</strong> será removida permanentemente. Papéis fiscais
+              vinculados a esta filial serão redefinidos para a matriz.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -149,7 +134,7 @@ export function EmpresaCard({ tenant }: { tenant: TenantDto }) {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() =>
                 startDelete(async () => {
-                  const result = await deleteEmpresaAction(tenant.id);
+                  const result = await deleteFilialAction(filial.id);
                   if (result.error) {
                     alert(result.error);
                     return;
@@ -165,14 +150,6 @@ export function EmpresaCard({ tenant }: { tenant: TenantDto }) {
         </AlertDialogContent>
       </AlertDialog>
     </>
-  );
-}
-
-function FormError({ error }: { error: string }) {
-  return (
-    <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-[14px] text-destructive">
-      {error}
-    </div>
   );
 }
 

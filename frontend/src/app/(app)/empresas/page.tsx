@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EmitentePapeisForm } from "@/components/emitente-papeis-form";
-import { FiliaisSection } from "@/components/filiais-section";
+import { FiliaisSection, SectionHeading } from "@/components/filiais-section";
 import { PageHeader } from "@/components/fiscal-ui";
 import { EmpresaCard } from "@/components/empresa-card";
 import { getTenants, listUnidadesLogisticas } from "@/lib/fiscal-api";
@@ -18,14 +18,14 @@ export default async function EmpresasPage() {
   const filiais = tenant?.filiais ?? [];
 
   return (
-    <div className="p-6 space-y-8">
+    <div className="p-6 space-y-10 max-w-5xl">
       <PageHeader
         title="Empresas"
         subtitle="Matriz, filiais e definição de quem emite remessas e transferências"
       />
 
       {tenants.length === 0 ? (
-        <div className="text-muted-foreground">
+        <div className="rounded-lg border border-dashed border-border bg-muted/20 p-8 text-center text-muted-foreground">
           Nenhuma empresa vinculada.{" "}
           <Link href="/onboarding/empresa" className="text-accent hover:underline">
             Cadastrar empresa
@@ -33,8 +33,11 @@ export default async function EmpresasPage() {
         </div>
       ) : (
         <>
-          <section className="space-y-3">
-            <h2 className="text-sm font-medium">Matriz</h2>
+          <section className="space-y-4">
+            <SectionHeading
+              title="Matriz"
+              subtitle="Cadastro principal do emitente vinculado à sua conta"
+            />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {tenants.map((t) => (
                 <EmpresaCard key={t.id} tenant={t} />
@@ -44,8 +47,15 @@ export default async function EmpresasPage() {
 
           {tenant && (
             <>
-              <FiliaisSection filiais={filiais} unidades={unidades} />
-              <EmitentePapeisForm tenant={tenant} filiais={filiais} />
+              <FiliaisSection tenant={tenant} filiais={filiais} unidades={unidades} />
+
+              <section className="space-y-4">
+                <SectionHeading
+                  title="Papéis fiscais"
+                  subtitle="Qual estabelecimento emite remessas e transferências de estoque"
+                />
+                <EmitentePapeisForm tenant={tenant} filiais={filiais} />
+              </section>
             </>
           )}
         </>

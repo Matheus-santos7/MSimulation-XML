@@ -11,28 +11,39 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { FilialCard } from "@/components/filial-card";
 import { FilialForm } from "@/components/filial-form";
-import { FilialList } from "@/components/filial-list";
 import type { UnidadeLogisticaDto } from "@/lib/fiscal-api";
-import type { TenantFilialDto } from "@/lib/fiscal-types";
+import type { TenantDto, TenantFilialDto } from "@/lib/fiscal-types";
 
 type Props = {
+  tenant: TenantDto;
   filiais: TenantFilialDto[];
   unidades: UnidadeLogisticaDto[];
 };
 
-export function FiliaisSection({ filiais, unidades }: Props) {
+function resolvePapeis(
+  tenant: TenantDto,
+  filialId: string,
+): { remessa?: boolean; transferencia?: boolean } {
+  const remessaId = tenant.emitenteRemessaId;
+  const transferenciaId = tenant.emitenteTransferenciaId;
+  return {
+    remessa: remessaId === filialId,
+    transferencia: transferenciaId === filialId,
+  };
+}
+
+export function FiliaisSection({ tenant, filiais, unidades }: Props) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 className="text-sm font-medium">Filiais</h2>
-          <p className="text-sm text-muted-foreground">
-            Estabelecimentos com CNPJ próprio vinculados à matriz.
-          </p>
-        </div>
+    <section className="space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <SectionHeading
+          title="Filiais"
+          subtitle="Estabelecimentos com CNPJ próprio vinculados à matriz"
+        />
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
             <Button type="button" size="sm">
@@ -49,6 +60,7 @@ export function FiliaisSection({ filiais, unidades }: Props) {
             </SheetHeader>
             <div className="mt-4">
               <FilialForm
+                embedded
                 unidades={unidades}
                 onSaved={() => setOpen(false)}
                 onCancel={() => setOpen(false)}
@@ -59,12 +71,35 @@ export function FiliaisSection({ filiais, unidades }: Props) {
       </div>
 
       {filiais.length === 0 ? (
-        <p className="text-sm text-muted-foreground rounded-lg border border-dashed border-border p-4">
-          Nenhuma filial cadastrada. Use &quot;Adicionar filial&quot; para incluir um estabelecimento.
-        </p>
+        <div className="rounded-lg border border-dashed border-border bg-muted/20 p-8 text-center">
+          <p className="text-sm text-muted-foreground">
+            Nenhuma filial cadastrada. Clique em &quot;Adicionar filial&quot; para incluir um
+            estabelecimento.
+          </p>
+        </div>
       ) : (
-        <FilialList filiais={filiais} unidades={unidades} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filiais.map((f) => (
+            <FilialCard
+              key={f.id}
+              filial={f}
+              unidades={unidades}
+              papeis={resolvePapeis(tenant, f.id)}
+            />
+          ))}
+        </div>
       )}
+    </section>
+  );
+}
+
+export function SectionHeading({ title, subtitle }: { title: string; subtitle?: string }) {
+  return (
+    <div>
+      <h2 className="text-[12px] uppercase font-bold tracking-widest text-muted-foreground">
+        {title}
+      </h2>
+      {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
     </div>
   );
 }

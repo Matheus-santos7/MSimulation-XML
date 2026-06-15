@@ -80,10 +80,9 @@ export function EmitentePapeisForm({ tenant, filiais }: Props) {
   }
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4 space-y-4 max-w-2xl">
+    <div className="rounded-lg border border-border bg-card p-5 space-y-4">
       <div>
-        <h2 className="text-sm font-medium">Papéis fiscais</h2>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-sm text-muted-foreground">
           Defina qual estabelecimento (matriz ou filial) emite remessas para o fulfillment e qual
           emite transferências de estoque entre filiais.
         </p>

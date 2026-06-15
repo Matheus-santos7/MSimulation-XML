@@ -22,8 +22,8 @@ import {
 } from "../../../../generated/prisma/client.js";
 import type { DbClient, PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { mapNfe } from "../../presentation/mappers/fiscal-mappers.js";
-import { mapProduct, type ProductDto } from "../../../../lib/catalog/product-mapper.js";
-import { mapEmitente } from "../../../../lib/org/tenant-mapper.js";
+import { mapProduct, type ProductDto } from "../../../catalog/index.js";
+import { mapEmitente } from "../../../org/infrastructure/fiscal/tenant-emitente.mapper.js";
 import { loadEmitterSettings } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
 import type { Product as ProductModel, Tenant } from "../../../../generated/prisma/client.js";
 

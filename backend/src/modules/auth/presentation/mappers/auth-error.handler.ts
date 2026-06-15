@@ -4,7 +4,7 @@ import { CaptchaVerificationError } from "../../../../lib/auth/turnstile.js";
 import {
   DATABASE_UNAVAILABLE_MESSAGE,
   isDatabaseUnavailableError,
-} from "../../../../lib/db/errors.js";
+} from "../../../../lib/http/error-handler.js";
 import { TenantConflictError } from "../../../org/index.js";
 import { AuthConflictError } from "../../domain/errors/auth-conflict.error.js";
 import { AuthStateError } from "../../domain/errors/auth-state.error.js";

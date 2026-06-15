@@ -24,5 +24,9 @@ export { DeleteProductUseCase } from "./application/use-cases/delete-product.use
 export { BulkUpsertProductsUseCase } from "./application/use-cases/bulk-upsert-products.use-case.js";
 export { createCatalogModule } from "./infrastructure/factory/catalog-module.factory.js";
 export { mapProductFromPrisma } from "./infrastructure/prisma/product-prisma.mapper.js";
-export type { ProductDto } from "./presentation/mappers/product.mapper.js";
+export {
+  formatEanForXml,
+  mapProduct,
+  type ProductDto,
+} from "./presentation/mappers/product.mapper.js";
 export { productController } from "./presentation/controllers/product.controller.js";

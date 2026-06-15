@@ -1,4 +1,4 @@
-import { clearedLockoutState } from "../../../../lib/auth/login-lockout.js";
+import { clearedLockoutState } from "../../domain/services/login-lockout.service.js";
 import type {
   PasswordResetRepository,
   PasswordResetTokenRecord,

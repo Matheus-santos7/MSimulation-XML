@@ -1,5 +1,5 @@
 import type { Prisma } from "../../../../generated/prisma/client.js";
-import { isPrismaUniqueError } from "../../../../lib/org/db-errors.js";
+import { isPrismaUniqueError } from "../../../org/infrastructure/prisma/prisma-errors.js";
 import { TenantConflictError } from "../../../org/index.js";
 import type { AuthUser } from "../../domain/entities/user.entity.js";
 import type { OnboardingRepository, TenantOnboardingData } from "../../domain/ports/onboarding.repository.js";

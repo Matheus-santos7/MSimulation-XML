@@ -1,4 +1,4 @@
-import type { DbClient } from "../db/prisma-tx.js";
+import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 
 type FiscalRoleIds = {
   emitenteRemessaId?: string | null;

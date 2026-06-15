@@ -1,6 +1,6 @@
 import type { Tenant, User } from "../../../../generated/prisma/client.js";
 import type { AuthUser, AuthUserWithTenant, TenantSummary } from "../../domain/entities/user.entity.js";
-import { mapTenant } from "../../../../lib/org/tenant-mapper.js";
+import { mapTenant } from "../../../org/infrastructure/prisma/tenant-prisma.mapper.js";
 
 export function mapAuthUser(row: User): AuthUser {
   return {

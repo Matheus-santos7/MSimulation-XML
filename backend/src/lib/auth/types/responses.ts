@@ -1,4 +1,4 @@
-import type { mapTenant } from "../../org/tenant-mapper.js";
+import type { Tenant } from "../../../modules/org/domain/entities/tenant.entity.js";
 
 export type AuthTokens = {
   accessToken: string;
@@ -12,7 +12,7 @@ export type AuthUserResponse = {
   tenantId: string | null;
   email: string;
   name?: string;
-  tenant: ReturnType<typeof mapTenant> | null;
+  tenant: Tenant | null;
   needsOnboarding: boolean;
   twoFactorEnabled: boolean;
   emailVerified: boolean;

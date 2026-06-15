@@ -1,5 +1,5 @@
 import type { Prisma } from "../../../../generated/prisma/client.js";
-import { isPrismaUniqueError } from "../../../../lib/org/db-errors.js";
+import { isPrismaUniqueError } from "../../../org/infrastructure/prisma/prisma-errors.js";
 import { runInTransaction } from "../../../../lib/db/prisma-tx.js";
 import type { Product } from "../../domain/entities/product.entity.js";
 import { ProductConflictError } from "../../domain/errors/product-conflict.error.js";

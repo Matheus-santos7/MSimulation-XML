@@ -1,4 +1,4 @@
-import { generateOpaqueToken, hashOpaqueToken } from "./token.js";
+import { generateOpaqueToken, hashOpaqueToken } from "../../../../lib/auth/token.js";
 
 const NAMESPACE = "password-reset";
 

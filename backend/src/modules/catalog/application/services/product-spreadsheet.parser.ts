@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import type { ProductImportRawRow } from "../../modules/catalog/domain/entities/product-import-raw-row.entity.js";
+import type { ProductImportRawRow } from "../../domain/entities/product-import-raw-row.entity.js";
 
 /** Colunas da planilha padrão (CSV compatível com Excel BR — separador `;`). */
 export const PRODUCT_SPREADSHEET_COLUMNS = [

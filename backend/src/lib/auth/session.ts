@@ -1,5 +1,5 @@
 import { isEmailVerified } from "./config.js";
-import type { mapTenant } from "../org/tenant-mapper.js";
+import type { Tenant } from "../../modules/org/domain/entities/tenant.entity.js";
 import type {
   AccessTokenPayload,
   AuthSessionResponse,
@@ -44,7 +44,7 @@ export function authSessionResponse(
     role?: "ADMIN" | "MEMBER";
     emailVerifiedAt?: Date | null;
   },
-  tenant: ReturnType<typeof mapTenant> | null,
+  tenant: Tenant | null,
   tokenVersion: number,
 ): AuthSessionResponse {
   const accessToken = signAccess(buildAccessPayload({ id: user.id, tenantId: user.tenantId, tokenVersion }));

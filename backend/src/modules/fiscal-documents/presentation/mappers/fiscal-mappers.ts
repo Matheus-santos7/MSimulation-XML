@@ -1,6 +1,6 @@
 import { formatNfeDateTime } from "@msimulation-xml/fiscal-core";
 import type { CteModal, FiscalStatus, NFeTipo, PrismaClient, Product, TimelineStatus } from "../../../../generated/prisma/client.js";
-import { mapProduct } from "../../../../lib/catalog/product-mapper.js";
+import { mapProduct } from "../../../catalog/index.js";
 
 export function num(n: { toString(): string } | number): number {
   return typeof n === "number" ? n : Number(n);

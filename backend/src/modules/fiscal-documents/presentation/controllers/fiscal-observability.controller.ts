@@ -6,7 +6,7 @@ import { buildProcInutNFeXML, infInutId } from "../../domain/services/inutilizac
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import { mapTimeline } from "../mappers/fiscal-mappers.js";
 import { ufToCodigo } from "../../domain/services/nfe-chave.js";
-import { mapEmitente } from "../../../../lib/org/tenant-mapper.js";
+import { mapEmitente } from "../../../org/infrastructure/fiscal/tenant-emitente.mapper.js";
 import { listTimelineChains } from "../../infrastructure/observability/timeline-service.js";
 
 const fiscalEventIdParam = z.object({ id: z.string().min(1) });

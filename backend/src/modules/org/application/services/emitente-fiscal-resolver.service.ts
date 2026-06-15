@@ -1,17 +1,13 @@
-import type { Tenant } from "../../generated/prisma/client.js";
-import type { DbClient } from "../db/prisma-tx.js";
-import { mapEmitente } from "./tenant-mapper.js";
-import { mapEmitenteFromFilial } from "./tenant-filial-mapper.js";
-import type { EmitenteEmissaoOverride } from "../../modules/remessas/infrastructure/fiscal/emitente-emissao-override.js";
+import type { Tenant } from "../../../../generated/prisma/client.js";
+import type { DbClient } from "../../../../lib/db/prisma-tx.js";
+import { EmitenteFiscalConfigError } from "../../domain/errors/emitente-fiscal-config.error.js";
+import type { EmitenteEmissaoOverride } from "../../domain/value-objects/emitente-emissao-override.js";
+import {
+  mapEmitente,
+  mapEmitenteFromFilial,
+} from "../../infrastructure/fiscal/tenant-emitente.mapper.js";
 
 export type EmitenteFiscalPapel = "principal" | "matriz";
-
-export class EmitenteFiscalConfigError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "EmitenteFiscalConfigError";
-  }
-}
 
 function overrideFromFilial(
   filial: {

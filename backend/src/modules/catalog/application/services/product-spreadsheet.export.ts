@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import type { Product } from "../../modules/catalog/domain/entities/product.entity.js";
+import type { Product } from "../../domain/entities/product.entity.js";
 import { PRODUCT_SPREADSHEET_COLUMNS } from "./product-spreadsheet.parser.js";
 
 export const EX_TIPI_FIELD_HELP =

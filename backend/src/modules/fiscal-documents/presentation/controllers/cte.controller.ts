@@ -1,7 +1,7 @@
 import { prepareFiscalXmlForDownload } from "@msimulation-xml/fiscal-core";
 import type { FastifyPluginAsync } from "fastify";
 import { tenantIdFromRequest } from "../../../../lib/auth/request-context.js";
-import { mapEmitente } from "../../../../lib/org/tenant-mapper.js";
+import { mapEmitente } from "../../../org/infrastructure/fiscal/tenant-emitente.mapper.js";
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import { createFiscalDocumentsModule } from "../../infrastructure/factory/fiscal-documents-module.factory.js";
 import { nfeAccessKeyParamSchema } from "../schemas/fiscal-document.schemas.js";

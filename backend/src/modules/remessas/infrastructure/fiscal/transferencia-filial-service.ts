@@ -34,7 +34,12 @@ import {
 } from "../../../tax/index.js";
 import { createLogisticsModule, findProductInTenant } from "../../../logistics/index.js";
 import { persistNfeXmlAutorizado } from "../../../fiscal-documents/infrastructure/xml/nfe-xml-service.js";
-import { mapEmitenteFromFilial } from "../../../../lib/org/tenant-filial-mapper.js";
+import { mapEmitenteFromFilial } from "../../../org/infrastructure/fiscal/tenant-emitente.mapper.js";
+import {
+  EmitenteFiscalConfigError,
+  resolveEmitenteFiscal,
+  resolveTransferenciaEmitenteId,
+} from "../../../org/index.js";
 import { realignRemessaFifoProductIdsBySku } from "../fifo/remessa-fifo.js";
 import {
   TRANSFERENCIA_FILIAL_NAT_OP,
@@ -45,11 +50,6 @@ import {
 import { RemessaError, emitirRemessaComItens } from "./remessa-service.js";
 import type { EmitenteEmissaoOverride } from "./emitente-emissao-override.js";
 import { chaveEmissaoFromOverride } from "./emitente-emissao-override.js";
-import {
-  EmitenteFiscalConfigError,
-  resolveEmitenteFiscal,
-  resolveTransferenciaEmitenteId,
-} from "../../../../lib/org/emitente-fiscal-resolver.js";
 
 export type TransferenciaFilialItemInput = {
   productId: string;

@@ -48,7 +48,7 @@ import { realignRemessaFifoProductIdsBySku } from "../fifo/remessa-fifo.js";
 import {
   EmitenteFiscalConfigError,
   resolveEmitenteFiscal,
-} from "../../../../lib/org/emitente-fiscal-resolver.js";
+} from "../../../org/index.js";
 
 export type EmitirRemessaOptions = {
   unidadeDestinoId?: string;

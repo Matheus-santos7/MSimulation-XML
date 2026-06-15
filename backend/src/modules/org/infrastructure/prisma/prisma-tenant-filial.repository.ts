@@ -1,6 +1,6 @@
 import type { Prisma } from "../../../../generated/prisma/client.js";
-import { isPrismaUniqueError } from "../../../../lib/org/db-errors.js";
-import { syncEmitenteFiscalFlags } from "../../../../lib/org/sync-emitente-fiscal-flags.js";
+import { isPrismaUniqueError } from "./prisma-errors.js";
+import { syncEmitenteFiscalFlags } from "../../application/services/sync-emitente-fiscal-flags.service.js";
 import { runInTransaction } from "../../../../lib/db/prisma-tx.js";
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import type { TenantFilial } from "../../domain/entities/tenant-filial.entity.js";

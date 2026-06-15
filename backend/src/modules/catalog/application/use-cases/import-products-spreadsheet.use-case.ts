@@ -1,7 +1,7 @@
 import {
   parseProductSpreadsheetCsv,
   parseProductSpreadsheetXlsx,
-} from "../../../../lib/catalog/product-spreadsheet.parser.js";
+} from "../services/product-spreadsheet.parser.js";
 import { ProductValidationError } from "../../domain/errors/product-validation.error.js";
 import type { BulkUpsertProductsResult } from "../dto/bulk-upsert-products.command.js";
 import type { BulkUpsertProductsUseCase } from "./bulk-upsert-products.use-case.js";

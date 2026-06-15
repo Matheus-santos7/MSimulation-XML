@@ -1,4 +1,4 @@
-import type { DbClient } from "../db/prisma-tx.js";
+import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 
 /** Garante exclusividade do papel de emitente fiscal entre filiais do tenant. */
 export async function aplicarPapelEmitenteFilial(

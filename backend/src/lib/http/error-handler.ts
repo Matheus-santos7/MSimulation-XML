@@ -1,10 +1,25 @@
 import type { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { ZodError } from "zod";
 import { Prisma } from "../../generated/prisma/client.js";
-import { DATABASE_UNAVAILABLE_MESSAGE, isDatabaseUnavailableError } from "../db/errors.js";
 import { sendZodValidationError } from "./domain-errors.js";
 
 const GENERIC_INTERNAL_ERROR = "Erro interno do servidor";
+
+export const DATABASE_UNAVAILABLE_MESSAGE = "Banco de dados indisponível";
+
+/** Indisponibilidade do Postgres (daemon parado, rede, credenciais). */
+export function isDatabaseUnavailableError(e: unknown): boolean {
+  if (e instanceof Prisma.PrismaClientKnownRequestError) {
+    return e.code === "P1001" || e.code === "P1000" || e.code === "ECONNREFUSED";
+  }
+  if (e instanceof Prisma.PrismaClientInitializationError) {
+    return true;
+  }
+  if (e instanceof Error && /ECONNREFUSED|Can't reach database|P1001/i.test(e.message)) {
+    return true;
+  }
+  return false;
+}
 
 export function registerGlobalErrorHandler(app: FastifyInstance): void {
   app.setErrorHandler((error: FastifyError, _req: FastifyRequest, reply: FastifyReply) => {

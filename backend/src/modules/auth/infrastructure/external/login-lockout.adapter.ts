@@ -1,9 +1,10 @@
+import { loginLockoutMs, loginMaxFailedAttempts } from "../../../../lib/auth/config.js";
 import {
   clearedLockoutState,
   isLoginLocked,
   lockoutMessage,
   nextLockoutState,
-} from "../../../../lib/auth/login-lockout.js";
+} from "../../domain/services/login-lockout.service.js";
 import type { LoginLockoutPort } from "../../domain/ports/login-lockout.port.js";
 
 export class LoginLockoutAdapter implements LoginLockoutPort {
@@ -16,7 +17,7 @@ export class LoginLockoutAdapter implements LoginLockoutPort {
   }
 
   nextFailedLoginState(currentAttempts: number) {
-    return nextLockoutState(currentAttempts);
+    return nextLockoutState(currentAttempts, loginMaxFailedAttempts(), loginLockoutMs());
   }
 
   clearedState() {

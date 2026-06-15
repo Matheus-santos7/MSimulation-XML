@@ -1,4 +1,4 @@
-import { isPrismaUniqueError } from "../../../../lib/org/db-errors.js";
+import { isPrismaUniqueError } from "./prisma-errors.js";
 import { runInTransaction } from "../../../../lib/db/prisma-tx.js";
 import type { OrgUser } from "../../domain/entities/org-user.entity.js";
 import { UserConflictError } from "../../domain/errors/user-conflict.error.js";

@@ -10,11 +10,11 @@ import {
 import {
   generateEmailVerificationToken,
   hashEmailVerificationToken,
-} from "../../../../lib/auth/email-verification-token.js";
+} from "../security/email-verification-token.js";
 import {
   generatePasswordResetToken,
   hashPasswordResetToken,
-} from "../../../../lib/auth/password-reset-token.js";
+} from "../security/password-reset-token.js";
 import { AttachTenantOnboardingUseCase } from "../../application/use-cases/attach-tenant-onboarding.use-case.js";
 import { DisableTwoFactorUseCase } from "../../application/use-cases/disable-two-factor.use-case.js";
 import { EnableTwoFactorUseCase } from "../../application/use-cases/enable-two-factor.use-case.js";

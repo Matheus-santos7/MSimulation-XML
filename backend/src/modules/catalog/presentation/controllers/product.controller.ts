@@ -3,7 +3,7 @@ import { tenantIdFromRequest } from "../../../../lib/auth/request-context.js";
 import {
   buildProductSpreadsheetTemplateXlsx,
   buildProductSpreadsheetXlsx,
-} from "../../../../lib/catalog/product-spreadsheet.export.js";
+} from "../../application/services/product-spreadsheet.export.js";
 import { handleRouteError } from "../../../../lib/http/domain-errors.js";
 import {
   productBulkUpsertBody,

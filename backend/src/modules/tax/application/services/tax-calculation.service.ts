@@ -28,7 +28,6 @@ import {
   resolveDifalMode,
   resolveFiscalExitUf,
   resolveInterstateIcmsRateForProductOrigin,
-  resolveIcmsCstFromSnapshot,
   resolveIpiCstFromSnapshot,
   resolvePisCofinsCstFromSnapshot,
   type FiscalEmitterSettingsData,
@@ -220,7 +219,7 @@ function resolveIcmsCst(snapshotCst: string, ctx: BuildFiscalItemContext): strin
       emitterSettings.taxes.cstDevolucao.icms,
     );
   }
-  return resolveIcmsCstFromSnapshot(snapshotCst, ctx.operationTipo);
+  return snapshotCst;
 }
 
 function resolvePisCofinsCst(

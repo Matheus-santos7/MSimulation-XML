@@ -66,11 +66,9 @@ export type {
   SettingsMode,
 } from "./fiscal-emitter-settings-types.js";
 export {
-  ICMS_CST_SYMBOLIC_RETURN,
   IPI_CST_SYMBOLIC_RETURN,
   PIS_COFINS_CST_SYMBOLIC_RETURN,
   resolveDefaultModFreteForTipo,
-  resolveIcmsCstFromSnapshot,
   resolveIpiCstFromSnapshot,
   resolvePisCofinsCstFromSnapshot,
 } from "./pis-cofins-cst.js";

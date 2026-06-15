@@ -2,10 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { NFeTipo } from "./nfe-tipo.js";
 import {
-  ICMS_CST_SYMBOLIC_RETURN,
   IPI_CST_SYMBOLIC_RETURN,
   resolveDefaultModFreteForTipo,
-  resolveIcmsCstFromSnapshot,
   resolveIpiCstFromSnapshot,
   resolvePisCofinsCstFromSnapshot,
 } from "./pis-cofins-cst.js";
@@ -26,17 +24,6 @@ describe("resolvePisCofinsCstFromSnapshot", () => {
     assert.equal(
       resolveIpiCstFromSnapshot("55 - Saída com Suspensão", NFeTipo.RETORNO_SIMBOLICO),
       IPI_CST_SYMBOLIC_RETURN,
-    );
-  });
-
-  it("força CST 50 de ICMS no retorno simbólico (suspensão — evita ICMS00 zerado)", () => {
-    assert.equal(
-      resolveIcmsCstFromSnapshot("00 - Tributada integralmente", NFeTipo.RETORNO_SIMBOLICO),
-      ICMS_CST_SYMBOLIC_RETURN,
-    );
-    assert.equal(
-      resolveIcmsCstFromSnapshot("90 - Outras", NFeTipo.RETORNO_SIMBOLICO),
-      ICMS_CST_SYMBOLIC_RETURN,
     );
   });
 

@@ -92,7 +92,7 @@ describe("calculateInboundInvoice — envio de estoque interestadual", () => {
     assert.equal(result.nota.itens[0]!.cofins.vBC, 0);
   });
 
-  it("retorno simbólico força CST 50 em ICMS (suspensão — evita ICMS00 zerado)", () => {
+  it("retorno simbólico mantém CST ICMS da planilha (sem override)", () => {
     const ruleCst00: ResolvedTaxRule = {
       ...inboundRuleZero,
       payload: {
@@ -117,10 +117,10 @@ describe("calculateInboundInvoice — envio de estoque interestadual", () => {
       operationTipo: "RETORNO_SIMBOLICO",
     });
 
-    assert.equal(result.nota.itens[0]!.icms.cst, "50");
-    assert.equal(result.nota.itens[0]!.icms.pICMS, 0);
-    assert.equal(result.nota.itens[0]!.icms.vBC, 0);
-    assert.equal(result.nota.totais.vICMS, 0);
+    assert.equal(result.nota.itens[0]!.icms.cst, "00");
+    assert.equal(result.nota.itens[0]!.icms.pICMS, 4);
+    assert.equal(result.nota.itens[0]!.icms.vBC, 609);
+    assert.equal(result.nota.itens[0]!.icms.vICMS, 24.36);
   });
 
   it("remessa interestadual SP→BA com CST 00 e origem importada aplica 4% Senado", () => {
@@ -156,7 +156,7 @@ describe("calculateInboundInvoice — envio de estoque interestadual", () => {
     assert.equal(result.nota.totais.vICMS, 24.36);
   });
 
-  it("retorno simbólico SP→MG (CFOP 2949) com CST 90 da planilha força CST 50", () => {
+  it("retorno simbólico SP→MG (CFOP 2949) mantém CST 90 da planilha", () => {
     const line = orderLineFromProduct(product, {
       cfop: "2949",
       quantidade: 10,
@@ -167,7 +167,7 @@ describe("calculateInboundInvoice — envio de estoque interestadual", () => {
       operationTipo: "RETORNO_SIMBOLICO",
     });
 
-    assert.equal(result.nota.itens[0]!.icms.cst, "50");
+    assert.equal(result.nota.itens[0]!.icms.cst, "90");
     assert.equal(result.aliqIcms, 0);
     assert.equal(result.valorIcms, 0);
     assert.equal(result.nota.totais.vICMS, 0);

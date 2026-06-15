@@ -9,12 +9,6 @@ export const PIS_COFINS_CST_SYMBOLIC_RETURN = "98";
 /** CST IPI no retorno simbólico ML Full (entrada com suspensão — `<IPINT>` CST 05). */
 export const IPI_CST_SYMBOLIC_RETURN = "05";
 
-/**
- * CST ICMS no retorno simbólico ML Full — suspensão (grupo ICMS40/ICMS50 sem vBC).
- * Evita CST 00 com pICMS zerado em operações de armazenagem.
- */
-export const ICMS_CST_SYMBOLIC_RETURN = "50";
-
 const ML_DEFAULT_MOD_FRETE: Record<NFeTipoValue, string> = {
   VENDA: "9",
   REMESSA: "0",
@@ -46,17 +40,6 @@ export function resolveIpiCstFromSnapshot(
 ): string {
   if (operationTipo === NFeTipo.RETORNO_SIMBOLICO) {
     return IPI_CST_SYMBOLIC_RETURN;
-  }
-  return pickTaxStCode(snapshotSt);
-}
-
-/** Resolve CST ICMS (2 dígitos) conforme o tipo de operação fiscal. */
-export function resolveIcmsCstFromSnapshot(
-  snapshotSt: string,
-  operationTipo?: NFeTipoValue | string,
-): string {
-  if (operationTipo === NFeTipo.RETORNO_SIMBOLICO) {
-    return ICMS_CST_SYMBOLIC_RETURN;
   }
   return pickTaxStCode(snapshotSt);
 }

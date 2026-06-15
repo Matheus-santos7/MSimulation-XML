@@ -7,5 +7,16 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": []
+  "include": [
+    "backend/**/*.ts",
+    "frontend/**/*.ts",
+    "frontend/**/*.tsx",
+    "packages/**/*.ts",
+    "scripts/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/dist",
+    "**/build"
+  ]
 }

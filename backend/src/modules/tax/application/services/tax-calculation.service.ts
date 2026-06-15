@@ -36,6 +36,7 @@ import {
   defaultInterstateConvenioRate,
   inferIcmsRateForShipment,
   inferIntraStateIcmsRate,
+  resolveInterstateIcmsFallback,
 } from "./tax-fallback-resolver.service.js";
 
 export {
@@ -43,7 +44,9 @@ export {
   inferIcmsRateForSale,
   inferIcmsRateForShipment,
   inferIntraStateIcmsRate,
+  normalizeProductOrigin,
   resolveIcmsFallbackRate,
+  resolveInterstateIcmsFallback,
   resolveInterstateSaleFallbackRate,
   resolvePisCofinsFallbackRates,
 } from "./tax-fallback-resolver.service.js";
@@ -155,13 +158,27 @@ function resolveInterstateIcmsRate(
 ): number {
   const fiscalOriginUf = resolveFiscalOriginUf(ctx);
   let rate: number;
+  const senateFallback = resolveInterstateIcmsFallback(
+    fiscalOriginUf,
+    ctx.ufDestino,
+    productOrigin,
+  );
+
   if (rule != null) {
-    if (rule.icms?.pIcmsInterstate != null) rate = rule.icms.pIcmsInterstate;
-    else if (rule.aliquotaIcmsInterna != null) rate = rule.aliquotaIcmsInterna;
-    else rate = fallbackIcmsRate;
+    if (rule.icms?.pIcmsInterstate != null) {
+      rate = rule.icms.pIcmsInterstate;
+    } else if (
+      rule.icms?.pIcmsInternal === 0 ||
+      (rule.aliquotaIcmsInterna === 0 && rule.icms?.pIcmsInterstate == null)
+    ) {
+      rate = 0;
+    } else {
+      rate = senateFallback ?? fallbackIcmsRate;
+    }
   } else {
     rate =
       snapshot.icms.pIcmsInterstate ??
+      senateFallback ??
       defaultInterstateConvenioRate(fiscalOriginUf, ctx.ufDestino) ??
       internalRate;
   }

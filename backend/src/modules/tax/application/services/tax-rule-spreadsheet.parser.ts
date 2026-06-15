@@ -36,9 +36,10 @@ function isNumericRuleId(value: string): boolean {
 /**
  * Planilhas ML mesclam células: RULE_ID/RULE_NAME/ORIGIN repetem só na 1ª linha do grupo.
  *
- * Coluna RULE_NAME numérica (ex.: 4133250001) identifica a regra do produto.
- * Textos descritivos (ex.: "Item nacional") são rótulos de exibição e não devem
- * substituir o ruleId nem reverter para o RULE_ID interno da ML (ex.: 612610).
+ * Coluna RULE_NAME numérica (ex.: 4133250001) identifica a regra do produto e
+ * define a ORIGIN do grupo. Linhas de continuação trazem rótulos descritivos
+ * (ex.: "Item nacional") e podem conter ORIGIN incorreta (ex.: RJ) — esses
+ * valores são ignorados; a origem fiscal é herdada da linha de cabeçalho.
  */
 function resolveRuleIdentity(byKey: Record<string, unknown>, state: RuleIdentityState): RuleIdentityState {
   const rawRuleId = String(byKey.RULE_ID ?? "").trim();
@@ -46,14 +47,14 @@ function resolveRuleIdentity(byKey: Record<string, unknown>, state: RuleIdentity
   const rawOrigin = String(byKey.ORIGIN ?? "").trim();
   const next = { ...state };
 
-  if (rawOrigin) next.origin = rawOrigin;
-
   if (rawRuleName && isNumericRuleId(rawRuleName)) {
     next.ruleId = rawRuleName;
     next.ruleName = rawRuleName;
+    if (rawOrigin) next.origin = rawOrigin;
   } else if (rawRuleId && isNumericRuleId(rawRuleId) && !next.ruleId) {
     next.ruleId = rawRuleId;
     if (!next.ruleName) next.ruleName = rawRuleId;
+    if (rawOrigin) next.origin = rawOrigin;
   }
 
   return next;

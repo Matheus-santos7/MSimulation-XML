@@ -64,13 +64,13 @@ describe("parseTaxRuleSpreadsheet", () => {
         {
           ruleId: "4133250001",
           ruleName: "4133250001",
-          origin: "RJ",
+          origin: "SP",
           transactionTypeLabel: "Não contribuinte",
         },
         {
           ruleId: "4133250001",
           ruleName: "4133250001",
-          origin: "RJ",
+          origin: "SP",
           transactionTypeLabel: "Envio de estoque (Transferência ou Remessa)",
         },
       ],
@@ -88,7 +88,7 @@ describe("parseTaxRuleSpreadsheet", () => {
     assert.equal(rawRows[0]!.ruleId, "4133250001");
     assert.equal(rawRows[1]!.ruleId, "4133250002");
     assert.equal(rawRows[2]!.ruleId, "4133250002");
-    assert.equal(rawRows[2]!.origin, "RJ");
+    assert.equal(rawRows[2]!.origin, "SP");
   });
 });
 
@@ -109,14 +109,25 @@ describe("import pipeline for SHARK spreadsheet rows", () => {
     assert.deepEqual(
       mapped.rows.map((row) => row.ruleId).sort(),
       [
-        "4133250001-RJ-non_taxpayer-sale",
-        "4133250001-RJ-taxpayer-inbound",
+        "4133250001-SP-non_taxpayer-sale",
+        "4133250001-SP-taxpayer-inbound",
         "4133250001-SP-taxpayer-sale",
-        "4133250002-RJ-non_taxpayer-sale",
-        "4133250002-RJ-taxpayer-inbound",
+        "4133250002-SP-non_taxpayer-sale",
+        "4133250002-SP-taxpayer-inbound",
         "4133250002-SP-taxpayer-sale",
       ].sort(),
     );
+  });
+
+  it("ignora ORIGIN de linhas de continuação com rótulo descritivo (formato ML novo)", () => {
+    const buffer = buildWorkbookBuffer([
+      ["612610", "4133250001", "SP", "Contribuinte", "99", 0],
+      ["612610", "Item nacional", "RJ", "Não contribuinte", "99", 0],
+      ["612610", "Item nacional", "RJ", "Envio de estoque (Transferência ou Remessa)", "99", 0],
+    ]);
+
+    const { rawRows } = parseTaxRuleSpreadsheet(buffer);
+    assert.ok(rawRows.every((row) => row.origin === "SP"));
   });
 
   it("processa o arquivo real regra_shark_atualizada.xlsx quando disponível", () => {
@@ -135,11 +146,11 @@ describe("import pipeline for SHARK spreadsheet rows", () => {
       .sort();
 
     assert.deepEqual(ruleIds, [
-      "4133250001-RJ-non_taxpayer-sale",
-      "4133250001-RJ-taxpayer-inbound",
+      "4133250001-SP-non_taxpayer-sale",
+      "4133250001-SP-taxpayer-inbound",
       "4133250001-SP-taxpayer-sale",
-      "4133250002-RJ-non_taxpayer-sale",
-      "4133250002-RJ-taxpayer-inbound",
+      "4133250002-SP-non_taxpayer-sale",
+      "4133250002-SP-taxpayer-inbound",
       "4133250002-SP-taxpayer-sale",
     ]);
   });

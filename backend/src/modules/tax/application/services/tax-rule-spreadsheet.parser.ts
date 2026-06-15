@@ -33,7 +33,13 @@ function isNumericRuleId(value: string): boolean {
   return /^\d+$/.test(value);
 }
 
-/** Planilhas ML mesclam células: RULE_ID/RULE_NAME/ORIGIN repetem só na 1ª linha do grupo. */
+/**
+ * Planilhas ML mesclam células: RULE_ID/RULE_NAME/ORIGIN repetem só na 1ª linha do grupo.
+ *
+ * Coluna RULE_NAME numérica (ex.: 4133250001) identifica a regra do produto.
+ * Textos descritivos (ex.: "Item nacional") são rótulos de exibição e não devem
+ * substituir o ruleId nem reverter para o RULE_ID interno da ML (ex.: 612610).
+ */
 function resolveRuleIdentity(byKey: Record<string, unknown>, state: RuleIdentityState): RuleIdentityState {
   const rawRuleId = String(byKey.RULE_ID ?? "").trim();
   const rawRuleName = String(byKey.RULE_NAME ?? "").trim();
@@ -42,12 +48,12 @@ function resolveRuleIdentity(byKey: Record<string, unknown>, state: RuleIdentity
 
   if (rawOrigin) next.origin = rawOrigin;
 
-  if (rawRuleName) {
+  if (rawRuleName && isNumericRuleId(rawRuleName)) {
+    next.ruleId = rawRuleName;
     next.ruleName = rawRuleName;
-    if (isNumericRuleId(rawRuleName)) next.ruleId = rawRuleName;
-    else if (rawRuleId) next.ruleId = rawRuleId;
-  } else if (rawRuleId) {
+  } else if (rawRuleId && isNumericRuleId(rawRuleId) && !next.ruleId) {
     next.ruleId = rawRuleId;
+    if (!next.ruleName) next.ruleName = rawRuleId;
   }
 
   return next;

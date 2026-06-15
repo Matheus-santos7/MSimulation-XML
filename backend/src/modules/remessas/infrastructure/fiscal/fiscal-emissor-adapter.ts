@@ -3,7 +3,7 @@ import {
   enrichFiscalPayloadWithXTexto,
   productUnitPrice,
 } from "@msimulation-xml/fiscal-core";
-import { NFeTipo } from "../../../../generated/prisma/client.js";
+import { NFeTipo, PrismaClient } from "../../../../generated/prisma/client.js";
 import { buildChaveNFe } from "../../../fiscal-documents/domain/services/nfe-chave.js";
 import { enrichTaxSnapshot, loadEmitterSettings } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";

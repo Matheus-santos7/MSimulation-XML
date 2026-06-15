@@ -61,7 +61,7 @@ export async function emitSaleNote(
       ncm: order.product.ncm,
       cfop,
       unidade: order.product.unidade ?? "UN",
-      cest: order.product.cest,
+      cest: order.product.cest ?? undefined,
       ean: order.product.ean ?? undefined,
       exTipi: order.product.exTipi ?? undefined,
       origem: order.product.origem ?? 0,

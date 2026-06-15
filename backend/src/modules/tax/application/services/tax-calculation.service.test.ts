@@ -61,21 +61,6 @@ describe("calculateInboundInvoice — envio de estoque interestadual", () => {
     assert.equal(result.nota.itens[0]!.ipi?.vBC, 0);
   });
 
-  it("retorno simbólico SP→MG (CFOP 2949) mantém ICMS zerado", () => {
-    const line = orderLineFromProduct(product, {
-      cfop: "2949",
-      quantidade: 10,
-      valorUnitario: 609,
-    });
-
-    const result = calculateInboundInvoice(line, inboundRuleZero, "SP", "MG", 12);
-
-    assert.equal(result.aliqIcms, 0);
-    assert.equal(result.valorIcms, 0);
-    assert.equal(result.nota.totais.vICMS, 0);
-    assert.equal(result.nota.totais.vBC, 0);
-  });
-
   it("retorno simbólico usa CST 98 em PIS/COFINS (ML produção)", () => {
     const ruleInboundSuspensao: ResolvedTaxRule = {
       ...inboundRuleZero,
@@ -105,6 +90,88 @@ describe("calculateInboundInvoice — envio de estoque interestadual", () => {
     assert.equal(result.nota.itens[0]!.ipi?.cst, "05");
     assert.equal(result.nota.itens[0]!.pis.vBC, 0);
     assert.equal(result.nota.itens[0]!.cofins.vBC, 0);
+  });
+
+  it("retorno simbólico força CST 50 em ICMS (suspensão — evita ICMS00 zerado)", () => {
+    const ruleCst00: ResolvedTaxRule = {
+      ...inboundRuleZero,
+      payload: {
+        taxes: {
+          icms: { st: "00 - Tributada integralmente", aliquota: 0 },
+          pis: { st: "98 - Outras", aliquota: 0 },
+          cofins: { st: "98 - Outras", aliquota: 0 },
+          ipi: { st: "55 - Saída com Suspensão", aliquota: 0, codEnq: 103 },
+        },
+        icmsByUf: { ICMS_SP_CST: "00", ICMS_SP_PICMS_INTERNAL: 0 },
+      },
+      icms: { cst: "00", pIcmsInternal: 0 },
+    };
+
+    const line = orderLineFromProduct(product, {
+      cfop: "2949",
+      quantidade: 1,
+      valorUnitario: 609,
+    });
+
+    const result = calculateInboundInvoice(line, ruleCst00, "BA", "SP", 12, {
+      operationTipo: "RETORNO_SIMBOLICO",
+    });
+
+    assert.equal(result.nota.itens[0]!.icms.cst, "50");
+    assert.equal(result.nota.itens[0]!.icms.pICMS, 0);
+    assert.equal(result.nota.itens[0]!.icms.vBC, 0);
+    assert.equal(result.nota.totais.vICMS, 0);
+  });
+
+  it("remessa interestadual SP→BA com CST 00 e origem importada aplica 4% Senado", () => {
+    const ruleCst00Zero: ResolvedTaxRule = {
+      ruleId: "sku-BA-taxpayer-inbound",
+      aliquotaIcmsInterna: 0,
+      payload: {
+        taxes: {
+          icms: { st: "00 - Tributada integralmente", aliquota: 0 },
+          pis: { st: "98 - Outras", aliquota: 0 },
+          cofins: { st: "98 - Outras", aliquota: 0 },
+          ipi: { st: "55 - Saída com Suspensão", aliquota: 0, codEnq: 103 },
+        },
+        icmsByUf: { ICMS_BA_CST: "00", ICMS_BA_PICMS_INTERNAL: 0 },
+      },
+      icms: { cst: "00", pIcmsInternal: 0 },
+    };
+
+    const line = orderLineFromProduct(product, {
+      cfop: "6949",
+      quantidade: 1,
+      valorUnitario: 609,
+    });
+
+    const result = calculateInboundInvoice(line, ruleCst00Zero, "SP", "BA", 4, {
+      operationTipo: "REMESSA",
+    });
+
+    assert.equal(result.nota.itens[0]!.icms.cst, "00");
+    assert.equal(result.nota.itens[0]!.icms.pICMS, 4);
+    assert.equal(result.nota.itens[0]!.icms.vBC, 609);
+    assert.equal(result.nota.itens[0]!.icms.vICMS, 24.36);
+    assert.equal(result.nota.totais.vICMS, 24.36);
+  });
+
+  it("retorno simbólico SP→MG (CFOP 2949) com CST 90 da planilha força CST 50", () => {
+    const line = orderLineFromProduct(product, {
+      cfop: "2949",
+      quantidade: 10,
+      valorUnitario: 609,
+    });
+
+    const result = calculateInboundInvoice(line, inboundRuleZero, "SP", "MG", 12, {
+      operationTipo: "RETORNO_SIMBOLICO",
+    });
+
+    assert.equal(result.nota.itens[0]!.icms.cst, "50");
+    assert.equal(result.aliqIcms, 0);
+    assert.equal(result.valorIcms, 0);
+    assert.equal(result.nota.totais.vICMS, 0);
+    assert.equal(result.nota.totais.vBC, 0);
   });
 });
 

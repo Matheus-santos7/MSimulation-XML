@@ -28,6 +28,7 @@ import {
   resolveDifalMode,
   resolveFiscalExitUf,
   resolveInterstateIcmsRateForProductOrigin,
+  resolveIcmsCstFromSnapshot,
   resolveIpiCstFromSnapshot,
   resolvePisCofinsCstFromSnapshot,
   type FiscalEmitterSettingsData,
@@ -57,6 +58,9 @@ export type BuildFiscalItemContext = FiscalContext & {
 };
 
 const ICMS_CST_NAO_TRIBUTADO = new Set(["40", "41", "50", "60"]);
+
+/** CSTs em que a planilha indica ICMS próprio zerado — não aplicar fallback Senado. */
+const ICMS_CST_INTERSTATE_EXPLICIT_ZERO = new Set(["40", "41", "50", "60", "90"]);
 
 /** Resultado simplificado de nota inbound (retorno simbólico / remessa). */
 export type InboundInvoiceResult = {
@@ -145,8 +149,9 @@ function resolveFiscalOriginUf(ctx: BuildFiscalItemContext): string {
 /**
  * Escolhe alíquota ICMS interestadual efetiva a aplicar no item.
  *
- * Prioridade: `pIcmsInterstate` → `aliquotaIcmsInterna` → fallback → snapshot.
- * Em seguida aplica Resolução do Senado 13/2012 (4%) para origens importadas.
+ * Prioridade: `pIcmsInterstate` explícito → CST de suspensão/isenção (zero) →
+ * fallback Senado/Convênio. Origens importadas (1/2/3/8) recebem 4% em qualquer
+ * operação tributada (remessa, venda, etc.), não apenas em venda final.
  */
 function resolveInterstateIcmsRate(
   rule: ResolvedTaxRule | null,
@@ -155,22 +160,24 @@ function resolveInterstateIcmsRate(
   fallbackIcmsRate: number,
   internalRate: number,
   productOrigin: number,
+  icmsCst: string,
 ): number {
   const fiscalOriginUf = resolveFiscalOriginUf(ctx);
-  let rate: number;
+  const cst = icmsCst.slice(0, 2);
   const senateFallback = resolveInterstateIcmsFallback(
     fiscalOriginUf,
     ctx.ufDestino,
     productOrigin,
   );
 
+  const isExplicitZero =
+    ICMS_CST_INTERSTATE_EXPLICIT_ZERO.has(cst) || rule?.icms?.pIcmsInterstate === 0;
+
+  let rate: number;
   if (rule != null) {
     if (rule.icms?.pIcmsInterstate != null) {
       rate = rule.icms.pIcmsInterstate;
-    } else if (
-      rule.icms?.pIcmsInternal === 0 ||
-      (rule.aliquotaIcmsInterna === 0 && rule.icms?.pIcmsInterstate == null)
-    ) {
+    } else if (isExplicitZero) {
       rate = 0;
     } else {
       rate = senateFallback ?? fallbackIcmsRate;
@@ -178,17 +185,14 @@ function resolveInterstateIcmsRate(
   } else {
     rate =
       snapshot.icms.pIcmsInterstate ??
-      senateFallback ??
+      (isExplicitZero ? 0 : senateFallback) ??
       defaultInterstateConvenioRate(fiscalOriginUf, ctx.ufDestino) ??
       internalRate;
   }
-  return ctx.operationTipo === "VENDA"
-    ? resolveInterstateIcmsRateForProductOrigin(
-        productOrigin,
-        fiscalOriginUf !== ctx.ufDestino.toUpperCase(),
-        rate,
-      )
-    : rate;
+
+  if (isExplicitZero) return rate;
+
+  return resolveInterstateIcmsRateForProductOrigin(productOrigin, true, rate);
 }
 
 function toOptionalNum(value: unknown): number | undefined {
@@ -216,7 +220,7 @@ function resolveIcmsCst(snapshotCst: string, ctx: BuildFiscalItemContext): strin
       emitterSettings.taxes.cstDevolucao.icms,
     );
   }
-  return snapshotCst;
+  return resolveIcmsCstFromSnapshot(snapshotCst, ctx.operationTipo);
 }
 
 function resolvePisCofinsCst(
@@ -286,11 +290,19 @@ export function buildFiscalItem(
   const appliesDifal = shouldApplyDifal(ctx, isInterstate, isFinalConsumer);
 
   const internalRate = snapshot.icms.aliquota;
+  const icmsCst = resolveIcmsCst(snapshot.icms.cst, ctx);
   const icmsRate = isInterstate
-    ? resolveInterstateIcmsRate(rule, snapshot, ctx, fallbackIcmsRate, internalRate, line.origem)
+    ? resolveInterstateIcmsRate(
+        rule,
+        snapshot,
+        ctx,
+        fallbackIcmsRate,
+        internalRate,
+        line.origem,
+        icmsCst,
+      )
     : internalRate;
 
-  const icmsCst = resolveIcmsCst(snapshot.icms.cst, ctx);
   const effectivePIcms = ICMS_CST_NAO_TRIBUTADO.has(icmsCst) ? 0 : icmsRate;
 
   const pisCst = resolvePisCofinsCst(snapshot.pis.st, ctx, "pis");

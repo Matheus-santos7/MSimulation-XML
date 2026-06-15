@@ -176,7 +176,12 @@ async function emitirNFeRemessaComItens(
   // --- Fase 4: engine tributária (ICMS, PIS, COFINS, totais) ---
   const nota = calcularImpostosNota(
     linhasComRegras,
-    { ufOrigem: emitUf, ufDestino: destino.uf, customerType: "taxpayer" },
+    {
+      ufOrigem: emitUf,
+      ufDestino: destino.uf,
+      customerType: "taxpayer",
+      operationTipo: "REMESSA",
+    },
     aliqFallback,
   );
 

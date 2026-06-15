@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { PageHeader } from "@/components/fiscal-ui";
 import { ProdutoCard } from "@/components/produto-card";
+import { ProdutoNovoSheet } from "@/components/produto-novo-sheet";
 import { ProdutoPlanilhaToolbar } from "@/components/produto-planilha-toolbar";
-import { Button } from "@/components/ui/button";
 import { listProducts, listTaxRuleCatalog } from "@/lib/fiscal-api";
 
 export const metadata: Metadata = { title: "Produtos" };
@@ -19,22 +18,17 @@ export default async function ProdutosPage() {
       <PageHeader
         title="Catálogo de Produtos"
         subtitle="Itens NF-e — bloco &lt;prod&gt; (cProd, NCM, CEST, preço…)"
-        actions={
-          <Button asChild>
-            <Link href="/produtos/novo">Novo produto</Link>
-          </Button>
-        }
+        actions={<ProdutoNovoSheet taxRuleCatalog={taxRuleCatalog} />}
       />
 
       <ProdutoPlanilhaToolbar products={produtos} />
 
       {produtos.length === 0 ? (
-        <div className="text-muted-foreground">
-          Nenhum produto para esta empresa. Importe uma planilha,{" "}
-          <Link href="/produtos/novo" className="text-accent hover:underline">
-            cadastre manualmente
-          </Link>{" "}
-          ou baixe o modelo CSV acima.
+        <div className="rounded-lg border border-dashed border-border bg-muted/20 p-8 text-center">
+          <p className="text-sm text-muted-foreground">
+            Nenhum produto para esta empresa. Clique em <strong>Novo produto</strong>, importe uma
+            planilha ou baixe o modelo CSV acima.
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

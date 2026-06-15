@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import {
   formatFieldErrors,
   inputToFormValues,
@@ -36,7 +35,7 @@ export async function createProdutoAction(
   revalidatePath("/nfe");
   revalidatePath("/cte");
   revalidatePath("/");
-  redirect("/produtos");
+  return { success: true };
 }
 
 export async function updateProdutoModalAction(

@@ -40,7 +40,7 @@ export async function importarRegrasTributariasAction(
 function revalidateTaxRulesPaths() {
   revalidatePath("/regras");
   revalidatePath("/produtos");
-  revalidatePath("/produtos/novo");
+  revalidatePath("/produtos");
   revalidatePath("/configuracoes-fiscais");
 }
 

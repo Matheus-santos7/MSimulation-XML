@@ -51,6 +51,8 @@ describe("tax-engine", () => {
     assert.equal(r.pis.vPIS, 13.9);
     assert.equal(r.cofins.vCOFINS, 64.04);
     assert.equal(r.difal?.vICMSUFDest, 63.62);
+    assert.equal(r.difal?.pICMSInterPart, 100);
+    assert.equal(r.difal?.vICMSUFRemet, 0);
     assert.equal(nota.totais.vNF, 1060.29);
   });
 

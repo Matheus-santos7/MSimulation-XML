@@ -77,6 +77,8 @@ export type DifalInput = {
   pFCPUFDest?: number;
   /** % de redução da base do DIFAL (pRedBCDifal). */
   pRedBC?: number;
+  /** % de partilha para a UF de destino (pICMSInterPart). Padrão 100% (EC 87/2015, regra atual). */
+  pICMSInterPart?: number;
 };
 
 export type ItemFiscalInput = {
@@ -158,7 +160,9 @@ export type ItemFiscalResult = {
     vBCUFDest: number;
     pICMSUFDest: number;
     pICMSInter: number;
+    pICMSInterPart: number;
     vICMSUFDest: number;
+    vICMSUFRemet: number;
     vBCFCPUFDest: number;
     pFCPUFDest: number;
     vFCPUFDest: number;
@@ -262,10 +266,14 @@ export function calcularItem(input: ItemFiscalInput): ItemFiscalResult {
     const vBCUFDest = round2(baseAntesReducao * (1 - pRedDifal / 100));
     const pICMSUFDest = pct(input.difal.pICMSUFDest);
     const pICMSInter = pct(input.difal.pICMSInter);
+    const pICMSInterPart = pct(input.difal.pICMSInterPart ?? 100);
     // DIFAL = base × (alíquota interna destino − alíquota interestadual).
-    const vICMSUFDest = round2(
+    const vDifalTotal = round2(
       round2(vBCUFDest * (pICMSUFDest / 100)) - round2(vBCUFDest * (pICMSInter / 100)),
     );
+    const vDifalPositivo = Math.max(0, vDifalTotal);
+    const vICMSUFDest = round2(vDifalPositivo * (pICMSInterPart / 100));
+    const vICMSUFRemet = round2(vDifalPositivo - vICMSUFDest);
     const pFCPUFDest = pct(input.difal.pFCPUFDest);
     const vBCFCPUFDest = pFCPUFDest > 0 ? vBCUFDest : 0;
     const vFCPUFDest = round2(vBCFCPUFDest * (pFCPUFDest / 100));
@@ -273,7 +281,9 @@ export function calcularItem(input: ItemFiscalInput): ItemFiscalResult {
       vBCUFDest,
       pICMSUFDest,
       pICMSInter,
-      vICMSUFDest: Math.max(0, vICMSUFDest),
+      pICMSInterPart,
+      vICMSUFDest,
+      vICMSUFRemet,
       vBCFCPUFDest,
       pFCPUFDest,
       vFCPUFDest,
@@ -339,6 +349,7 @@ export function calcularTotais(itens: ItemFiscalResult[]): NotaFiscalTotais {
     acc.vCOFINS = round2(acc.vCOFINS + item.cofins.vCOFINS);
     if (item.difal) {
       acc.vICMSUFDest = round2(acc.vICMSUFDest + item.difal.vICMSUFDest);
+      acc.vICMSUFRemet = round2(acc.vICMSUFRemet + item.difal.vICMSUFRemet);
       acc.vFCPUFDest = round2(acc.vFCPUFDest + item.difal.vFCPUFDest);
     }
   }

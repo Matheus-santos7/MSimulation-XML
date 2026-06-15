@@ -92,6 +92,13 @@ export {
 } from "./venda-ml-payload.js";
 export { normalizeTaxPercent, parseTaxPercent } from "./tax-percent.js";
 export {
+  IMPORTED_ICMS_ORIGINS,
+  SENATE_RESOLUTION_IMPORT_INTERSTATE_RATE,
+  isImportedInterstateOrigin,
+  resolveFiscalExitUf,
+  resolveInterstateIcmsRateForProductOrigin,
+} from "./interstate-icms.js";
+export {
   buildEmitterSnapshot,
   calcTributoBase,
   composicaoChannel,

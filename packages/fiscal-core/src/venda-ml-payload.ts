@@ -106,14 +106,18 @@ export function buildVendaInfCplText(
   vTotTrib: number,
   returnNote?: VendaMlReturnNoteRef | null,
   cd: Partial<typeof VENDA_ML_CD_DEPOSITO> = {},
+  difal?: { vICMSUFDest?: number; vFCPUFDest?: number; vICMSUFRemet?: number },
 ): string {
   const dep = { ...VENDA_ML_CD_DEPOSITO, ...cd };
   const ibpt = vTotTrib.toFixed(2).replace(".", ",");
   const retornoPart = returnNote
     ? ` Nota fiscal de retorno simbolico n ${returnNote.numero}, emitida em ${formatBrDate(returnNote.emitidaEm)}, serie ${returnNote.serie}.`
     : "";
+  const vDifalDest = (difal?.vICMSUFDest ?? 0).toFixed(2).replace(".", ",");
+  const vFcpDest = (difal?.vFCPUFDest ?? 0).toFixed(2).replace(".", ",");
+  const vDifalOrig = (difal?.vICMSUFRemet ?? 0).toFixed(2).replace(".", ",");
   return (
-    `Enviado diretamente do deposito temporario - operador logistico: EBAZAR.COM.BR LTDA, Cnpj: ${dep.cnpj}, Inscricao Estadual: ${dep.ie}, saindo do endereco: ${dep.logradouro}, Numero: ${dep.numero}, Complemento: ${dep.complemento}, Bairro: ${dep.bairro}, Cidade: ${dep.municipio}, Cep: ${dep.cep}, Estado: ${dep.uf}, Pais: ${dep.pais}.${retornoPart} Valor aproximado dos tributos (IBPT) R$${ibpt}. Valores totais do ICMS Interestadual: DIFAL da UF destino R$0,00 + FCP R$0,00; DIFAL da UF Origem R$0,00. N/A ${ibpt.replace(",", ".")} 0,00`
+    `Enviado diretamente do deposito temporario - operador logistico: EBAZAR.COM.BR LTDA, Cnpj: ${dep.cnpj}, Inscricao Estadual: ${dep.ie}, saindo do endereco: ${dep.logradouro}, Numero: ${dep.numero}, Complemento: ${dep.complemento}, Bairro: ${dep.bairro}, Cidade: ${dep.municipio}, Cep: ${dep.cep}, Estado: ${dep.uf}, Pais: ${dep.pais}.${retornoPart} Valor aproximado dos tributos (IBPT) R$${ibpt}. Valores totais do ICMS Interestadual: DIFAL da UF destino R$${vDifalDest} + FCP R$${vFcpDest}; DIFAL da UF Origem R$${vDifalOrig}. N/A ${ibpt.replace(",", ".")} 0,00`
   );
 }
 
@@ -144,6 +148,12 @@ export function enrichFiscalPayloadMlVenda(
     vPIS: Number(totais?.vPIS ?? pis?.vPIS ?? 0),
     vCOFINS: Number(totais?.vCOFINS ?? cofins?.vCOFINS ?? 0),
   };
+  const difal = asRecord(item?.difal);
+  const difalTotais = {
+    vICMSUFDest: Number(totais?.vICMSUFDest ?? difal?.vICMSUFDest ?? 0),
+    vFCPUFDest: Number(totais?.vFCPUFDest ?? difal?.vFCPUFDest ?? 0),
+    vICMSUFRemet: Number(totais?.vICMSUFRemet ?? difal?.vICMSUFRemet ?? 0),
+  };
 
   const vTotTrib =
     input.vTotTrib != null && Number.isFinite(input.vTotTrib)
@@ -165,7 +175,7 @@ export function enrichFiscalPayloadMlVenda(
     transp: payload.transp ?? { qVol: input.quantidade, pesoL, pesoB },
     vTotTrib,
     infAdProd: buildVendaInfAdProdText(xPed, vTotTrib),
-    infCplVenda: buildVendaInfCplText(vTotTrib, input.returnNote, input.cdDeposito),
+    infCplVenda: buildVendaInfCplText(vTotTrib, input.returnNote, input.cdDeposito, difalTotais),
     pagamento: {
       tPag: "03",
       card: {

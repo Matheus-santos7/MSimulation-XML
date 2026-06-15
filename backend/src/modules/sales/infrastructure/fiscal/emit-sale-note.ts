@@ -1,6 +1,7 @@
 import {
   enrichFiscalPayloadMlVenda,
   enrichFiscalPayloadWithXTexto,
+  resolveFiscalExitUf,
   resolveSaleCfop,
   VENDA_ML_NAT_OP,
 } from "@msimulation-xml/fiscal-core";
@@ -40,14 +41,16 @@ export async function emitSaleNote(
   ctx: EmissionContext,
   rules: SalesChainRules,
   returnNote: ReturnNoteCreated,
+  stockUf: string,
 ) {
   const { tenant } = order;
   const { saleTaxRule, customerType, emitterSettings } = rules;
+  const fiscalExitUf = resolveFiscalExitUf(tenant.uf, stockUf);
 
   const numero = await proximoNumeroNfe(tx, tenant.id, ctx.serie);
   const chave = buildChaveNFe({ uf: tenant.uf, cnpj: tenant.cnpj, serie: ctx.serie, numero });
-  const fallbackRate = inferIcmsRateForSale(tenant.uf, order.destUf, emitterSettings);
-  const cfop = resolveSaleCfop(tenant.uf, order.destUf, customerType, saleTaxRule.cfop);
+  const fallbackRate = inferIcmsRateForSale(fiscalExitUf, order.destUf, emitterSettings);
+  const cfop = resolveSaleCfop(fiscalExitUf, order.destUf, customerType, saleTaxRule.cfop);
   const natOp = VENDA_ML_NAT_OP;
   const valorFrete = order.valorFrete ?? 0;
   const xPed = order.mlPackId?.trim() || undefined;
@@ -70,7 +73,14 @@ export async function emitSaleNote(
       frete: valorFrete,
     },
     saleTaxRule,
-    { ufOrigem: tenant.uf, ufDestino: order.destUf, customerType },
+    {
+      ufOrigem: tenant.uf,
+      ufSaidaFisica: fiscalExitUf,
+      ufDestino: order.destUf,
+      customerType,
+      emitterSettings,
+      operationTipo: "VENDA",
+    },
     fallbackRate,
   );
   const saleInvoice = calcularNotaFiscal([saleItem]);
@@ -106,11 +116,12 @@ export async function emitSaleNote(
               tipo: NFeTipo.VENDA,
               valor: ctx.valorTotalVenda,
               valorIcms: icmsValue,
-              emitUf: tenant.uf,
+              emitUf: fiscalExitUf,
               destUf: order.destUf,
               indFinal: 1,
             }),
             engine: saleInvoice,
+            ufSaidaFisica: fiscalExitUf,
             ...(autXmlCpfs ? { autXmlCpfs } : {}),
             ...(nfci ? { nfci } : {}),
             ...(xPed ? { xPed } : {}),

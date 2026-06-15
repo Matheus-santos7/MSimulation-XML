@@ -13,6 +13,7 @@ import type { FiscalEmitterSettingsData } from "@msimulation-xml/fiscal-core";
 import {
   ML_INF_RESP_TEC,
   ML_NFE_VER_PROC,
+  resolveFiscalExitUf,
   resolveSaleCfop,
   VENDA_ML_INF_RESP_TEC,
 } from "@msimulation-xml/fiscal-core";
@@ -62,6 +63,7 @@ import {
 } from "./nfe-xml-blocks.js";
 import {
   buildIcmsXmlFromEngineItem,
+  buildIcmsUfDestXmlFromEngine,
   buildIpiXmlFromEngine,
   buildIpiXmlFromFiscalSnapshot,
   buildPisCofinsXmlFromEngine,
@@ -385,12 +387,13 @@ function buildItemImpostoXml(opts: {
     vBcIcms: number;
     valorIcms: number;
   };
-}): { icmsXml: string; ipiXml: string; pisCofinsXml: string } {
+}): { icmsXml: string; ipiXml: string; pisCofinsXml: string; icmsUfDestXml: string } {
   const { engineItem, fiscal, emitter, icmsSnapshotFallback } = opts;
   const { orig, icms, vBcIcms, valorIcms } = icmsSnapshotFallback;
 
   if (engineItem) {
     const icmsXml = buildIcmsXmlFromEngineItem(engineItem.icms);
+    const icmsUfDestXml = engineItem.difal ? buildIcmsUfDestXmlFromEngine(engineItem.difal) : "";
     const pisCofinsXml = buildPisCofinsXmlFromEngine(engineItem.pis, engineItem.cofins);
     let ipiXml: string;
     if (engineItem.ipi) {
@@ -402,7 +405,7 @@ function buildItemImpostoXml(opts: {
           ? buildIpiXmlFromFiscalSnapshot(ipiSnap, emitter.bases.vBcIpi)
           : impostoIpiIntXml();
     }
-    return { icmsXml, ipiXml, pisCofinsXml };
+    return { icmsXml, ipiXml, pisCofinsXml, icmsUfDestXml };
   }
 
   const icmsSnap = icms ?? { cst: "00", aliquota: 0 };
@@ -413,7 +416,21 @@ function buildItemImpostoXml(opts: {
     ipiSnap.st != null || ipiSnap.codEnq != null
       ? buildIpiXmlFromFiscalSnapshot(ipiSnap, emitter.bases.vBcIpi)
       : impostoIpiIntXml();
-  return { icmsXml, ipiXml, pisCofinsXml };
+  const difalSnap = (fiscal.difal as Record<string, unknown> | undefined) ?? {};
+  const icmsUfDestXml =
+    difalSnap.vBCUFDest != null
+      ? buildIcmsUfDestXmlFromEngine({
+          vBCUFDest: asNum(difalSnap.vBCUFDest, 0),
+          pFCPUFDest: asNum(difalSnap.pFCPUFDest, 0),
+          pICMSUFDest: asNum(difalSnap.pICMSUFDest, 0),
+          pICMSInter: asNum(difalSnap.pICMSInter, 0),
+          pICMSInterPart: asNum(difalSnap.pICMSInterPart, 100),
+          vFCPUFDest: asNum(difalSnap.vFCPUFDest, 0),
+          vICMSUFDest: asNum(difalSnap.vICMSUFDest, 0),
+          vICMSUFRemet: asNum(difalSnap.vICMSUFRemet, 0),
+        })
+      : "";
+  return { icmsXml, ipiXml, pisCofinsXml, icmsUfDestXml };
 }
 
 export function buildNFeXML(
@@ -551,7 +568,7 @@ function buildRemessaNFeXML(
 
     const vBcIcmsItem = asNum(icms.vBc, emitter.bases.vBcIcms);
     const valorIcmsItem = asNum(icms.valorIcms, nfe.valorICMS);
-    const { icmsXml, ipiXml, pisCofinsXml } = buildItemImpostoXml({
+    const { icmsXml, ipiXml, pisCofinsXml, icmsUfDestXml } = buildItemImpostoXml({
       engineItem,
       fiscal,
       emitter,
@@ -753,7 +770,7 @@ function buildRetornoNFeXML(
   };
   const vBcIcms = asNum(icmsSnap.vBc, emitter.bases.vBcIcms);
   const valorIcms = asNum(icmsSnap.valorIcms, nfe.valorICMS);
-  const { icmsXml, ipiXml, pisCofinsXml } = buildItemImpostoXml({
+  const { icmsXml, ipiXml, pisCofinsXml, icmsUfDestXml } = buildItemImpostoXml({
     engineItem,
     fiscal,
     emitter,
@@ -884,6 +901,7 @@ ${autXml}      <det nItem="1">
         <imposto>
           <vTotTrib>0.00</vTotTrib>
           ${icmsXml}
+          ${icmsUfDestXml}
           ${ipiXml}
           ${pisCofinsXml}${fulfillmentImpostoExtras(fiscal, retornoVBcIbsCbs)}
         </imposto>${infAdProd}${fulfillmentDetTail(fiscal, vProd)}
@@ -927,10 +945,15 @@ function buildVendaNFeXML(
 
   const d = nfe.destinatario;
   const de = d.endereco;
+  const fiscal = (nfe.fiscalPayload ?? {}) as Record<string, unknown>;
+  const stockUf = resolveFiscalExitUf(
+    e.uf,
+    typeof fiscal.ufSaidaFisica === "string" ? fiscal.ufSaidaFisica : undefined,
+  );
   const cfop =
     nfe.cfop?.trim() ||
     resolveSaleCfop(
-      e.uf,
+      stockUf,
       de.uf,
       d.indIEDest === 9 ? "non_taxpayer" : "taxpayer",
     );
@@ -940,7 +963,6 @@ function buildVendaNFeXML(
   const destFone = de.telefone ? `\n          <fone>${de.telefone.replace(/\D/g, "")}</fone>` : "";
   const cUF = ufToCodigo(e.uf);
 
-  const fiscal = (nfe.fiscalPayload ?? {}) as Record<string, unknown>;
   const engine = parseEngineFromFiscalPayload(fiscal);
   const icms = (fiscal.icms as Record<string, unknown> | undefined) ?? {};
   const ipi = (fiscal.ipi as Record<string, unknown> | undefined) ?? {};
@@ -954,11 +976,12 @@ function buildVendaNFeXML(
   const autXml = autXmlBlock(fiscal);
   const vTotTrib = asNum(fiscal.vTotTrib, 0);
   const finNFe = 1;
-  const idDest = idDestFromUfs(e.uf, de.uf);
+  const idDest = idDestFromUfs(stockUf, de.uf);
 
   let icmsXml: string;
   let ipiXml: string;
   let pisCofinsXml: string;
+  let icmsUfDestXml = "";
   let totBlock: string;
   let vUnComOut = vUnCom;
   let vProdOut = vProd;
@@ -969,6 +992,7 @@ function buildVendaNFeXML(
   if (engine?.itens[0]) {
     const item = engine.itens[0];
     icmsXml = buildIcmsXmlFromEngineItem(item.icms);
+    icmsUfDestXml = item.difal ? buildIcmsUfDestXmlFromEngine(item.difal) : "";
     ipiXml = item.ipi ? buildIpiXmlFromEngine(item.ipi) : impostoIpiIntXml("50");
     pisCofinsXml = buildPisCofinsXmlFromEngine(item.pis, item.cofins);
     totBlock = icmsTotBlock({ ...icmsTotFromEngine(engine.totais, vFrete), vTotTrib });
@@ -1139,6 +1163,7 @@ ${autXml}      <det nItem="1">
         <imposto>
           ${vTotTribImpostoXml}
           ${icmsXml}
+          ${icmsUfDestXml}
           ${ipiXml}
           ${pisCofinsXml}
           ${ibsCbsXml}

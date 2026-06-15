@@ -201,4 +201,102 @@ describe("buildNFeXML — VENDA", () => {
     const xml = buildNFeXML(nfe, emit, product);
     assert.match(xml, /<CFOP>5105<\/CFOP>/);
   });
+
+  it("emite ICMSUFDest e idDest=2 em venda interestadual com DIFAL no engine", () => {
+    const nfe: NFeXmlInput = {
+      chave: "42260678242849000169550050000000061423282897",
+      numero: 6,
+      serie: 5,
+      natOp: VENDA_ML_NAT_OP,
+      cfop: "6105",
+      ncm: "85094010",
+      destinatario: {
+        nome: "Comprador Interestadual",
+        doc: "07629167962",
+        uf: "SP",
+        indIEDest: 9,
+        docTipo: "CPF",
+        endereco: {
+          logradouro: "Rua B",
+          numero: "10",
+          bairro: "Centro",
+          codigoMunicipio: "3550308",
+          municipio: "Sao Paulo",
+          uf: "SP",
+          cep: "01001000",
+          codigoPais: 1058,
+          nomePais: "Brasil",
+        },
+      },
+      valor: 500,
+      valorICMS: 21,
+      aliqICMS: 4,
+      status: "AUTORIZADA",
+      emitidaEm: "2026-06-13T15:57:40-03:00",
+      pedidoML: "46766952869",
+      quantidade: 1,
+      tipo: "VENDA",
+      fiscalPayload: enrichFiscalPayloadMlVenda(
+        {
+          ufSaidaFisica: "SC",
+          engine: {
+            itens: [
+              {
+                vProd: 500,
+                vFrete: 25,
+                quantidade: 1,
+                valorUnitario: 500,
+                icms: { cst: "00", orig: 2, vBC: 538.75, pICMS: 4, vICMS: 21.55 },
+                ipi: { cst: "50", cEnq: "999", vBC: 525, pIPI: 2.6, vIPI: 13.65 },
+                pis: { cst: "01", vBC: 420.5, pPIS: 1.65, vPIS: 6.94 },
+                cofins: { cst: "01", vBC: 420.5, pCOFINS: 7.6, vCOFINS: 31.96 },
+                difal: {
+                  vBCUFDest: 538.75,
+                  pICMSUFDest: 19.5,
+                  pICMSInter: 4,
+                  pICMSInterPart: 100,
+                  vICMSUFDest: 83.48,
+                  vICMSUFRemet: 0,
+                  pFCPUFDest: 0,
+                  vFCPUFDest: 0,
+                },
+              },
+            ],
+            totais: {
+              vBC: 538.75,
+              vICMS: 21.55,
+              vProd: 500,
+              vFrete: 25,
+              vIPI: 13.65,
+              vPIS: 6.94,
+              vCOFINS: 31.96,
+              vICMSUFDest: 83.48,
+              vICMSUFRemet: 0,
+              vFCPUFDest: 0,
+              vNF: 538.75,
+            },
+          },
+        },
+        { quantidade: 1, valorFrete: 25, xPed: "200001579233993" },
+      ),
+    };
+
+    const importedProduct: ProductXmlInput = {
+      ...product,
+      sku: "4133250001",
+      nome: "Liquidificador Importado",
+      ncm: "85094010",
+      origem: 2,
+    };
+
+    const xml = buildNFeXML(nfe, emit, importedProduct);
+    assert.match(xml, /<idDest>2<\/idDest>/);
+    assert.match(xml, /<CFOP>6105<\/CFOP>/);
+    assert.match(xml, /<pICMS>4\.0000<\/pICMS>/);
+    assert.match(xml, /<ICMSUFDest>/);
+    assert.match(xml, /<pICMSInter>4\.00<\/pICMSInter>/);
+    assert.match(xml, /<pICMSInterPart>100\.00<\/pICMSInterPart>/);
+    assert.match(xml, /<vICMSUFDest>83\.48<\/vICMSUFDest>/);
+    assert.match(xml, /<infCpl>[^<]*DIFAL da UF destino R\$83,48/);
+  });
 });

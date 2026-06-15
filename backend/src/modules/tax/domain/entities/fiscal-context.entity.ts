@@ -21,8 +21,14 @@ export type CstVendaReferencia = {
  * Usado em `buildFiscalItem` e `resolveTaxRuleFromDb`.
  */
 export type FiscalContext = {
+  /** UF do emitente / estabelecimento responsável pela regra fiscal. */
   ufOrigem: string;
   ufDestino: string;
+  /**
+   * UF de saída física da mercadoria (CD fulfillment).
+   * Quando informada, prevalece sobre `ufOrigem` no cálculo interestadual, DIFAL e CFOP.
+   */
+  ufSaidaFisica?: string;
   customerType: CustomerType;
   operationTipo?: FiscalOperationTipo;
   cstVendaReferencia?: CstVendaReferencia;

@@ -25,9 +25,11 @@ import type { ResolvedTaxRule } from "../../domain/entities/resolved-tax-rule.en
 import {
   composicaoChannel,
   mapCstDevolucao,
+  resolveDifalMode,
+  resolveFiscalExitUf,
+  resolveInterstateIcmsRateForProductOrigin,
   resolveIpiCstFromSnapshot,
   resolvePisCofinsCstFromSnapshot,
-  resolveDifalMode,
   type FiscalEmitterSettingsData,
 } from "@msimulation-xml/fiscal-core";
 import {
@@ -133,28 +135,43 @@ export function calculateInboundInvoice(
   };
 }
 
+function resolveFiscalOriginUf(ctx: BuildFiscalItemContext): string {
+  return resolveFiscalExitUf(ctx.ufOrigem, ctx.ufSaidaFisica);
+}
+
 /**
  * Escolhe alíquota ICMS interestadual efetiva a aplicar no item.
  *
  * Prioridade: `pIcmsInterstate` → `aliquotaIcmsInterna` → fallback → snapshot.
+ * Em seguida aplica Resolução do Senado 13/2012 (4%) para origens importadas.
  */
 function resolveInterstateIcmsRate(
   rule: ResolvedTaxRule | null,
   snapshot: ReturnType<typeof taxSnapshotFromRule>,
-  ctx: FiscalContext,
+  ctx: BuildFiscalItemContext,
   fallbackIcmsRate: number,
   internalRate: number,
+  productOrigin: number,
 ): number {
+  const fiscalOriginUf = resolveFiscalOriginUf(ctx);
+  let rate: number;
   if (rule != null) {
-    if (rule.icms?.pIcmsInterstate != null) return rule.icms.pIcmsInterstate;
-    if (rule.aliquotaIcmsInterna != null) return rule.aliquotaIcmsInterna;
-    return fallbackIcmsRate;
+    if (rule.icms?.pIcmsInterstate != null) rate = rule.icms.pIcmsInterstate;
+    else if (rule.aliquotaIcmsInterna != null) rate = rule.aliquotaIcmsInterna;
+    else rate = fallbackIcmsRate;
+  } else {
+    rate =
+      snapshot.icms.pIcmsInterstate ??
+      defaultInterstateConvenioRate(fiscalOriginUf, ctx.ufDestino) ??
+      internalRate;
   }
-  return (
-    snapshot.icms.pIcmsInterstate ??
-    defaultInterstateConvenioRate(ctx.ufOrigem, ctx.ufDestino) ??
-    internalRate
-  );
+  return ctx.operationTipo === "VENDA"
+    ? resolveInterstateIcmsRateForProductOrigin(
+        productOrigin,
+        fiscalOriginUf !== ctx.ufDestino.toUpperCase(),
+        rate,
+      )
+    : rate;
 }
 
 function toOptionalNum(value: unknown): number | undefined {
@@ -246,13 +263,14 @@ export function buildFiscalItem(
 ): ItemFiscalInput {
   const snapshot = taxSnapshotFromRule(rule, fallbackIcmsRate, ctx.emitterSettings);
 
-  const isInterstate = ctx.ufOrigem.toUpperCase() !== ctx.ufDestino.toUpperCase();
+  const fiscalOriginUf = resolveFiscalOriginUf(ctx);
+  const isInterstate = fiscalOriginUf !== ctx.ufDestino.toUpperCase();
   const isFinalConsumer = ctx.customerType === "non_taxpayer";
   const appliesDifal = shouldApplyDifal(ctx, isInterstate, isFinalConsumer);
 
   const internalRate = snapshot.icms.aliquota;
   const icmsRate = isInterstate
-    ? resolveInterstateIcmsRate(rule, snapshot, ctx, fallbackIcmsRate, internalRate)
+    ? resolveInterstateIcmsRate(rule, snapshot, ctx, fallbackIcmsRate, internalRate, line.origem)
     : internalRate;
 
   const icmsCst = resolveIcmsCst(snapshot.icms.cst, ctx);
@@ -311,6 +329,7 @@ export function buildFiscalItem(
           pICMSUFDest: internalRate,
           pFCPUFDest: snapshot.icms.pIcmsFcp,
           pRedBC: snapshot.icms.pRedBcDifal,
+          pICMSInterPart: 100,
         }
       : undefined,
     incluirIpiNaBaseIcms: shouldIncludeIpiInIcmsBase(ctx, isFinalConsumer),

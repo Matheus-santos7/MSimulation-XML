@@ -34,8 +34,13 @@ export type EnginePisCofins = {
 };
 
 export type EngineDifal = {
-  vICMSUFDest: number;
+  vBCUFDest: number;
+  pFCPUFDest?: number;
+  pICMSUFDest: number;
+  pICMSInter: number;
+  pICMSInterPart?: number;
   vFCPUFDest?: number;
+  vICMSUFDest: number;
   vICMSUFRemet?: number;
 };
 
@@ -167,8 +172,13 @@ export function parseEngineFromFiscalPayload(
       },
       difal: difal
         ? {
-            vICMSUFDest: num(difal.vICMSUFDest),
+            vBCUFDest: num(difal.vBCUFDest),
+            pFCPUFDest: num(difal.pFCPUFDest),
+            pICMSUFDest: num(difal.pICMSUFDest),
+            pICMSInter: num(difal.pICMSInter),
+            pICMSInterPart: num(difal.pICMSInterPart, 100),
             vFCPUFDest: num(difal.vFCPUFDest),
+            vICMSUFDest: num(difal.vICMSUFDest),
             vICMSUFRemet: num(difal.vICMSUFRemet),
           }
         : undefined,
@@ -329,5 +339,30 @@ export function buildPisCofinsXmlFromEngine(pis: EnginePisCofins, cofins: Engine
     { vBC: pis.vBC, pPIS: pPis, vPIS: pis.vPIS },
     { vBC: cofins.vBC, pCOFINS: pCofins, vCOFINS: cofins.vCOFINS },
   );
+}
+
+/** Gera `<ICMSUFDest>` quando o motor fiscal calculou partilha válida (DIFAL). */
+export function buildIcmsUfDestXmlFromEngine(difal: EngineDifal): string {
+  if (!Number.isFinite(difal.vBCUFDest) || difal.vBCUFDest <= 0) return "";
+  if (!Number.isFinite(difal.vICMSUFDest) && !Number.isFinite(difal.vFCPUFDest)) return "";
+
+  const pFcp = difal.pFCPUFDest ?? 0;
+  const vFcp = difal.vFCPUFDest ?? 0;
+  const pInterPart = difal.pICMSInterPart ?? 100;
+  const vRemet = difal.vICMSUFRemet ?? 0;
+  const pFcpXml =
+    pFcp > 0
+      ? `<pFCPUFDest>${pFcp.toFixed(4)}</pFCPUFDest><vFCPUFDest>${vFcp.toFixed(2)}</vFCPUFDest>`
+      : "";
+
+  return `<ICMSUFDest>
+            <vBCUFDest>${difal.vBCUFDest.toFixed(2)}</vBCUFDest>
+            ${pFcpXml}
+            <pICMSUFDest>${difal.pICMSUFDest.toFixed(4)}</pICMSUFDest>
+            <pICMSInter>${difal.pICMSInter.toFixed(2)}</pICMSInter>
+            <pICMSInterPart>${pInterPart.toFixed(2)}</pICMSInterPart>
+            <vICMSUFDest>${difal.vICMSUFDest.toFixed(2)}</vICMSUFDest>
+            <vICMSUFRemet>${vRemet.toFixed(2)}</vICMSUFRemet>
+          </ICMSUFDest>`;
 }
 

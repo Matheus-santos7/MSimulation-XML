@@ -190,3 +190,61 @@ describe("buildFiscalItem — devolução", () => {
     assert.equal(item.pis.cst, "50");
   });
 });
+
+const importedSaleRule: ResolvedTaxRule = {
+  ruleId: "sku-SC-non_taxpayer-sale",
+  aliquotaIcmsInterna: 19.5,
+  cfop: "6105",
+  payload: {
+    taxes: {
+      pis: { st: "01 - Operação Tributável com Alíquota Básica", aliquota: 1.65, pRedBc: 18.4675 },
+      cofins: { st: "01 - Operação Tributável com Alíquota Básica", aliquota: 7.6, pRedBc: 18.4675 },
+      ipi: { st: "50 - Saída Tributada", aliquota: 2.6, codEnq: "999" },
+    },
+    icmsByUf: {
+      ICMS_SP_CST: "00",
+      ICMS_SP_PICMS_INTERNAL: 19.5,
+      ICMS_SP_PICMS_INTERSTATE: 12,
+    },
+  },
+  icms: { cst: "00", pIcmsInternal: 19.5, pIcmsInterstate: 12 },
+};
+
+describe("buildFiscalItem — venda ML Full importada interestadual", () => {
+  it("origem 2 (SC→SP) aplica 4% de ICMS e calcula DIFAL para consumidor final", () => {
+    const line = orderLineFromProduct(product, {
+      cfop: "6105",
+      quantidade: 1,
+      valorUnitario: 500,
+    });
+
+    const item = buildFiscalItem(
+      { ...line, frete: 25 },
+      importedSaleRule,
+      {
+        ufOrigem: "PR",
+        ufSaidaFisica: "SC",
+        ufDestino: "SP",
+        customerType: "non_taxpayer",
+        operationTipo: "VENDA",
+        emitterSettings: DEFAULT_FISCAL_EMITTER_SETTINGS,
+      },
+      12,
+    );
+
+    assert.equal(item.icms.pICMS, 4);
+    assert.ok(item.difal);
+    assert.equal(item.difal!.pICMSInter, 4);
+    assert.equal(item.difal!.pICMSUFDest, 19.5);
+    assert.equal(item.difal!.pICMSInterPart, 100);
+
+    const nota = calcularNotaFiscal([item]);
+    const r = nota.itens[0]!;
+    assert.equal(r.icms.pICMS, 4);
+    assert.ok(r.difal);
+    assert.equal(r.difal!.vBCUFDest, r.icms.vBC);
+    assert.ok(r.difal!.vICMSUFDest > 0);
+    assert.equal(r.difal!.vICMSUFRemet, 0);
+    assert.equal(nota.totais.vICMSUFDest, r.difal!.vICMSUFDest);
+  });
+});

@@ -6,12 +6,7 @@ import {
   calculateInvoiceTaxes,
   inferIcmsRateForShipment,
   inferIntraStateIcmsRate,
-  normalizeProductOrigin,
   orderLineFromProduct,
-  resolveIcmsFallbackRate,
-  resolveInterstateIcmsFallback,
-  resolveInterstateSaleFallbackRate,
-  resolvePisCofinsFallbackRates,
   type InboundInvoiceResult,
 } from "./application/services/tax-calculation.service.js";
 import type { FiscalContext } from "./domain/entities/fiscal-context.entity.js";
@@ -33,21 +28,25 @@ export type { InboundInvoiceResult };
 
 /** @deprecated Use InboundInvoiceResult */
 export type ResultadoNotaInbound = InboundInvoiceResult;
+
 export {
   buildFiscalItem,
   calculateInboundInvoice,
   calculateInvoiceTaxes,
+  orderLineFromProduct,
+} from "./application/services/tax-calculation.service.js";
+
+export {
   inferIcmsRateForShipment,
   inferIntraStateIcmsRate,
   normalizeProductOrigin,
-  orderLineFromProduct,
   resolveIcmsFallbackRate,
   resolveInterstateIcmsFallback,
   resolveInterstateSaleFallbackRate,
   resolvePisCofinsFallbackRates,
-  createTaxModule,
-  resolveTaxRuleFromDb,
-};
+} from "./application/services/tax-fallback-resolver.service.js";
+
+export { createTaxModule, resolveTaxRuleFromDb };
 export { taxRuleController } from "./presentation/controllers/tax-rule.controller.js";
 export {
   taxRuleImportRowSchema,

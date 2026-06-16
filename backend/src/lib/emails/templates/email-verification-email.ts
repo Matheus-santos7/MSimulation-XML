@@ -1,4 +1,4 @@
-import { BRAND_FULL_NAME } from "../../lib/brand.js";
+import { BRAND_FULL_NAME } from "../../../lib/brand.js";
 import { escapeHtml } from "../utils.js";
 
 export function buildEmailVerificationEmailHtml(params: {

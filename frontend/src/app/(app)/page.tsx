@@ -7,7 +7,7 @@ import { brl, formatChave } from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "Dashboard",
-  description: "Cockpit fiscal e logístico para simulação de operações Mercado Livre Full.",
+  description: "Simulação de operações Mercado Livre Full.",
 };
 
 export default async function DashboardPage() {
@@ -47,7 +47,7 @@ export default async function DashboardPage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="text-[12px] text-muted-foreground uppercase tracking-tighter border-b border-border">
-                  <th className="px-4 py-3 font-medium">Chave de Acesso</th>
+                  <th className="px-4 py-3 font-medium">NF-e</th>
                   <th className="px-4 py-3 font-medium">Destinatário</th>
                   <th className="px-4 py-3 font-medium">Valor</th>
                   <th className="px-4 py-3 font-medium">Status</th>
@@ -66,8 +66,8 @@ export default async function DashboardPage() {
                         i === 0 ? "text-accent/80" : "text-muted-foreground"
                       }`}
                     >
-                      <Link href={`/nfe/${nfe.chave}`} className="hover:underline">
-                        {formatChave(nfe.chave)}
+                      <Link href={`/nfe/${nfe.numero}/${nfe.serie}`} className="hover:underline">
+                        {nfe.numero}/{nfe.serie}
                       </Link>
                     </td>
                     <td className="px-4 py-3">

@@ -63,7 +63,7 @@ export function LoginPanel() {
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
           {mode === "login"
-            ? "Acesse o cockpit para simular e inspecionar documentos fiscais."
+            ? "Acesse o MSimulation XML para simular seus documentos fiscais."
             : "Crie sua conta e em seguida cadastre a empresa emitente."}
         </p>
       </div>

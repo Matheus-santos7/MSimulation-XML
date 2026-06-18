@@ -80,7 +80,7 @@ export default async function ConfiguracoesFiscaisPage() {
 
       <FiscalSettingsSection title="Configurações de dados da NF-e">
         <FiscalSettingsRow
-          label="Série da NF-e"
+          label="Numeração e Série da NF-e"
           hint={cfg ? `NF-e série ${cfg.serieRemessa} (todas) · CT-e série ${cfg.serieCte}` : "—"}
           href="/configuracoes-fiscais/serie-nfe"
         />

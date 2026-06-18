@@ -2,6 +2,7 @@ import {
   enrichFiscalPayloadMlVenda,
   enrichFiscalPayloadWithXTexto,
   resolveFiscalExitUf,
+  resolveNumeroInicialNfe,
   resolveSaleCfop,
   VENDA_ML_NAT_OP,
 } from "@msimulation-xml/fiscal-core";
@@ -47,7 +48,11 @@ export async function emitSaleNote(
   const { saleTaxRule, customerType, emitterSettings } = rules;
   const fiscalExitUf = resolveFiscalExitUf(tenant.uf, stockUf);
 
-  const numero = await proximoNumeroNfe(tx, tenant.id, ctx.serie);
+  const numeroInicial = resolveNumeroInicialNfe(emitterSettings, ctx.serie, {
+    serieRemessa: tenant.serieRemessa,
+    serieTransferencia: tenant.serieRemessa,
+  });
+  const numero = await proximoNumeroNfe(tx, tenant.id, ctx.serie, numeroInicial);
   const chave = buildChaveNFe({ uf: tenant.uf, cnpj: tenant.cnpj, serie: ctx.serie, numero });
   const fallbackRate = inferIcmsRateForSale(fiscalExitUf, order.destUf, emitterSettings);
   const cfop = resolveSaleCfop(fiscalExitUf, order.destUf, customerType, saleTaxRule.cfop);

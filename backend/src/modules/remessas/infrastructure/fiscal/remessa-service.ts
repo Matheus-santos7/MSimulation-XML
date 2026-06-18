@@ -29,6 +29,7 @@ import { taxSnapshotFromRule } from "../../../tax/domain/services/tax-snapshot.j
 import {
   enrichFiscalPayloadMlFulfillment,
   enrichFiscalPayloadWithXTexto,
+  resolveNumeroInicialNfe,
 } from "@msimulation-xml/fiscal-core";
 import { emitirCteRemessa } from "./cte-remessa-service.js";
 import { productUnitPrice } from "@msimulation-xml/fiscal-core";
@@ -195,7 +196,11 @@ async function emitirNFeRemessaComItens(
   // --- Fase 5: chave e numeração NF-e (série remessa do tenant) ---
   const chaveParams = chaveEmissaoFromOverride(emitenteOverride);
   const serie = chaveParams.serie;
-  const numero = await proximoNumeroNfe(db, tenant.id, serie);
+  const numeroInicial = resolveNumeroInicialNfe(emitterSettings, serie, {
+    serieRemessa: tenant.serieRemessa,
+    serieTransferencia: tenant.serieTransferencia,
+  });
+  const numero = await proximoNumeroNfe(db, tenant.id, serie, numeroInicial);
   const chave = buildChaveNFe({ uf: chaveParams.uf, cnpj: chaveParams.cnpj, serie, numero });
   const emitidaEm = new Date();
   const destData = destinoToNfeFields(destino);
@@ -203,7 +208,6 @@ async function emitirNFeRemessaComItens(
   // --- Fases 6–9: transação atômica (payload, NF-e, XML, CT-e) ---
   const { nfeRow, cteRow, itemRows } = await runFiscalTransaction(db, tenant.id, async (tx) => {
     // Fase 6: configurações do emissor + snapshot para XML/payload.
-    const emitterSettings = await loadEmitterSettings(tx, tenant.id);
     const fiscalPayloadBase = enrichFiscalPayloadMlFulfillment(
       enrichFiscalPayloadWithXTexto(
         {

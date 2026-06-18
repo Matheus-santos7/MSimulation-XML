@@ -24,6 +24,7 @@ import { taxSnapshotFromRule } from "../../../tax/domain/services/tax-snapshot.j
 import {
   enrichFiscalPayloadMlFulfillment,
   enrichFiscalPayloadWithXTexto,
+  resolveNumeroInicialNfe,
 } from "@msimulation-xml/fiscal-core";
 import { productUnitPrice } from "@msimulation-xml/fiscal-core";
 import {
@@ -258,18 +259,21 @@ async function emitirNFeTransferenciaComItens(
 
   const chaveParams = chaveEmissaoFromOverride(matrizEmitente);
   const serie = chaveParams.serie;
-  const numero = await proximoNumeroNfe(db, tenant.id, serie);
+  const numeroInicial = resolveNumeroInicialNfe(emitterSettings, serie, {
+    serieRemessa: tenant.serieRemessa,
+    serieTransferencia: tenant.serieTransferencia,
+  });
+  const numero = await proximoNumeroNfe(db, tenant.id, serie, numeroInicial);
   const chave = buildChaveNFe({ uf: chaveParams.uf, cnpj: chaveParams.cnpj, serie, numero });
   const emitidaEm = new Date();
   const logistics = createLogisticsModule();
 
   const { nfeRow, itemRows } = await runFiscalTransaction(db, tenant.id, async (tx) => {
-    const settings = await loadEmitterSettings(tx, tenant.id);
     const fiscalPayload = enrichFiscalPayloadMlFulfillment(
       enrichFiscalPayloadWithXTexto(
         {
-          ...enrichTaxSnapshot(taxSnapshotFromRule(linhasComRegras[0]!.rule, aliqFallback, settings), {
-            settings,
+          ...enrichTaxSnapshot(taxSnapshotFromRule(linhasComRegras[0]!.rule, aliqFallback, emitterSettings), {
+            settings: emitterSettings,
             tipo: NFeTipo.TRANSFERENCIA_FILIAL,
             valor,
             valorIcms,
@@ -360,7 +364,7 @@ async function emitirNFeTransferenciaComItens(
       nfeRow: { ...nfeRow, fiscalPayload: fiscalPayloadWithEmit },
       products: linhas.map((l) => l.product),
       itemRows,
-      settings,
+      settings: emitterSettings,
     });
 
     return { nfeRow, itemRows };

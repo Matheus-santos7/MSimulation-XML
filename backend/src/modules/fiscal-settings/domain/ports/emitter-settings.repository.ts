@@ -1,4 +1,4 @@
-import type { EmitterSettingsView } from "../entities/emitter-settings-view.entity.js";
+import type { EmitterSettingsView, NfeNumeracaoView } from "../entities/emitter-settings-view.entity.js";
 
 /**
  * Patch parcial das configurações do emissor (body do `PATCH /fiscal-settings`).
@@ -30,4 +30,13 @@ export interface EmitterSettingsRepository {
    * @returns Vista atualizada ou `null` se tenant inexistente
    */
   update(tenantId: string, input: UpdateEmitterSettingsInput): Promise<EmitterSettingsView | null>;
+
+  /**
+   * Consulta última NF-e emitida e próximo número para uma série informada.
+   */
+  getNumeracaoForSerie(
+    tenantId: string,
+    serie: number,
+    numeroInicial: number,
+  ): Promise<NfeNumeracaoView | null>;
 }

@@ -1,5 +1,12 @@
 import type { FiscalEmitterSettingsData } from "../../domain/services/fiscal-emitter-settings-defaults.js";
 
+/** Resumo de numeração de NF-e por série lógica (leitura na UI). */
+export type NfeNumeracaoView = {
+  numeroInicial: number;
+  ultimoEmitido: number | null;
+  proximoNumero: number;
+};
+
 /**
  * Vista agregada das configurações do emissor fiscal de um tenant.
  *
@@ -16,6 +23,11 @@ export interface EmitterSettingsView {
   serieCte: number;
   /** Grupos distintos de regras importadas (indicador de catálogo tax). */
   taxRulesCount: number;
+  /** Numeração NF-e por série lógica (remessa/venda e transferência). */
+  numeracaoNfe: {
+    remessa: NfeNumeracaoView;
+    transferencia: NfeNumeracaoView;
+  };
   /** Configuração fiscal completa: `basic`, `taxes`, `nfe`. */
   settings: FiscalEmitterSettingsData;
 }

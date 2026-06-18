@@ -23,6 +23,17 @@ export type ComposicaoTributo = {
   acrescimoPreco: ComposicaoLinha;
 };
 
+export type NfeNumeracaoView = {
+  numeroInicial: number;
+  ultimoEmitido: number | null;
+  proximoNumero: number;
+};
+
+export type NfeNumeracaoSettings = {
+  remessa: { numeroInicial: number };
+  transferencia: { numeroInicial: number };
+};
+
 export type FiscalEmitterSettingsData = {
   basic: {
     formaFaturamento: "EMISSOR_PROPRIO" | "EMISSOR_ML";
@@ -78,6 +89,7 @@ export type FiscalEmitterSettingsData = {
     acessoExternoContatos: number;
     contatos: { nome: string; email: string }[];
     autXmlCpfs?: string[];
+    numeracao?: NfeNumeracaoSettings;
   };
 };
 
@@ -87,6 +99,10 @@ export type FiscalEmitterSettingsView = {
   serieTransferencia: number;
   serieCte: number;
   taxRulesCount: number;
+  numeracaoNfe: {
+    remessa: NfeNumeracaoView;
+    transferencia: NfeNumeracaoView;
+  };
   settings: FiscalEmitterSettingsData;
 };
 

@@ -37,6 +37,12 @@ async function fetchFromBff(apiPath: string): Promise<Response> {
   return res;
 }
 
+/** GET autenticado via proxy BFF — seguro em Client Components. */
+export async function fetchJsonFromBff<T>(apiPath: string): Promise<T> {
+  const res = await fetchFromBff(apiPath);
+  return res.json() as Promise<T>;
+}
+
 export function triggerBlobDownload(blob: Blob, filename: string): void {
   const objectUrl = URL.createObjectURL(blob);
   const a = document.createElement("a");

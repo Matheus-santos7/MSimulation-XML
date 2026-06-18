@@ -21,6 +21,10 @@ export async function runInTransaction<T>(
   db: DbClient,
   fn: (tx: PrismaTx) => Promise<T>,
 ): Promise<T> {
+  const existingTx = dbTransactionContext.getStore();
+  if (existingTx) {
+    return fn(existingTx);
+  }
   if ("$transaction" in db && typeof db.$transaction === "function") {
     return db.$transaction(fn, DB_TRANSACTION_OPTIONS);
   }

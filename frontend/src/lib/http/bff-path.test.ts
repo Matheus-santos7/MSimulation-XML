@@ -5,6 +5,9 @@ describe("toBffPath", () => {
   it("converte caminho da API fiscal para o BFF", () => {
     expect(toBffPath("/api/nfes/123/xml")).toBe("/api/bff/nfes/123/xml");
     expect(toBffPath("/api/nfes/123/xml?download=1")).toBe("/api/bff/nfes/123/xml?download=1");
+    expect(toBffPath("/api/fiscal-settings/nfe-numeracao?serie=5&numeroInicial=1")).toBe(
+      "/api/bff/fiscal-settings/nfe-numeracao?serie=5&numeroInicial=1",
+    );
   });
 
   it("rejeita caminhos fora da allowlist", () => {

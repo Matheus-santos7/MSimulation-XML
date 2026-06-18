@@ -13,9 +13,17 @@ type Props = {
   backHref?: string;
   children: React.ReactNode;
   onSave: () => FiscalEmitterSettingsPatch;
+  /** Rotas adicionais para revalidar após salvar (ex.: subpágina atual). */
+  revalidatePaths?: string[];
 };
 
-export function FiscalSettingsFormShell({ title, backHref = "/configuracoes-fiscais", children, onSave }: Props) {
+export function FiscalSettingsFormShell({
+  title,
+  backHref = "/configuracoes-fiscais",
+  children,
+  onSave,
+  revalidatePaths = [],
+}: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +34,7 @@ export function FiscalSettingsFormShell({ title, backHref = "/configuracoes-fisc
     setError(null);
     setOk(false);
     startTransition(async () => {
-      const res = await salvarConfiguracoesFiscaisAction(onSave());
+      const res = await salvarConfiguracoesFiscaisAction(onSave(), revalidatePaths);
       if (!res.ok) {
         setError(res.error ?? "Erro ao salvar");
         return;

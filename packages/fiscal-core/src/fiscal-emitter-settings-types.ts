@@ -1,3 +1,5 @@
+import type { NfeNumeracaoSettings } from "./nfe-numeracao.js";
+
 export type SettingsMode = "DEFAULT" | "CUSTOM";
 
 export type BaseCalcAction =
@@ -87,5 +89,7 @@ export type FiscalEmitterSettingsData = {
     contatos: { nome: string; email: string }[];
     /** CPFs autorizados a baixar XML (`autXML`) — padrão ML quando vazio. */
     autXmlCpfs?: string[];
+    /** Numeração inicial por série lógica (remessa/venda vs transferência filial). */
+    numeracao?: NfeNumeracaoSettings;
   };
 };

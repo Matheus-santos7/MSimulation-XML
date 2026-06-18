@@ -1,4 +1,5 @@
 import { GetEmitterSettingsUseCase } from "../../application/use-cases/get-emitter-settings.use-case.js";
+import { GetNfeNumeracaoPreviewUseCase } from "../../application/use-cases/get-nfe-numeracao-preview.use-case.js";
 import { UpdateEmitterSettingsUseCase } from "../../application/use-cases/update-emitter-settings.use-case.js";
 import { PrismaEmitterSettingsRepository } from "../prisma/prisma-emitter-settings.repository.js";
 
@@ -12,6 +13,7 @@ export function createFiscalSettingsModule() {
 
   return {
     getEmitterSettings: new GetEmitterSettingsUseCase(emitterSettingsRepository),
+    getNfeNumeracaoPreview: new GetNfeNumeracaoPreviewUseCase(emitterSettingsRepository),
     updateEmitterSettings: new UpdateEmitterSettingsUseCase(emitterSettingsRepository),
     emitterSettingsRepository,
   };

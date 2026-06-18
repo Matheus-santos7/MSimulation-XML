@@ -1,6 +1,7 @@
 import {
   enrichFiscalPayloadMlFulfillment,
   enrichFiscalPayloadWithXTexto,
+  resolveNumeroInicialNfe,
 } from "@msimulation-xml/fiscal-core";
 import { FiscalStatus, NFeTipo, Prisma } from "../../../../generated/prisma/client.js";
 import { buildChaveNFe } from "../../../fiscal-documents/domain/services/nfe-chave.js";
@@ -57,7 +58,11 @@ export async function emitReturnNote(
   const destino = destinoRetornoFromRemessa(remessa, remessa.unidadeDestino);
   const destIe = destIeRetornoFromRemessa(remessa, remessa.unidadeDestino);
 
-  const numero = await proximoNumeroNfe(tx, tenant.id, ctx.serie);
+  const numeroInicial = resolveNumeroInicialNfe(emitterSettings, ctx.serie, {
+    serieRemessa: tenant.serieRemessa,
+    serieTransferencia: tenant.serieRemessa,
+  });
+  const numero = await proximoNumeroNfe(tx, tenant.id, ctx.serie, numeroInicial);
   const chave = buildChaveNFe({ uf: tenant.uf, cnpj: tenant.cnpj, serie: ctx.serie, numero });
 
   const fallbackRate = resolveIcmsFallbackRate(tenant.uf, destUf, "inbound", emitterSettings);

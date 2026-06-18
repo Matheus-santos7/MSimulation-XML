@@ -66,6 +66,14 @@ export type {
   SettingsMode,
 } from "./fiscal-emitter-settings-types.js";
 export {
+  computeProximoNumeroNfe,
+  DEFAULT_NFE_NUMERACAO,
+  resolveNumeroInicialNfe,
+  type NfeNumeracaoSerie,
+  type NfeNumeracaoSettings,
+  type TenantSeriesForNumeracao,
+} from "./nfe-numeracao.js";
+export {
   IPI_CST_SYMBOLIC_RETURN,
   PIS_COFINS_CST_SYMBOLIC_RETURN,
   resolveDefaultModFreteForTipo,

@@ -64,6 +64,20 @@ export function mergeEmitterSettingsPatch(
         ? { prazoCancelamento: { ...current.nfe.prazoCancelamento, ...nfe.prazoCancelamento } }
         : {}),
       ...(nfe?.contatos ? { contatos: nfe.contatos } : {}),
+      ...(nfe?.numeracao
+        ? {
+            numeracao: {
+              remessa: {
+                ...current.nfe.numeracao!.remessa,
+                ...(nfe.numeracao as { remessa?: { numeroInicial?: number } }).remessa,
+              },
+              transferencia: {
+                ...current.nfe.numeracao!.transferencia,
+                ...(nfe.numeracao as { transferencia?: { numeroInicial?: number } }).transferencia,
+              },
+            },
+          }
+        : {}),
     },
   });
 }

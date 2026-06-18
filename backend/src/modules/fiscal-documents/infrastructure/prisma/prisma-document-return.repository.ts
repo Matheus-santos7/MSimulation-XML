@@ -23,7 +23,7 @@ import { mapNfe, num } from "../../presentation/mappers/fiscal-mappers.js";
 import { buildChaveNFe } from "../../domain/services/nfe-chave.js";
 import { proximoNumeroNfe } from "../../domain/services/nfe-sequencia.js";
 import { enrichTaxSnapshot, loadEmitterSettings } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
-import { enrichFiscalPayloadWithXTexto } from "@msimulation-xml/fiscal-core";
+import { enrichFiscalPayloadWithXTexto, resolveNumeroInicialNfe } from "@msimulation-xml/fiscal-core";
 import { taxSnapshotFromRule } from "../../../tax/domain/services/tax-snapshot.js";
 import { calcularNotaFiscal } from "../../../tax/domain/services/tax-engine.js";
 import { montarItemFiscal, resolveTaxRule, resolveIcmsFallbackRate, type CustomerType } from "../../../tax/index.js";
@@ -130,7 +130,11 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
       const returnIcmsRate = fiscalItem.icms.pICMS || icmsFallbackRate;
       const returnIcmsValue = invoice.totais.vICMS;
 
-      const number = await proximoNumeroNfe(tx, tenant.id, series);
+      const numeroInicial = resolveNumeroInicialNfe(emitterSettings, series, {
+        serieRemessa: tenant.serieRemessa,
+        serieTransferencia: tenant.serieTransferencia,
+      });
+      const number = await proximoNumeroNfe(tx, tenant.id, series, numeroInicial);
       const accessKey = buildChaveNFe({ uf: tenant.uf, cnpj: tenant.cnpj, serie: series, numero: number });
 
       const taxSnapshot = enrichTaxSnapshot(
@@ -211,7 +215,7 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
 
       let symbolicShipmentDto: Record<string, unknown> | undefined;
       if (mainShipment) {
-        const symbolicNumber = await proximoNumeroNfe(tx, tenant.id, series);
+        const symbolicNumber = await proximoNumeroNfe(tx, tenant.id, series, numeroInicial);
         const symbolicKey = buildChaveNFe({
           uf: tenant.uf,
           cnpj: tenant.cnpj,

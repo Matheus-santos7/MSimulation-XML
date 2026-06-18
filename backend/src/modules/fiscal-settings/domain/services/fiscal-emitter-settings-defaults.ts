@@ -17,6 +17,7 @@ import type {
   DifalCalculo,
   FiscalEmitterSettingsData,
 } from "@msimulation-xml/fiscal-core";
+import { DEFAULT_NFE_NUMERACAO } from "@msimulation-xml/fiscal-core";
 
 const BR_UFS = [
   "AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS", "MT",
@@ -136,6 +137,7 @@ export const DEFAULT_FISCAL_EMITTER_SETTINGS: FiscalEmitterSettingsData = {
     prazoCancelamento: { horas: 24, naoInformar: false },
     acessoExternoContatos: 0,
     contatos: [],
+    numeracao: structuredClone(DEFAULT_NFE_NUMERACAO),
   },
 };
 
@@ -237,6 +239,16 @@ export function mergeFiscalEmitterSettings(partial: unknown): FiscalEmitterSetti
       },
       contatos: p.nfe?.contatos ?? base.nfe.contatos,
       autXmlCpfs: p.nfe?.autXmlCpfs ?? base.nfe.autXmlCpfs,
+      numeracao: {
+        remessa: {
+          ...base.nfe.numeracao!.remessa,
+          ...p.nfe?.numeracao?.remessa,
+        },
+        transferencia: {
+          ...base.nfe.numeracao!.transferencia,
+          ...p.nfe?.numeracao?.transferencia,
+        },
+      },
     },
   };
 }

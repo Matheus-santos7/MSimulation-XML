@@ -3,6 +3,7 @@ const ALLOWED_BFF_PREFIXES = [
   "nfes/",
   "ctes/",
   "fiscal-events/",
+  "fiscal-settings/",
   "products/spreadsheet/",
 ] as const;
 

@@ -1,6 +1,7 @@
 import { runInTransaction } from "../../../../lib/db/prisma-tx.js";
+import { computeProximoNumeroNfe } from "@msimulation-xml/fiscal-core";
 import { mergeFiscalEmitterSettings } from "../../domain/services/fiscal-emitter-settings-defaults.js";
-import type { EmitterSettingsView } from "../../domain/entities/emitter-settings-view.entity.js";
+import type { EmitterSettingsView, NfeNumeracaoView } from "../../domain/entities/emitter-settings-view.entity.js";
 import type {
   EmitterSettingsRepository,
   UpdateEmitterSettingsInput,
@@ -10,6 +11,7 @@ import {
   DEFAULT_FISCAL_EMITTER_SETTINGS,
   mergeEmitterSettingsPatch,
 } from "../../application/services/merge-emitter-settings-patch.service.js";
+import { ultimoNumeroNfe } from "../../../fiscal-documents/domain/services/nfe-sequencia.js";
 
 /**
  * Implementação Prisma do port {@link EmitterSettingsRepository}.
@@ -29,19 +31,7 @@ export class PrismaEmitterSettingsRepository implements EmitterSettingsRepositor
     });
     if (!tenant) return null;
 
-    const taxRulesCount = await this.countDistinctTaxRuleGroups(tenantId);
-    const settings = tenant.fiscalEmitterSettings
-      ? mergeFiscalEmitterSettings(tenant.fiscalEmitterSettings.settings)
-      : DEFAULT_FISCAL_EMITTER_SETTINGS;
-
-    return {
-      tenantId,
-      serieRemessa: tenant.serieRemessa,
-      serieTransferencia: tenant.serieTransferencia,
-      serieCte: tenant.serieCte,
-      taxRulesCount,
-      settings,
-    };
+    return this.buildView(tenantId, tenant);
   }
 
   /** @inheritdoc */
@@ -81,7 +71,39 @@ export class PrismaEmitterSettingsRepository implements EmitterSettingsRepositor
       });
     });
 
-    return this.getByTenantId(tenantId);
+    return this.buildView(tenantId, {
+      ...tenant,
+      serieRemessa: serieRemessa ?? tenant.serieRemessa,
+      serieTransferencia: serieTransferencia ?? tenant.serieTransferencia,
+      serieCte: serieCte ?? tenant.serieCte,
+      fiscalEmitterSettings: { settings: nextSettings },
+    });
+  }
+
+  private async buildView(
+    tenantId: string,
+    tenant: {
+      serieRemessa: number;
+      serieTransferencia: number;
+      serieCte: number;
+      fiscalEmitterSettings: { settings: unknown } | null;
+    },
+  ): Promise<EmitterSettingsView> {
+    const taxRulesCount = await this.countDistinctTaxRuleGroups(tenantId);
+    const settings = tenant.fiscalEmitterSettings
+      ? mergeFiscalEmitterSettings(tenant.fiscalEmitterSettings.settings)
+      : DEFAULT_FISCAL_EMITTER_SETTINGS;
+    const numeracaoNfe = await this.buildNumeracaoNfeView(tenantId, tenant, settings);
+
+    return {
+      tenantId,
+      serieRemessa: tenant.serieRemessa,
+      serieTransferencia: tenant.serieTransferencia,
+      serieCte: tenant.serieCte,
+      taxRulesCount,
+      numeracaoNfe,
+      settings,
+    };
   }
 
   /** Conta grupos de regra por nome normalizado (sem sufixo UF). */
@@ -93,5 +115,48 @@ export class PrismaEmitterSettingsRepository implements EmitterSettingsRepositor
     return new Set(
       ruleRows.map((row) => row.nome.replace(/\s*\([^)]*\)\s*$/i, "").trim()),
     ).size;
+  }
+
+  /** Monta contadores de numeração NF-e para exibição e edição na UI. */
+  private async buildNumeracaoNfeView(
+    tenantId: string,
+    tenant: { serieRemessa: number; serieTransferencia: number },
+    settings: EmitterSettingsView["settings"],
+  ): Promise<EmitterSettingsView["numeracaoNfe"]> {
+    const build = async (serie: number, kind: "remessa" | "transferencia"): Promise<NfeNumeracaoView> => {
+      const ultimoEmitido = await ultimoNumeroNfe(this.db, tenantId, serie);
+      const numeroInicial = settings.nfe.numeracao?.[kind]?.numeroInicial ?? 1;
+      return {
+        numeroInicial,
+        ultimoEmitido,
+        proximoNumero: computeProximoNumeroNfe(ultimoEmitido, numeroInicial),
+      };
+    };
+
+    return {
+      remessa: await build(tenant.serieRemessa, "remessa"),
+      transferencia: await build(tenant.serieTransferencia, "transferencia"),
+    };
+  }
+
+  /** @inheritdoc */
+  async getNumeracaoForSerie(
+    tenantId: string,
+    serie: number,
+    numeroInicial: number,
+  ): Promise<NfeNumeracaoView | null> {
+    const tenant = await this.db.tenant.findUnique({
+      where: { id: tenantId },
+      select: { id: true },
+    });
+    if (!tenant) return null;
+
+    const floor = Math.max(1, Math.trunc(numeroInicial) || 1);
+    const ultimoEmitido = await ultimoNumeroNfe(this.db, tenantId, serie);
+    return {
+      numeroInicial: floor,
+      ultimoEmitido,
+      proximoNumero: computeProximoNumeroNfe(ultimoEmitido, floor),
+    };
   }
 }

@@ -2,6 +2,7 @@ import {
   enrichFiscalPayloadMlFulfillment,
   enrichFiscalPayloadWithXTexto,
   productUnitPrice,
+  resolveNumeroInicialNfe,
 } from "@msimulation-xml/fiscal-core";
 import { NFeTipo, PrismaClient } from "../../../../generated/prisma/client.js";
 import { buildChaveNFe } from "../../../fiscal-documents/domain/services/nfe-chave.js";
@@ -108,7 +109,12 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
       );
     }
 
-    const numero = await proximoNumeroNfe(tx, tenant.id, ctx.serie);
+    const emitterSettings = await loadEmitterSettings(tx, tenant.id);
+    const numeroInicial = resolveNumeroInicialNfe(emitterSettings, ctx.serie, {
+      serieRemessa: tenant.serieRemessa,
+      serieTransferencia: tenant.serieTransferencia,
+    });
+    const numero = await proximoNumeroNfe(tx, tenant.id, ctx.serie, numeroInicial);
     const chave = buildChaveNFe({
       uf: tenant.uf,
       cnpj: tenant.cnpj,
@@ -116,7 +122,6 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
       numero,
     });
 
-    const emitterSettings = await loadEmitterSettings(tx, tenant.id);
     const aliqFallback = resolveIcmsFallbackRate(tenant.uf, destUf, "inbound", emitterSettings);
     const cfop = resolveRetornoSimbolicoCfop(tenant.uf, destUf);
     const calc = calcularNotaInbound(
@@ -224,7 +229,12 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
       pedidoMl: ctx.pedidoMl,
     });
 
-    const numero = await proximoNumeroNfe(tx, ctx.tenant.id, ctx.serie);
+    const emitterSettings = await loadEmitterSettings(tx, ctx.tenant.id);
+    const numeroInicial = resolveNumeroInicialNfe(emitterSettings, ctx.serie, {
+      serieRemessa: ctx.tenant.serieRemessa,
+      serieTransferencia: ctx.tenant.serieTransferencia,
+    });
+    const numero = await proximoNumeroNfe(tx, ctx.tenant.id, ctx.serie, numeroInicial);
     const chave = buildChaveNFe({
       uf: ctx.tenant.uf,
       cnpj: ctx.tenant.cnpj,

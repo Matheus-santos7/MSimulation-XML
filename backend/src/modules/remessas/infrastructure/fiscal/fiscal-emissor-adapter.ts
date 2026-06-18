@@ -9,6 +9,8 @@ import { buildChaveNFe } from "../../../fiscal-documents/domain/services/nfe-cha
 import { enrichTaxSnapshot, loadEmitterSettings } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import {
+  destIeRetornoFromRemessa,
+  destinoRetornoFromRemessa,
   resolveRetornoSimbolicoCfop,
   RETORNO_SIMBOLICO_NAT_OP,
 } from "../../domain/services/retorno-simbolico-dest.js";
@@ -51,12 +53,6 @@ function destinoFiscalParaCampos(destino: ReturnType<typeof unidadeParaDestinoFi
   };
 }
 
-function destIeFromUnidade(unidade: { ie: string | null }): string | undefined {
-  const raw = unidade.ie?.trim() ?? "";
-  const digits = raw.replace(/\D/g, "");
-  return digits || undefined;
-}
-
 export class FiscalEmissorAdapter implements EmissorNotaPort {
   async prepararRetornoSimbolicoAvanco(
     tx: PrismaTx,
@@ -81,20 +77,12 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
       );
     }
 
-    const unidadeDestino = await findActiveLogisticsUnitRecord(
-      tx as unknown as PrismaClient,
-      tenant.id,
-      unidadeDestinoId,
-    );
-    if (!unidadeDestino) {
-      throw new RemessaDomainError("CD destino não encontrado ou inativo");
-    }
-
     const remessaPai = await loadRemessaDestinoRetorno(tx, remessaReferencia.id);
-    const destinoFiscal = unidadeParaDestinoFiscal(unidadeDestino);
-    const destino = destinoFiscalParaCampos(destinoFiscal);
-    const destUf = destinoFiscal.uf;
-    const destIe = destIeFromUnidade(unidadeDestino);
+    const destinoRetorno = destinoRetornoFromRemessa(remessaPai, remessaPai.unidadeDestino);
+    const { destTelefone: _destTelefone, ...destino } = destinoRetorno;
+    const destUf = destinoRetorno.destUf;
+    const destIe = destIeRetornoFromRemessa(remessaPai, remessaPai.unidadeDestino);
+    const idCadIntTran = remessaPai.unidadeDestino?.idCadIntTran?.trim() || null;
 
     const inboundTaxRule = await resolveTaxRule(tx, tenant.id, {
       originUf: tenant.uf,
@@ -167,7 +155,7 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
         quantidadeTotal: quantidade,
         withLogistics: false,
         destIe,
-        idCadIntTran: unidadeDestino.idCadIntTran?.trim() || null,
+        idCadIntTran,
         autXmlCpfs: autXmlCpfs?.length ? autXmlCpfs : null,
       },
     );

@@ -18,8 +18,12 @@ import { lookupCep } from "@/lib/lookup-actions";
 import type { PedidoDto, ProductDto } from "@/lib/fiscal-types";
 import { brl } from "@/lib/format";
 import {
+  PEDIDO_FORM_EXAMPLE_GROUPS,
+  PEDIDO_FORM_EXAMPLES,
+  findPedidoFormExample,
+} from "@/lib/pedido-form";
+import {
   PEDIDO_FORM_EMPTY,
-  PEDIDO_FORM_EXAMPLE,
   pedidoToFormValues,
   type PedidoFormValues,
 } from "@/lib/pedido-form";
@@ -44,7 +48,10 @@ export function PedidoWizardDialog({ open, onOpenChange, products, pedido }: Pro
   const [form, setForm] = useState<PedidoFormValues>(PEDIDO_FORM_EMPTY);
   const [error, setError] = useState<string | null>(null);
   const [cepLoading, setCepLoading] = useState(false);
+  const [exampleId, setExampleId] = useState("");
   const [pending, startTransition] = useTransition();
+
+  const selectedExample = exampleId ? findPedidoFormExample(exampleId) : undefined;
 
   const isEdit = Boolean(pedido);
   const selected = products.find((p) => p.id === form.productId);
@@ -55,6 +62,7 @@ export function PedidoWizardDialog({ open, onOpenChange, products, pedido }: Pro
     if (!open) return;
     setStep(0);
     setError(null);
+    setExampleId("");
     if (pedido) {
       setForm(pedidoToFormValues(pedido));
     } else {
@@ -66,6 +74,17 @@ export function PedidoWizardDialog({ open, onOpenChange, products, pedido }: Pro
   }, [open, pedido, products]);
 
   const set = (key: keyof PedidoFormValues, value: string) => setForm((f) => ({ ...f, [key]: value }));
+
+  function applyExample(id: string) {
+    const example = findPedidoFormExample(id);
+    if (!example) return;
+    setExampleId(id);
+    setForm((current) => ({
+      ...example.values,
+      productId: current.productId || products[0]?.id || "",
+      quantidade: current.quantidade || "1",
+    }));
+  }
 
   function submit(saveOnly: boolean) {
     setError(null);
@@ -177,14 +196,65 @@ export function PedidoWizardDialog({ open, onOpenChange, products, pedido }: Pro
                   <span className="ml-1 font-mono font-bold text-accent">{brl(total)}</span>
                 </div>
               </div>
+              {!isEdit ? (
+                <div className="space-y-2 border-t border-border/60 pt-3">
+                  <Label htmlFor="pedidoExample">Exemplo de comprador (simulação fiscal)</Label>
+                  <select
+                    id="pedidoExample"
+                    value={exampleId}
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      if (id) applyExample(id);
+                      else setExampleId("");
+                    }}
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                  >
+                    <option value="">Selecione um exemplo…</option>
+                    {PEDIDO_FORM_EXAMPLE_GROUPS.map((group) => (
+                      <optgroup key={group.kind} label={group.label}>
+                        {PEDIDO_FORM_EXAMPLES.filter((item) => item.kind === group.kind).map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.label}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                  {selectedExample ? (
+                    <p className="text-[12px] text-muted-foreground">{selectedExample.fiscalHint}</p>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           )}
 
           {step === 1 && (
             <div className="grid grid-cols-1 gap-3">
-              <Field label="CPF" value={form.cpf} onChange={(v) => set("cpf", v)} mono />
+              <Field
+                label="CPF / CNPJ"
+                value={form.cpf}
+                onChange={(v) => set("cpf", v)}
+                mono
+              />
               <Field label="Nome (xNome)" value={form.nome} onChange={(v) => set("nome", v)} />
               <Field label="Telefone" value={form.telefone} onChange={(v) => set("telefone", v)} mono />
+              <div className="space-y-2">
+                <Label htmlFor="indIEDest">Indicador IE destinatário (indIEDest)</Label>
+                <select
+                  id="indIEDest"
+                  name="indIEDest"
+                  value={form.indIEDest}
+                  onChange={(e) => set("indIEDest", e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                >
+                  <option value="9">9 — Não contribuinte (consumidor final)</option>
+                  <option value="1">1 — Contribuinte ICMS</option>
+                  <option value="2">2 — Contribuinte isento de IE</option>
+                </select>
+                <p className="text-[12px] text-muted-foreground">
+                  Define a regra tributária (taxpayer / non_taxpayer) e validações SEFAZ na emissão da NF-e.
+                </p>
+              </div>
             </div>
           )}
 
@@ -231,6 +301,7 @@ export function PedidoWizardDialog({ open, onOpenChange, products, pedido }: Pro
               <ReviewRow label="Produto" value={selected ? `${selected.sku} — ${selected.nome}` : "—"} />
               <ReviewRow label="Qtd / Total" value={`${qty} × ${brl(selected?.preco ?? 0)} = ${brl(total)}`} />
               <ReviewRow label="Comprador" value={`${form.nome} (${form.cpf})`} />
+              <ReviewRow label="Perfil fiscal" value={formatIndIEDest(form.indIEDest, form.cpf)} />
               <ReviewRow
                 label="Entrega"
                 value={`${form.logradouro}, ${form.numero}${form.complemento ? ` — ${form.complemento}` : ""} — ${form.bairro}, ${form.municipio}/${form.uf} — CEP ${form.cep}`}
@@ -256,16 +327,11 @@ export function PedidoWizardDialog({ open, onOpenChange, products, pedido }: Pro
             )}
           </div>
           <div className="flex gap-2">
-            {step === 0 && !isEdit && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setForm({ ...PEDIDO_FORM_EXAMPLE, productId: form.productId || products[0]?.id || "" })}
-              >
-                Exemplo
+            {step === 0 && !isEdit && exampleId ? (
+              <Button type="button" variant="ghost" size="sm" onClick={() => applyExample(exampleId)}>
+                Recarregar exemplo
               </Button>
-            )}
+            ) : null}
             <Button type="button" variant="outline" size="sm" disabled={pending} onClick={() => submit(true)}>
               Salvar rascunho
             </Button>
@@ -298,6 +364,18 @@ function Field({
       <Input value={value} onChange={(e) => onChange(e.target.value)} className={mono ? "font-mono" : undefined} />
     </div>
   );
+}
+
+function formatIndIEDest(indIEDest: string, doc: string): string {
+  const digits = doc.replace(/\D/g, "");
+  const docLabel = digits.length === 14 ? "CNPJ" : "CPF";
+  const profile =
+    indIEDest === "1"
+      ? "Contribuinte ICMS"
+      : indIEDest === "2"
+        ? "Contribuinte isento"
+        : "Não contribuinte";
+  return `${docLabel} · indIEDest ${indIEDest} (${profile})`;
 }
 
 function ReviewRow({ label, value }: { label: string; value: string }) {

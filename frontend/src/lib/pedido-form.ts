@@ -1,4 +1,12 @@
 import type { CompradorCheckoutInput, PedidoCheckoutInput, PedidoDto } from "@/lib/fiscal-types";
+export {
+  findPedidoFormExample,
+  PEDIDO_FORM_EXAMPLE_GROUPS,
+  PEDIDO_FORM_EXAMPLES,
+  type PedidoFormExample,
+  type PedidoFormExampleKind,
+} from "./pedido-form-examples";
+import { PEDIDO_FORM_EXAMPLES } from "./pedido-form-examples";
 
 export type PedidoFormState = {
   error?: string;
@@ -20,6 +28,8 @@ export type PedidoFormValues = {
   uf: string;
   cep: string;
   telefone: string;
+  /** indIEDest SEFAZ: 1=contribuinte, 2=isento, 9=não contribuinte (consumidor final). */
+  indIEDest: string;
 };
 
 export const PEDIDO_FORM_EMPTY: PedidoFormValues = {
@@ -36,23 +46,12 @@ export const PEDIDO_FORM_EMPTY: PedidoFormValues = {
   uf: "SP",
   cep: "",
   telefone: "",
+  indIEDest: "9",
 };
 
-export const PEDIDO_FORM_EXAMPLE: PedidoFormValues = {
-  productId: "",
-  quantidade: "1",
-  cpf: "079.516.039-96",
-  nome: "Claudilene Aparecida Bonfim",
-  logradouro: "Rua Cafarnaum",
-  numero: "260",
-  complemento: "casa",
-  bairro: "canaa",
-  codigoMunicipio: "4122701",
-  municipio: "Sabaudia",
-  uf: "PR",
-  cep: "86720-000",
-  telefone: "43999999999",
-};
+/** @deprecated Preferir `PEDIDO_FORM_EXAMPLES` ou `findPedidoFormExample`. */
+export const PEDIDO_FORM_EXAMPLE: PedidoFormValues =
+  PEDIDO_FORM_EXAMPLES.find((e) => e.id === "cpf-pr")?.values ?? PEDIDO_FORM_EXAMPLES[0]!.values;
 
 export function pedidoToFormValues(p: PedidoDto): PedidoFormValues {
   const c = p.comprador;
@@ -70,6 +69,7 @@ export function pedidoToFormValues(p: PedidoDto): PedidoFormValues {
     uf: c.uf,
     cep: c.cep,
     telefone: c.telefone ?? "",
+    indIEDest: String(c.indIEDest ?? 9),
   };
 }
 
@@ -93,7 +93,7 @@ export function parsePedidoForm(formData: FormData): PedidoCheckoutInput {
     telefone: opt("telefone"),
     codigoPais: 1058,
     nomePais: "Brasil",
-    indIEDest: 9,
+    indIEDest: Number(formData.get("indIEDest") ?? 9),
   };
 
   return {

@@ -8,7 +8,7 @@ const cpfField = z
   .string()
   .trim()
   .transform((v) => digitsOnly(v))
-  .refine((v) => v.length === 11, "CPF deve ter 11 dígitos");
+  .refine((v) => v.length === 11 || v.length === 14, "CPF/CNPJ deve ter 11 ou 14 dígitos");
 
 const cepField = z
   .string()

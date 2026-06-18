@@ -50,7 +50,10 @@ function matchesNfeTipoFilter(
   return rowTipo === filter;
 }
 
-function createFifoMock(initial: ItemRow[]) {
+function createFifoMock(
+  initial: ItemRow[],
+  options?: { defaultCdUnitId?: string; defaultCdCodigo?: string },
+) {
   const items = new Map(initial.map((r) => [r.id, structuredClone(r)]));
   const consumos: ConsumoRow[] = [];
 
@@ -68,6 +71,17 @@ function createFifoMock(initial: ItemRow[]) {
 
   const tx = {
     ...fifoStubs,
+    tenantUnidadeLogistica: {
+      findFirst: async () => {
+        if (!options?.defaultCdUnitId && !options?.defaultCdCodigo) return null;
+        return {
+          unidade: {
+            id: options.defaultCdUnitId ?? "cd-sp",
+            codigo: options.defaultCdCodigo ?? "SP01",
+          },
+        };
+      },
+    },
     nfeItem: {
       updateMany: async () => ({ count: 0 }),
       findMany: async ({
@@ -300,9 +314,10 @@ describe("remessa-fifo", () => {
   });
 
   it("venda full usa fallback global quando não há saldo na UF do comprador", async () => {
-    const { tx } = createFifoMock([
-      item("i-sp", "r-sp", 3, "2026-01-01", 1, "unidade-sp", 1, NFeTipo.REMESSA, "SP"),
-    ]);
+    const { tx } = createFifoMock(
+      [item("i-sp", "r-sp", 3, "2026-01-01", 1, "unidade-sp", 1, NFeTipo.REMESSA, "SP")],
+      { defaultCdUnitId: "unidade-sp", defaultCdCodigo: "SP01" },
+    );
 
     const alocacoes = await consumirSaldoRemessaFifoParaVenda(
       tx,
@@ -314,6 +329,28 @@ describe("remessa-fifo", () => {
     );
 
     assert.equal(alocacoes[0]!.remessaNfeId, "r-sp");
+  });
+
+  it("venda full prefere avanço simbólico antes da remessa principal no CD padrão", async () => {
+    const { tx } = createFifoMock(
+      [
+        item("i-sp", "r-sp", 5, "2026-01-01", 1, "unidade-sp", 1, NFeTipo.REMESSA, "SP", "SP01"),
+        item("i-mg", "r-mg", 5, "2026-02-01", 2, "unidade-mg", 1, NFeTipo.REMESSA_SIMBOLICA, "MG", "MG01"),
+      ],
+      { defaultCdUnitId: "unidade-sp", defaultCdCodigo: "SP01" },
+    );
+
+    const alocacoes = await consumirSaldoRemessaFifoParaVenda(
+      tx,
+      tenantId,
+      productId,
+      2,
+      "retorno-rj",
+      "RJ",
+    );
+
+    assert.equal(alocacoes[0]!.remessaNfeId, "r-mg");
+    assert.equal(alocacoes[0]!.quantidade, 2);
   });
 
   it("ignora linhas com saldo zero", async () => {

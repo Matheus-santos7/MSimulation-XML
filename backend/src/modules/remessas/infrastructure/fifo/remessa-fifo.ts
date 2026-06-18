@@ -4,11 +4,20 @@
 import { NFeTipo, type Prisma, type PrismaClient } from "../../../../generated/prisma/client.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { fiscalNotDeleted } from "../../../fiscal-documents/domain/constants/fiscal-not-deleted.js";
+import {
+  ordenarFifoParaVenda,
+  type DefaultCdContext,
+} from "../../domain/services/ordenar-fifo-venda.js";
 
 type Tx = Pick<PrismaTx, "nfeItem" | "nfeRemessaConsumo" | "product" | "nFe">;
 type FifoPrisma = Pick<
   PrismaTx,
-  "nfeItem" | "product" | "nFe" | "meliUnidadeLogistica" | "nfeRemessaConsumo"
+  | "nfeItem"
+  | "product"
+  | "nFe"
+  | "meliUnidadeLogistica"
+  | "nfeRemessaConsumo"
+  | "tenantUnidadeLogistica"
 >;
 
 export class SaldoRemessaInsuficienteError extends Error {
@@ -599,9 +608,48 @@ type FifoItemRow = {
   nfe?: {
     unidadeDestinoId: string | null;
     destUf?: string;
+    tipo?: NFeTipo;
     unidadeDestino: { uf: string; codigo: string } | null;
   };
 };
+
+/** Resolve CD padrão do tenant para priorizar remessa física principal na venda. */
+async function resolveDefaultCdContext(
+  db: FifoPrisma,
+  tenantId: string,
+): Promise<DefaultCdContext> {
+  const link = await db.tenantUnidadeLogistica.findFirst({
+    where: { tenantId, padrao: true, unidade: { ativa: true } },
+    select: {
+      unidade: { select: { id: true, codigo: true } },
+    },
+  });
+  if (!link?.unidade) return { unitId: null, codigo: null };
+  return { unitId: link.unidade.id, codigo: link.unidade.codigo };
+}
+
+function toFifoVendaItem(row: FifoItemRow) {
+  return {
+    id: row.id,
+    nfeId: row.nfeId,
+    saldoDisponivel: row.saldoDisponivel,
+    nfeTipo: row.nfe?.tipo,
+    destUf: row.nfe?.destUf,
+    unidadeUf: row.nfe?.unidadeDestino?.uf,
+    unidadeDestinoId: row.nfe?.unidadeDestinoId,
+    unidadeCodigo: row.nfe?.unidadeDestino?.codigo ?? null,
+  };
+}
+
+function ordenarItensFifoVenda(
+  itens: FifoItemRow[],
+  buyerUf: string,
+  defaultCd: DefaultCdContext,
+): FifoItemRow[] {
+  const byId = new Map(itens.map((item) => [item.id, item]));
+  const sorted = ordenarFifoParaVenda(itens.map(toFifoVendaItem), buyerUf, defaultCd);
+  return sorted.map((item) => byId.get(item.id)!);
+}
 
 async function listarItensRemessaFifo(
   tx: FifoPrisma,
@@ -630,6 +678,7 @@ async function listarItensRemessaFifo(
               select: {
                 unidadeDestinoId: true,
                 destUf: true,
+                tipo: true,
                 unidadeDestino: { select: { uf: true, codigo: true } },
               },
             },
@@ -682,20 +731,6 @@ async function debitarItensFifo(
   return alocacoes;
 }
 
-function ordenarFifoPreferindoUf(itens: FifoItemRow[], destUf: string): FifoItemRow[] {
-  const uf = destUf.trim().toUpperCase();
-  if (!uf) return itens;
-
-  const naUf: FifoItemRow[] = [];
-  const fora: FifoItemRow[] = [];
-  for (const item of itens) {
-    const itemUf = (item.nfe?.unidadeDestino?.uf ?? item.nfe?.destUf)?.trim().toUpperCase();
-    if (itemUf === uf) naUf.push(item);
-    else fora.push(item);
-  }
-  return [...naUf, ...fora];
-}
-
 export async function consumirSaldoRemessaFifo(
   tx: Tx,
   tenantId: string,
@@ -710,8 +745,8 @@ export async function consumirSaldoRemessaFifo(
 }
 
 /**
- * Venda full: debita saldo preferindo CDs na UF do comprador; se não houver,
- * consome remessa simbólica ou remessa física com saldo (FIFO global).
+ * Venda full: debita saldo com prioridade:
+ * 1) UF do comprador; 2) avanço simbólico; 3) remessa física no CD padrão; 4) demais (FIFO).
  */
 const REMESSA_DEST_SELECT = {
   id: true,
@@ -766,6 +801,7 @@ export async function previewRemessaPrincipalFifoParaVenda(
 ): Promise<PreviewRemessaFifoVenda> {
   const fifoTx = tx as unknown as FifoPrisma;
   const sku = await prepararSaldoFifoParaOperacao(fifoTx, tenantId, productId, productSku);
+  const defaultCd = await resolveDefaultCdContext(fifoTx, tenantId);
   const itens = await listarItensRemessaFifo(
     fifoTx,
     tenantId,
@@ -774,7 +810,7 @@ export async function previewRemessaPrincipalFifoParaVenda(
     sku ?? productSku,
     true,
   );
-  const ordenados = ordenarFifoPreferindoUf(itens, destUf);
+  const ordenados = ordenarItensFifoVenda(itens, destUf, defaultCd);
 
   let restante = quantidade;
   let remessaNfeId: string | null = null;
@@ -822,6 +858,7 @@ export async function consumirSaldoRemessaFifoParaVenda(
 ): Promise<{ remessaNfeId: string; quantidade: number; nfeItemId: string }[]> {
   const fifoTx = tx as unknown as FifoPrisma;
   const sku = await prepararSaldoFifoParaOperacao(fifoTx, tenantId, productId, productSku);
+  const defaultCd = await resolveDefaultCdContext(fifoTx, tenantId);
   const itens = await listarItensRemessaFifo(
     fifoTx,
     tenantId,
@@ -830,7 +867,7 @@ export async function consumirSaldoRemessaFifoParaVenda(
     sku ?? productSku,
     true,
   );
-  const ordenados = ordenarFifoPreferindoUf(itens, destUf);
+  const ordenados = ordenarItensFifoVenda(itens, destUf, defaultCd);
   return debitarItensFifo(tx, ordenados, quantidade, retornoNfeId, productId);
 }
 

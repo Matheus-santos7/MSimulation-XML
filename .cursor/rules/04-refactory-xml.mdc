@@ -1,0 +1,10 @@
+---
+alwaysApply: true
+---
+# Diretrizes para Geração e Refatoração de XML
+
+- **Proibido o uso de Template Strings:** Nunca gere XML concatenando strings (ex: `<tag>${valor}</tag>`).
+- **Arquitetura de Objetos:** Toda estrutura de XML deve ser primeiramente montada como um objeto JavaScript/TypeScript puro. A conversão para string XML deve ocorrer apenas na última etapa usando um serializador.
+- **Princípio de Responsabilidade Única (SRP):** Crie funções pequenas e isoladas (Nodes) que retornam apenas uma parte específica do XML (ex: `buildIde()`, `buildDest()`).
+- **Isolamento Fiscal:** A lógica de cálculo de impostos deve estar em arquivos separados (`resolvers`) que recebem dados brutos e retornam os objetos das tags de imposto.
+- **Documentação Oobrigatória:** Sempre adicione blocos de comentário em padrão TSDoc (TypeScript Document) para explicar o que as novas classes e funções principais fazem.

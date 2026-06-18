@@ -307,7 +307,7 @@ async function emitirNFeRemessaComItens(
       );
     }
 
-    // Fase 8: XML autorizado (buildRemessaNFeXML via nfe-xml).
+    // Fase 8: XML autorizado via Factory Strategy + XmlSerializer (@msimulation-xml/nfe-xml).
     await persistNfeXmlAutorizado(tx, {
       nfeId: nfeRow.id,
       tenant,

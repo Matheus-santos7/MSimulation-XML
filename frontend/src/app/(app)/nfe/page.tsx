@@ -52,7 +52,7 @@ export default async function NFeListPage() {
               <tr className="text-[12px] text-muted-foreground uppercase tracking-tighter border-b border-border bg-muted/30">
                 <th className="px-4 py-3 font-medium whitespace-nowrap">Nº / Série</th>
                 <th className="px-4 py-3 font-medium whitespace-nowrap">Emitida em</th>
-                <th className="px-4 py-3 font-medium min-w-[280px]">Chave de acesso</th>
+                {/* <th className="px-4 py-3 font-medium min-w-[280px]">Chave de acesso</th> */}
                 <th className="px-4 py-3 font-medium">Tipo</th>
                 <th className="px-4 py-3 font-medium">CFOP</th>
                 <th className="px-4 py-3 font-medium">Qtd</th>
@@ -113,9 +113,9 @@ export default async function NFeListPage() {
                         timeStyle: "short",
                       })}
                     </td>
-                    <td className="px-4 py-3 font-mono text-[11px] text-muted-foreground leading-relaxed break-all select-all">
+                    {/* <td className="px-4 py-3 font-mono text-[11px] text-muted-foreground leading-relaxed break-all select-all">
                       {nfe.chave}
-                    </td>
+                    </td> */}
                     <td className="px-4 py-3">
                       <NfeTipoBadge tipo={nfe.tipo} />
                     </td>

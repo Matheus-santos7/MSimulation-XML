@@ -45,6 +45,12 @@ export class RemessaSimbolicaFiscalError extends Error {
   }
 }
 
+export type PrepararRemessaSimbolicaPosDevolucaoInput = {
+  numero: number;
+  serie: number;
+  emitidaEm: Date | string;
+};
+
 export async function prepararRemessaSimbolicaFiscal(
   prisma: PrismaTx,
   input: {
@@ -54,6 +60,11 @@ export async function prepararRemessaSimbolicaFiscal(
     product: ProdutoRemessaSimbolica;
     quantidade: number;
     pedidoMl: string;
+    /** Reposição no CD após devolução de venda — ajusta infCpl e xTexto. */
+    posDevolucao?: PrepararRemessaSimbolicaPosDevolucaoInput;
+    destIe?: string | null;
+    remessaSerie?: number;
+    idCadIntTran?: string | null;
   },
 ): Promise<RemessaSimbolicaFiscalPreparada> {
   const unitCusto = productUnitPrice(input.product, "REMESSA");
@@ -111,17 +122,39 @@ export async function prepararRemessaSimbolicaFiscal(
           indFinal: 0,
         }),
         engine: calc.nota,
+        ...(input.posDevolucao
+          ? {
+              remessaSimbolicaPosDevolucao: {
+                numero: input.posDevolucao.numero,
+                serie: input.posDevolucao.serie,
+                emitidaEm:
+                  input.posDevolucao.emitidaEm instanceof Date
+                    ? input.posDevolucao.emitidaEm.toISOString()
+                    : input.posDevolucao.emitidaEm,
+              },
+            }
+          : {}),
+        ...(input.destIe?.trim() ? { destIe: input.destIe.replace(/\D/g, "") } : {}),
       } as Record<string, unknown>,
       {
         tipo: NFeTipo.REMESSA_SIMBOLICA,
         cfop,
         natOp: REMESSA_SIMBOLICA_NAT_OP,
         pedidoMl: input.pedidoMl,
+        ...(input.posDevolucao
+          ? {
+              posDevolucao: true,
+              serie: input.remessaSerie ?? input.posDevolucao.serie,
+            }
+          : {}),
+        ...(input.idCadIntTran?.trim() ? { warehouseId: input.idCadIntTran.trim() } : {}),
       },
     ),
     {
       quantidadeTotal: input.quantidade,
       withLogistics: true,
+      destIe: input.destIe,
+      idCadIntTran: input.idCadIntTran,
     },
   );
 

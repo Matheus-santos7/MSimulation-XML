@@ -30,6 +30,22 @@ describe("fiscal-core / nfe-xtexto", () => {
     );
   });
 
+  it("remessa simbólica pós-devolução — SALE_RETURN com série e CD", () => {
+    const pedidoMl = "47238016772";
+    assert.equal(
+      buildNfeObsContXTexto({
+        tipo: NFeTipo.REMESSA_SIMBOLICA,
+        cfop: "5949",
+        natOp: "Outras Saidas - Remessa para Deposito Temporario",
+        pedidoMl,
+        serie: 2,
+        warehouseId: "3272442934",
+        posDevolucao: true,
+      }),
+      `SALE_RETURN-symbolic_inbound-${pedidoMl}-2-OLSS-3272442934`,
+    );
+  });
+
   it("venda consumidor final — só pedido ML", () => {
     const pedidoMl = "987654321";
     assert.equal(

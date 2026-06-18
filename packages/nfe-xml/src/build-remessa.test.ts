@@ -6,8 +6,20 @@ import {
   enrichFiscalPayloadWithXTexto,
   verifySimulationXmlSignature,
 } from "@msimulation-xml/fiscal-core";
-import { buildNFeXML } from "./nfe-xml-generator.js";
-import type { EmitenteXml, NFeXmlInput } from "./types.js";
+import { buildNFeXmlFromBuilder } from "./core/nfe-factory.js";
+import type { EmitenteXml, NFeXmlInput, ProductXmlInput } from "./types.js";
+import type { FiscalEmitterSettingsData } from "@msimulation-xml/fiscal-core";
+
+/** Compat wrapper — testes espelham a API antiga via Factory + Serializer. */
+function buildNFeXML(
+  nfe: NFeXmlInput,
+  emit: EmitenteXml,
+  product?: ProductXmlInput,
+  emitterSettings?: FiscalEmitterSettingsData | null,
+  products?: ProductXmlInput[],
+): string {
+  return buildNFeXmlFromBuilder({ nfe, emit, product, emitterSettings, products });
+}
 
 const emit: EmitenteXml = {
   cnpj: "12345678000199",
@@ -228,9 +240,11 @@ describe("buildNFeXML — REMESSA", () => {
     assert.match(xml, /<autXML>\s*<CPF>87659808915<\/CPF>\s*<\/autXML>/);
     assert.match(xml, /<cEnq>103<\/cEnq>/);
     assert.match(xml, /<IPINT>\s*<CST>55<\/CST>\s*<\/IPINT>/);
-    assert.match(xml, /<infCpl>Remessa para Deposito Temporario\.<\/infCpl>/);
+    assert.match(
+      xml,
+      /<infCpl>Remessa para Deposito Temporario - Portaria CAT 31\/2019\. Inscricao Estadual do Operador Logistico: 261755994<\/infCpl>/,
+    );
     assert.match(xml, /<xCpl>Nao consta<\/xCpl>/);
-    assert.doesNotMatch(xml, /Portaria CAT 31\/2019/);
     assert.doesNotMatch(xml, /<vFCPUFDest>/);
     assert.doesNotMatch(xml, /<CEST>/);
   });
@@ -351,6 +365,54 @@ describe("buildNFeXML — REMESSA", () => {
     const err = doc.getElementsByTagName("parsererror");
     assert.equal(err.length, 0, err[0]?.textContent ?? "XML malformado");
     assert.equal(verifySimulationXmlSignature(xml), true);
+  });
+
+  it("REMESSA_SIMBOLICA pós-devolução emite infCpl CAT 31 e xTexto SALE_RETURN", () => {
+    const pedidoMl = "47238016772";
+    const nfe = {
+      ...baseNfe(),
+      serie: 2,
+      pedidoML: pedidoMl,
+      tipo: "REMESSA_SIMBOLICA" as const,
+      nfeReferenciaChave: "35260612345678000199550010000000021000000023",
+      emitidaEm: "2026-06-17T12:00:00-03:00",
+      fiscalPayload: enrichFiscalPayloadMlFulfillment(
+        enrichFiscalPayloadWithXTexto(
+          {
+            remessaSimbolicaPosDevolucao: {
+              numero: 628,
+              serie: 2,
+              emitidaEm: "2026-06-17T12:00:00-03:00",
+            },
+            destIe: "241174886113",
+            engine: baseNfe().fiscalPayload?.engine,
+          },
+          {
+            tipo: "REMESSA_SIMBOLICA",
+            cfop: "5949",
+            natOp: "Outras Saidas - Remessa para Deposito Temporario",
+            pedidoMl,
+            posDevolucao: true,
+            serie: 2,
+            warehouseId: "3272442934",
+          },
+        ),
+        {
+          quantidadeTotal: 2,
+          destIe: "241174886113",
+          idCadIntTran: "3272442934",
+        },
+      ),
+    };
+    const xml = buildNFeXML(nfe, emit);
+    assert.match(
+      xml,
+      /<infCpl>Remessa Simbolica para Deposito Temporario - Portaria CAT 31\/2019\. Inscricao Estadual do Operador Logistico: 241174886113\. Nota fiscal de devolucao n 628 emitida em 17\/06\/2026 serie 2\.<\/infCpl>/,
+    );
+    assert.match(
+      xml,
+      /<xTexto>SALE_RETURN-symbolic_inbound-47238016772-2-OLSS-3272442934<\/xTexto>/,
+    );
   });
 
   it("REMESSA_SIMBOLICA usa CST da planilha em PIS/COFINS (não força 99)", () => {

@@ -1,31 +1,30 @@
 /**
  * XML autorizado da NF-e: geração na emissão e leitura via API.
  *
- * Remessa física: `persistNfeXmlAutorizado` → `buildNfeXmlAutorizado` →
- * `buildNFeXML` (tipo REMESSA) → `buildRemessaNFeXML` em @msimulation-xml/nfe-xml.
+ * Geração via Factory + Serializer (`createNFeBuilder` → `buildXml()` em @msimulation-xml/nfe-xml).
+ * Remessa física: `persistNfeXmlAutorizado` → `buildNfeXmlAutorizado` → `buildNFeXmlFromBuilder`.
  * @see docs/remessa-fisica.md — Fase 8
  */
 import { fiscalXmlDownloadFilename, simulationNProt } from "@msimulation-xml/fiscal-core";
 import {
-  buildNFeXML,
+  buildNFeXmlFromBuilder,
   buildProcEventoCancelamentoXML,
   isNfeXmlPersistSupported,
   UnsupportedNfeXmlTipoError,
+  type EmitenteXml,
+  type NFeFactoryInput,
 } from "@msimulation-xml/nfe-xml";
 import type { FiscalEmitterSettingsData } from "@msimulation-xml/fiscal-core";
 import {
   FiscalStatus,
-  type NFeTipo,
-  type Prisma,
-  type PrismaClient,
   type Product,
+  type Tenant,
 } from "../../../../generated/prisma/client.js";
 import type { DbClient, PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { mapNfe } from "../../presentation/mappers/fiscal-mappers.js";
 import { mapProduct, type ProductDto } from "../../../catalog/index.js";
 import { mapEmitente } from "../../../org/infrastructure/fiscal/tenant-emitente.mapper.js";
 import { loadEmitterSettings } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
-import type { Product as ProductModel, Tenant } from "../../../../generated/prisma/client.js";
 
 export type NfeXmlPersistTx = PrismaTx;
 
@@ -60,9 +59,11 @@ export function buildNfeXmlAutorizado(
     throw new UnsupportedNfeXmlTipoError(nfe.tipo);
   }
   const fiscalPayload = (nfe.fiscalPayload ?? {}) as Record<string, unknown>;
-  const emitSnapshot = fiscalPayload.emitSnapshot as Parameters<typeof buildNFeXML>[1] | undefined;
+  const emitSnapshot = fiscalPayload.emitSnapshot as EmitenteXml | undefined;
   const emit = emitSnapshot ?? mapEmitente(tenant);
-  return buildNFeXML(nfe, emit, product, settings, products);
+  const input: NFeFactoryInput = { nfe, emit, product, emitterSettings: settings, products };
+  // XML gerado via Factory Strategy + XmlSerializer (sem template strings).
+  return buildNFeXmlFromBuilder(input);
 }
 
 export async function persistNfeXmlAutorizado(
@@ -223,14 +224,4 @@ export async function resolveNfeCancelamentoEventoXml(
   const xml = buildProcEventoCancelamentoXML(dto, emit, evento);
   const filename = fiscalXmlDownloadFilename("Canc", chave);
   return { xml, filename, source: "regenerated" };
-}
-
-export class NfeXmlUnavailableError extends Error {
-  readonly tipo: NFeTipo;
-
-  constructor(tipo: NFeTipo) {
-    super(`XML persistido indisponível para NF-e tipo ${tipo}`);
-    this.name = "NfeXmlUnavailableError";
-    this.tipo = tipo;
-  }
 }

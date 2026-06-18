@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  buildNFeXML,
-} from "./nfe-xml-generator.js";
+  buildNFeXmlFromBuilder,
+} from "./core/nfe-factory.js";
 import type { EmitenteXml, NFeXmlInput, ProductXmlInput } from "./types.js";
 import {
   enrichFiscalPayloadMlVenda,
@@ -10,6 +10,18 @@ import {
   VENDA_ML_NAT_OP,
 } from "@msimulation-xml/fiscal-core";
 import { verifySimulationXmlSignature } from "@msimulation-xml/fiscal-core";
+import type { FiscalEmitterSettingsData } from "@msimulation-xml/fiscal-core";
+
+/** Compat wrapper — testes espelham a API antiga via Factory + Serializer. */
+function buildNFeXML(
+  nfe: NFeXmlInput,
+  emit: EmitenteXml,
+  product?: ProductXmlInput,
+  emitterSettings?: FiscalEmitterSettingsData | null,
+  products?: ProductXmlInput[],
+): string {
+  return buildNFeXmlFromBuilder({ nfe, emit, product, emitterSettings, products });
+}
 
 const emit: EmitenteXml = {
   cnpj: "78242849000169",
@@ -45,7 +57,7 @@ const product: ProductXmlInput = {
   nfci: "A7B816FF-59CC-41D9-97C1-B39BCED07B17",
 };
 
-describe("buildNFeXML — VENDA", () => {
+describe("buildNFeXmlFromBuilder — VENDA", () => {
   it("alinha estrutura ML: natOp, verProc, autXML, CFOP, vFrete, xPed e nFCI", () => {
     const nfe: NFeXmlInput = {
       chave: "41260678242849000169550050000000051423282896",
@@ -134,7 +146,7 @@ describe("buildNFeXML — VENDA", () => {
     assert.match(xml, /<vTotTrib>289\.96<\/vTotTrib>/);
     assert.match(xml, /<infAdProd>[^<]*289,96<\/infAdProd>/);
     assert.match(xml, /<pIPI>2\.6000<\/pIPI>/);
-    assert.match(xml, /<gIBSUF><pIBSUF>0\.10<\/pIBSUF><vIBSUF>0\.63<\/vIBSUF><\/gIBSUF>/);
+    assert.match(xml, /<gIBSUF>\s*<pIBSUF>0\.10<\/pIBSUF>\s*<vIBSUF>0\.63<\/vIBSUF>\s*<\/gIBSUF>/);
     assert.match(xml, /<vBCIBSCBS>632\.91<\/vBCIBSCBS>/);
     assert.match(xml, /<vNFTot>815\.86<\/vNFTot>/);
     assert.match(xml, /<transporta>\s*<CNPJ>03007331012239<\/CNPJ>/);

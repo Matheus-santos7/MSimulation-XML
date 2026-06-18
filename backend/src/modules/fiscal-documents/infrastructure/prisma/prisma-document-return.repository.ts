@@ -228,6 +228,14 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
             product,
             quantidade: quantity,
             pedidoMl: sale.pedidoMl,
+            posDevolucao: {
+              numero: returnRow.numero,
+              serie: returnRow.serie,
+              emitidaEm: returnRow.emitidaEm,
+            },
+            destIe: destIeFromRemessaFiscalPayload(mainShipment.fiscalPayload),
+            remessaSerie: series,
+            idCadIntTran: idCadIntTranFromRemessaFiscalPayload(mainShipment.fiscalPayload),
           });
         } catch (error) {
           if (error instanceof RemessaSimbolicaFiscalError) {
@@ -303,6 +311,19 @@ function resolveCustomerType(destIndIeDest: number): CustomerType {
 /** Return CFOP (inbound): interstate → 2202, intrastate → 1202. */
 function resolveReturnCfop(emitterUf: string, destinationUf: string): string {
   return emitterUf.toUpperCase() !== destinationUf.toUpperCase() ? "2202" : "1202";
+}
+
+function destIeFromRemessaFiscalPayload(payload: unknown): string | undefined {
+  const root = (payload ?? {}) as Record<string, unknown>;
+  const destIe = root.destIe;
+  return typeof destIe === "string" && destIe.trim() ? destIe.replace(/\D/g, "") : undefined;
+}
+
+function idCadIntTranFromRemessaFiscalPayload(payload: unknown): string | undefined {
+  const root = (payload ?? {}) as Record<string, unknown>;
+  const intermed = root.infIntermed as Record<string, unknown> | undefined;
+  const id = intermed?.idCadIntTran;
+  return typeof id === "string" && id.trim() ? id.trim() : undefined;
 }
 
 function extractCstFromPayload(payload: unknown): {

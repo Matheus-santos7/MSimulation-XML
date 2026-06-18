@@ -9,7 +9,7 @@ import {
   REMESSA_IBS_CBS_DEFAULT,
   type RemessaMlTransporta,
 } from "@msimulation-xml/fiscal-core";
-import type { IcmsTotInput } from "./fiscal-engine-xml.js";
+import type { IcmsTotInput } from "../fiscal-engine-xml.js";
 
 export type IcmsTotValues = IcmsTotInput;
 
@@ -418,8 +418,39 @@ export function destComplementoXml(complemento?: string, placeholder = "Nao cons
   return `\n          <xCpl>${xmlEscape(value)}</xCpl>`;
 }
 
-export function remessaInfCplText(_destIe?: string): string {
-  return "Remessa para Deposito Temporario.";
+/** Informações complementares da remessa inbound (Portaria CAT 31/2019). */
+export function remessaInfCplText(destIe?: string): string {
+  return `Remessa para Deposito Temporario - Portaria CAT 31/2019. Inscricao Estadual do Operador Logistico: ${destIe?.trim() ?? ""}`;
+}
+
+export type RemessaSimbolicaPosDevolucaoInfCplInput = {
+  destIe?: string;
+  devolucaoNumero: number;
+  devolucaoSerie: number;
+  devolucaoEmitidaEm: Date | string;
+};
+
+function formatNfeDateBr(input: Date | string): string {
+  const date = typeof input === "string" ? new Date(input) : input;
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+}
+
+/** Informações complementares da remessa simbólica após devolução de venda. */
+export function remessaSimbolicaPosDevolucaoInfCplText(
+  input: RemessaSimbolicaPosDevolucaoInfCplInput,
+): string {
+  const ie = input.destIe?.replace(/\D/g, "").trim() ?? "";
+  const data = formatNfeDateBr(input.devolucaoEmitidaEm);
+  return (
+    `Remessa Simbolica para Deposito Temporario - Portaria CAT 31/2019. ` +
+    `Inscricao Estadual do Operador Logistico: ${ie}. ` +
+    `Nota fiscal de devolucao n ${input.devolucaoNumero} emitida em ${data} serie ${input.devolucaoSerie}.`
+  );
 }
 
 export function retornoInfCplText(): string {

@@ -12,6 +12,10 @@ type RuleIdentityState = {
   ruleId: string;
   ruleName: string;
   origin: string;
+  /** RULE_ID bruto da linha de cabeçalho do grupo atual. */
+  lastRawRuleId: string;
+  /** Identificador estável do grupo (persistência), independente do rótulo de continuação. */
+  groupRuleId: string;
 };
 
 function toNumberLike(value: unknown): unknown {
@@ -34,12 +38,38 @@ function isNumericRuleId(value: string): boolean {
 }
 
 /**
+ * Escolhe identificador persistível do grupo sem impor formato ao nome exibido.
+ *
+ * - ML novo: RULE_ID e RULE_NAME distintos, nome não puramente numérico → RULE_ID.
+ * - Demais casos: RULE_NAME, senão RULE_ID (aceita numérico, texto ou misto).
+ */
+function resolveStableRuleId(rawRuleId: string, rawRuleName: string): string {
+  if (rawRuleId && rawRuleName && rawRuleName !== rawRuleId && !isNumericRuleId(rawRuleName)) {
+    return rawRuleId;
+  }
+  return rawRuleName || rawRuleId;
+}
+
+/**
+ * Detecta início de novo grupo na planilha mesclada do ML.
+ */
+function isNewRuleGroup(rawRuleId: string, rawRuleName: string, state: RuleIdentityState): boolean {
+  if (!state.groupRuleId) return Boolean(rawRuleId || rawRuleName);
+  if (rawRuleId && rawRuleId !== state.lastRawRuleId) return true;
+  if (!rawRuleId && rawRuleName && isNumericRuleId(rawRuleName) && rawRuleName !== state.groupRuleId) {
+    return true;
+  }
+  return false;
+}
+
+/**
  * Planilhas ML mesclam células: RULE_ID/RULE_NAME/ORIGIN repetem só na 1ª linha do grupo.
  *
- * Coluna RULE_NAME numérica (ex.: 4133250001) identifica a regra do produto e
- * define a ORIGIN do grupo. Linhas de continuação trazem rótulos descritivos
- * (ex.: "Item nacional") e podem conter ORIGIN incorreta (ex.: RJ) — esses
- * valores são ignorados; a origem fiscal é herdada da linha de cabeçalho.
+ * RULE_NAME aceita qualquer formato (texto, numérico, misto). O nome exibido vem da 1ª
+ * linha do grupo; linhas de continuação podem trazer rótulos mais longos — ignorados.
+ *
+ * Novo grupo: RULE_ID muda, ou (legado) RULE_ID vazio com RULE_NAME numérico novo.
+ * Linhas de continuação legado podem trazer ORIGIN incorreta — herdada do cabeçalho.
  */
 function resolveRuleIdentity(byKey: Record<string, unknown>, state: RuleIdentityState): RuleIdentityState {
   const rawRuleId = String(byKey.RULE_ID ?? "").trim();
@@ -47,15 +77,16 @@ function resolveRuleIdentity(byKey: Record<string, unknown>, state: RuleIdentity
   const rawOrigin = String(byKey.ORIGIN ?? "").trim();
   const next = { ...state };
 
-  if (rawRuleName && isNumericRuleId(rawRuleName)) {
-    next.ruleId = rawRuleName;
-    next.ruleName = rawRuleName;
-    if (rawOrigin) next.origin = rawOrigin;
-  } else if (rawRuleId && isNumericRuleId(rawRuleId) && !next.ruleId) {
-    next.ruleId = rawRuleId;
-    if (!next.ruleName) next.ruleName = rawRuleId;
-    if (rawOrigin) next.origin = rawOrigin;
+  if (!isNewRuleGroup(rawRuleId, rawRuleName, state)) {
+    return next;
   }
+
+  const stableRuleId = resolveStableRuleId(rawRuleId, rawRuleName);
+  next.groupRuleId = stableRuleId;
+  next.ruleId = stableRuleId;
+  next.ruleName = rawRuleName || rawRuleId;
+  next.lastRawRuleId = rawRuleId;
+  if (rawOrigin) next.origin = rawOrigin;
 
   return next;
 }
@@ -92,7 +123,13 @@ export function parseTaxRuleSpreadsheet(buffer: Buffer | ArrayBuffer): TaxRuleSp
   const errors: { line: number; message: string }[] = [];
   const rawRows: TaxRuleSpreadsheetRawRow[] = [];
 
-  let identity: RuleIdentityState = { ruleId: "", ruleName: "", origin: "" };
+  let identity: RuleIdentityState = {
+    ruleId: "",
+    ruleName: "",
+    origin: "",
+    lastRawRuleId: "",
+    groupRuleId: "",
+  };
 
   for (let i = 3; i < matrix.length; i++) {
     const line = i + 1;

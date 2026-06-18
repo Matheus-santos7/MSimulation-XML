@@ -28,7 +28,7 @@ export default async function AuditoriaPage() {
             </thead>
             <tbody className="divide-y divide-border">
               {audit.map((a) => (
-                <tr key={a.id} className="hover:bg-white/2 transition-colors">
+                <tr key={a.id} className="hover:bg-foreground/[0.02] transition-colors">
                   <td className="px-4 py-3 font-mono text-[13px]">{a.ator}</td>
                   <td className="px-4 py-3">
                     <span className="text-[12px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-muted text-foreground">

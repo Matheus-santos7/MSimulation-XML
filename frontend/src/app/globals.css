@@ -70,53 +70,56 @@
 
 :root {
   --radius: 0.375rem;
+  color-scheme: light;
 
-  --background: oklch(0.145 0.005 285);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.185 0.005 285);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.185 0.005 285);
-  --popover-foreground: oklch(0.985 0 0);
+  --background: oklch(0.985 0.003 285);
+  --foreground: oklch(0.18 0.01 285);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0.01 285);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.01 285);
 
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.145 0.005 285);
+  --primary: oklch(0.22 0.01 285);
+  --primary-foreground: oklch(0.98 0 0);
 
-  --secondary: oklch(0.235 0.005 285);
-  --secondary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.96 0.004 285);
+  --secondary-foreground: oklch(0.22 0.01 285);
 
-  --muted: oklch(0.235 0.005 285);
-  --muted-foreground: oklch(0.55 0.012 285);
+  --muted: oklch(0.955 0.004 285);
+  --muted-foreground: oklch(0.48 0.012 285);
 
-  --accent: oklch(0.78 0.17 68);
-  --accent-foreground: oklch(0.145 0.005 285);
+  --accent: oklch(0.58 0.17 68);
+  --accent-foreground: oklch(0.98 0 0);
 
-  --destructive: oklch(0.625 0.215 27);
-  --destructive-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.55 0.22 27);
+  --destructive-foreground: oklch(0.98 0 0);
 
-  --success: oklch(0.7 0.17 158);
-  --success-foreground: oklch(0.145 0.005 285);
+  --success: oklch(0.52 0.14 158);
+  --success-foreground: oklch(0.98 0 0);
 
-  --warning: oklch(0.78 0.17 68);
-  --warning-foreground: oklch(0.145 0.005 285);
+  --warning: oklch(0.58 0.17 68);
+  --warning-foreground: oklch(0.98 0 0);
 
-  --border: oklch(0.255 0.005 285);
-  --input: oklch(0.255 0.005 285);
-  --ring: oklch(0.78 0.17 68);
+  --border: oklch(0.90 0.006 285);
+  --input: oklch(0.90 0.006 285);
+  --ring: oklch(0.58 0.17 68);
 
-  --sidebar: oklch(0.145 0.005 285);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.78 0.17 68);
-  --sidebar-primary-foreground: oklch(0.145 0.005 285);
-  --sidebar-accent: oklch(0.235 0.005 285);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.255 0.005 285);
-  --sidebar-ring: oklch(0.78 0.17 68);
+  --sidebar: oklch(0.975 0.004 285);
+  --sidebar-foreground: oklch(0.18 0.01 285);
+  --sidebar-primary: oklch(0.58 0.17 68);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.94 0.006 285);
+  --sidebar-accent-foreground: oklch(0.22 0.01 285);
+  --sidebar-border: oklch(0.90 0.006 285);
+  --sidebar-ring: oklch(0.58 0.17 68);
 
-  --brand-glow: oklch(0.78 0.17 68);
-  --brand-xml: oklch(0.76 0.17 162);
+  --brand-glow: oklch(0.58 0.17 68);
+  --brand-xml: oklch(0.52 0.17 162);
 }
 
 .dark {
+  color-scheme: dark;
+
   --background: oklch(0.145 0.005 285);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.185 0.005 285);
@@ -158,7 +161,6 @@
     border-color: var(--color-border);
   }
   html {
-    color-scheme: dark;
     /* ~6% maior que o padrão do browser: escala text-sm, text-base, etc. */
     font-size: 106.25%;
   }
@@ -180,13 +182,28 @@
 @layer utilities {
   .brand-grid-bg {
     background-image:
-      linear-gradient(oklch(0.255 0.005 285 / 0.35) 1px, transparent 1px),
-      linear-gradient(90deg, oklch(0.255 0.005 285 / 0.35) 1px, transparent 1px);
+      linear-gradient(oklch(0.55 0.01 285 / 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, oklch(0.55 0.01 285 / 0.1) 1px, transparent 1px);
     background-size: 32px 32px;
     mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, black 20%, transparent 75%);
   }
 
+  .dark .brand-grid-bg {
+    background-image:
+      linear-gradient(oklch(0.255 0.005 285 / 0.35) 1px, transparent 1px),
+      linear-gradient(90deg, oklch(0.255 0.005 285 / 0.35) 1px, transparent 1px);
+  }
+
   .brand-glow-orb {
+    background: radial-gradient(
+      circle at center,
+      oklch(0.58 0.17 68 / 0.12) 0%,
+      oklch(0.52 0.15 162 / 0.04) 45%,
+      transparent 70%
+    );
+  }
+
+  .dark .brand-glow-orb {
     background: radial-gradient(
       circle at center,
       oklch(0.78 0.17 68 / 0.18) 0%,

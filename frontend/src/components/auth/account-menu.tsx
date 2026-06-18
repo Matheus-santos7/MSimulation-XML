@@ -47,7 +47,7 @@ export function AccountMenu({ tenant, userEmail, userName }: Props) {
       <DropdownMenuTrigger
         className={cn(
           "flex items-center gap-2 rounded-md border border-border px-2.5 py-1.5",
-          "text-[13px] text-foreground hover:bg-white/5 transition-colors",
+          "text-[13px] text-foreground hover:bg-foreground/5 transition-colors",
           "outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
         )}
       >

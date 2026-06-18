@@ -91,7 +91,7 @@ export function PedidosView({ pedidos, products }: Props) {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {pedidos.map((p) => (
-                    <tr key={p.id} className="hover:bg-white/2">
+                    <tr key={p.id} className="hover:bg-foreground/[0.02]">
                       <td className="px-4 py-3 font-mono text-[13px] text-accent">
                         {p.pedidoMl ?? `RASC-${p.id.slice(0, 8)}`}
                       </td>

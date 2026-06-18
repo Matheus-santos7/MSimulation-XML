@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { AccountMenu } from "@/components/auth/account-menu";
 import { BrandLogo } from "@/components/brand-logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { BRAND } from "@/lib/brand";
 import type { TenantDto } from "@/lib/fiscal-types";
 
@@ -70,7 +71,7 @@ function AppShellInner({
           <Link
             href="/"
             className={`flex items-center gap-3 px-3 py-2 rounded transition-colors ${
-              path === "/" ? "bg-white/5 text-foreground" : "text-muted-foreground hover:bg-white/5"
+              path === "/" ? "bg-foreground/5 text-foreground" : "text-muted-foreground hover:bg-foreground/5"
             }`}
           >
             <span className="size-1.5 rounded-full bg-success" />
@@ -90,7 +91,7 @@ function AppShellInner({
                 className={`flex items-center gap-3 px-3 py-2 rounded transition-colors ${
                   active
                     ? "bg-accent/5 text-accent font-medium"
-                    : "text-muted-foreground hover:bg-white/5"
+                    : "text-muted-foreground hover:bg-foreground/5"
                 }`}
               >
                 <Icon className="size-3.5" />
@@ -112,7 +113,7 @@ function AppShellInner({
                 className={`flex items-center gap-3 px-3 py-2 rounded transition-colors ${
                   active
                     ? "bg-accent/5 text-accent font-medium"
-                    : "text-muted-foreground hover:bg-white/5"
+                    : "text-muted-foreground hover:bg-foreground/5"
                 }`}
               >
                 <Icon className="size-3.5" />
@@ -130,7 +131,10 @@ function AppShellInner({
               {tenant?.razaoSocial ?? "Empresa"}
             </span>
           </div>
-          <AccountMenu tenant={tenant} userEmail={userEmail} userName={userName} />
+          <div className="flex items-center gap-2 shrink-0">
+            <ThemeToggle />
+            <AccountMenu tenant={tenant} userEmail={userEmail} userName={userName} />
+          </div>
         </header>
 
         <div className="flex-1 overflow-y-auto">{children}</div>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { BRAND } from "@/lib/brand";
 import "./globals.css";
@@ -33,10 +34,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className={`dark h-full ${inter.variable} ${jetbrainsMono.variable}`}>
+    <html
+      lang="pt-BR"
+      className={`h-full ${inter.variable} ${jetbrainsMono.variable}`}
+      suppressHydrationWarning
+    >
       <body className="min-h-full antialiased">
-        {children}
-        <Toaster richColors closeButton position="top-right" />
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem storageKey="msedit-theme">
+          {children}
+          <Toaster richColors closeButton position="top-right" />
+        </ThemeProvider>
       </body>
     </html>
   );

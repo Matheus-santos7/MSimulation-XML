@@ -69,7 +69,7 @@ export default async function NFeListPage() {
                   const { inut } = row;
                   const nFim = inut.numeroFim ?? inut.numeroIni!;
                   return (
-                    <tr key={`inut-${inut.id}`} className="hover:bg-white/2 transition-colors">
+                    <tr key={`inut-${inut.id}`} className="hover:bg-foreground/[0.02] transition-colors">
                       <td className="px-4 py-3 font-mono text-[13px]">
                         {formatNumeroSerie(inut.serie!, inut.numeroIni!, nFim)}
                       </td>
@@ -101,7 +101,7 @@ export default async function NFeListPage() {
                 const nfe = row.nfe;
 
                 return (
-                  <tr key={nfe.chave} className="hover:bg-white/2 transition-colors">
+                  <tr key={nfe.chave} className="hover:bg-foreground/[0.02] transition-colors">
                     <td className="px-4 py-3 font-mono text-[13px]">
                       <Link href={`/nfe/${nfe.chave}`} className="text-accent hover:underline">
                         {nfe.numero}/{nfe.serie}

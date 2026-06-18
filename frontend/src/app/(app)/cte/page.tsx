@@ -36,7 +36,7 @@ export default async function CTePage() {
             </thead>
             <tbody className="divide-y divide-border">
               {ctes.map((c) => (
-                <tr key={c.chave} className="hover:bg-white/2 transition-colors">
+                <tr key={c.chave} className="hover:bg-foreground/[0.02] transition-colors">
                   <td className="px-4 py-3 font-mono">
                     <Link href={`/cte/${c.chave}`} className="text-accent hover:underline">
                       {c.numero}/{c.serie}

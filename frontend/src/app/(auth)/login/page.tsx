@@ -2,11 +2,15 @@
 
 import { BrandLogo } from "@/components/brand-logo";
 import { LoginPanel } from "@/components/auth/login-panel";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { BRAND } from "@/lib/brand";
 
 export default function LoginPage() {
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-background text-foreground p-6 overflow-hidden">
+      <div className="absolute top-4 right-4 z-10">
+        <ThemeToggle />
+      </div>
       <div className="absolute inset-0 brand-grid-bg opacity-40 pointer-events-none" aria-hidden />
 
       <div className="relative w-full max-w-5xl flex flex-col lg:flex-row lg:items-center gap-10 lg:gap-16 xl:gap-20">

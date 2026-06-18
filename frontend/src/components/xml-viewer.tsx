@@ -23,7 +23,7 @@ export function XMLViewer({
 
   return (
     <div className="border border-border rounded-lg bg-black overflow-hidden flex flex-col h-full">
-      <div className="px-4 py-2 border-b border-border bg-white/5 flex justify-between items-center shrink-0">
+      <div className="px-4 py-2 border-b border-border bg-muted/50 flex justify-between items-center shrink-0">
         <span className="text-[12px] font-mono text-muted-foreground">{filename}</span>
         <div className="flex items-center gap-3">
           {toolbarExtra}

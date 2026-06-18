@@ -57,7 +57,7 @@ export default async function DashboardPage() {
                 {nfes.map((nfe, i) => (
                   <tr
                     key={nfe.chave}
-                    className={`hover:bg-white/2 transition-colors ${
+                    className={`hover:bg-foreground/[0.02] transition-colors ${
                       i === 0 ? "border-l-2 border-l-accent" : ""
                     }`}
                   >

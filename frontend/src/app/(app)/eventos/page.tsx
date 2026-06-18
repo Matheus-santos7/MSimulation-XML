@@ -46,7 +46,7 @@ export default async function EventosPage() {
             </thead>
             <tbody className="divide-y divide-border">
               {events.map((e) => (
-                <tr key={e.id} className="hover:bg-white/2 transition-colors">
+                <tr key={e.id} className="hover:bg-foreground/[0.02] transition-colors">
                   <td className="px-4 py-3 font-mono text-[13px] text-accent">{e.tipo}</td>
                   <td className="px-4 py-3">
                     <div>{EVENT_NAMES[e.tipo] ?? e.descricao}</div>

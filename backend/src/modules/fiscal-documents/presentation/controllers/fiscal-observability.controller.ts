@@ -128,6 +128,7 @@ export const fiscalObservabilityController: FastifyPluginAsync = async (app) => 
   });
 
   app.get("/timeline/spreadsheet/export", async (req, reply) => {
+    /** Exportação XLSX de todos os cenários fiscais do tenant (organização operacional). */
     const tenantId = tenantIdFromRequest(req);
     const buffer = await exportTimelineSpreadsheet(getDbClient(), tenantId);
     return reply

@@ -21,11 +21,13 @@ export type TimelineNfeExportDetail = {
   cfop: string;
   destUf: string;
   nfeReferenciaChave?: string;
+  /** SKU do produto — valor da coluna PRODUTO na planilha. */
   produto: string;
 };
 
 export type TimelineSpreadsheetRow = Record<(typeof TIMELINE_SPREADSHEET_HEADERS)[number], string>;
 
+/** Linha da planilha com metadado de faixa zebrada por cenário. */
 export type TimelineSpreadsheetDataRow = {
   row: TimelineSpreadsheetRow;
   /** Índice do cenário na ordem da planilha — usado para faixas zebradas. */
@@ -98,6 +100,13 @@ function mapEventStepRow(
 
 /**
  * Converte grupos da timeline em linhas tabulares para exportação em planilha.
+ * Cada passo (NF-e ou evento) vira uma linha; o índice `scenarioStripe` incrementa
+ * a cada cenário para permitir faixas zebradas no XLSX.
+ *
+ * @param groups - Timeline agrupada por remessa (`listTimelineChains`).
+ * @param ufEmitente - UF do tenant (coluna UF EMITENTE).
+ * @param nfeDetails - Metadados fiscais indexados por chave de NF-e.
+ * @returns Linhas com valores e índice de faixa por cenário.
  */
 export function buildTimelineSpreadsheetExportData(
   groups: TimelineRemessaGroupDto[],
@@ -185,7 +194,13 @@ function applyScenarioStripes(worksheet: XLSX.WorkSheet, dataRows: TimelineSprea
 }
 
 /**
- * Gera buffer XLSX com todos os cenários fiscais do tenant.
+ * Gera buffer XLSX com todos os cenários fiscais, incluindo formatação zebrada
+ * alternada por cenário (tom claro) e cabeçalho destacado.
+ *
+ * @param groups - Timeline agrupada por remessa.
+ * @param ufEmitente - UF do emitente.
+ * @param nfeDetails - Detalhes fiscais por chave de NF-e.
+ * @returns Buffer `.xlsx` da aba "Cenários".
  */
 export function buildTimelineSpreadsheetXlsx(
   groups: TimelineRemessaGroupDto[],

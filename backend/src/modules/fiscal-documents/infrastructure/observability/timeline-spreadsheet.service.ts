@@ -6,6 +6,14 @@ import {
   type TimelineNfeExportDetail,
 } from "./timeline-spreadsheet.export.js";
 
+/**
+ * Resolve o SKU exibido na coluna PRODUTO da planilha.
+ * Prioriza produto do cabeçalho da NF-e; fallback no primeiro item.
+ *
+ * @param product - Produto vinculado diretamente à NF-e.
+ * @param itemProduct - Produto do primeiro `nfe_item`, quando existir.
+ * @returns SKU trimado ou string vazia.
+ */
 function resolveProdutoSku(
   product?: { sku: string } | null,
   itemProduct?: { sku: string } | null,
@@ -14,6 +22,14 @@ function resolveProdutoSku(
   return picked?.sku?.trim() ?? "";
 }
 
+/**
+ * Carrega metadados fiscais das NF-e do tenant indexados por chave de acesso.
+ * Usado exclusivamente para preencher colunas da planilha de cenários.
+ *
+ * @param db - Cliente Prisma ou transação.
+ * @param tenantId - Tenant emissor.
+ * @returns Mapa chave → CFOP, UF destino, chave referência e SKU.
+ */
 async function loadNfeExportDetails(
   db: DbClient,
   tenantId: string,
@@ -48,7 +64,15 @@ async function loadNfeExportDetails(
 }
 
 /**
- * Monta planilha XLSX com todos os cenários fiscais do tenant.
+ * Caso de uso: exporta todos os cenários fiscais do tenant em planilha XLSX.
+ *
+ * Combina a timeline enriquecida (`listTimelineChains`), UF do emitente e
+ * detalhes fiscais das NF-e para gerar `cenarios-fiscais.xlsx`.
+ *
+ * @param db - Cliente Prisma.
+ * @param tenantId - Tenant autenticado.
+ * @returns Buffer do arquivo `.xlsx` pronto para download HTTP.
+ * @throws Erro Prisma se o tenant não existir.
  */
 export async function exportTimelineSpreadsheet(db: DbClient, tenantId: string): Promise<Buffer> {
   const [groups, tenant, nfeDetails] = await Promise.all([

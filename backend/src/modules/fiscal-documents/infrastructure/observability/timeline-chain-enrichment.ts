@@ -30,6 +30,11 @@ const CANCELLABLE_TIPOS = new Set<NFeTipo>([NFeTipo.VENDA, NFeTipo.RETORNO_SIMBO
 /**
  * Insere na cadeia eventos de inutilização (faixas sequenciais ou anteriores ao cenário)
  * e cancelamentos de venda/retorno simbólico, ordenados por número de série.
+ *
+ * @param nfeSteps - Passos documentais do cenário (sem eventos).
+ * @param inutilizations - Registros `nfe_inutilizacao` do tenant.
+ * @param cancellationsByChave - Eventos 110111 indexados pela chave da NF-e cancelada.
+ * @returns Cadeia unificada (NF-e + eventos) ordenada numericamente.
  */
 export function enrichScenarioStepsWithEvents(
   nfeSteps: TimelineNfeStepDto[],

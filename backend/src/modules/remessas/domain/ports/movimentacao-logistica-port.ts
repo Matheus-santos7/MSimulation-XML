@@ -11,7 +11,7 @@ export type RegistrarMovimentacaoInput = {
   quantidade: number;
   unidadeOrigemId: string;
   unidadeDestinoId: string;
-  /** NF-e principal da operação (remessa simbólica no avanço). */
+  /** NF-e principal da operação (remessa avanço no CD destino). */
   nfeId: string;
   nfeSecundariaId?: string;
   observacao?: string;

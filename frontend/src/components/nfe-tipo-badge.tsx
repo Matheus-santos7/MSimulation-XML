@@ -5,6 +5,7 @@ export type NfeTipoDisplay = NFeDto["tipo"] | "INUTILIZACAO";
 const TIPO_LABELS: Record<NfeTipoDisplay, string> = {
   REMESSA: "Remessa",
   REMESSA_SIMBOLICA: "Remessa simb.",
+  REMESSA_AVANCO: "Remessa avanço",
   RETORNO_SIMBOLICO: "Retorno",
   VENDA: "Venda",
   DEVOLUCAO: "Devolução",

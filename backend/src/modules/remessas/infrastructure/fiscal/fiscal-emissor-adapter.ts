@@ -32,7 +32,7 @@ import type {
   DocumentoFiscalPreparado,
   EmissorNotaPort,
 } from "../../domain/ports/emissor-nota-port.js";
-import { criarRetornoSimbolicoAvanco, criarRemessaSimbolicaAvanco } from "../../domain/entities/nota-fiscal.js";
+import { criarRetornoSimbolicoAvanco, criarRemessaAvanco } from "../../domain/entities/nota-fiscal.js";
 import { RemessaDomainError } from "../../domain/errors.js";
 
 function destinoFiscalParaCampos(destino: ReturnType<typeof unidadeParaDestinoFiscal>): CamposDestinoNfe {
@@ -172,7 +172,7 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
       {
         id: remessaPai.id,
         chave: remessaPai.chave,
-        tipo: remessaPai.tipo as "REMESSA" | "REMESSA_SIMBOLICA",
+        tipo: remessaPai.tipo as "REMESSA" | "REMESSA_AVANCO",
       },
     );
 
@@ -215,6 +215,7 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
       product: ctx.product,
       quantidade,
       pedidoMl: ctx.pedidoMl,
+      nfeTipo: NFeTipo.REMESSA_AVANCO,
     });
 
     const emitterSettings = await loadEmitterSettings(tx, ctx.tenant.id);
@@ -235,7 +236,7 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
       select: { id: true, chave: true, tipo: true },
     });
 
-    const rascunho = criarRemessaSimbolicaAvanco(
+    const rascunho = criarRemessaAvanco(
       {
         tenantId: ctx.tenant.id,
         productId: ctx.product.id,

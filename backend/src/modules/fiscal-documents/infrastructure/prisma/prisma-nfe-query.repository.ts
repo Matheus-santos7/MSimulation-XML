@@ -15,7 +15,7 @@ const nfeListInclude = {
 };
 
 function isShipmentWithFifoBalance(tipo: NFeTipo): boolean {
-  return tipo === NFeTipo.REMESSA || tipo === NFeTipo.REMESSA_SIMBOLICA;
+  return tipo === NFeTipo.REMESSA || tipo === NFeTipo.REMESSA_AVANCO;
 }
 
 export class PrismaNfeQueryRepository implements NfeQueryPort {

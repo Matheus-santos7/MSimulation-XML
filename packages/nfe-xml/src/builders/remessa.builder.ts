@@ -1,5 +1,5 @@
 /**
- * Builder Strategy para NF-e de Remessa (`REMESSA`, `REMESSA_SIMBOLICA`, `TRANSFERENCIA_FILIAL`).
+ * Builder Strategy para NF-e de Remessa (`REMESSA`, `REMESSA_SIMBOLICA`, `REMESSA_AVANCO`, `TRANSFERENCIA_FILIAL`).
  *
  * Espelha `buildRemessaNFeXML` em `nfe-xml-generator.ts`, retornando objetos AST
  * e usando resolvers fiscais de `src/taxes/`.

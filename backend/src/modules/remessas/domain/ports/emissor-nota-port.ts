@@ -58,7 +58,7 @@ export interface EmissorNotaPort {
   ): Promise<DocumentoFiscalPreparado>;
 
   /**
-   * Prepara remessa simbólico que “reenvia” ao CD destino do avanço.
+   * Prepara remessa avanço que “reenvia” ao CD destino do avanço (`REMESSA_AVANCO`).
    * Referencia o retorno simbólico recém-emitido.
    */
   prepararRemessaSimbolicaAvanco(

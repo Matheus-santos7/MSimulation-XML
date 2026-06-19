@@ -31,8 +31,12 @@ export function buildNfeObsContXTexto(input: XTextoInput): string | null {
   const warehouseId = input.warehouseId?.trim() || ML_OLSS_WAREHOUSE_SUFFIX;
   const serieSeg = input.serie ?? 1;
 
-  if (tipo === NFeTipo.REMESSA_SIMBOLICA || (nat.includes("Remessa Simbolica") && nat.includes("Saidas"))) {
-    if (input.posDevolucao || cfop === "6949" || nat.includes("SALE_RETURN")) {
+  if (
+    tipo === NFeTipo.REMESSA_SIMBOLICA ||
+    tipo === NFeTipo.REMESSA_AVANCO ||
+    (nat.includes("Remessa Simbolica") && nat.includes("Saidas"))
+  ) {
+    if (tipo === NFeTipo.REMESSA_SIMBOLICA && (input.posDevolucao || cfop === "6949" || nat.includes("SALE_RETURN"))) {
       return `SALE_RETURN-symbolic_inbound-${pedido}-${serieSeg}-OLSS-${warehouseId}`;
     }
     return `DEVOLUTION-symbolic_inbound-${pedido}-${serieSeg}-OLSS-${warehouseId}`;

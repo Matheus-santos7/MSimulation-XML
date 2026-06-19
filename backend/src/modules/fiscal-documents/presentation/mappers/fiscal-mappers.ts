@@ -130,7 +130,7 @@ export function mapNfe(
     quantidade: row.quantidade,
     tipo: row.tipo,
     saldoDisponivel:
-      row.tipo === "REMESSA" || row.tipo === "REMESSA_SIMBOLICA"
+      row.tipo === "REMESSA" || row.tipo === "REMESSA_AVANCO"
         ? saldoRemessaFromItens(itens, row.saldoDisponivel, saldoFifoOverride)
         : undefined,
     itens: mappedItens,
@@ -145,6 +145,7 @@ const NFE_TIPO_LABEL: Record<NFeTipo, string> = {
   RETORNO_SIMBOLICO: "Retorno simbólico",
   DEVOLUCAO: "Devolução",
   REMESSA_SIMBOLICA: "Remessa simbólica",
+  REMESSA_AVANCO: "Remessa avanço",
   TRANSFERENCIA_FILIAL: "Transferência filial",
 };
 

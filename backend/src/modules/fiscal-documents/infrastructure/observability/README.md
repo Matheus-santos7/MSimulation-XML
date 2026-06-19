@@ -6,7 +6,7 @@ Este pacote concentra a **leitura analítica** das cadeias fiscais do tenant (fu
 
 Responsabilidades de negócio:
 
-- Representar cada **cenário** como cadeia `Remessa → Retorno simbólico → Venda` (com devoluções quando existirem).
+- Representar cada **cenário** como cadeia `Remessa → Retorno simbólico → Venda` (com devoluções e remessa simbólica pós-devolução quando existirem).
 - Inserir na ordem numérica **inutilizações** e **cancelamentos** relevantes ao cenário.
 - Gerar planilha tabular (uma linha por passo) com dados fiscais mínimos para auditoria e conferência externa.
 
@@ -117,8 +117,20 @@ Constante de cabeçalhos: `TIMELINE_SPREADSHEET_HEADERS` em `timeline-spreadshee
 
 1. Parte de cada NF-e tipo **VENDA** do tenant.
 2. Sobe referências até a remessa raiz (`nfeReferenciaId`).
-3. Anexa devoluções e remessas simbólicas ligadas à venda.
+3. Anexa devoluções e `REMESSA_SIMBOLICA` (reposição pós-devolução) ligadas à venda.
 4. Agrupa cenários pela remessa do primeiro passo.
+
+### Tipos de NF-e na cadeia (`NFeTipo`)
+
+| Tipo persistido | Label na UI | Uso |
+|-----------------|-------------|-----|
+| `REMESSA` | Remessa | Envio físico inicial ao CD |
+| `RETORNO_SIMBOLICO` | Retorno simbólico | Saída simbólica do CD origem no avanço |
+| `REMESSA_AVANCO` | Remessa avanço | Entrada simbólica no CD destino; gera saldo FIFO |
+| `REMESSA_SIMBOLICA` | Remessa simbólica | Reposição no CD **após devolução de venda** (referencia `DEVOLUCAO`) |
+| `VENDA` / `DEVOLUCAO` | Venda / Devolução | Saída ao consumidor e retorno do comprador |
+
+Avanço entre CDs **não** usa mais `REMESSA_SIMBOLICA`; dados legados foram migrados via `20260619120000_nfe_tipo_remessa_avanco`.
 
 ### Enriquecimento com eventos (`timeline-chain-enrichment.ts`)
 

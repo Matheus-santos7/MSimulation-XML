@@ -8,6 +8,7 @@ export type NFeTipoXml =
   | "RETORNO_SIMBOLICO"
   | "DEVOLUCAO"
   | "REMESSA_SIMBOLICA"
+  | "REMESSA_AVANCO"
   | "TRANSFERENCIA_FILIAL";
 
 export type DestinatarioXml = {

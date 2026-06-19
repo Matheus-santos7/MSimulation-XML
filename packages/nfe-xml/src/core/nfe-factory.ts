@@ -19,6 +19,7 @@ export const NFE_BUILDER_SUPPORTED: readonly NFeTipoXml[] = [
   "VENDA",
   "REMESSA",
   "REMESSA_SIMBOLICA",
+  "REMESSA_AVANCO",
   "TRANSFERENCIA_FILIAL",
   "RETORNO_SIMBOLICO",
   "DEVOLUCAO",
@@ -60,6 +61,7 @@ export function createNFeBuilder(input: NFeFactoryInput): BaseNFeBuilder {
       return new VendaNFeStrategyBuilder(factoryInput);
     case "REMESSA":
     case "REMESSA_SIMBOLICA":
+    case "REMESSA_AVANCO":
     case "TRANSFERENCIA_FILIAL":
       return new RemessaNFeStrategyBuilder(factoryInput);
     case "RETORNO_SIMBOLICO":

@@ -62,12 +62,15 @@ export async function prepararRemessaSimbolicaFiscal(
     pedidoMl: string;
     /** Reposição no CD após devolução de venda — ajusta infCpl e xTexto. */
     posDevolucao?: PrepararRemessaSimbolicaPosDevolucaoInput;
+    /** Tipo persistido na NF-e; avanço entre CDs usa `REMESSA_AVANCO`. */
+    nfeTipo?: typeof NFeTipo.REMESSA_SIMBOLICA | typeof NFeTipo.REMESSA_AVANCO;
     destIe?: string | null;
     remessaSerie?: number;
     idCadIntTran?: string | null;
   },
 ): Promise<RemessaSimbolicaFiscalPreparada> {
-  const unitCusto = productUnitPrice(input.product, "REMESSA");
+  const nfeTipo = input.nfeTipo ?? NFeTipo.REMESSA_SIMBOLICA;
+  const unitCusto = productUnitPrice(input.product, nfeTipo);
   if (unitCusto <= 0) {
     throw new RemessaSimbolicaFiscalError(
       "Preço de custo não informado ou zero. Informe o custo no cadastro do produto.",
@@ -114,7 +117,7 @@ export async function prepararRemessaSimbolicaFiscal(
       {
         ...enrichTaxSnapshot(taxSnapshotFromRule(taxRule, aliqFallback, emitterSettings), {
           settings: emitterSettings,
-          tipo: NFeTipo.REMESSA_SIMBOLICA,
+          tipo: nfeTipo,
           valor: calc.valor,
           valorIcms: calc.valorIcms,
           emitUf: input.emitUf,
@@ -137,7 +140,7 @@ export async function prepararRemessaSimbolicaFiscal(
         ...(input.destIe?.trim() ? { destIe: input.destIe.replace(/\D/g, "") } : {}),
       } as Record<string, unknown>,
       {
-        tipo: NFeTipo.REMESSA_SIMBOLICA,
+        tipo: nfeTipo,
         cfop,
         natOp: REMESSA_SIMBOLICA_NAT_OP,
         pedidoMl: input.pedidoMl,

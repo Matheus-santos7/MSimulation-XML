@@ -79,8 +79,8 @@ export async function remessaSaldoItensWhere(
   return remessaItemSaldoWhereMulti(tenantId, productIds, unidadeDestinoId);
 }
 
-/** Saldo FIFO: remessa física + remessa simbólica (avanço entre CDs). */
-const REMESSA_FIFO_TIPOS: NFeTipo[] = [NFeTipo.REMESSA, NFeTipo.REMESSA_SIMBOLICA];
+/** Saldo FIFO: remessa física + remessa avanço entre CDs. */
+const REMESSA_FIFO_TIPOS: NFeTipo[] = [NFeTipo.REMESSA, NFeTipo.REMESSA_AVANCO];
 
 const remessaSaldoNfeWhere = (tenantId: string) => ({
   tenantId,
@@ -460,7 +460,7 @@ export async function atualizarItensSaldoFifoParaNfes(
   const productIds = new Set<string>();
 
   for (const nfe of nfes) {
-    if (nfe.tipo !== NFeTipo.REMESSA && nfe.tipo !== NFeTipo.REMESSA_SIMBOLICA) continue;
+    if (nfe.tipo !== NFeTipo.REMESSA && nfe.tipo !== NFeTipo.REMESSA_AVANCO) continue;
     remessaIds.push(nfe.id);
     if (nfe.productId) productIds.add(nfe.productId);
     for (const item of nfe.itens) productIds.add(item.productId);
@@ -489,7 +489,7 @@ export async function atualizarItensSaldoFifoParaNfes(
   }
 
   for (const nfe of nfes) {
-    if (nfe.tipo !== NFeTipo.REMESSA && nfe.tipo !== NFeTipo.REMESSA_SIMBOLICA) continue;
+    if (nfe.tipo !== NFeTipo.REMESSA && nfe.tipo !== NFeTipo.REMESSA_AVANCO) continue;
     (nfe as NfeRemessaSaldoRow & { itens: (typeof refreshed)[number][] }).itens =
       byNfeId.get(nfe.id) ?? [];
   }

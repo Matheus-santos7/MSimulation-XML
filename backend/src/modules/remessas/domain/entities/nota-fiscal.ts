@@ -67,16 +67,16 @@ export function criarRetornoSimbolicoAvanco(
 }
 
 /**
- * Remessa simbólica do avanço: mercadoria “chega” ao CD destino sem NF-e física nova.
+ * Remessa de avanço entre CDs: mercadoria “chega” ao CD destino sem NF-e física nova.
  * Referencia o retorno simbólico imediatamente anterior e **cria novo saldo FIFO** no destino.
  */
-export function criarRemessaSimbolicaAvanco(
+export function criarRemessaAvanco(
   base: Omit<NotaFiscalRascunho, "tipo" | "referencia">,
   retornoReferencia: Pick<NotaFiscal, "id" | "chave" | "tipo">,
 ): NotaFiscalRascunho {
   return {
     ...base,
-    tipo: "REMESSA_SIMBOLICA",
+    tipo: "REMESSA_AVANCO",
     referencia: {
       notaPaiId: retornoReferencia.id,
       notaPaiChave: retornoReferencia.chave,
@@ -84,3 +84,6 @@ export function criarRemessaSimbolicaAvanco(
     },
   };
 }
+
+/** @deprecated Use {@link criarRemessaAvanco} */
+export const criarRemessaSimbolicaAvanco = criarRemessaAvanco;

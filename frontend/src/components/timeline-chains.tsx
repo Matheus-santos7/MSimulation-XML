@@ -13,6 +13,7 @@ const TIPO_STYLE: Record<string, string> = {
   VENDA: "text-emerald-400",
   DEVOLUCAO: "text-violet-400",
   REMESSA_SIMBOLICA: "text-orange-400",
+  REMESSA_AVANCO: "text-orange-300",
 };
 
 const EVENT_STYLE: Record<TimelineEventStepDto["eventTipo"], string> = {

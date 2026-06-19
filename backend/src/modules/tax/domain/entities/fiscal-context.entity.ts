@@ -6,7 +6,8 @@ export type FiscalOperationTipo =
   | "REMESSA"
   | "RETORNO_SIMBOLICO"
   | "DEVOLUCAO"
-  | "REMESSA_SIMBOLICA";
+  | "REMESSA_SIMBOLICA"
+  | "REMESSA_AVANCO";
 
 /** CSTs da NF-e de venda referenciada (mapeamento de devolução). */
 export type CstVendaReferencia = {

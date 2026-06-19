@@ -87,6 +87,7 @@ export function resolveModFrete(settings: FiscalEmitterSettingsData, tipo: NFeTi
     case "REMESSA":
       return m.fullfilmentVendas;
     case "REMESSA_SIMBOLICA":
+    case "REMESSA_AVANCO":
       return m.coleta;
     case "RETORNO_SIMBOLICO":
       return m.fullfilmentEntrada;
@@ -96,7 +97,7 @@ export function resolveModFrete(settings: FiscalEmitterSettingsData, tipo: NFeTi
 }
 
 export function composicaoChannel(tipo: NFeTipoValue): keyof ComposicaoLinha {
-  return tipo === "REMESSA" || tipo === "REMESSA_SIMBOLICA" || tipo === "RETORNO_SIMBOLICO"
+  return tipo === "REMESSA" || tipo === "REMESSA_SIMBOLICA" || tipo === "REMESSA_AVANCO" || tipo === "RETORNO_SIMBOLICO"
     ? "remessa"
     : "venda";
 }

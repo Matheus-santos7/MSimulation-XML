@@ -122,7 +122,7 @@ export default async function NFeListPage() {
                     <td className="px-4 py-3 font-mono">{nfe.cfop}</td>
                     <td className="px-4 py-3 font-mono text-muted-foreground">
                       {nfe.quantidade}
-                      {(nfe.tipo === "REMESSA" || nfe.tipo === "REMESSA_SIMBOLICA") && (
+                      {(nfe.tipo === "REMESSA" || nfe.tipo === "REMESSA_AVANCO") && (
                         <span
                           className={`block text-[11px] font-semibold mt-0.5 ${
                             (nfe.saldoDisponivel ?? 0) > 0

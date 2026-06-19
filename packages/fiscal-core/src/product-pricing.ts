@@ -10,6 +10,7 @@ function usesPrecoCusto(tipo: NFeTipoValue | string): boolean {
   return (
     tipo === NFeTipo.REMESSA ||
     tipo === NFeTipo.REMESSA_SIMBOLICA ||
+    tipo === NFeTipo.REMESSA_AVANCO ||
     tipo === NFeTipo.RETORNO_SIMBOLICO
   );
 }

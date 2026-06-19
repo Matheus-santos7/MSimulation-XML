@@ -297,7 +297,7 @@ describe("remessa-fifo", () => {
   it("venda full prefere saldo no CD da UF do comprador", async () => {
     const { tx } = createFifoMock([
       item("i-sp", "r-sp", 5, "2026-01-01", 1, "unidade-sp", 1, NFeTipo.REMESSA, "SP"),
-      item("i-mg", "r-mg", 5, "2026-02-01", 2, "unidade-mg", 1, NFeTipo.REMESSA_SIMBOLICA, "MG"),
+      item("i-mg", "r-mg", 5, "2026-02-01", 2, "unidade-mg", 1, NFeTipo.REMESSA_AVANCO, "MG"),
     ]);
 
     const alocacoes = await consumirSaldoRemessaFifoParaVenda(
@@ -335,7 +335,7 @@ describe("remessa-fifo", () => {
     const { tx } = createFifoMock(
       [
         item("i-sp", "r-sp", 5, "2026-01-01", 1, "unidade-sp", 1, NFeTipo.REMESSA, "SP", "SP01"),
-        item("i-mg", "r-mg", 5, "2026-02-01", 2, "unidade-mg", 1, NFeTipo.REMESSA_SIMBOLICA, "MG", "MG01"),
+        item("i-mg", "r-mg", 5, "2026-02-01", 2, "unidade-mg", 1, NFeTipo.REMESSA_AVANCO, "MG", "MG01"),
       ],
       { defaultCdUnitId: "unidade-sp", defaultCdCodigo: "SP01" },
     );

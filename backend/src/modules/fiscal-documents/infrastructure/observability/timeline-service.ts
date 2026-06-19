@@ -39,7 +39,7 @@ type ChainNode = {
 };
 
 function saldoFifoNota(nfe: ChainNode): number | undefined {
-  if (nfe.tipo !== NFeTipo.REMESSA && nfe.tipo !== NFeTipo.REMESSA_SIMBOLICA) {
+  if (nfe.tipo !== NFeTipo.REMESSA && nfe.tipo !== NFeTipo.REMESSA_AVANCO) {
     return undefined;
   }
   if (nfe.itens && nfe.itens.length > 0) {

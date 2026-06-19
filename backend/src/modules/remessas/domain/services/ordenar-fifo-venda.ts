@@ -34,7 +34,7 @@ function matchesDefaultCd(item: FifoVendaItem, defaultCd: DefaultCdContext): boo
  * Prioridade de consumo FIFO na venda (menor = consome antes):
  *
  * 0 — saldo no CD/UF do comprador (remessa física ou avanço simbólico)
- * 1 — remessa simbólica de avanço em outra UF
+ * 1 — remessa avanço em outra UF
  * 2 — remessa física no CD padrão do tenant
  * 3 — demais remessas físicas com saldo (fallback FIFO)
  */
@@ -47,7 +47,7 @@ export function rankFifoItemForVenda(
   const ufItem = resolveItemUf(item);
 
   if (ufComprador && ufItem === ufComprador) return 0;
-  if (item.nfeTipo === NFeTipo.REMESSA_SIMBOLICA) return 1;
+  if (item.nfeTipo === NFeTipo.REMESSA_AVANCO) return 1;
   if (item.nfeTipo === NFeTipo.REMESSA && matchesDefaultCd(item, defaultCd)) return 2;
   return 3;
 }

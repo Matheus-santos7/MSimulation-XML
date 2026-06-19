@@ -24,7 +24,7 @@ export class ValidadorCadeiaFiscal {
     }
     if (remessaSimbolica.referencia?.notaPaiId !== retorno.id) {
       throw new RemessaDomainError(
-        "Remessa simbólica deve referenciar o retorno simbólico emitido no avanço",
+        "Remessa avanço deve referenciar o retorno simbólico emitido no avanço",
       );
     }
   }

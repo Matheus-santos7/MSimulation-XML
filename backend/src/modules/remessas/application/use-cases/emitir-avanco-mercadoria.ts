@@ -40,8 +40,8 @@ function mapUnidade(row: { id: string; codigo: string; uf: string; nome: string 
 
 /**
  * Caso de uso: Avanço de Mercadoria entre CDs.
- * Cadeia fiscal: [Remessa Inicial] → [Retorno Simbólico] → [Remessa Simbólica].
- * O saldo fica na remessa simbólica no CD destino (sem remessa física adicional).
+ * Cadeia fiscal: [Remessa Inicial] → [Retorno Simbólico] → [Remessa Avanço].
+ * O saldo fica na remessa avanço no CD destino (sem remessa física adicional).
  */
 export class EmitirAvancoMercadoriaUseCase {
   private readonly validador = new ValidadorCadeiaFiscal();
@@ -161,7 +161,7 @@ export class EmitirAvancoMercadoriaUseCase {
       const remessaPrincipal = await notaFiscal.buscarRemessaPrincipal(alocacoes);
       if (
         !remessaPrincipal ||
-        (remessaPrincipal.tipo !== "REMESSA" && remessaPrincipal.tipo !== "REMESSA_SIMBOLICA")
+        (remessaPrincipal.tipo !== "REMESSA" && remessaPrincipal.tipo !== "REMESSA_AVANCO")
       ) {
         throw new RemessaDomainError("Remessa de referência não encontrada para o avanço");
       }

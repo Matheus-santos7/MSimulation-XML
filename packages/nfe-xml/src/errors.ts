@@ -4,6 +4,7 @@ import type { NFeTipoXml } from "./types.js";
 export const NFE_XML_PERSIST_SUPPORTED: readonly NFeTipoXml[] = [
   "REMESSA",
   "REMESSA_SIMBOLICA",
+  "REMESSA_AVANCO",
   "RETORNO_SIMBOLICO",
   "VENDA",
   "DEVOLUCAO",

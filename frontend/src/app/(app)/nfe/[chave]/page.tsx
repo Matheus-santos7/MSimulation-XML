@@ -111,7 +111,7 @@ export default async function NFeDetailPage({ params }: Props) {
             </div>
           )}
 
-          {(nfe.tipo === "REMESSA" || nfe.tipo === "REMESSA_SIMBOLICA") && (
+          {(nfe.tipo === "REMESSA" || nfe.tipo === "REMESSA_AVANCO") && (
             <div className="border border-border rounded-lg bg-card p-4">
               <Field
                 label="Saldo disponível (FIFO)"

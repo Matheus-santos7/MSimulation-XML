@@ -242,7 +242,7 @@ export type NFeDto = {
   emitidaEm: string;
   pedidoML: string;
   quantidade: number;
-  tipo: "VENDA" | "REMESSA" | "RETORNO_SIMBOLICO" | "DEVOLUCAO" | "REMESSA_SIMBOLICA" | "TRANSFERENCIA_FILIAL";
+  tipo: "VENDA" | "REMESSA" | "RETORNO_SIMBOLICO" | "DEVOLUCAO" | "REMESSA_SIMBOLICA" | "REMESSA_AVANCO" | "TRANSFERENCIA_FILIAL";
   saldoDisponivel?: number;
   itens?: NFeItemDto[];
   /** Chave da NF-e referenciada por esta nota (pai na cadeia → vai no XML refNFe). */

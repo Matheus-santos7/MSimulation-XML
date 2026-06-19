@@ -9,9 +9,12 @@ describe("validarReferenciaFiscal", () => {
     assert.doesNotThrow(() => validarReferenciaFiscal(TipoNota.REMESSA, null));
   });
 
-  it("exige retorno simbólico referenciando remessa", () => {
+  it("exige retorno simbólico referenciando remessa ou remessa avanço", () => {
     assert.doesNotThrow(() =>
       validarReferenciaFiscal(TipoNota.RETORNO_SIMBOLICO, TipoNota.REMESSA),
+    );
+    assert.doesNotThrow(() =>
+      validarReferenciaFiscal(TipoNota.RETORNO_SIMBOLICO, TipoNota.REMESSA_AVANCO),
     );
     assert.throws(
       () => validarReferenciaFiscal(TipoNota.RETORNO_SIMBOLICO, null),
@@ -19,12 +22,12 @@ describe("validarReferenciaFiscal", () => {
     );
   });
 
-  it("exige remessa simbólica referenciando retorno simbólico", () => {
+  it("exige remessa avanço referenciando retorno simbólico", () => {
     assert.doesNotThrow(() =>
-      validarReferenciaFiscal(TipoNota.REMESSA_SIMBOLICA, TipoNota.RETORNO_SIMBOLICO),
+      validarReferenciaFiscal(TipoNota.REMESSA_AVANCO, TipoNota.RETORNO_SIMBOLICO),
     );
     assert.throws(
-      () => validarReferenciaFiscal(TipoNota.REMESSA_SIMBOLICA, TipoNota.REMESSA),
+      () => validarReferenciaFiscal(TipoNota.REMESSA_AVANCO, TipoNota.REMESSA),
       CadeiaFiscalInvalidaError,
     );
   });

@@ -27,7 +27,7 @@ describe("ordenarFifoParaVenda", () => {
     const ordered = ordenarFifoParaVenda(
       [
         row("sp", { unidadeUf: "SP", nfeTipo: NFeTipo.REMESSA }),
-        row("mg", { unidadeUf: "MG", nfeTipo: NFeTipo.REMESSA_SIMBOLICA, unidadeDestinoId: "cd-mg" }),
+        row("mg", { unidadeUf: "MG", nfeTipo: NFeTipo.REMESSA_AVANCO, unidadeDestinoId: "cd-mg" }),
       ],
       "MG",
       defaultCd,
@@ -46,7 +46,7 @@ describe("ordenarFifoParaVenda", () => {
         }),
         row("mg-avanco", {
           unidadeUf: "MG",
-          nfeTipo: NFeTipo.REMESSA_SIMBOLICA,
+          nfeTipo: NFeTipo.REMESSA_AVANCO,
           unidadeDestinoId: "cd-mg",
           unidadeCodigo: "MG01",
         }),
@@ -84,12 +84,12 @@ describe("ordenarFifoParaVenda", () => {
       [
         row("avanco-novo", {
           unidadeUf: "MG",
-          nfeTipo: NFeTipo.REMESSA_SIMBOLICA,
+          nfeTipo: NFeTipo.REMESSA_AVANCO,
           unidadeDestinoId: "cd-mg-2",
         }),
         row("avanco-antigo", {
           unidadeUf: "BA",
-          nfeTipo: NFeTipo.REMESSA_SIMBOLICA,
+          nfeTipo: NFeTipo.REMESSA_AVANCO,
           unidadeDestinoId: "cd-ba",
         }),
       ],

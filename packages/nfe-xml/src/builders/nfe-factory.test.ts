@@ -134,6 +134,7 @@ describe("nfe-factory — Strategy builders", () => {
       "VENDA",
       "REMESSA",
       "REMESSA_SIMBOLICA",
+      "REMESSA_AVANCO",
       "TRANSFERENCIA_FILIAL",
       "RETORNO_SIMBOLICO",
       "DEVOLUCAO",

@@ -4,7 +4,7 @@ import { quantidadeSaldo, type QuantidadeSaldo } from "../value-objects/quantida
  * Linha de saldo FIFO — unidade mínima de estoque fiscal rastreável.
  *
  * Cada linha corresponde a **um item** (`nfe_itens`) de uma NF-e do tipo
- * `REMESSA` (física) ou `REMESSA_SIMBOLICA` (avanço entre CDs). O saldo
+ * `REMESSA` (física) ou `REMESSA_AVANCO` (avanço entre CDs). O saldo
  * representa quantas unidades daquele produto ainda podem ser consumidas
  * (venda full, retorno simbólico ou novo avanço) antes de esgotar a nota.
  *

@@ -1,5 +1,11 @@
 import Link from "next/link";
-import type { TimelineChainDto, TimelineRemessaGroupDto } from "@/lib/fiscal-types";
+import type {
+  TimelineChainDto,
+  TimelineChainStepDto,
+  TimelineEventStepDto,
+  TimelineRemessaGroupDto,
+} from "@/lib/fiscal-types";
+import { fiscalEventXmlHref } from "@/lib/fiscal-xml-routes";
 
 const TIPO_STYLE: Record<string, string> = {
   REMESSA: "text-amber-500",
@@ -7,6 +13,11 @@ const TIPO_STYLE: Record<string, string> = {
   VENDA: "text-emerald-400",
   DEVOLUCAO: "text-violet-400",
   REMESSA_SIMBOLICA: "text-orange-400",
+};
+
+const EVENT_STYLE: Record<TimelineEventStepDto["eventTipo"], string> = {
+  INUT: "text-blue-400 border-blue-500/30 bg-blue-500/5",
+  "110111": "text-red-400 border-red-500/30 bg-red-500/5",
 };
 
 type TimelineChainsProps = {
@@ -98,6 +109,64 @@ function RemessaGroup({
   );
 }
 
+function formatEventNumero(step: TimelineEventStepDto): string {
+  if (step.numeroFim != null && step.numeroFim !== step.numero) {
+    return `${step.numero}–${step.numeroFim}/${step.serie}`;
+  }
+  return `${step.numero}/${step.serie}`;
+}
+
+function TimelineStepChip({ step }: { step: TimelineChainStepDto }) {
+  if (step.kind === "event") {
+    const hrefs = fiscalEventXmlHref({
+      id: step.eventId,
+      tipo: step.eventTipo,
+      chaveRef: step.chaveRef,
+    });
+
+    const chip = (
+      <div
+        className={`flex flex-col rounded border px-2 py-1 ${EVENT_STYLE[step.eventTipo]} ${
+          hrefs ? "hover:border-accent transition-colors" : ""
+        }`}
+      >
+        <span className="text-[10px] font-bold uppercase leading-tight">{step.eventLabel}</span>
+        <span className="font-mono text-[10px]">{formatEventNumero(step)}</span>
+      </div>
+    );
+
+    if (!hrefs) return chip;
+
+    return (
+      <a href={hrefs.viewPath} target="_blank" rel="noopener noreferrer" className="group">
+        {chip}
+      </a>
+    );
+  }
+
+  const isCancelled = step.status === "CANCELADA";
+
+  return (
+    <Link
+      href={`/nfe/${step.chave}`}
+      className={`group flex flex-col rounded border px-2 py-1 hover:border-accent transition-colors ${
+        isCancelled ? "opacity-60 border-red-500/30 bg-red-500/5" : "border-border"
+      }`}
+    >
+      <span
+        className={`text-[10px] font-bold uppercase leading-tight ${TIPO_STYLE[step.tipo] ?? ""} ${
+          isCancelled ? "line-through" : ""
+        }`}
+      >
+        {step.tipoLabel}
+      </span>
+      <span className="font-mono text-[10px] text-foreground group-hover:text-accent">
+        {step.numero}/{step.serie}
+      </span>
+    </Link>
+  );
+}
+
 function ScenarioRow({
   cenario,
   index,
@@ -110,30 +179,26 @@ function ScenarioRow({
   const statusEl = (
     <span
       className={
-        cenario.status === "completa"
-          ? "text-[10px] uppercase font-bold text-success whitespace-nowrap"
-          : "text-[10px] uppercase font-bold text-amber-500 whitespace-nowrap"
+        cenario.status === "cancelada"
+          ? "text-[10px] uppercase font-bold text-red-400 whitespace-nowrap"
+          : cenario.status === "completa"
+            ? "text-[10px] uppercase font-bold text-success whitespace-nowrap"
+            : "text-[10px] uppercase font-bold text-amber-500 whitespace-nowrap"
       }
     >
-      {cenario.status === "completa" ? "Completa" : "Em aberto"}
+      {cenario.status === "cancelada"
+        ? "Cancelada"
+        : cenario.status === "completa"
+          ? "Completa"
+          : "Em aberto"}
     </span>
   );
 
   const stepsEl = (
     <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
       {cenario.steps.map((step, i) => (
-        <div key={step.chave} className="flex items-center gap-1">
-          <Link
-            href={`/nfe/${step.chave}`}
-            className="group flex flex-col rounded border border-border px-2 py-1 hover:border-accent transition-colors"
-          >
-            <span className={`text-[10px] font-bold uppercase leading-tight ${TIPO_STYLE[step.tipo] ?? ""}`}>
-              {step.tipoLabel}
-            </span>
-            <span className="font-mono text-[10px] text-foreground group-hover:text-accent">
-              {step.numero}/{step.serie}
-            </span>
-          </Link>
+        <div key={stepKey(step, i)} className="flex items-center gap-1">
+          <TimelineStepChip step={step} />
           {i < cenario.steps.length - 1 && <span className="text-muted-foreground text-xs">→</span>}
         </div>
       ))}
@@ -171,4 +236,9 @@ function ScenarioRow({
       {stepsEl}
     </div>
   );
+}
+
+function stepKey(step: TimelineChainStepDto, index: number): string {
+  if (step.kind === "event") return `evt-${step.eventId}-${index}`;
+  return step.chave;
 }

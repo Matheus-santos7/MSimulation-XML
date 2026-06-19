@@ -331,7 +331,8 @@ export type TimelineStepDto = {
   meta?: string;
 };
 
-export type TimelineChainStepDto = {
+export type TimelineNfeStepDto = {
+  kind: "nfe";
   tipo: NFeDto["tipo"];
   tipoLabel: string;
   chave: string;
@@ -339,15 +340,30 @@ export type TimelineChainStepDto = {
   serie: number;
   emitidaEm: string;
   quantidade: number;
+  status: FiscalStatus;
   saldoDisponivel?: number;
   nfeReferenciaChave?: string;
 };
+
+export type TimelineEventStepDto = {
+  kind: "event";
+  eventTipo: "INUT" | "110111";
+  eventId: string;
+  eventLabel: string;
+  serie: number;
+  numero: number;
+  numeroFim?: number;
+  ocorridoEm: string;
+  chaveRef?: string;
+};
+
+export type TimelineChainStepDto = TimelineNfeStepDto | TimelineEventStepDto;
 
 export type TimelineChainDto = {
   id: string;
   pedidoMl?: string;
   emitidaEm: string;
-  status: "completa" | "parcial";
+  status: "completa" | "parcial" | "cancelada";
   steps: TimelineChainStepDto[];
 };
 

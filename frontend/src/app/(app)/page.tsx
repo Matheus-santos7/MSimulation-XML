@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { SectionHeader, StatusBadge } from "@/components/fiscal-ui";
 import { TimelineChains } from "@/components/timeline-chains";
+import { TimelineExportButton } from "@/components/timeline-export-button";
 import { listNfes, listTimeline } from "@/lib/fiscal-api";
 import { brl } from "@/lib/format";
 
@@ -16,7 +17,10 @@ export default async function DashboardPage() {
   return (
     <div className="p-6 flex flex-col gap-6 h-[calc(100dvh-3.5rem-2.5rem)] box-border overflow-hidden">
       <div className="shrink-0 border border-border rounded-lg bg-card overflow-hidden animate-slide-in">
-        <SectionHeader title="Timeline — Cenários de NF-e" />
+        <SectionHeader
+          title="Timeline — Cenários de NF-e"
+          right={<TimelineExportButton />}
+        />
         <TimelineChains groups={timeline} layout="rows" />
       </div>
 

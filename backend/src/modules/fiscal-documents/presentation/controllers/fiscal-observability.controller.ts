@@ -8,6 +8,7 @@ import { mapTimeline } from "../mappers/fiscal-mappers.js";
 import { ufToCodigo } from "../../domain/services/nfe-chave.js";
 import { mapEmitente } from "../../../org/infrastructure/fiscal/tenant-emitente.mapper.js";
 import { listTimelineChains } from "../../infrastructure/observability/timeline-service.js";
+import { exportTimelineSpreadsheet } from "../../infrastructure/observability/timeline-spreadsheet.service.js";
 
 const fiscalEventIdParam = z.object({ id: z.string().min(1) });
 
@@ -124,6 +125,18 @@ export const fiscalObservabilityController: FastifyPluginAsync = async (app) => 
   app.get("/timeline", async (req) => {
     const tenantId = tenantIdFromRequest(req);
     return listTimelineChains(getDbClient(), tenantId);
+  });
+
+  app.get("/timeline/spreadsheet/export", async (req, reply) => {
+    const tenantId = tenantIdFromRequest(req);
+    const buffer = await exportTimelineSpreadsheet(getDbClient(), tenantId);
+    return reply
+      .header(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      )
+      .header("Content-Disposition", 'attachment; filename="cenarios-fiscais.xlsx"')
+      .send(buffer);
   });
 
   app.get("/timeline/steps", async (req) => {

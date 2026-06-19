@@ -5,6 +5,7 @@ const ALLOWED_BFF_PREFIXES = [
   "fiscal-events/",
   "fiscal-settings/",
   "products/spreadsheet/",
+  "timeline/",
 ] as const;
 
 /** `/api/nfes/...` → `/api/bff/nfes/...` (preserva query string). */

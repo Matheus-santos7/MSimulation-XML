@@ -18,5 +18,6 @@ describe("toBffPath", () => {
 describe("assertAllowedBffPath", () => {
   it("permite downloads de planilha", () => {
     expect(() => assertAllowedBffPath("products/spreadsheet/export")).not.toThrow();
+    expect(() => assertAllowedBffPath("timeline/spreadsheet/export")).not.toThrow();
   });
 });

@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx";
+import XLSX from "xlsx-js-style";
 import type {
   TimelineChainStepDto,
   TimelineRemessaGroupDto,
@@ -6,7 +6,6 @@ import type {
 
 export const TIMELINE_SPREADSHEET_HEADERS = [
   "CENÁRIO",
-  "PEDIDO ML",
   "DATA",
   "TIPO",
   "NF-e/SÉRIE",
@@ -27,6 +26,16 @@ export type TimelineNfeExportDetail = {
 
 export type TimelineSpreadsheetRow = Record<(typeof TIMELINE_SPREADSHEET_HEADERS)[number], string>;
 
+export type TimelineSpreadsheetDataRow = {
+  row: TimelineSpreadsheetRow;
+  /** Índice do cenário na ordem da planilha — usado para faixas zebradas. */
+  scenarioStripe: number;
+};
+
+const HEADER_FILL = { patternType: "solid" as const, fgColor: { rgb: "FFE5E7EB" } };
+const ROW_FILL_EVEN = { patternType: "solid" as const, fgColor: { rgb: "FFFFFFFF" } };
+const ROW_FILL_ODD = { patternType: "solid" as const, fgColor: { rgb: "FFF3F4F6" } };
+
 function formatSpreadsheetDate(iso: string): string {
   return new Date(iso).toLocaleString("pt-BR", {
     dateStyle: "short",
@@ -44,7 +53,6 @@ function formatNfeSerie(numero: number, serie: number, numeroFim?: number): stri
 function mapNfeStepRow(
   context: {
     cenario: string;
-    pedidoMl: string;
     ufEmitente: string;
   },
   step: Extract<TimelineChainStepDto, { kind: "nfe" }>,
@@ -55,7 +63,6 @@ function mapNfeStepRow(
 
   return {
     CENÁRIO: context.cenario,
-    "PEDIDO ML": context.pedidoMl,
     DATA: formatSpreadsheetDate(step.emitidaEm),
     TIPO: step.tipoLabel,
     "NF-e/SÉRIE": formatNfeSerie(step.numero, step.serie),
@@ -71,14 +78,12 @@ function mapNfeStepRow(
 function mapEventStepRow(
   context: {
     cenario: string;
-    pedidoMl: string;
     ufEmitente: string;
   },
   step: Extract<TimelineChainStepDto, { kind: "event" }>,
 ): TimelineSpreadsheetRow {
   return {
     CENÁRIO: context.cenario,
-    "PEDIDO ML": context.pedidoMl,
     DATA: formatSpreadsheetDate(step.ocorridoEm),
     TIPO: step.eventLabel,
     "NF-e/SÉRIE": formatNfeSerie(step.numero, step.serie, step.numeroFim),
@@ -94,36 +99,89 @@ function mapEventStepRow(
 /**
  * Converte grupos da timeline em linhas tabulares para exportação em planilha.
  */
-export function buildTimelineSpreadsheetRows(
+export function buildTimelineSpreadsheetExportData(
   groups: TimelineRemessaGroupDto[],
   ufEmitente: string,
   nfeDetails: Map<string, TimelineNfeExportDetail>,
-): TimelineSpreadsheetRow[] {
-  const rows: TimelineSpreadsheetRow[] = [];
+): TimelineSpreadsheetDataRow[] {
+  const rows: TimelineSpreadsheetDataRow[] = [];
+  let scenarioStripe = 0;
 
   for (const group of groups) {
     group.cenarios.forEach((cenario, index) => {
       const context = {
         cenario: `Cenário ${index + 1}`,
-        pedidoMl: cenario.pedidoMl ?? "",
         ufEmitente,
       };
 
       for (const step of cenario.steps) {
-        if (step.kind === "event") {
-          rows.push(mapEventStepRow(context, step));
-          continue;
-        }
-        rows.push(mapNfeStepRow(context, step, nfeDetails));
+        const row =
+          step.kind === "event"
+            ? mapEventStepRow(context, step)
+            : mapNfeStepRow(context, step, nfeDetails);
+        rows.push({ row, scenarioStripe });
       }
+
+      scenarioStripe += 1;
     });
   }
 
   return rows;
 }
 
+export function buildTimelineSpreadsheetRows(
+  groups: TimelineRemessaGroupDto[],
+  ufEmitente: string,
+  nfeDetails: Map<string, TimelineNfeExportDetail>,
+): TimelineSpreadsheetRow[] {
+  return buildTimelineSpreadsheetExportData(groups, ufEmitente, nfeDetails).map((entry) => entry.row);
+}
+
 function rowToArray(row: TimelineSpreadsheetRow): string[] {
   return TIMELINE_SPREADSHEET_HEADERS.map((header) => row[header]);
+}
+
+function applyScenarioStripes(worksheet: XLSX.WorkSheet, dataRows: TimelineSpreadsheetDataRow[]): void {
+  const colCount = TIMELINE_SPREADSHEET_HEADERS.length;
+
+  for (let col = 0; col < colCount; col += 1) {
+    const headerRef = XLSX.utils.encode_cell({ r: 0, c: col });
+    const headerCell = worksheet[headerRef];
+    if (!headerCell) continue;
+    headerCell.s = {
+      fill: HEADER_FILL,
+      font: { bold: true, color: { rgb: "FF111827" } },
+      alignment: { vertical: "center", horizontal: "center" },
+    };
+  }
+
+  for (let rowIndex = 0; rowIndex < dataRows.length; rowIndex += 1) {
+    const fill = dataRows[rowIndex]!.scenarioStripe % 2 === 0 ? ROW_FILL_EVEN : ROW_FILL_ODD;
+    const sheetRow = rowIndex + 1;
+
+    for (let col = 0; col < colCount; col += 1) {
+      const cellRef = XLSX.utils.encode_cell({ r: sheetRow, c: col });
+      const cell = worksheet[cellRef];
+      if (!cell) continue;
+      cell.s = {
+        fill,
+        alignment: { vertical: "center" },
+      };
+    }
+  }
+
+  worksheet["!cols"] = [
+    { wch: 12 },
+    { wch: 18 },
+    { wch: 18 },
+    { wch: 14 },
+    { wch: 48 },
+    { wch: 48 },
+    { wch: 12 },
+    { wch: 10 },
+    { wch: 8 },
+    { wch: 16 },
+  ];
 }
 
 /**
@@ -134,9 +192,11 @@ export function buildTimelineSpreadsheetXlsx(
   ufEmitente: string,
   nfeDetails: Map<string, TimelineNfeExportDetail>,
 ): Buffer {
-  const rows = buildTimelineSpreadsheetRows(groups, ufEmitente, nfeDetails);
-  const matrix = [TIMELINE_SPREADSHEET_HEADERS.slice(), ...rows.map(rowToArray)];
+  const dataRows = buildTimelineSpreadsheetExportData(groups, ufEmitente, nfeDetails);
+  const matrix = [TIMELINE_SPREADSHEET_HEADERS.slice(), ...dataRows.map((entry) => rowToArray(entry.row))];
   const worksheet = XLSX.utils.aoa_to_sheet(matrix);
+  applyScenarioStripes(worksheet, dataRows);
+
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Cenários");
   return Buffer.from(XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }));

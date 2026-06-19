@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { FiscalStatus, NFeTipo } from "../../../../generated/prisma/client.js";
 import type { TimelineRemessaGroupDto } from "./timeline-step.dto.js";
-import { buildTimelineSpreadsheetRows } from "./timeline-spreadsheet.export.js";
+import { buildTimelineSpreadsheetExportData, buildTimelineSpreadsheetRows } from "./timeline-spreadsheet.export.js";
 
 describe("buildTimelineSpreadsheetRows", () => {
   const groups: TimelineRemessaGroupDto[] = [
@@ -85,7 +85,6 @@ describe("buildTimelineSpreadsheetRows", () => {
 
     assert.equal(rows.length, 4);
     assert.equal(rows[0]?.CENÁRIO, "Cenário 1");
-    assert.equal(rows[0]?.["PEDIDO ML"], "ML-123");
     assert.equal(rows[0]?.TIPO, "Remessa");
     assert.equal(rows[0]?.CFOP, "5904");
     assert.equal(rows[0]?.PRODUTO, "300002137");
@@ -100,5 +99,51 @@ describe("buildTimelineSpreadsheetRows", () => {
 
     assert.equal(rows[3]?.TIPO, "Cancelamento");
     assert.equal(rows[3]?.["CHAVE DE ACESSO"], "ch-venda");
+  });
+
+  it("marca todas as linhas do mesmo cenário com o mesmo índice de faixa", () => {
+    const exportData = buildTimelineSpreadsheetExportData(groups, "SP", nfeDetails);
+
+    assert.equal(exportData.length, 4);
+    assert.equal(exportData[0]?.scenarioStripe, 0);
+    assert.equal(exportData[1]?.scenarioStripe, 0);
+    assert.equal(exportData[2]?.scenarioStripe, 0);
+    assert.equal(exportData[3]?.scenarioStripe, 0);
+  });
+
+  it("alterna faixa entre cenários diferentes", () => {
+    const groupsWithTwoScenarios: TimelineRemessaGroupDto[] = [
+      {
+        ...groups[0]!,
+        cenarios: [
+          groups[0]!.cenarios[0]!,
+          {
+            id: "c2",
+            pedidoMl: "ML-456",
+            emitidaEm: "2026-01-03T00:00:00.000Z",
+            status: "parcial",
+            steps: [
+              {
+                kind: "nfe",
+                tipo: NFeTipo.VENDA,
+                tipoLabel: "Venda",
+                chave: "ch-venda-2",
+                numero: 15,
+                serie: 58,
+                emitidaEm: "2026-01-03T10:00:00.000Z",
+                quantidade: 1,
+                status: FiscalStatus.AUTORIZADA,
+              },
+            ],
+          },
+        ],
+      },
+    ];
+
+    const exportData = buildTimelineSpreadsheetExportData(groupsWithTwoScenarios, "SP", nfeDetails);
+
+    assert.equal(exportData[0]?.scenarioStripe, 0);
+    assert.equal(exportData[3]?.scenarioStripe, 0);
+    assert.equal(exportData[4]?.scenarioStripe, 1);
   });
 });

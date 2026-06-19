@@ -9,12 +9,28 @@ const TIPO_STYLE: Record<string, string> = {
   REMESSA_SIMBOLICA: "text-orange-400",
 };
 
-export function TimelineChains({ groups }: { groups: TimelineRemessaGroupDto[] }) {
+type TimelineChainsProps = {
+  groups: TimelineRemessaGroupDto[];
+  /** `rows` exibe cenários em linhas horizontais que ocupam a largura (ideal para o dashboard). */
+  layout?: "vertical" | "rows";
+};
+
+export function TimelineChains({ groups, layout = "vertical" }: TimelineChainsProps) {
   if (groups.length === 0) {
     return (
       <p className="text-[13px] text-muted-foreground p-4">
         Nenhuma cenário fiscal ainda. Emita remessas e fature pedidos para formar Remessa → Retorno → Venda.
       </p>
+    );
+  }
+
+  if (layout === "rows") {
+    return (
+      <div className="p-4 space-y-4 max-h-[280px] overflow-y-auto">
+        {groups.map((group) => (
+          <RemessaGroup key={group.remessaChave || "avulsa"} group={group} variant="rows" />
+        ))}
+      </div>
     );
   }
 
@@ -27,7 +43,13 @@ export function TimelineChains({ groups }: { groups: TimelineRemessaGroupDto[] }
   );
 }
 
-function RemessaGroup({ group }: { group: TimelineRemessaGroupDto }) {
+function RemessaGroup({
+  group,
+  variant = "stacked",
+}: {
+  group: TimelineRemessaGroupDto;
+  variant?: "stacked" | "rows";
+}) {
   const avulsa = !group.remessaChave;
   return (
     <div className="border border-border rounded-md overflow-hidden">
@@ -59,6 +81,12 @@ function RemessaGroup({ group }: { group: TimelineRemessaGroupDto }) {
         <p className="px-3 py-2 text-[11px] text-muted-foreground">
           Saldo disponível no full — ainda sem venda associada.
         </p>
+      ) : variant === "rows" ? (
+        <div className="divide-y divide-border">
+          {group.cenarios.map((cenario, i) => (
+            <ScenarioRow key={cenario.id} cenario={cenario} index={i + 1} variant="inline" />
+          ))}
+        </div>
       ) : (
         <div className="divide-y divide-border">
           {group.cenarios.map((cenario, i) => (
@@ -70,7 +98,65 @@ function RemessaGroup({ group }: { group: TimelineRemessaGroupDto }) {
   );
 }
 
-function ScenarioRow({ cenario, index }: { cenario: TimelineChainDto; index: number }) {
+function ScenarioRow({
+  cenario,
+  index,
+  variant = "stacked",
+}: {
+  cenario: TimelineChainDto;
+  index: number;
+  variant?: "stacked" | "inline";
+}) {
+  const statusEl = (
+    <span
+      className={
+        cenario.status === "completa"
+          ? "text-[10px] uppercase font-bold text-success whitespace-nowrap"
+          : "text-[10px] uppercase font-bold text-amber-500 whitespace-nowrap"
+      }
+    >
+      {cenario.status === "completa" ? "Completa" : "Em aberto"}
+    </span>
+  );
+
+  const stepsEl = (
+    <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
+      {cenario.steps.map((step, i) => (
+        <div key={step.chave} className="flex items-center gap-1">
+          <Link
+            href={`/nfe/${step.chave}`}
+            className="group flex flex-col rounded border border-border px-2 py-1 hover:border-accent transition-colors"
+          >
+            <span className={`text-[10px] font-bold uppercase leading-tight ${TIPO_STYLE[step.tipo] ?? ""}`}>
+              {step.tipoLabel}
+            </span>
+            <span className="font-mono text-[10px] text-foreground group-hover:text-accent">
+              {step.numero}/{step.serie}
+            </span>
+          </Link>
+          {i < cenario.steps.length - 1 && <span className="text-muted-foreground text-xs">→</span>}
+        </div>
+      ))}
+    </div>
+  );
+
+  if (variant === "inline") {
+    return (
+      <div className="flex items-center gap-4 px-3 py-2.5 hover:bg-foreground/[0.02] transition-colors">
+        <div className="shrink-0 w-[min(180px,22%)] min-w-0">
+          <div className="text-[11px] font-bold uppercase tracking-wider text-foreground truncate">
+            Cenário {index}
+            {cenario.pedidoMl && (
+              <span className="ml-1.5 font-normal normal-case text-muted-foreground">{cenario.pedidoMl}</span>
+            )}
+          </div>
+        </div>
+        <div className="flex-1 min-w-0">{stepsEl}</div>
+        <div className="shrink-0">{statusEl}</div>
+      </div>
+    );
+  }
+
   return (
     <div className="px-3 py-3 space-y-2">
       <div className="flex items-center justify-between gap-2">
@@ -80,38 +166,9 @@ function ScenarioRow({ cenario, index }: { cenario: TimelineChainDto; index: num
             <span className="ml-1.5 font-normal normal-case text-muted-foreground">{cenario.pedidoMl}</span>
           )}
         </span>
-        <span
-          className={
-            cenario.status === "completa"
-              ? "text-[10px] uppercase font-bold text-success"
-              : "text-[10px] uppercase font-bold text-amber-500"
-          }
-        >
-          {cenario.status === "completa" ? "Completa" : "Em aberto"}
-        </span>
+        {statusEl}
       </div>
-
-      <div className="flex flex-wrap items-stretch gap-x-1 gap-y-2">
-        {cenario.steps.map((step, i) => (
-          <div key={step.chave} className="flex items-center gap-1">
-            <Link
-              href={`/nfe/${step.chave}`}
-              className="group flex flex-col rounded border border-border px-2 py-1 hover:border-accent transition-colors"
-            >
-              <span className={`text-[10px] font-bold uppercase leading-tight ${TIPO_STYLE[step.tipo] ?? ""}`}>
-                {step.tipoLabel}
-              </span>
-              <span className="font-mono text-[10px] text-foreground group-hover:text-accent">
-                {step.numero}/{step.serie}
-                {/* {step.tipo === "REMESSA" && step.saldoDisponivel != null && (
-                  <span className="text-amber-500"> · saldo {step.saldoDisponivel}</span>
-                )} */}
-              </span>
-            </Link>
-            {i < cenario.steps.length - 1 && <span className="text-muted-foreground text-xs">→</span>}
-          </div>
-        ))}
-      </div>
+      {stepsEl}
     </div>
   );
 }

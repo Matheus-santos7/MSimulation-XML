@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { KPI, SectionHeader, StatusBadge } from "@/components/fiscal-ui";
+import { SectionHeader, StatusBadge } from "@/components/fiscal-ui";
 import { TimelineChains } from "@/components/timeline-chains";
 import { listNfes, listTimeline } from "@/lib/fiscal-api";
-import { brl, formatChave } from "@/lib/format";
+import { brl } from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -14,38 +14,32 @@ export default async function DashboardPage() {
   const [nfes, timeline] = await Promise.all([listNfes(), listTimeline()]);
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="grid grid-cols-3 gap-4">
-        <KPI label="Notas emitidas" value={String(nfes.length)} hint="Notas emitidas" hintTone="success" />
-        <KPI
-          label="Cenários fiscais"
-          value={String(timeline.reduce((acc, g) => acc + g.cenarios.length, 0))}
-          hint={`${timeline.filter((g) => g.remessaChave).length} remessa(s) · cenários`}
-          hintTone="accent"
-        />
-        <KPI label="Conformidade" value="100%" hint="Simulação" hintTone="success" />
+    <div className="p-6 flex flex-col gap-6 h-[calc(100dvh-3.5rem-2.5rem)] box-border overflow-hidden">
+      <div className="shrink-0 border border-border rounded-lg bg-card overflow-hidden animate-slide-in">
+        <SectionHeader title="Timeline — Cenários de NF-e" />
+        <TimelineChains groups={timeline} layout="rows" />
       </div>
 
-      <div className="grid grid-cols-12 gap-6 items-start">
-        <div className="col-span-8 border border-border rounded-lg bg-card overflow-hidden animate-slide-in">
-          <SectionHeader
-            title="Últimas Notas Fiscais"
-            right={
-              <Link
-                href="/nfe"
-                className="text-[12px] font-bold uppercase tracking-wider text-accent hover:underline"
-              >
-                Ver todas
-              </Link>
-            }
-          />
-          {nfes.length === 0 ? (
-            <div className="p-6 text-muted-foreground text-[14px]">
-              Nenhuma NF-e para esta empresa.
-            </div>
-          ) : (
+      <div className="flex-1 min-h-0 border border-border rounded-lg bg-card overflow-hidden animate-slide-in flex flex-col">
+        <SectionHeader
+          title="Últimas Notas Fiscais"
+          right={
+            <Link
+              href="/nfe"
+              className="text-[12px] font-bold uppercase tracking-wider text-accent hover:underline"
+            >
+              Ver todas
+            </Link>
+          }
+        />
+        {nfes.length === 0 ? (
+          <div className="p-6 text-muted-foreground text-[14px]">
+            Nenhuma NF-e para esta empresa.
+          </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto min-h-0">
             <table className="w-full text-left border-collapse">
-              <thead>
+              <thead className="sticky top-0 z-10 bg-card">
                 <tr className="text-[12px] text-muted-foreground uppercase tracking-tighter border-b border-border">
                   <th className="px-4 py-3 font-medium">NF-e</th>
                   <th className="px-4 py-3 font-medium">Destinatário</th>
@@ -82,15 +76,8 @@ export default async function DashboardPage() {
                 ))}
               </tbody>
             </table>
-          )}
-        </div>
-
-        <div className="col-span-4 space-y-6">
-          <div className="border border-border rounded-lg bg-card animate-slide-in">
-            <SectionHeader title="Timeline — Cenários de NF-e" />
-            <TimelineChains groups={timeline} />
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

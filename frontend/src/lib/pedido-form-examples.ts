@@ -70,10 +70,10 @@ function calcCnpjCheckDigits(base12: string): string {
   const w1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
   const w2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
   let sum = w1.reduce((acc, weight, index) => acc + nums[index]! * weight, 0);
-  let d1 = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+  const d1 = sum % 11 < 2 ? 0 : 11 - (sum % 11);
   const nums13 = [...nums, d1];
   sum = w2.reduce((acc, weight, index) => acc + nums13[index]! * weight, 0);
-  let d2 = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+  const d2 = sum % 11 < 2 ? 0 : 11 - (sum % 11);
   return `${base12}${d1}${d2}`;
 }
 

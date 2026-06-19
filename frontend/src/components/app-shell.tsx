@@ -147,10 +147,6 @@ function AppShellInner({
         </div>
 
         <footer className="h-10 shrink-0 border-t border-border bg-accent/5 flex items-center justify-center gap-3 px-4">
-          <BrandLogo variant="mark" href="/" className="opacity-80 hover:opacity-100 transition-opacity" />
-          <span className="text-[11px] text-muted-foreground hidden sm:inline">
-            {BRAND.tagline}
-          </span>
           <span className="text-[11px] text-muted-foreground hidden md:inline">·</span>
           <span className="text-[11px] font-mono text-muted-foreground hidden md:inline">
             Simulação — sem validade SEFAZ

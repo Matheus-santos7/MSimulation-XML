@@ -5,10 +5,8 @@ import type {
 } from "./timeline-step.dto.js";
 
 export const TIMELINE_SPREADSHEET_HEADERS = [
-  "REMESSA",
   "CENÁRIO",
   "PEDIDO ML",
-  "STATUS",
   "DATA",
   "TIPO",
   "NF-e/SÉRIE",
@@ -43,26 +41,10 @@ function formatNfeSerie(numero: number, serie: number, numeroFim?: number): stri
   return `${numero}/${serie}`;
 }
 
-function resolveRemessaLabel(group: TimelineRemessaGroupDto): string {
-  if (!group.remessaChave) return "Vendas avulsas";
-  if (group.remessaNumero != null && group.remessaSerie != null) {
-    return `Remessa ${group.remessaNumero}/${group.remessaSerie}`;
-  }
-  return "Remessa";
-}
-
-function resolveCenarioStatusLabel(status: TimelineRemessaGroupDto["cenarios"][number]["status"]): string {
-  if (status === "cancelada") return "Cancelada";
-  if (status === "completa") return "Completa";
-  return "Em aberto";
-}
-
 function mapNfeStepRow(
   context: {
-    remessa: string;
     cenario: string;
     pedidoMl: string;
-    statusCenario: string;
     ufEmitente: string;
   },
   step: Extract<TimelineChainStepDto, { kind: "nfe" }>,
@@ -72,10 +54,8 @@ function mapNfeStepRow(
   const chaveRef = step.nfeReferenciaChave ?? detail?.nfeReferenciaChave ?? "";
 
   return {
-    REMESSA: context.remessa,
     CENÁRIO: context.cenario,
     "PEDIDO ML": context.pedidoMl,
-    STATUS: context.statusCenario,
     DATA: formatSpreadsheetDate(step.emitidaEm),
     TIPO: step.tipoLabel,
     "NF-e/SÉRIE": formatNfeSerie(step.numero, step.serie),
@@ -90,19 +70,15 @@ function mapNfeStepRow(
 
 function mapEventStepRow(
   context: {
-    remessa: string;
     cenario: string;
     pedidoMl: string;
-    statusCenario: string;
     ufEmitente: string;
   },
   step: Extract<TimelineChainStepDto, { kind: "event" }>,
 ): TimelineSpreadsheetRow {
   return {
-    REMESSA: context.remessa,
     CENÁRIO: context.cenario,
     "PEDIDO ML": context.pedidoMl,
-    STATUS: context.statusCenario,
     DATA: formatSpreadsheetDate(step.ocorridoEm),
     TIPO: step.eventLabel,
     "NF-e/SÉRIE": formatNfeSerie(step.numero, step.serie, step.numeroFim),
@@ -126,14 +102,10 @@ export function buildTimelineSpreadsheetRows(
   const rows: TimelineSpreadsheetRow[] = [];
 
   for (const group of groups) {
-    const remessa = resolveRemessaLabel(group);
-
     group.cenarios.forEach((cenario, index) => {
       const context = {
-        remessa,
         cenario: `Cenário ${index + 1}`,
         pedidoMl: cenario.pedidoMl ?? "",
-        statusCenario: resolveCenarioStatusLabel(cenario.status),
         ufEmitente,
       };
 

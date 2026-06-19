@@ -72,11 +72,11 @@ describe("buildTimelineSpreadsheetRows", () => {
   const nfeDetails = new Map([
     [
       "ch-rem",
-      { cfop: "5904", destUf: "SP", produto: "Fogão Atlas", nfeReferenciaChave: undefined },
+      { cfop: "5904", destUf: "SP", produto: "300002137", nfeReferenciaChave: undefined },
     ],
     [
       "ch-venda",
-      { cfop: "6108", destUf: "RJ", produto: "Fogão Atlas", nfeReferenciaChave: "ch-ret" },
+      { cfop: "6108", destUf: "RJ", produto: "300002137", nfeReferenciaChave: "ch-ret" },
     ],
   ]);
 
@@ -84,12 +84,11 @@ describe("buildTimelineSpreadsheetRows", () => {
     const rows = buildTimelineSpreadsheetRows(groups, "SP", nfeDetails);
 
     assert.equal(rows.length, 4);
-    assert.equal(rows[0]?.REMESSA, "Remessa 8/58");
     assert.equal(rows[0]?.CENÁRIO, "Cenário 1");
     assert.equal(rows[0]?.["PEDIDO ML"], "ML-123");
     assert.equal(rows[0]?.TIPO, "Remessa");
     assert.equal(rows[0]?.CFOP, "5904");
-    assert.equal(rows[0]?.PRODUTO, "Fogão Atlas");
+    assert.equal(rows[0]?.PRODUTO, "300002137");
 
     assert.equal(rows[1]?.TIPO, "Inutilização");
     assert.equal(rows[1]?.["NF-e/SÉRIE"], "11–12/58");

@@ -14,7 +14,6 @@ import {
   Scale,
   Bell,
   Sparkles,
-  ShieldCheck,
   Settings2,
   Users,
 } from "lucide-react";
@@ -22,7 +21,11 @@ import { AccountMenu } from "@/components/auth/account-menu";
 import { BrandLogo } from "@/components/brand-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { BRAND } from "@/lib/brand";
+import { cn } from "@/lib/utils";
 import type { TenantDto } from "@/lib/fiscal-types";
+
+/** Rotas que preenchem a área útil — scroll só dentro do conteúdo, nunca no browser. */
+const PAGE_FILL_PATHS = new Set(["/", "/nfe"]);
 
 const NAV_OPERACIONAL = [
   { href: "/empresas", label: "Empresas", icon: Building2 },
@@ -42,10 +45,6 @@ const NAV_CONFIG = [
   { href: "/ia", label: "IA Insights", icon: Sparkles },
 ] as const;
 
-function ambienteLabel(a: TenantDto["ambiente"]): string {
-  return a === "PRODUCAO" ? "PRODUÇÃO" : "HOMOLOGAÇÃO";
-}
-
 function AppShellInner({
   tenant,
   userEmail,
@@ -59,9 +58,10 @@ function AppShellInner({
 }) {
   const path = usePathname() ?? "/";
   const isActive = (href: string) => path === href || (href !== "/" && path.startsWith(href));
+  const isPageFill = PAGE_FILL_PATHS.has(path);
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background text-foreground text-[15px]">
+    <div className="flex h-dvh w-full overflow-hidden bg-background text-foreground text-[15px]">
       <aside className="w-64 shrink-0 border-r border-border flex flex-col bg-sidebar">
         <div className="p-4 border-b border-border">
           <BrandLogo variant="full" href="/" />
@@ -137,7 +137,14 @@ function AppShellInner({
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto">{children}</div>
+        <div
+          className={cn(
+            "flex flex-1 min-h-0 flex-col",
+            isPageFill ? "overflow-hidden" : "overflow-y-auto",
+          )}
+        >
+          {children}
+        </div>
 
         <footer className="h-10 shrink-0 border-t border-border bg-accent/5 flex items-center justify-center gap-3 px-4">
           <BrandLogo variant="mark" href="/" className="opacity-80 hover:opacity-100 transition-opacity" />
@@ -168,7 +175,7 @@ export function AppShell({
   return (
     <Suspense
       fallback={
-        <div className="flex h-screen w-full items-center justify-center bg-background text-muted-foreground" />
+        <div className="flex h-dvh w-full items-center justify-center bg-background text-muted-foreground" />
       }
     >
       <AppShellInner tenant={tenant} userEmail={userEmail} userName={userName}>

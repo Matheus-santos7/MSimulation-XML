@@ -36,10 +36,10 @@ export default function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className={`h-full ${inter.variable} ${jetbrainsMono.variable}`}
+      className={`h-full overflow-hidden ${inter.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >
-      <body className="min-h-full antialiased">
+      <body className="h-full overflow-hidden antialiased">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem storageKey="msedit-theme">
           {children}
           <Toaster richColors closeButton position="top-right" />

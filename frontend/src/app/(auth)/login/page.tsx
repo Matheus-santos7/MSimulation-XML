@@ -7,7 +7,7 @@ import { BRAND } from "@/lib/brand";
 
 export default function LoginPage() {
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-background text-foreground p-6 overflow-hidden">
+    <div className="relative flex min-h-dvh items-center justify-center overflow-y-auto bg-background text-foreground p-6">
       <div className="absolute top-4 right-4 z-10">
         <ThemeToggle />
       </div>

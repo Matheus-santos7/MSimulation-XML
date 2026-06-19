@@ -163,8 +163,12 @@
   html {
     /* ~6% maior que o padrão do browser: escala text-sm, text-base, etc. */
     font-size: 106.25%;
+    height: 100%;
+    overflow: hidden;
   }
   body {
+    height: 100%;
+    overflow: hidden;
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);

@@ -15,7 +15,7 @@ export default async function DashboardPage() {
   const [nfes, timeline] = await Promise.all([listNfes(), listTimeline()]);
 
   return (
-    <div className="p-6 flex flex-col gap-6 h-[calc(100dvh-3.5rem-2.5rem)] box-border overflow-hidden">
+    <div className="flex flex-1 min-h-0 flex-col gap-6 overflow-hidden p-6">
       <div className="shrink-0 border border-border rounded-lg bg-card overflow-hidden animate-slide-in">
         <SectionHeader
           title="Timeline — Cenários de NF-e"

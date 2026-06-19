@@ -1,4 +1,5 @@
 import type { FiscalStatus } from "@/lib/fiscal-types";
+import { cn } from "@/lib/utils";
 
 export function StatusBadge({ status }: { status: FiscalStatus }) {
   const styles: Record<FiscalStatus, string> = {
@@ -76,13 +77,15 @@ export function PageHeader({
   title,
   subtitle,
   actions,
+  className,
 }: {
   title: string;
   subtitle?: string;
   actions?: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="flex items-end justify-between mb-6">
+    <div className={cn("flex items-end justify-between mb-6", className)}>
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
         {subtitle && (

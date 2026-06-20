@@ -17,12 +17,12 @@ import { RemessaSimbolicaFiscalError } from "../../../remessas/infrastructure/fi
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import {
   RemessaDomainError,
-  RemessaError,
   SaldoFifoInsuficienteError,
   SaldoRemessaInsuficienteError,
   createRemessasModule,
   listRemessaBalanceByCd,
   realignRemessaFifoProductIdsBySku,
+  ShipmentError,
 } from "../../../remessas/index.js";
 import { EmitenteFiscalConfigError } from "../../../remessas/infrastructure/fiscal/remessa-service.js";
 import {
@@ -49,7 +49,7 @@ function mapRemessaModuleError(e: unknown): { status: number; message: string } 
   ) {
     return { status: 400, message: e.message };
   }
-  if (e instanceof RemessaError || e instanceof RemessaSimbolicaFiscalError) {
+  if (e instanceof ShipmentError || e instanceof RemessaSimbolicaFiscalError) {
     return { status: 400, message: e.message };
   }
   if (e instanceof TransferenciaFilialError || e instanceof EmitenteFiscalConfigError) {

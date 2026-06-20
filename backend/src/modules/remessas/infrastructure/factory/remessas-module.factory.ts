@@ -1,5 +1,5 @@
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
-import { emitirRemessaManual } from "../fiscal/remessa-service.js";
+import { emitManualShipment } from "../fiscal/physical-shipment/index.js";
 import { createLogisticsModule } from "../../../logistics/index.js";
 import { EmitirAvancoMercadoriaUseCase } from "../../application/use-cases/emitir-avanco-mercadoria.js";
 import { EmitirRemessaInicialUseCase } from "../../application/use-cases/emitir-remessa-inicial.js";
@@ -16,7 +16,7 @@ export function createRemessasModule() {
     estoqueFifo: adapters.estoqueFifo,
     unidadeLogistica: adapters.unidadeLogistica,
     emitirRemessaLegado: async (_tx, command) => {
-      return emitirRemessaManual(getDbClient(), {
+      return emitManualShipment(getDbClient(), {
         tenantId: command.tenantId,
         unidadeDestinoId: command.unidadeDestinoId!,
         items: command.items.map((i) => ({

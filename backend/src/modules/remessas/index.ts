@@ -23,11 +23,11 @@ export { createRemessasAdapters } from "./infrastructure/factory/remessas-adapte
 export { mapAvancoMercadoriaParaApi } from "./presentation/avanco-api.mapper.js";
 
 export {
-  emitirNFeRemessa,
-  emitirRemessaManual,
-  RemessaError,
-  type EmitirRemessaOptions,
-} from "./infrastructure/fiscal/remessa-service.js";
+  emitShipmentNfe,
+  emitManualShipment,
+  ShipmentError,
+  type EmitShipmentOptions,
+} from "./infrastructure/fiscal/physical-shipment/index.js";
 export {
   prepararRemessaSimbolicaFiscal,
   RemessaSimbolicaFiscalError,

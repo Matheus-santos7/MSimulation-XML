@@ -21,7 +21,7 @@ import {
   SaldoFifoInsuficienteError,
   SaldoRemessaInsuficienteError,
   createRemessasModule,
-  listarSaldoRemessaPorCd,
+  listRemessaBalanceByCd,
   realignRemessaFifoProductIdsBySku,
 } from "../../../remessas/index.js";
 import { EmitenteFiscalConfigError } from "../../../remessas/infrastructure/fiscal/remessa-service.js";
@@ -188,7 +188,7 @@ export const movementController: FastifyPluginAsync = async (app) => {
     if (!parsed.success) {
       return reply.status(400).send({ error: "productId obrigatório", details: parsed.error.flatten() });
     }
-    return listarSaldoRemessaPorCd(
+    return listRemessaBalanceByCd(
       getDbClient(),
       tenantId,
       parsed.data.productId,

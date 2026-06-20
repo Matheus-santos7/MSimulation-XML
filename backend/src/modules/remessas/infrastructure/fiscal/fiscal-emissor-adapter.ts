@@ -17,7 +17,7 @@ import {
 import { unidadeParaDestinoFiscal } from "../../../logistics/domain/services/meli-unidade.js";
 import { taxSnapshotFromRule } from "../../../tax/domain/services/tax-snapshot.js";
 import { proximoNumeroNfe } from "../../../fiscal-documents/domain/services/nfe-sequencia.js";
-import { loadRemessaDestinoRetorno } from "../fifo/remessa-fifo.js";
+import { loadRemessaForReturnDestination } from "../fifo/remessa-fifo.js";
 import {
   calculateInboundInvoice,
   resolveIcmsFallbackRate,
@@ -77,7 +77,7 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
       );
     }
 
-    const remessaPai = await loadRemessaDestinoRetorno(tx, remessaReferencia.id);
+    const remessaPai = await loadRemessaForReturnDestination(tx, remessaReferencia.id);
     const destinoRetorno = destinoRetornoFromRemessa(remessaPai, remessaPai.unidadeDestino);
     const { destTelefone: _destTelefone, ...destino } = destinoRetorno;
     const destUf = destinoRetorno.destUf;

@@ -3,12 +3,12 @@ import { describe, it } from "node:test";
 import { NFeTipo } from "../../../../generated/prisma/client.js";
 import type { PrismaClient } from "../../../../generated/prisma/client.js";
 import {
-  consumirSaldoRemessaFifo,
-  consumirSaldoRemessaFifoParaVenda,
-  debitarSaldoRemessaPorCd,
-  estornarConsumosRemessa,
-  listarSaldoRemessaPorCd,
-  resolveUnidadeFifoOrigemId,
+  consumeRemessaFifoBalance,
+  consumeRemessaFifoBalanceForSale,
+  debitRemessaBalanceByCd,
+  reverseRemessaFifoConsumptions,
+  listRemessaBalanceByCd,
+  resolveFifoOriginUnitId,
   realignRemessaFifoProductIdsBySku,
   SaldoRemessaInsuficienteError,
 } from "./remessa-fifo.js";
@@ -232,7 +232,7 @@ describe("remessa-fifo", () => {
       item("i-antigo", "r-antigo", 10, "2026-01-01", 10),
     ]);
 
-    const alocacoes = await consumirSaldoRemessaFifo(tx, tenantId, productId, 3, "retorno-1");
+    const alocacoes = await consumeRemessaFifoBalance(tx, tenantId, productId, 3, "retorno-1");
 
     assert.equal(alocacoes.length, 1);
     assert.equal(alocacoes[0]!.remessaNfeId, "r-antigo");
@@ -248,7 +248,7 @@ describe("remessa-fifo", () => {
       item("i2", "r2", 5, "2026-02-01", 2),
     ]);
 
-    const alocacoes = await consumirSaldoRemessaFifo(tx, tenantId, productId, 4, "ret-1");
+    const alocacoes = await consumeRemessaFifoBalance(tx, tenantId, productId, 4, "ret-1");
 
     assert.deepEqual(alocacoes, [
       { remessaNfeId: "r1", nfeItemId: "i1", quantidade: 2 },
@@ -260,7 +260,7 @@ describe("remessa-fifo", () => {
     const { tx } = createFifoMock([item("i1", "r1", 1, "2026-01-01", 1)]);
 
     await assert.rejects(
-      () => consumirSaldoRemessaFifo(tx, tenantId, productId, 5, "ret-1"),
+      () => consumeRemessaFifoBalance(tx, tenantId, productId, 5, "ret-1"),
       (err: unknown) => {
         assert.ok(err instanceof SaldoRemessaInsuficienteError);
         assert.equal(err.productId, productId);
@@ -271,24 +271,24 @@ describe("remessa-fifo", () => {
     );
   });
 
-  it("estornarConsumosRemessa devolve saldo nas linhas originais", async () => {
+  it("reverseRemessaFifoConsumptions devolve saldo nas linhas originais", async () => {
     const { tx, items } = createFifoMock([item("i1", "r1", 10, "2026-01-01", 1)]);
 
-    await consumirSaldoRemessaFifo(tx, tenantId, productId, 4, "retorno-x");
+    await consumeRemessaFifoBalance(tx, tenantId, productId, 4, "retorno-x");
     assert.equal(items.get("i1")!.saldoDisponivel, 6);
 
-    const estornos = await estornarConsumosRemessa(tx, "retorno-x");
+    const estornos = await reverseRemessaFifoConsumptions(tx, "retorno-x");
     assert.deepEqual(estornos, [{ remessaNfeId: "r1", nfeItemId: "i1", quantidade: 4 }]);
     assert.equal(items.get("i1")!.saldoDisponivel, 10);
   });
 
-  it("debitarSaldoRemessaPorCd filtra por unidade de destino", async () => {
+  it("debitRemessaBalanceByCd filtra por unidade de destino", async () => {
     const { tx, items } = createFifoMock([
       item("ia", "cd-a", 5, "2026-01-01", 1, "unidade-a"),
       item("ib", "cd-b", 8, "2026-01-02", 2, "unidade-b"),
     ]);
 
-    await debitarSaldoRemessaPorCd(tx, tenantId, productId, 3, "unidade-b");
+    await debitRemessaBalanceByCd(tx, tenantId, productId, 3, "unidade-b");
 
     assert.equal(items.get("ia")!.saldoDisponivel, 5);
     assert.equal(items.get("ib")!.saldoDisponivel, 5);
@@ -300,7 +300,7 @@ describe("remessa-fifo", () => {
       item("i-mg", "r-mg", 5, "2026-02-01", 2, "unidade-mg", 1, NFeTipo.REMESSA_AVANCO, "MG"),
     ]);
 
-    const alocacoes = await consumirSaldoRemessaFifoParaVenda(
+    const alocacoes = await consumeRemessaFifoBalanceForSale(
       tx,
       tenantId,
       productId,
@@ -319,7 +319,7 @@ describe("remessa-fifo", () => {
       { defaultCdUnitId: "unidade-sp", defaultCdCodigo: "SP01" },
     );
 
-    const alocacoes = await consumirSaldoRemessaFifoParaVenda(
+    const alocacoes = await consumeRemessaFifoBalanceForSale(
       tx,
       tenantId,
       productId,
@@ -340,7 +340,7 @@ describe("remessa-fifo", () => {
       { defaultCdUnitId: "unidade-sp", defaultCdCodigo: "SP01" },
     );
 
-    const alocacoes = await consumirSaldoRemessaFifoParaVenda(
+    const alocacoes = await consumeRemessaFifoBalanceForSale(
       tx,
       tenantId,
       productId,
@@ -359,7 +359,7 @@ describe("remessa-fifo", () => {
       item("ok", "r1", 4, "2026-01-02", 2),
     ]);
 
-    const alocacoes = await consumirSaldoRemessaFifo(tx, tenantId, productId, 2, "ret-1");
+    const alocacoes = await consumeRemessaFifoBalance(tx, tenantId, productId, 2, "ret-1");
     assert.deepEqual(alocacoes, [{ remessaNfeId: "r1", nfeItemId: "ok", quantidade: 2 }]);
   });
 });
@@ -403,7 +403,7 @@ describe("realignRemessaFifoProductIdsBySku", () => {
   });
 });
 
-describe("listarSaldoRemessaPorCd", () => {
+describe("listRemessaBalanceByCd", () => {
   it("agrega saldo FIFO por CD de destino da remessa", async () => {
     const prisma = {
       product: {
@@ -452,7 +452,7 @@ describe("listarSaldoRemessaPorCd", () => {
       },
     } as unknown as PrismaClient;
 
-    const rows = await listarSaldoRemessaPorCd(prisma, tenantId, productId);
+    const rows = await listRemessaBalanceByCd(prisma, tenantId, productId);
 
     assert.equal(rows.length, 2);
     const rowA = rows.find((r) => r.unidadeDestinoId === "cat-a");
@@ -466,7 +466,7 @@ describe("listarSaldoRemessaPorCd", () => {
   });
 });
 
-describe("resolveUnidadeFifoOrigemId", () => {
+describe("resolveFifoOriginUnitId", () => {
   it("usa o ID do saldo FIFO quando o UUID do catálogo diverge do gravado na NF-e", async () => {
     const fifoUnidadeId = "uuid-fifo-sp02";
     const catalogoUnidadeId = "uuid-catalogo-sp02";
@@ -497,7 +497,7 @@ describe("resolveUnidadeFifoOrigemId", () => {
       },
     } as unknown as PrismaClient;
 
-    const resolved = await resolveUnidadeFifoOrigemId(
+    const resolved = await resolveFifoOriginUnitId(
       prisma,
       tenantId,
       productId,

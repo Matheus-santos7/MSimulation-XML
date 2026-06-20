@@ -3,8 +3,8 @@ import { mapNfe } from "../../presentation/mappers/fiscal-mappers.js";
 import { fiscalNotDeleted } from "../../domain/constants/fiscal-not-deleted.js";
 import { resolveNfeCancelamentoEventoXml, resolveNfeXml } from "../xml/nfe-xml-service.js";
 import {
-  atualizarItensSaldoFifoParaNfes,
-  saldoLiquidoRemessaNfe,
+  refreshRemessaFifoItemsForNfes,
+  getNetRemessaNfeBalance,
 } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
 import type { NfeDetail, NfeQueryPort } from "../../domain/ports/nfe-query.port.js";
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
@@ -31,11 +31,11 @@ export class PrismaNfeQueryRepository implements NfeQueryPort {
     });
     if (rows.length === 0) return [];
 
-    await atualizarItensSaldoFifoParaNfes(this.db, tenantId, rows);
+    await refreshRemessaFifoItemsForNfes(this.db, tenantId, rows);
     return Promise.all(
       rows.map(async (row) => {
         const fifoBalance = isShipmentWithFifoBalance(row.tipo)
-          ? await saldoLiquidoRemessaNfe(this.db, row.id, row.quantidade)
+          ? await getNetRemessaNfeBalance(this.db, row.id, row.quantidade)
           : undefined;
         return mapNfe(row, row.nfeReferencia?.chave, row.itens, fifoBalance) as Record<
           string,
@@ -59,10 +59,10 @@ export class PrismaNfeQueryRepository implements NfeQueryPort {
     if (!row) return null;
 
     if (isShipmentWithFifoBalance(row.tipo)) {
-      await atualizarItensSaldoFifoParaNfes(this.db, tenantId, [row]);
+      await refreshRemessaFifoItemsForNfes(this.db, tenantId, [row]);
     }
     const fifoBalance = isShipmentWithFifoBalance(row.tipo)
-      ? await saldoLiquidoRemessaNfe(this.db, row.id, row.quantidade)
+      ? await getNetRemessaNfeBalance(this.db, row.id, row.quantidade)
       : undefined;
     const dto = mapNfe(row, row.nfeReferencia?.chave, row.itens, fifoBalance);
 

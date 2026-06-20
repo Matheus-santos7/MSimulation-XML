@@ -1,6 +1,6 @@
 import {
   collectRemessaSaldoProductIds,
-  remessaItemSaldoWhere,
+  buildRemessaFifoItemWhere,
 } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import type { AdvanceProductResolved } from "../../domain/entities/advance-product.entity.js";
@@ -33,7 +33,7 @@ export class AdvanceProductResolverAdapter implements AdvanceProductResolverPort
 
     if (!product && fifoProductId) {
       const linha = await this.db.nfeItem.findFirst({
-        where: remessaItemSaldoWhere(tenantId, fifoProductId),
+        where: buildRemessaFifoItemWhere(tenantId, fifoProductId),
         include: { product: true },
       });
       const legacy = linha?.product;
@@ -71,7 +71,7 @@ export class AdvanceProductResolverAdapter implements AdvanceProductResolverPort
     );
     for (const fid of fifoIds) {
       const linha = await this.db.nfeItem.findFirst({
-        where: remessaItemSaldoWhere(tenantId, fid),
+        where: buildRemessaFifoItemWhere(tenantId, fid),
         select: { id: true },
       });
       if (linha) return true;
@@ -104,7 +104,7 @@ export class AdvanceProductResolverAdapter implements AdvanceProductResolverPort
   ): Promise<string | null> {
     for (const fid of productIds) {
       const linha = await this.db.nfeItem.findFirst({
-        where: remessaItemSaldoWhere(tenantId, fid),
+        where: buildRemessaFifoItemWhere(tenantId, fid),
         select: { productId: true },
         orderBy: [{ nfe: { emitidaEm: "asc" } }, { numeroItem: "asc" }],
       });

@@ -5,9 +5,9 @@ import { gerarPedidoMl } from "../../../fiscal-documents/domain/services/nfe-cha
 import { runFiscalTransaction } from "../../../../lib/db/prisma-tx.js";
 import { emitirCteRemessa } from "../../infrastructure/fiscal/cte-remessa-service.js";
 import {
-  debitarSaldoRemessaPorCd,
-  resolveOrigemFiscalParaAvanco,
-  saldoRemessaDisponivel,
+  debitRemessaBalanceByCd,
+  resolveAdvanceFiscalOrigin,
+  getAvailableRemessaBalance,
   SaldoRemessaInsuficienteError,
 } from "../../infrastructure/fifo/remessa-fifo.js";
 import { createLogisticsModule } from "../../../logistics/index.js";
@@ -70,7 +70,7 @@ export class EmitirAvancoMercadoriaUseCase {
 
     const prisma = getDbClient();
     const logistics = createLogisticsModule();
-    const origemResolvida = await resolveOrigemFiscalParaAvanco(
+    const origemResolvida = await resolveAdvanceFiscalOrigin(
       prisma,
       command.tenantId,
       saldoProductId,
@@ -102,7 +102,7 @@ export class EmitirAvancoMercadoriaUseCase {
       throw new RemessaDomainError("CD de destino não encontrado ou inativo");
     }
 
-    const saldoDisponivel = await saldoRemessaDisponivel(
+    const saldoDisponivel = await getAvailableRemessaBalance(
       prisma,
       command.tenantId,
       saldoProductId,
@@ -135,7 +135,7 @@ export class EmitirAvancoMercadoriaUseCase {
 
       let alocacoesRaw;
       try {
-        alocacoesRaw = await debitarSaldoRemessaPorCd(
+        alocacoesRaw = await debitRemessaBalanceByCd(
           tx,
           command.tenantId,
           saldoProductId,

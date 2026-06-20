@@ -14,7 +14,7 @@ import { mapNfe } from "../../presentation/mappers/fiscal-mappers.js";
 import { loadEmitterSettings } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
 import { gerarProtocoloSefaz } from "../../domain/services/sefaz-protocol.js";
 import { fiscalNotDeleted } from "../../domain/constants/fiscal-not-deleted.js";
-import { estornarConsumosRemessa } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
+import { reverseRemessaFifoConsumptions } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
 import type { CancelDocumentResult } from "../../domain/entities/lifecycle-result.entity.js";
 import { DocumentCancellationError } from "../../domain/errors/document-cancellation.error.js";
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
@@ -92,7 +92,7 @@ export class PrismaDocumentCancellationRepository implements DocumentCancellatio
         symbolicReturn.tipo === NFeTipo.RETORNO_SIMBOLICO &&
         symbolicReturn.status !== FiscalStatus.CANCELADA
       ) {
-        reversedBalance = await estornarConsumosRemessa(tx, symbolicReturn.id);
+        reversedBalance = await reverseRemessaFifoConsumptions(tx, symbolicReturn.id);
         await registerCancellation(tx, {
           tenantId: sale.tenantId,
           nfeId: symbolicReturn.id,

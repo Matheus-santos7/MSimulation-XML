@@ -6,9 +6,9 @@ import type {
   ListarSaldoFifoFiltro,
 } from "../../domain/ports/estoque-fifo-repository.js";
 import {
-  debitarSaldoRemessaPorCd,
+  debitRemessaBalanceByCd,
   realignRemessaFifoProductIdsBySku,
-  remessaSaldoItensWhere,
+  buildRemessaFifoItemsWhere,
 } from "../fifo/remessa-fifo.js";
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 type Db = PrismaClient | PrismaTx;
@@ -23,7 +23,7 @@ export class PrismaEstoqueFifoRepository implements EstoqueFifoRepository {
   }
 
   async listarLinhasComSaldo(filtro: ListarSaldoFifoFiltro) {
-    const where = await remessaSaldoItensWhere(
+    const where = await buildRemessaFifoItemsWhere(
       this.db,
       filtro.tenantId,
       filtro.productId,
@@ -101,7 +101,7 @@ export class PrismaEstoqueFifoRepository implements EstoqueFifoRepository {
   }
 }
 
-/** Atalho logístico por CD — mantém compatibilidade com debitarSaldoRemessaPorCd. */
+/** Atalho logístico por CD — mantém compatibilidade com debitRemessaBalanceByCd. */
 export async function debitarFifoPorCd(
   db: PrismaTx,
   tenantId: string,
@@ -109,6 +109,6 @@ export async function debitarFifoPorCd(
   quantidade: number,
   unidadeOrigemId: string,
 ) {
-  return debitarSaldoRemessaPorCd(db, tenantId, productId, quantidade, unidadeOrigemId);
+  return debitRemessaBalanceByCd(db, tenantId, productId, quantidade, unidadeOrigemId);
 }
 

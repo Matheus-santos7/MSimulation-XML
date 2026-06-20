@@ -22,8 +22,8 @@ import {
   orderLineFromProduct,
 } from "../../../tax/index.js";
 import {
-  consumirSaldoRemessaFifoParaVenda,
-  loadRemessaDestinoRetorno,
+  consumeRemessaFifoBalanceForSale,
+  loadRemessaForReturnDestination,
   type PreviewRemessaFifoVenda,
 } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
 import { persistNfeXmlFromEmission } from "../../../fiscal-documents/infrastructure/xml/nfe-xml-service.js";
@@ -53,7 +53,7 @@ export async function emitReturnNote(
   const { tenant } = order;
   const { inboundTaxRule, emitterSettings } = rules;
 
-  const remessa = await loadRemessaDestinoRetorno(tx, fifoPreview.remessaNfeId);
+  const remessa = await loadRemessaForReturnDestination(tx, fifoPreview.remessaNfeId);
   const destUf = remessa.destUf;
   const destino = destinoRetornoFromRemessa(remessa, remessa.unidadeDestino);
   const destIe = destIeRetornoFromRemessa(remessa, remessa.unidadeDestino);
@@ -160,7 +160,7 @@ export async function consumeShipmentAndLinkReturn(
   returnNote: ReturnNoteCreated,
   emitterSettings: SalesChainRules["emitterSettings"],
 ) {
-  const allocations = await consumirSaldoRemessaFifoParaVenda(
+  const allocations = await consumeRemessaFifoBalanceForSale(
     tx,
     order.tenant.id,
     order.product.id,

@@ -28,7 +28,7 @@ import { taxSnapshotFromRule } from "../../../tax/domain/services/tax-snapshot.j
 import { calcularNotaFiscal } from "../../../tax/domain/services/tax-engine.js";
 import { buildFiscalItem, resolveTaxRule, resolveIcmsFallbackRate, type CustomerType } from "../../../tax/index.js";
 import { persistNfeXmlFromEmission } from "../xml/nfe-xml-service.js";
-import { estornarConsumosRemessa } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
+import { reverseRemessaFifoConsumptions } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
 import {
   prepararRemessaSimbolicaFiscal,
   RemessaSimbolicaFiscalError,
@@ -206,7 +206,7 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
       });
 
       const reversals = sale.nfeReferenciaId
-        ? await estornarConsumosRemessa(tx, sale.nfeReferenciaId)
+        ? await reverseRemessaFifoConsumptions(tx, sale.nfeReferenciaId)
         : [];
 
       const mainShipment = sale.nfeReferencia?.nfeReferenciaId

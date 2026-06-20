@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { NFeTipo } from "../../../../generated/prisma/client.js";
-import { consumirSaldoRemessaFifo } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
+import { consumeRemessaFifoBalance } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
 
 /**
  * Sales chain contracts (no real Prisma).
@@ -86,7 +86,7 @@ describe("sales-chain — refNFe contract (FIFO)", () => {
       },
     };
 
-    const alocacoes = await consumirSaldoRemessaFifo(tx, tenantId, productId, 2, "retorno-id");
+    const alocacoes = await consumeRemessaFifoBalance(tx, tenantId, productId, 2, "retorno-id");
     const nfeReferenciaIdRetorno = alocacoes[0]!.remessaNfeId;
 
     assert.equal(nfeReferenciaIdRetorno, "remessa-antiga");

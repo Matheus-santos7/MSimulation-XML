@@ -63,12 +63,28 @@ Migrar 7 arquivos backend para nomes EN oficiais do módulo `tax` e remover alia
 - Extrair `BRAZILIAN_UFS` para `frontend/src/lib/brazilian-states.ts`
 - Substituir duplicações em `pedido-wizard-dialog.tsx`, `tenant-form-fields.tsx`, `regras/page.tsx`
 
-## Fora de escopo
+## Fora de escopo (quick wins originais)
 
-- Decomposição de `remessa-fifo.ts` (~913 linhas)
 - Split de `fiscal-api.ts` (~787 linhas)
 - Reescrita de `cte-xml.ts` (template strings → AST)
-- Renomear API pública do frontend (`cancelarVenda`, etc.) — decisão separada de UX
+
+## Refatoração adicional — remessa-fifo (2026-06-20)
+
+God file ~913 linhas dividido em módulos focados; `remessa-fifo.ts` virou barrel público:
+
+| Arquivo | Responsabilidade |
+|---------|------------------|
+| `remessa-fifo.constants.ts` | Tipos NF-e FIFO, `REMESSA_DEST_SELECT` |
+| `remessa-fifo.errors.ts` | `SaldoRemessaInsuficienteError` |
+| `remessa-fifo.types.ts` | Tipos Prisma pick + DTOs |
+| `remessa-fifo-product-ids.ts` | Where clauses, SKU realignment |
+| `remessa-fifo-item-sync.ts` | Reconciliação e preparação de saldo |
+| `remessa-fifo-balance-query.ts` | Consultas de saldo por CD/NF-e |
+| `remessa-fifo-origin-resolver.ts` | Resolução CD origem para avanço |
+| `remessa-fifo-consumption.ts` | Débito, preview, estorno FIFO |
+| `remessa-fifo.ts` | Re-exports (API estável) |
+
+Comportamento inalterado — `pnpm test:backend` 108/108 verde.
 
 ## Verificação
 

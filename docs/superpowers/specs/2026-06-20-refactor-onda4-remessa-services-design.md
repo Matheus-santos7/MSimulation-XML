@@ -1,7 +1,7 @@
 # Refatoração Onda 4 — Remessa Services (Design Spec)
 
 **Data:** 2026-06-20  
-**Status:** Aprovado  
+**Status:** Concluída (2026-06-20)  
 **Objetivo:** Dividir god files de emissão de remessa/transferência em módulos focados, renomear exports públicos para inglês e revisar serviços vizinhos — sem alterar comportamento fiscal ou contratos HTTP.
 
 ## Roadmap geral (ordem aprovada)

@@ -93,9 +93,15 @@ Comportamento inalterado — `pnpm test:backend` 108/108 verde.
 | Split `fiscal-api` (frontend) | `ee293f9` |
 | CT-e objeto + serializador | `6330d44` |
 
-## Onda 4 — Remessa services (APROVADA)
+## Onda 4 — Remessa services (CONCLUÍDA)
 
-Ver spec dedicado: [`2026-06-20-refactor-onda4-remessa-services-design.md`](./2026-06-20-refactor-onda4-remessa-services-design.md)
+Ver spec: [`2026-06-20-refactor-onda4-remessa-services-design.md`](./2026-06-20-refactor-onda4-remessa-services-design.md)
+
+| Commit | Entrega |
+|--------|---------|
+| `211da90` | physical-shipment + EN exports |
+| `62f0d72` | branch-transfer + EN exports |
+| `d95b396` | symbolic-shipment + shipment-cte |
 
 Roadmap restante: **Onda 5** (xml-serializer) → **Onda 6** (frontend EN + forms).
 

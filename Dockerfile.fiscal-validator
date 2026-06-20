@@ -1,9 +1,13 @@
 # Microsserviço MCP Fiscal Brasil (validação de NF-e).
-# Deploy no Render: Web Service → Docker → Dockerfile.fiscal-validator
-FROM ghcr.io/dehor-labs/mcp-fiscal-brasil:latest
+# Instala via PyPI — a imagem GHCR é privada e não funciona no Render sem credenciais.
+FROM python:3.12-slim-bookworm
 
-ENV HOST=0.0.0.0
-ENV MCP_FISCAL_LOG_LEVEL=INFO
+ENV PYTHONUNBUFFERED=1 \
+    HOST=0.0.0.0 \
+    MCP_FISCAL_LOG_LEVEL=INFO \
+    PIP_NO_CACHE_DIR=1
+
+RUN pip install --no-cache-dir "mcp-fiscal-brasil==0.4.0"
 
 # Render injeta PORT em runtime; mcp-fiscal-api respeita essa variável.
 CMD ["mcp-fiscal-api"]

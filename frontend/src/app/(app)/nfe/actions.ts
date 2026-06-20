@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { cancelarVenda, deleteNfe, emitirDevolucao } from "@/lib/fiscal-api";
+import { cancelSale, deleteNfe, emitReturnNote } from "@/lib/fiscal-api";
 
 export async function excluirNfeAction(chave: string): Promise<{ error?: string }> {
   try {
@@ -18,7 +18,7 @@ export async function devolverVendaAction(
   chave: string,
 ): Promise<{ error?: string; numero?: number; serie?: number }> {
   try {
-    const { devolucao } = await emitirDevolucao(chave);
+    const { devolucao } = await emitReturnNote(chave);
     revalidatePath("/nfe");
     revalidatePath("/");
     revalidatePath("/eventos");
@@ -30,7 +30,7 @@ export async function devolverVendaAction(
 
 export async function cancelarVendaAction(chave: string): Promise<{ error?: string }> {
   try {
-    await cancelarVenda(chave);
+    await cancelSale(chave);
     revalidatePath("/nfe");
     revalidatePath("/");
     revalidatePath("/eventos");

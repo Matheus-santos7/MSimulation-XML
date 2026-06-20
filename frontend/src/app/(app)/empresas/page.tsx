@@ -4,14 +4,14 @@ import { EmitentePapeisForm } from "@/components/emitente-papeis-form";
 import { FiliaisSection, SectionHeading } from "@/components/filiais-section";
 import { PageHeader } from "@/components/fiscal-ui";
 import { EmpresaCard } from "@/components/empresa-card";
-import { getTenants, listUnidadesLogisticas } from "@/lib/fiscal-api";
+import { getTenants, listLogisticUnits } from "@/lib/fiscal-api";
 
 export const metadata: Metadata = { title: "Empresas" };
 
 export default async function EmpresasPage() {
   const [tenants, unidades] = await Promise.all([
     getTenants(),
-    listUnidadesLogisticas({ ativa: true }),
+    listLogisticUnits({ ativa: true }),
   ]);
 
   const tenant = tenants[0];

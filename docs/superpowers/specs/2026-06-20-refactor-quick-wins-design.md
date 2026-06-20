@@ -107,7 +107,15 @@ Ver spec: [`2026-06-20-refactor-onda4-remessa-services-design.md`](./2026-06-20-
 
 Fonte única em `packages/fiscal-core/src/xml-serializer.ts`; `nfe-xml` re-exporta via `@msimulation-xml/fiscal-core`. Testes migrados para `fiscal-core` (68/68). `pnpm build` + `pnpm test:backend` 108/108 verde.
 
-Roadmap restante: **Onda 6** (frontend EN + forms).
+## Onda 6 — Frontend EN + forms (CONCLUÍDA)
+
+Spec: [`2026-06-20-refactor-onda6-frontend-en-design.md`](./2026-06-20-refactor-onda6-frontend-en-design.md)
+
+- Exports EN em `fiscal-api` (22 funções renomeadas)
+- Helpers extraídos para `lib/tax-rules-sheet.ts`
+- Hooks: `use-pedido-wizard`, `use-filial-form`, `use-tenant-form-fields`
+
+Roadmap quick wins: **concluído** (ondas 1–6).
 
 ## Verificação
 

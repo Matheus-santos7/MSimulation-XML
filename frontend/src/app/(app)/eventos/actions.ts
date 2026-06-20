@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { inutilizarNumeracao } from "@/lib/fiscal-api";
+import { invalidateNumbering } from "@/lib/fiscal-api";
 
 export async function inutilizarNumeracaoAction(input: {
   serie: number;
@@ -10,7 +10,7 @@ export async function inutilizarNumeracaoAction(input: {
   xJust?: string;
 }): Promise<{ error?: string }> {
   try {
-    await inutilizarNumeracao(input);
+    await invalidateNumbering(input);
     revalidatePath("/eventos");
     return {};
   } catch (e) {

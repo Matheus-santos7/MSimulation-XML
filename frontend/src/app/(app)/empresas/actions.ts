@@ -10,12 +10,12 @@ import {
 import { enrichEmpresaFromCep } from "@/lib/enrich-empresa-cep";
 import {
   ApiValidationError,
-  createFilial,
+  createBranch,
   createTenant,
-  deleteFilial,
+  deleteBranch,
   deleteTenant,
-  updateFilial,
-  updatePapeisFiscais,
+  updateBranch,
+  updateFiscalRoles,
   updateTenant,
 } from "@/lib/fiscal-api";
 import { parseEmpresaForm } from "@/lib/parse-empresa-form";
@@ -78,7 +78,7 @@ export async function updatePapeisFiscaisAction(
   input: TenantFiscalRolesInput,
 ): Promise<{ error?: string; success?: boolean }> {
   try {
-    await updatePapeisFiscais(input);
+    await updateFiscalRoles(input);
     revalidatePath("/empresas");
     revalidatePath("/empresas/filiais");
     revalidatePath("/operacoes");
@@ -90,7 +90,7 @@ export async function updatePapeisFiscaisAction(
 
 export async function deleteFilialAction(id: string): Promise<{ error?: string }> {
   try {
-    await deleteFilial(id);
+    await deleteBranch(id);
     revalidatePath("/empresas");
     revalidatePath("/empresas/filiais");
     return {};
@@ -103,7 +103,7 @@ export async function createFilialAction(
   input: TenantFilialInput,
 ): Promise<{ error?: string }> {
   try {
-    await createFilial(input);
+    await createBranch(input);
     revalidatePath("/empresas/filiais");
     revalidatePath("/empresas");
     return {};
@@ -117,7 +117,7 @@ export async function updateFilialAction(
   input: TenantFilialInput,
 ): Promise<{ error?: string }> {
   try {
-    await updateFilial(id, input);
+    await updateBranch(id, input);
     revalidatePath("/empresas/filiais");
     revalidatePath("/empresas");
     return {};

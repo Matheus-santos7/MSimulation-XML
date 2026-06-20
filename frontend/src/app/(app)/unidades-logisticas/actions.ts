@@ -2,12 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  emitirAvancoCd,
-  emitirRemessaManual,
-  importUnidadesLogisticasSpreadsheet,
-  listSaldoRemessaPorCd,
+  emitWarehouseAdvance,
+  emitManualShipment,
+  importLogisticUnitsSpreadsheet,
+  listRemessaBalanceByCd,
   realignRemessaFifo,
-  setUnidadeLogisticaPadrao,
+  setDefaultLogisticUnit,
 } from "@/lib/fiscal-api";
 import type { SaldoRemessaCdDto } from "@/lib/fiscal-api";
 import { validateSpreadsheetFile } from "@/lib/spreadsheet-upload";
@@ -42,7 +42,7 @@ export async function importarUnidadesLogisticasAction(
   const enrichCep = !enrichCepValues.includes("false") || enrichCepValues.includes("true");
 
   try {
-    const result = await importUnidadesLogisticasSpreadsheet(file, { enrichCep });
+    const result = await importLogisticUnitsSpreadsheet(file, { enrichCep });
     revalidatePath("/unidades-logisticas");
     revalidatePath("/operacoes");
     revalidatePath("/produtos");
@@ -74,7 +74,7 @@ export async function listarSaldoCdRemessaAction(
   productSku?: string,
 ): Promise<SaldoRemessaCdDto[]> {
   if (!productId) return [];
-  return listSaldoRemessaPorCd(productId, productSku);
+  return listRemessaBalanceByCd(productId, productSku);
 }
 
 function readAvancoField(formData: FormData, key: string): string {
@@ -99,7 +99,7 @@ export async function emitirAvancoCdAction(
   }
 
   try {
-    const result = await emitirAvancoCd({
+    const result = await emitWarehouseAdvance({
       productId,
       productSku: productSku || undefined,
       quantidade,
@@ -153,7 +153,7 @@ export async function emitirRemessaCdOrigemAction(
       realinhados = relink.atualizados;
     }
 
-    const result = await emitirRemessaManual({
+    const result = await emitManualShipment({
       unidadeDestinoId,
       items: [{ productId, productSku: productSku || undefined, quantidade }],
     });
@@ -178,7 +178,7 @@ export async function definirUnidadePadraoAction(
   unidadeId: string,
 ): Promise<{ error?: string; codigo?: string }> {
   try {
-    const unidade = await setUnidadeLogisticaPadrao(unidadeId);
+    const unidade = await setDefaultLogisticUnit(unidadeId);
     revalidatePath("/unidades-logisticas");
     revalidatePath("/operacoes");
     revalidatePath("/produtos");

@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import { OperacoesTabs } from "@/components/operacoes-tabs";
 import { PageHeader } from "@/components/fiscal-ui";
-import { listFiliais, listProducts, listUnidadesLogisticas, getTenants } from "@/lib/fiscal-api";
+import { listBranches, listProducts, listLogisticUnits, getTenants } from "@/lib/fiscal-api";
 
 export const metadata: Metadata = { title: "Operações de fulfillment" };
 
 export default async function OperacoesPage() {
   const [products, unidades, filiais, tenants] = await Promise.all([
     listProducts(),
-    listUnidadesLogisticas({ ativa: true }),
-    listFiliais(),
+    listLogisticUnits({ ativa: true }),
+    listBranches(),
     getTenants(),
   ]);
   const tenant = tenants[0];

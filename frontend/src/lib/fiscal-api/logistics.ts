@@ -80,7 +80,7 @@ export type MovimentacaoProdutoDto = {
   createdAt: string;
 };
 
-export async function listUnidadesLogisticas(opts?: {
+export async function listLogisticUnits(opts?: {
   q?: string;
   cnpj?: string;
   ativa?: boolean;
@@ -95,7 +95,7 @@ export async function listUnidadesLogisticas(opts?: {
 }
 
 /** Envia planilha ML (.xlsx) para parse e importação no backend. */
-export async function importUnidadesLogisticasSpreadsheet(
+export async function importLogisticUnitsSpreadsheet(
   file: File,
   options?: { enrichCep?: boolean },
 ): Promise<UnidadeLogisticaBulkImportResult> {
@@ -121,14 +121,14 @@ export async function importUnidadesLogisticasSpreadsheet(
   return res.json() as Promise<UnidadeLogisticaBulkImportResult>;
 }
 
-export async function setUnidadeLogisticaPadrao(unidadeId: string): Promise<UnidadeLogisticaDto> {
+export async function setDefaultLogisticUnit(unidadeId: string): Promise<UnidadeLogisticaDto> {
   return mutateJson<UnidadeLogisticaDto>(
     buildApiUrl(`/api/unidades-logisticas/${unidadeId}/padrao`),
     "PATCH",
   ) as Promise<UnidadeLogisticaDto>;
 }
 
-export async function emitirAvancoCd(body: {
+export async function emitWarehouseAdvance(body: {
   productId: string;
   productSku?: string;
   quantidade: number;
@@ -138,7 +138,7 @@ export async function emitirAvancoCd(body: {
   return mutateJson<AvancoCdResult>(buildApiUrl("/api/movimentacoes/avanco-cd"), "POST", body) as Promise<AvancoCdResult>;
 }
 
-export async function listSaldoRemessaPorCd(
+export async function listRemessaBalanceByCd(
   productId: string,
   productSku?: string,
 ): Promise<SaldoRemessaCdDto[]> {
@@ -158,7 +158,7 @@ export type RemessaManualResult = {
   cte: CTeDto;
 };
 
-export async function emitirRemessaManual(body: {
+export async function emitManualShipment(body: {
   unidadeDestinoId: string;
   items: RemessaManualItemInput[];
 }): Promise<RemessaManualResult> {

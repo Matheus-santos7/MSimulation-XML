@@ -53,7 +53,7 @@ export type DevolucaoResult = {
   saldoEstornado: { remessaNfeId: string; quantidade: number }[];
 };
 
-export async function emitirDevolucao(chave: string): Promise<DevolucaoResult> {
+export async function emitReturnNote(chave: string): Promise<DevolucaoResult> {
   return mutateJson<DevolucaoResult>(
     buildApiUrl(`/api/nfes/${chave}/devolucao`),
     "POST",
@@ -66,7 +66,7 @@ export type CancelamentoResult = {
   saldoEstornado: { remessaNfeId: string; quantidade: number }[];
 };
 
-export async function cancelarVenda(chave: string, xJust?: string): Promise<CancelamentoResult> {
+export async function cancelSale(chave: string, xJust?: string): Promise<CancelamentoResult> {
   return mutateJson<CancelamentoResult>(buildApiUrl(`/api/nfes/${chave}/cancelamento`), "POST", {
     xJust,
   }) as Promise<CancelamentoResult>;
@@ -84,7 +84,7 @@ export type InutilizacaoResult = {
   ocorridoEm: string;
 };
 
-export async function inutilizarNumeracao(input: {
+export async function invalidateNumbering(input: {
   serie: number;
   numeroIni: number;
   numeroFim: number;

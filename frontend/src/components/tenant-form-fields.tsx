@@ -1,22 +1,13 @@
 "use client";
 
 import { Loader2, Search } from "lucide-react";
-import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { lookupCep, lookupCnpj } from "@/lib/lookup-actions";
 import type { EmpresaFormValues } from "@/lib/empresa-form";
 import type { TenantDto } from "@/lib/fiscal-types";
 import { BRAZILIAN_UFS } from "@/lib/brazilian-states";
-
-const CRT_OPTIONS = [
-  { value: "1", label: "1 — Simples Nacional" },
-  { value: "2", label: "2 — Simples (excesso sublimite)" },
-  { value: "3", label: "3 — Regime Normal" },
-] as const;
-
-type FormState = EmpresaFormValues;
+import { TENANT_CRT_OPTIONS, useTenantFormFields } from "@/hooks/use-tenant-form-fields";
 
 type Props = {
   tenant?: TenantDto;
@@ -26,106 +17,9 @@ type Props = {
   idPrefix?: string;
 };
 
-function toFormState(tenant?: TenantDto, draft?: EmpresaFormValues): FormState {
-  if (draft) return draft;
-  return {
-    razaoSocial: tenant?.razaoSocial ?? "",
-    nomeFantasia: tenant?.nomeFantasia ?? "",
-    cnpj: tenant?.cnpj ?? "",
-    ie: tenant?.ie ?? "",
-    iest: tenant?.iest ?? "",
-    crt: String(tenant?.crt ?? 3),
-    logradouro: tenant?.logradouro ?? "",
-    numero: tenant?.numero ?? "SN",
-    complemento: tenant?.complemento ?? "",
-    bairro: tenant?.bairro ?? "",
-    codigoMunicipio: tenant?.codigoMunicipio ?? "",
-    municipio: tenant?.municipio ?? "",
-    uf: tenant?.uf ?? "SP",
-    cep: tenant?.cep ?? "",
-    telefone: tenant?.telefone ?? "",
-    ambiente: tenant?.ambiente ?? "HOMOLOGACAO",
-  };
-}
-
 export function TenantFormFields({ tenant, draft, fieldErrors, idPrefix = "tenant" }: Props) {
-  const [form, setForm] = useState<FormState>(() => toFormState(tenant, draft));
-  const [lookupError, setLookupError] = useState<string | null>(null);
-  const [cnpjLoading, setCnpjLoading] = useState(false);
-  const [cepLoading, setCepLoading] = useState(false);
-
-  useEffect(() => {
-    if (draft) {
-      setForm(draft);
-      return;
-    }
-    if (tenant) setForm(toFormState(tenant));
-  }, [tenant?.id, draft]);
-
-  const set = (key: keyof FormState, value: string) => setForm((f) => ({ ...f, [key]: value }));
-
-  const err = (name: keyof FormState) => fieldErrors?.[name]?.[0];
-
-  async function onLookupCnpj() {
-    setLookupError(null);
-    setCnpjLoading(true);
-    try {
-      const data = await lookupCnpj(form.cnpj);
-      let codigoMunicipio = data.codigoMunicipio || "";
-      const cep = data.cep || form.cep;
-
-      if (!codigoMunicipio && cep.replace(/\D/g, "").length === 8) {
-        try {
-          const cepLookup = await lookupCep(cep);
-          codigoMunicipio = cepLookup.codigoMunicipio ?? "";
-        } catch {
-          // IBGE pode ser preenchido manualmente ou via Buscar CEP
-        }
-      }
-
-      setForm((f) => ({
-        ...f,
-        razaoSocial: data.razaoSocial || f.razaoSocial,
-        nomeFantasia: data.nomeFantasia || f.nomeFantasia,
-        cnpj: data.cnpj,
-        logradouro: data.logradouro || f.logradouro,
-        numero: data.numero || f.numero,
-        complemento: data.complemento ?? f.complemento,
-        bairro: data.bairro || f.bairro,
-        municipio: data.municipio || f.municipio,
-        codigoMunicipio,
-        uf: data.uf || f.uf,
-        cep,
-        telefone: data.telefone ?? f.telefone,
-        crt: String(data.crt),
-      }));
-    } catch (e) {
-      setLookupError(e instanceof Error ? e.message : "Erro ao buscar CNPJ");
-    } finally {
-      setCnpjLoading(false);
-    }
-  }
-
-  async function onLookupCep() {
-    setLookupError(null);
-    setCepLoading(true);
-    try {
-      const data = await lookupCep(form.cep);
-      setForm((f) => ({
-        ...f,
-        cep: data.cep,
-        logradouro: data.logradouro || f.logradouro,
-        bairro: data.bairro || f.bairro,
-        municipio: data.municipio || f.municipio,
-        codigoMunicipio: data.codigoMunicipio ?? f.codigoMunicipio,
-        uf: data.uf || f.uf,
-      }));
-    } catch (e) {
-      setLookupError(e instanceof Error ? e.message : "Erro ao buscar CEP");
-    } finally {
-      setCepLoading(false);
-    }
-  }
+  const { form, set, lookupError, cnpjLoading, cepLoading, err, onLookupCnpj, onLookupCep } =
+    useTenantFormFields({ tenant, draft, fieldErrors });
 
   return (
     <div className="space-y-6">
@@ -160,7 +54,7 @@ export function TenantFormFields({ tenant, draft, fieldErrors, idPrefix = "tenan
           <Field id={`${idPrefix}-ie`} label="Inscrição estadual (IE)" name="ie" value={form.ie} onChange={set} required mono error={err("ie")} />
           <Field id={`${idPrefix}-iest`} label="IE substituto (IEST)" name="iest" value={form.iest} onChange={set} mono error={err("iest")} />
         </div>
-        <SelectField id={`${idPrefix}-crt`} label="Regime tributário (CRT)" name="crt" value={form.crt} onChange={set} options={CRT_OPTIONS} error={err("crt")} />
+        <SelectField id={`${idPrefix}-crt`} label="Regime tributário (CRT)" name="crt" value={form.crt} onChange={set} options={TENANT_CRT_OPTIONS} error={err("crt")} />
       </Section>
 
       <Section title="Endereço (enderEmit)">
@@ -249,9 +143,9 @@ function Field({
 }: {
   id: string;
   label: string;
-  name: keyof FormState;
+  name: keyof EmpresaFormValues;
   value: string;
-  onChange: (key: keyof FormState, value: string) => void;
+  onChange: (key: keyof EmpresaFormValues, value: string) => void;
   required?: boolean;
   placeholder?: string;
   mono?: boolean;
@@ -288,9 +182,9 @@ function SelectField({
 }: {
   id: string;
   label: string;
-  name: keyof FormState;
+  name: keyof EmpresaFormValues;
   value: string;
-  onChange: (key: keyof FormState, value: string) => void;
+  onChange: (key: keyof EmpresaFormValues, value: string) => void;
   options: readonly string[] | readonly { value: string; label: string }[];
   error?: string;
 }) {

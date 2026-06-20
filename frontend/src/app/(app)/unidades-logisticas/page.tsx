@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/fiscal-ui";
 import { UnidadesLogisticasTable } from "@/components/unidades-logisticas-table";
 import { isAdminRole } from "@/lib/auth/roles";
 import { getAuthMe } from "@/lib/auth/session";
-import { listProducts, listUnidadesLogisticas } from "@/lib/fiscal-api";
+import { listProducts, listLogisticUnits } from "@/lib/fiscal-api";
 
 // Define a tag <title> do HTML gerado pelo Next.js para SEO e aba do navegador
 export const metadata: Metadata = { title: "Unidades Logísticas" };
@@ -24,7 +24,7 @@ export default async function UnidadesLogisticasPage({ searchParams }: Props) {
   // Promise.all executa as três buscas ao mesmo tempo. 
   // Isso reduz o tempo de resposta pela métrica da requisição mais demorada, em vez da soma de todas.
   const [unidades, products, me] = await Promise.all([
-    listUnidadesLogisticas({
+    listLogisticUnits({
       q: q?.trim() || undefined,
       cnpj: cnpj?.trim() || undefined,
       ativa: true, // Traz apenas unidades em funcionamento

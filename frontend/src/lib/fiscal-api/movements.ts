@@ -18,7 +18,7 @@ export type TransferenciaFilialResult = {
   unidadeDestinoId: string;
 };
 
-export async function emitirTransferenciaFilial(body: {
+export async function emitBranchTransfer(body: {
   filialId: string;
   items: RemessaManualItemInput[];
 }): Promise<TransferenciaFilialResult> {
@@ -40,7 +40,7 @@ export async function realignRemessaFifo(productSku: string): Promise<{
   ) as Promise<{ atualizados: number; productId: string | null }>;
 }
 
-export async function listMovimentacoesProduto(opts?: {
+export async function listProductMovements(opts?: {
   productId?: string;
   limit?: number;
 }): Promise<MovimentacaoProdutoDto[]> {

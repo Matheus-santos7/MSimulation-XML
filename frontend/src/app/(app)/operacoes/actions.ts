@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { emitirRemessaManual, emitirTransferenciaFilial } from "@/lib/fiscal-api";
+import { emitBranchTransfer, emitManualShipment } from "@/lib/fiscal-api";
 
 export type RemessaManualState = {
   error?: string;
@@ -49,7 +49,7 @@ export async function emitirRemessaManualAction(
   }
 
   try {
-    const result = await emitirRemessaManual({
+    const result = await emitManualShipment({
       unidadeDestinoId,
       items,
     });
@@ -108,7 +108,7 @@ export async function emitirTransferenciaFilialAction(
   }
 
   try {
-    const result = await emitirTransferenciaFilial({ filialId, items });
+    const result = await emitBranchTransfer({ filialId, items });
     revalidatePath("/operacoes");
     revalidatePath("/nfe");
     revalidatePath("/cte");

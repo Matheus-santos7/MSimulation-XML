@@ -4,10 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   ApiValidationError,
-  createPedido,
-  deletePedido,
-  faturarPedido,
-  updatePedido,
+  createOrder,
+  deleteOrder,
+  invoiceOrder,
+  updateOrder,
 } from "@/lib/fiscal-api";
 import { parsePedidoForm, type PedidoFormState } from "@/lib/pedido-form";
 import { rethrowNavigationError } from "@/lib/auth/navigation";
@@ -29,9 +29,9 @@ export async function salvarPedidoRascunhoAction(
   try {
     const input = parsePedidoForm(formData);
     if (pedidoId) {
-      await updatePedido(pedidoId, input);
+      await updateOrder(pedidoId, input);
     } else {
-      await createPedido(input);
+      await createOrder(input);
     }
     revalidatePath("/pedidos");
     return { success: true };
@@ -50,13 +50,13 @@ export async function faturarPedidoAction(
     let id = pedidoId;
     if (!id) {
       const input = parsePedidoForm(formData);
-      const created = await createPedido(input);
+      const created = await createOrder(input);
       id = created.id;
     } else {
-      await updatePedido(id, parsePedidoForm(formData));
+      await updateOrder(id, parsePedidoForm(formData));
     }
 
-    const { nfe } = await faturarPedido(id);
+    const { nfe } = await invoiceOrder(id);
     revalidatePath("/pedidos");
     revalidatePath("/nfe");
     revalidatePath("/operacoes");
@@ -71,7 +71,7 @@ export async function faturarPedidoAction(
 
 export async function excluirPedidoAction(id: string): Promise<{ error?: string }> {
   try {
-    await deletePedido(id);
+    await deleteOrder(id);
     revalidatePath("/pedidos");
     revalidatePath("/nfe");
     return {};

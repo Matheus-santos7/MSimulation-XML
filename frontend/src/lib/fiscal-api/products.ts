@@ -27,27 +27,27 @@ export async function getProduct(id: string): Promise<ProductDto | null> {
   return res.json() as Promise<ProductDto>;
 }
 
-export async function checkoutPedido(input: PedidoCheckoutInput): Promise<NFeDto> {
+export async function checkoutOrder(input: PedidoCheckoutInput): Promise<NFeDto> {
   return mutateJson<NFeDto>(buildApiUrl("/api/pedidos/checkout"), "POST", input) as Promise<NFeDto>;
 }
 
-export async function listPedidos(): Promise<PedidoDto[]> {
+export async function listOrders(): Promise<PedidoDto[]> {
   return getJson<PedidoDto[]>(buildApiUrl("/api/pedidos"));
 }
 
-export async function createPedido(input: PedidoCheckoutInput): Promise<PedidoDto> {
+export async function createOrder(input: PedidoCheckoutInput): Promise<PedidoDto> {
   return mutateJson<PedidoDto>(buildApiUrl("/api/pedidos"), "POST", input) as Promise<PedidoDto>;
 }
 
-export async function updatePedido(id: string, input: PedidoCheckoutInput): Promise<PedidoDto> {
+export async function updateOrder(id: string, input: PedidoCheckoutInput): Promise<PedidoDto> {
   return mutateJson<PedidoDto>(buildApiUrl(`/api/pedidos/${id}`), "PATCH", input) as Promise<PedidoDto>;
 }
 
-export async function faturarPedido(id: string): Promise<PedidoFaturarResult> {
+export async function invoiceOrder(id: string): Promise<PedidoFaturarResult> {
   return mutateJson<PedidoFaturarResult>(buildApiUrl(`/api/pedidos/${id}/faturar`), "POST") as Promise<PedidoFaturarResult>;
 }
 
-export async function deletePedido(id: string): Promise<void> {
+export async function deleteOrder(id: string): Promise<void> {
   await mutateJson(buildApiUrl(`/api/pedidos/${id}`), "DELETE");
 }
 

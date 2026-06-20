@@ -24,7 +24,7 @@ export default async function IaPage() {
     <div className="p-6">
       <PageHeader
         title="IA Fiscal Insights"
-        subtitle="Validação MCP, rejeições recentes e padrões de erro (últimos 7 dias)"
+        subtitle="Validação MCP, rejeições recentes e padrões de erro"
         actions={
           <div className="flex items-center gap-4">
             {isAdmin ? (

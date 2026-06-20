@@ -426,6 +426,8 @@ model NFe {
   statusValidacao    NfeValidationStatus @default(PENDING) @map("status_validacao")
   mensagemValidacao  String?       @map("mensagem_validacao")
   errosValidacao     Json?         @map("erros_validacao")
+  /// Payload completo retornado pelo MCP fiscal (valida, resumo, erros, achados).
+  auditoriaMcp       Json?         @map("auditoria_mcp")
   nfeReferenciaId    String?       @map("nfe_referencia_id")
   nfeReferencia      NFe?          @relation("NfeReferencia", fields: [nfeReferenciaId], references: [id], onDelete: SetNull)
   nfeReferenciadas   NFe[]         @relation("NfeReferencia")

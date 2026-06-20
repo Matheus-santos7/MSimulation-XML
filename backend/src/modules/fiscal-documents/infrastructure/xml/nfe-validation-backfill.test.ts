@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { NfeValidationStatus } from "../../../../generated/prisma/client.js";
-import { FakeFiscalValidatorAdapter } from "../external/fake-fiscal-validator.adapter.js";
+import {
+  buildFakeMcpAudit,
+  FakeFiscalValidatorAdapter,
+} from "../external/fake-fiscal-validator.adapter.js";
 import { resolveNfeValidationUpdate } from "./nfe-xml-validation.js";
 
 describe("backfill validation flow", () => {
@@ -10,6 +13,7 @@ describe("backfill validation flow", () => {
       isValid: true,
       message: "XML aprovado",
       errors: [],
+      audit: buildFakeMcpAudit({ valida: true }),
     });
 
     const update = await resolveNfeValidationUpdate(validator, "<nfeProc/>", { enabled: true });
@@ -22,6 +26,7 @@ describe("backfill validation flow", () => {
       isValid: true,
       message: "unused",
       errors: [],
+      audit: buildFakeMcpAudit({ valida: true }),
     });
 
     const update = await resolveNfeValidationUpdate(validator, "<nfeProc/>", { enabled: false });

@@ -36,7 +36,7 @@ export function FiscalValidationInsights({ data }: Props) {
         </h2>
         {data.recentRejections.length === 0 ? (
           <p className="text-muted-foreground text-sm">
-            Nenhuma rejeição nos últimos {data.periodDays} dias.
+            Nenhuma rejeição.
           </p>
         ) : (
           data.recentRejections.map((row) => (

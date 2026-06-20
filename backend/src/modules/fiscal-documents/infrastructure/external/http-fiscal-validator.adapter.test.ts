@@ -14,6 +14,7 @@ describe("HttpFiscalValidatorAdapter", () => {
     assert.equal(result.isValid, true);
     assert.match(result.message, /aprovada/i);
     assert.deepEqual(result.errors, []);
+    assert.equal(result.audit.valida, true);
     assert.equal(fetchMock.mock.calls.length, 1);
   });
 
@@ -35,6 +36,7 @@ describe("HttpFiscalValidatorAdapter", () => {
     assert.equal(result.isValid, false);
     assert.match(result.message, /rejeitada/i);
     assert.match(result.errors[0] ?? "", /CFOP 6949/i);
+    assert.equal(result.audit.achados.length, 0);
   });
 
   it("throws when HTTP status is not ok", async () => {

@@ -11,12 +11,18 @@ export async function resolveNfeValidationUpdate(
   validator: FiscalValidatorPort,
   xml: string,
   config: ValidationConfig,
-): Promise<Pick<Prisma.NFeUpdateInput, "statusValidacao" | "mensagemValidacao" | "errosValidacao">> {
+): Promise<
+  Pick<
+    Prisma.NFeUpdateInput,
+    "statusValidacao" | "mensagemValidacao" | "errosValidacao" | "auditoriaMcp"
+  >
+> {
   if (!config.enabled) {
     return {
       statusValidacao: NfeValidationStatus.PENDING,
       mensagemValidacao: "Validação desabilitada",
       errosValidacao: Prisma.DbNull,
+      auditoriaMcp: Prisma.DbNull,
     };
   }
 
@@ -26,6 +32,7 @@ export async function resolveNfeValidationUpdate(
       statusValidacao: result.isValid ? NfeValidationStatus.APPROVED : NfeValidationStatus.REJECTED,
       mensagemValidacao: result.message,
       errosValidacao: result.errors.length > 0 ? result.errors : Prisma.DbNull,
+      auditoriaMcp: result.audit,
     };
   } catch (err) {
     const detail = err instanceof Error ? err.message : "Erro desconhecido";
@@ -33,6 +40,7 @@ export async function resolveNfeValidationUpdate(
       statusValidacao: NfeValidationStatus.PENDING,
       mensagemValidacao: `Validador indisponível: ${detail}`,
       errosValidacao: Prisma.DbNull,
+      auditoriaMcp: Prisma.DbNull,
     };
   }
 }

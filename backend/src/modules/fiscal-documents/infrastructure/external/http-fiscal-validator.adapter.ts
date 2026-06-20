@@ -1,5 +1,7 @@
 import type {
   FiscalValidatorPort,
+  NfeMcpAudit,
+  NfeValidationAchado,
   NfeValidationResult,
 } from "../../domain/ports/fiscal-validator.port.js";
 
@@ -7,8 +9,28 @@ type McpValidateNfeResponse = {
   valida?: boolean;
   erros?: string[];
   resumo?: string;
-  achados?: Array<{ severidade: string; codigo: string; mensagem: string }>;
+  achados?: NfeValidationAchado[];
 };
+
+function mapMcpAudit(data: McpValidateNfeResponse): NfeMcpAudit {
+  const isValid = Boolean(data.valida);
+  const erros = Array.isArray(data.erros) ? data.erros.map(String) : [];
+  const resumo = typeof data.resumo === "string" ? data.resumo.trim() : "";
+  const achados = Array.isArray(data.achados)
+    ? data.achados.map((item) => ({
+        severidade: String(item.severidade ?? ""),
+        codigo: String(item.codigo ?? ""),
+        mensagem: String(item.mensagem ?? ""),
+      }))
+    : [];
+
+  return {
+    valida: isValid,
+    resumo,
+    erros,
+    achados,
+  };
+}
 
 const REJECTED_MESSAGE = "NF-e rejeitada na auditoria fiscal (estrutura, chave ou regras CAT 31).";
 
@@ -35,16 +57,15 @@ export class HttpFiscalValidatorAdapter implements FiscalValidatorPort {
     }
 
     const data = (await response.json()) as McpValidateNfeResponse;
-    const isValid = Boolean(data.valida);
-    const errors = Array.isArray(data.erros) ? data.erros.map(String) : [];
-    const resumo = typeof data.resumo === "string" ? data.resumo.trim() : "";
+    const audit = mapMcpAudit(data);
 
     return {
-      isValid,
-      message: isValid
-        ? resumo || "NF-e aprovada na auditoria fiscal"
-        : resumo || REJECTED_MESSAGE,
-      errors,
+      isValid: audit.valida,
+      message: audit.valida
+        ? audit.resumo || "NF-e aprovada na auditoria fiscal"
+        : audit.resumo || REJECTED_MESSAGE,
+      errors: audit.erros,
+      audit,
     };
   }
 }

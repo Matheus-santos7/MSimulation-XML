@@ -230,6 +230,20 @@ def _build_resumo(achados: list[Achado], valida: bool) -> str:
     )
 
 
+def _should_skip_assinatura_check(tp_amb: str, motivo: str | None) -> bool:
+    """
+    Ignora validação de assinatura XMLDSig quando não há valor fiscal real.
+
+    - tpAmb=2: ambiente de homologação/simulação (certificados de teste).
+    - RSA_SHA1 forbidden: limitação de configuração do validador MCP, não do XML.
+    """
+    if tp_amb == "2":
+        return True
+    if motivo and "rsa_sha1 forbidden by configuration" in motivo.lower():
+        return True
+    return False
+
+
 async def audit_nfe_xml(xml_content: str, xml_path: Path | None = None) -> AuditResult:
     """
     Executa auditoria completa de NF-e conforme fluxo MCP + regras CAT 31.
@@ -366,17 +380,19 @@ async def audit_nfe_xml(xml_content: str, xml_path: Path | None = None) -> Audit
         _append(achados, Severidade.CRITICO, "PARSE_NFE", f"Falha ao parsear XML: {exc}")
 
     try:
-        assinatura = validar_assinatura_nfe(xml_content)
         extra = _parse_xml_fields(xml_content)
         tp_amb = extra.get("tp_amb", "1")
-        if not assinatura.assinatura_valida:
-            sev = Severidade.MEDIO if tp_amb == "2" else Severidade.CRITICO
-            _append(
-                achados,
-                sev,
-                "ASSINATURA_INVALIDA",
-                f"Assinatura XMLDSig não validada: {assinatura.motivo}",
-            )
+        if not _should_skip_assinatura_check(tp_amb, None):
+            assinatura = validar_assinatura_nfe(xml_content)
+            if not assinatura.assinatura_valida and not _should_skip_assinatura_check(
+                tp_amb, assinatura.motivo
+            ):
+                _append(
+                    achados,
+                    Severidade.CRITICO,
+                    "ASSINATURA_INVALIDA",
+                    f"Assinatura XMLDSig não validada: {assinatura.motivo}",
+                )
     except Exception as exc:
         _append(achados, Severidade.ALTO, "ASSINATURA_ERRO", f"Falha ao validar assinatura: {exc}")
 

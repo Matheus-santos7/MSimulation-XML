@@ -44,6 +44,7 @@ type NfeRow = {
   statusValidacao?: NfeValidationStatus;
   mensagemValidacao?: string | null;
   errosValidacao?: unknown;
+  auditoriaMcp?: unknown;
 };
 
 type NfeItemRow = {
@@ -144,6 +145,31 @@ export function mapNfe(
     validationErrors: Array.isArray(row.errosValidacao)
       ? (row.errosValidacao as string[])
       : undefined,
+    validationAudit: parseNfeMcpAudit(row.auditoriaMcp),
+  };
+}
+
+function parseNfeMcpAudit(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+  const achados = Array.isArray(record.achados)
+    ? record.achados
+        .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
+        .map((item) => ({
+          severidade: String(item.severidade ?? ""),
+          codigo: String(item.codigo ?? ""),
+          mensagem: String(item.mensagem ?? ""),
+        }))
+    : [];
+
+  return {
+    valida: Boolean(record.valida),
+    resumo: typeof record.resumo === "string" ? record.resumo : "",
+    erros: Array.isArray(record.erros) ? record.erros.map(String) : [],
+    achados,
   };
 }
 

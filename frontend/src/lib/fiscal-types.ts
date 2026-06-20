@@ -251,9 +251,23 @@ export type NFeDto = {
   validationStatus: "PENDING" | "APPROVED" | "REJECTED";
   validationMessage?: string;
   validationErrors?: string[];
+  validationAudit?: NfeMcpAuditDto;
   /** Notas que referenciam esta (filhas na cadeia) — não usar no XML refNFe. */
   referenciadas?: { chave: string; tipo: string; numero: number; serie: number }[];
   fiscalPayload?: Record<string, unknown>;
+};
+
+export type NfeMcpAuditAchadoDto = {
+  severidade: string;
+  codigo: string;
+  mensagem: string;
+};
+
+export type NfeMcpAuditDto = {
+  valida: boolean;
+  resumo: string;
+  erros: string[];
+  achados: NfeMcpAuditAchadoDto[];
 };
 
 export type EmitenteEnderecoDto = {

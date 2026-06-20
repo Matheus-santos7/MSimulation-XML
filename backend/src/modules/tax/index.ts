@@ -10,8 +10,11 @@ export type { TaxRule } from "./domain/entities/tax-rule.entity.js";
 export type { ResolvedTaxRule } from "./domain/entities/resolved-tax-rule.entity.js";
 export type { TaxRuleCatalogEntry } from "./domain/entities/tax-rule-catalog-entry.entity.js";
 export type { TaxRuleImportRow } from "./domain/entities/tax-rule-import-row.entity.js";
-export type { OrderLine, FiscalContext, ProductFiscalLine, ResolveTaxRuleParams };
-export type { InboundInvoiceResult };
+export type { OrderLine } from "./domain/entities/order-line.entity.js";
+export type { FiscalContext } from "./domain/entities/fiscal-context.entity.js";
+export type { ProductFiscalLine } from "./domain/entities/product-fiscal-line.entity.js";
+export type { ResolveTaxRuleParams } from "./domain/ports/tax-rule.repository.js";
+export type { InboundInvoiceResult } from "./domain/entities/inbound-invoice-result.entity.js";
 
 export {
   buildFiscalItem,

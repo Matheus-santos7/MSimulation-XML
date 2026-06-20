@@ -103,7 +103,11 @@ Ver spec: [`2026-06-20-refactor-onda4-remessa-services-design.md`](./2026-06-20-
 | `62f0d72` | branch-transfer + EN exports |
 | `d95b396` | symbolic-shipment + shipment-cte |
 
-Roadmap restante: **Onda 5** (xml-serializer) → **Onda 6** (frontend EN + forms).
+## Onda 5 — xml-serializer unificado (CONCLUÍDA)
+
+Fonte única em `packages/fiscal-core/src/xml-serializer.ts`; `nfe-xml` re-exporta via `@msimulation-xml/fiscal-core`. Testes migrados para `fiscal-core` (68/68). `pnpm build` + `pnpm test:backend` 108/108 verde.
+
+Roadmap restante: **Onda 6** (frontend EN + forms).
 
 ## Verificação
 

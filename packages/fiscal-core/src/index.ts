@@ -146,3 +146,14 @@ export {
   type TenantRemetenteInput,
 } from "./cte-template.js";
 export { buildCTeXML, type CTeXmlInput } from "./cte-xml.js";
+export {
+  XmlSerializer,
+  escapeXml,
+  serializeXmlDocument,
+  serializeXmlObject,
+  type XmlDocument,
+  type XmlNodeValue,
+  type XmlObject,
+  type XmlPrimitive,
+  type XmlSerializerOptions,
+} from "./xml-serializer.js";

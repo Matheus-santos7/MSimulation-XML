@@ -1,7 +1,14 @@
 /**
- * Serializador objeto → XML para `fiscal-core` (CT-e e artefatos compartilhados).
+ * Serializador objeto → XML compartilhado (`fiscal-core` + `nfe-xml`).
  *
  * Única etapa em que a árvore de objetos vira string XML (regra 04-refactory-xml).
+ *
+ * ## Convenções
+ *
+ * - **Atributos:** chaves com prefixo `@` (ex.: `{ "@Id": "NFe...", "@versao": "4.00" }`).
+ * - **Arrays:** repetem a mesma tag (ex.: `{ det: [item1, item2] }` → dois `<det>`).
+ * - **Texto:** chave `#text` para conteúdo textual do elemento (folha ou misto com filhos).
+ * - **Primitivos:** `string | number | boolean` em folhas viram texto escapado do elemento.
  *
  * @module xml-serializer
  */
@@ -25,7 +32,9 @@ export type XmlDocument = {
 
 /** Opções do serializador. */
 export type XmlSerializerOptions = {
+  /** Indentação por nível (padrão: dois espaços). */
   indent?: string;
+  /** Incluir quebras de linha entre elementos (padrão: `true`). */
   pretty?: boolean;
 };
 
@@ -34,6 +43,7 @@ const TEXT_NODE_KEY = "#text";
 
 /**
  * Escapa caracteres reservados em conteúdo textual e valores de atributo.
+ * Cobre `&`, `<`, `>`, `"` e `'`.
  */
 export function escapeXml(value: string): string {
   return value
@@ -84,7 +94,9 @@ function splitNode(node: XmlObject): {
   return { attrs: attrString, text, children };
 }
 
-/** Converte árvore de objetos em string XML formatada. */
+/**
+ * Converte árvore de objetos em string XML formatada.
+ */
 export class XmlSerializer {
   private readonly indentUnit: string;
   private readonly pretty: boolean;
@@ -94,6 +106,7 @@ export class XmlSerializer {
     this.pretty = options.pretty ?? true;
   }
 
+  /** Serializa um documento com elemento raiz único. */
   serializeDocument(doc: XmlDocument): string {
     const [rootTag, rootValue] = Object.entries(doc.root)[0] ?? [];
     if (!rootTag || rootValue == null) {
@@ -109,6 +122,7 @@ export class XmlSerializer {
     return this.pretty ? `${declaration}\n${body}` : `${declaration}${body}`;
   }
 
+  /** Serializa um objeto raiz `{ tagName: value }` sem declaração XML. */
   serializeRoot(root: XmlObject): string {
     const [rootTag, rootValue] = Object.entries(root)[0] ?? [];
     if (!rootTag || rootValue == null) {
@@ -162,9 +176,15 @@ export class XmlSerializer {
   }
 }
 
+/** Instância padrão com indentação de 2 espaços. */
 const defaultSerializer = new XmlSerializer();
 
-/** Serializa documento XML com declaração. */
+/** Atalho funcional para `XmlSerializer.serializeDocument`. */
 export function serializeXmlDocument(doc: XmlDocument): string {
   return defaultSerializer.serializeDocument(doc);
+}
+
+/** Serializa objeto raiz sem declaração XML. */
+export function serializeXmlObject(root: XmlObject): string {
+  return defaultSerializer.serializeRoot(root);
 }

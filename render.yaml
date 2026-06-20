@@ -1,19 +1,31 @@
-# Blueprint Render — API Fastify + PostgreSQL
+# Blueprint Render — API Fastify + PostgreSQL + Validador MCP
 # Docs: https://render.com/docs/blueprint-spec
+#
+# IMPORTANTE: alterar este arquivo NÃO cria serviços automaticamente se o projeto
+# já existia no Render. Para novos recursos:
+#   1) Dashboard → Blueprints → Sync (se houver blueprint), OU
+#   2) Criar manualmente o web service do validador (ver README / instruções abaixo).
 #
 # Deploy automático: push na branch `main` dispara build + deploy (autoDeployTrigger).
 # Frontend em produção: https://msimulation-xml.vercel.app
 
 services:
+  # Validador MCP — criar manualmente se não existir após sync do blueprint.
   - type: web
     name: msimulation-xml-fiscal-validator
-    runtime: image
-    image:
-      url: ghcr.io/dehor-labs/mcp-fiscal-brasil:latest
-    dockerCommand: mcp-fiscal-api
+    runtime: docker
+    repo: https://github.com/Matheus-santos7/MSimulation-XML
+    branch: main
+    autoDeployTrigger: commit
+    dockerfilePath: ./Dockerfile.fiscal-validator
+    dockerContext: .
     plan: starter
     healthCheckPath: /health
-    autoDeployTrigger: commit
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: MCP_FISCAL_LOG_LEVEL
+        value: INFO
 
   - type: web
     name: msimulation-xml-api

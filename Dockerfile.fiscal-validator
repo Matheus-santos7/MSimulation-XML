@@ -1,0 +1,9 @@
+# Microsserviço MCP Fiscal Brasil (validação de NF-e).
+# Deploy no Render: Web Service → Docker → Dockerfile.fiscal-validator
+FROM ghcr.io/dehor-labs/mcp-fiscal-brasil:latest
+
+ENV HOST=0.0.0.0
+ENV MCP_FISCAL_LOG_LEVEL=INFO
+
+# Render injeta PORT em runtime; mcp-fiscal-api respeita essa variável.
+CMD ["mcp-fiscal-api"]

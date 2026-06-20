@@ -24,7 +24,7 @@ import {
   orderLineFromProduct,
 } from "../../../tax/index.js";
 import { resolveTaxRule } from "../../../tax/index.js";
-import { prepararRemessaSimbolicaFiscal } from "./remessa-simbolica-fiscal.js";
+import { prepareSymbolicShipmentFiscal } from "./symbolic-shipment/index.js";
 import { findActiveLogisticsUnitRecord } from "../../../logistics/index.js";
 import type { CamposDestinoNfe } from "../../domain/types/destino-nfe.js";
 import type {
@@ -208,7 +208,7 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
     }
 
     const destino = unidadeParaDestinoFiscal(unidade);
-    const fiscal = await prepararRemessaSimbolicaFiscal(tx, {
+    const fiscal = await prepareSymbolicShipmentFiscal(tx, {
       tenantId: ctx.tenant.id,
       emitUf: ctx.emitUf,
       destUf: destino.uf,

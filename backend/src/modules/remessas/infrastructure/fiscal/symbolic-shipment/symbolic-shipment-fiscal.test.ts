@@ -4,8 +4,8 @@ import {
   REMESSA_CFOP_INTERSTATE,
   REMESSA_CFOP_INTRASTATE,
   resolveRemessaCfop,
-} from "./helpers/remessa-dest.js";
-import { prepararRemessaSimbolicaFiscal } from "./remessa-simbolica-fiscal.js";
+} from "../helpers/remessa-dest.js";
+import { prepareSymbolicShipmentFiscal } from "./symbolic-shipment-fiscal.js";
 
 const tenantId = "tenant-test";
 
@@ -50,9 +50,9 @@ function createPrismaMock() {
   };
 }
 
-describe("prepararRemessaSimbolicaFiscal — CFOP", () => {
+describe("prepareSymbolicShipmentFiscal — CFOP", () => {
   it("usa 5949 quando emitente e destinatário estão na mesma UF", async () => {
-    const result = await prepararRemessaSimbolicaFiscal(createPrismaMock(), {
+    const result = await prepareSymbolicShipmentFiscal(createPrismaMock(), {
       tenantId,
       emitUf: "SP",
       destUf: "SP",
@@ -66,7 +66,7 @@ describe("prepararRemessaSimbolicaFiscal — CFOP", () => {
   });
 
   it("usa 6949 quando emitente e destinatário estão em UFs diferentes", async () => {
-    const result = await prepararRemessaSimbolicaFiscal(createPrismaMock(), {
+    const result = await prepareSymbolicShipmentFiscal(createPrismaMock(), {
       tenantId,
       emitUf: "SP",
       destUf: "SC",
@@ -82,7 +82,7 @@ describe("prepararRemessaSimbolicaFiscal — CFOP", () => {
 
 describe("avanço CD interestadual (SP origem → SC destino)", () => {
   it("remessa simbólica (saída CD origem SP) usa CFOP intrastadual 5949", async () => {
-    const simbolica = await prepararRemessaSimbolicaFiscal(createPrismaMock(), {
+    const simbolica = await prepareSymbolicShipmentFiscal(createPrismaMock(), {
       tenantId,
       emitUf: "SP",
       destUf: "SP",

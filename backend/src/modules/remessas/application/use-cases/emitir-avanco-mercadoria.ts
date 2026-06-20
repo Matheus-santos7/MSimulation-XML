@@ -3,7 +3,7 @@ import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { gerarPedidoMl } from "../../../fiscal-documents/domain/services/nfe-chave.js";
 import { runFiscalTransaction } from "../../../../lib/db/prisma-tx.js";
-import { emitirCteRemessa } from "../../infrastructure/fiscal/cte-remessa-service.js";
+import { emitShipmentCte } from "../../infrastructure/fiscal/shipment-cte.service.js";
 import {
   debitRemessaBalanceByCd,
   resolveAdvanceFiscalOrigin,
@@ -259,7 +259,7 @@ export class EmitirAvancoMercadoriaUseCase {
       const remessaSimbNfe = await tx.nFe.findUniqueOrThrow({
         where: { id: remessaSimbPersistida.id },
       });
-      const cte = await emitirCteRemessa(tx, tenant, remessaSimbNfe);
+      const cte = await emitShipmentCte(tx, tenant, remessaSimbNfe);
 
       return {
         remessaPrincipal,

@@ -30,9 +30,9 @@ import { buildFiscalItem, resolveTaxRule, resolveIcmsFallbackRate, type Customer
 import { persistNfeXmlFromEmission } from "../xml/nfe-xml-service.js";
 import { reverseRemessaFifoConsumptions } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
 import {
-  prepararRemessaSimbolicaFiscal,
-  RemessaSimbolicaFiscalError,
-} from "../../../remessas/infrastructure/fiscal/remessa-simbolica-fiscal.js";
+  prepareSymbolicShipmentFiscal,
+  SymbolicShipmentFiscalError,
+} from "../../../remessas/infrastructure/fiscal/symbolic-shipment/index.js";
 import type { ProcessReturnResult } from "../../domain/entities/lifecycle-result.entity.js";
 import { DocumentReturnError } from "../../domain/errors/document-return.error.js";
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
@@ -225,7 +225,7 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
 
         let symbolicFiscal;
         try {
-          symbolicFiscal = await prepararRemessaSimbolicaFiscal(tx, {
+          symbolicFiscal = await prepareSymbolicShipmentFiscal(tx, {
             tenantId: tenant.id,
             emitUf: tenant.uf,
             destUf: mainShipment.destUf,
@@ -242,7 +242,7 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
             idCadIntTran: idCadIntTranFromRemessaFiscalPayload(mainShipment.fiscalPayload),
           });
         } catch (error) {
-          if (error instanceof RemessaSimbolicaFiscalError) {
+          if (error instanceof SymbolicShipmentFiscalError) {
             throw new DocumentReturnError(error.message, 422);
           }
           throw error;

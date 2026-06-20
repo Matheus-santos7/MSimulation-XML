@@ -35,7 +35,7 @@ import {
   enrichFiscalPayloadWithXTexto,
   resolveNumeroInicialNfe,
 } from "@msimulation-xml/fiscal-core";
-import { emitirCteRemessa } from "../cte-remessa-service.js";
+import { emitShipmentCte } from "../shipment-cte.service.js";
 import { calculateInvoiceTaxes, inferIcmsRateForShipment } from "../../../../tax/index.js";
 import { createLogisticsModule } from "../../../../logistics/index.js";
 import { persistNfeXmlAutorizado } from "../../../../fiscal-documents/infrastructure/xml/nfe-xml-service.js";
@@ -278,7 +278,7 @@ export async function emitShipmentNfeWithItems(
     });
 
     // Phase 9: 1:1 linked transport CT-e.
-    const cteRow = await emitirCteRemessa(tx, tenant, nfeRow);
+    const cteRow = await emitShipmentCte(tx, tenant, nfeRow);
     return { nfeRow, cteRow, itemRows };
   });
 

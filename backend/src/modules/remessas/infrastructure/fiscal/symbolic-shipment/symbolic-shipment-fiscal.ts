@@ -1,85 +1,67 @@
 /**
  * Cálculo fiscal unificado para NF-e de remessa simbólica (CFOP 5949/6949 conforme UF).
  */
-import { NFeTipo } from "../../../../generated/prisma/client.js";
-import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
-import { resolveRemessaCfop } from "./helpers/remessa-dest.js";
-import { REMESSA_SIMBOLICA_NAT_OP } from "./helpers/remessa-simbolica-dest.js";
-import { enrichTaxSnapshot, loadEmitterSettings } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
+import { NFeTipo } from "../../../../../generated/prisma/client.js";
+import type { PrismaTx } from "../../../../../lib/db/prisma-tx.js";
+import { resolveRemessaCfop } from "../helpers/remessa-dest.js";
+import { REMESSA_SIMBOLICA_NAT_OP } from "../helpers/remessa-simbolica-dest.js";
+import { enrichTaxSnapshot, loadEmitterSettings } from "../../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
 import {
   enrichFiscalPayloadMlFulfillment,
   enrichFiscalPayloadWithXTexto,
   productUnitPrice,
 } from "@msimulation-xml/fiscal-core";
-import { taxSnapshotFromRule } from "../../../tax/domain/services/tax-snapshot.js";
+import { taxSnapshotFromRule } from "../../../../tax/domain/services/tax-snapshot.js";
 import {
   calculateInboundInvoice,
   inferIcmsRateForShipment,
   orderLineFromProduct,
-  type ProductFiscalLine,
-  type InboundInvoiceResult,
-} from "../../../tax/index.js";
-import { resolveTaxRule } from "../../../tax/index.js";
+} from "../../../../tax/index.js";
+import { resolveTaxRule } from "../../../../tax/index.js";
+import type {
+  SymbolicShipmentProduct,
+  SymbolicShipmentFiscalPrepared,
+  SymbolicShipmentAfterReturnInput,
+} from "./symbolic-shipment.types.js";
+import { SymbolicShipmentFiscalError } from "./symbolic-shipment.errors.js";
 
-type ProductPrices = {
-  preco: { toString(): string } | number;
-  precoCusto: { toString(): string } | number;
-};
-
-export type ProdutoRemessaSimbolica = ProductFiscalLine &
-  ProductPrices & {
-    taxRuleBaseId: string | null;
-  };
-
-export type RemessaSimbolicaFiscalPreparada = {
-  calc: InboundInvoiceResult;
-  cfop: string;
-  natOp: string;
-  fiscalPayload: Record<string, unknown>;
-};
-
-export class RemessaSimbolicaFiscalError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "RemessaSimbolicaFiscalError";
-  }
-}
-
-export type PrepararRemessaSimbolicaPosDevolucaoInput = {
-  numero: number;
-  serie: number;
-  emitidaEm: Date | string;
-};
-
-export async function prepararRemessaSimbolicaFiscal(
+/**
+ * Prepara os dados fiscais para emissão de uma NF-e de remessa simbólica.
+ * 
+ * @param prisma - Transaction context
+ * @param input - Symbolic shipment input parameters
+ * @returns Prepared fiscal data including tax calculation and fiscal payload
+ * @throws {SymbolicShipmentFiscalError} When product cost is invalid or tax rule is missing
+ */
+export async function prepareSymbolicShipmentFiscal(
   prisma: PrismaTx,
   input: {
     tenantId: string;
     emitUf: string;
     destUf: string;
-    product: ProdutoRemessaSimbolica;
+    product: SymbolicShipmentProduct;
     quantidade: number;
     pedidoMl: string;
     /** Reposição no CD após devolução de venda — ajusta infCpl e xTexto. */
-    posDevolucao?: PrepararRemessaSimbolicaPosDevolucaoInput;
+    posDevolucao?: SymbolicShipmentAfterReturnInput;
     /** Tipo persistido na NF-e; avanço entre CDs usa `REMESSA_AVANCO`. */
     nfeTipo?: typeof NFeTipo.REMESSA_SIMBOLICA | typeof NFeTipo.REMESSA_AVANCO;
     destIe?: string | null;
     remessaSerie?: number;
     idCadIntTran?: string | null;
   },
-): Promise<RemessaSimbolicaFiscalPreparada> {
+): Promise<SymbolicShipmentFiscalPrepared> {
   const nfeTipo = input.nfeTipo ?? NFeTipo.REMESSA_SIMBOLICA;
   const unitCusto = productUnitPrice(input.product, nfeTipo);
   if (unitCusto <= 0) {
-    throw new RemessaSimbolicaFiscalError(
+    throw new SymbolicShipmentFiscalError(
       "Preço de custo não informado ou zero. Informe o custo no cadastro do produto.",
     );
   }
 
   const ruleBaseId = input.product.taxRuleBaseId?.trim();
   if (!ruleBaseId) {
-    throw new RemessaSimbolicaFiscalError(
+    throw new SymbolicShipmentFiscalError(
       "Produto sem regra fiscal associada. Edite o cadastro e selecione a regra da planilha.",
     );
   }
@@ -92,7 +74,7 @@ export async function prepararRemessaSimbolicaFiscal(
     ruleBaseId,
   });
   if (!taxRule) {
-    throw new RemessaSimbolicaFiscalError(
+    throw new SymbolicShipmentFiscalError(
       `Regra "${ruleBaseId}" sem linha inbound (envio de estoque) para ${input.emitUf} → ${input.destUf}. Importe ou revise a planilha.`,
     );
   }

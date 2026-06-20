@@ -13,7 +13,7 @@
  */
 import type { FastifyPluginAsync } from "fastify";
 import { tenantIdFromRequest } from "../../../../lib/auth/request-context.js";
-import { RemessaSimbolicaFiscalError } from "../../../remessas/infrastructure/fiscal/remessa-simbolica-fiscal.js";
+import { SymbolicShipmentFiscalError } from "../../../remessas/infrastructure/fiscal/symbolic-shipment/index.js";
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import {
   RemessaDomainError,
@@ -49,7 +49,7 @@ function mapRemessaModuleError(e: unknown): { status: number; message: string } 
   ) {
     return { status: 400, message: e.message };
   }
-  if (e instanceof ShipmentError || e instanceof RemessaSimbolicaFiscalError) {
+  if (e instanceof ShipmentError || e instanceof SymbolicShipmentFiscalError) {
     return { status: 400, message: e.message };
   }
   if (e instanceof BranchTransferError || e instanceof EmitenteFiscalConfigError) {

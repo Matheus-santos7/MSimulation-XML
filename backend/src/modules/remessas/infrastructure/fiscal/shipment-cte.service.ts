@@ -14,7 +14,7 @@ import { buildCteXmlAutorizado } from "../../../fiscal-documents/infrastructure/
 /**
  * Cria CT-e vinculado à NF-e de remessa (física ou simbólica) recém-emitida.
  */
-export async function emitirCteRemessa(prisma: PrismaTx, tenant: Tenant, nfeRemessa: NFe) {
+export async function emitShipmentCte(prisma: PrismaTx, tenant: Tenant, nfeRemessa: NFe) {
   const serie = tenant.serieCte;
   const numero = await proximoNumeroCte(prisma, tenant.id, serie);
   const dados = await montarDadosCteFromNfe(prisma, tenant, nfeRemessa, "remessa", { serie, numero });

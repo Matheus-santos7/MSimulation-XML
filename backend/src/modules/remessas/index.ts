@@ -29,10 +29,10 @@ export {
   type EmitShipmentOptions,
 } from "./infrastructure/fiscal/physical-shipment/index.js";
 export {
-  prepararRemessaSimbolicaFiscal,
-  RemessaSimbolicaFiscalError,
-  type RemessaSimbolicaFiscalPreparada,
-} from "./infrastructure/fiscal/remessa-simbolica-fiscal.js";
+  prepareSymbolicShipmentFiscal,
+  SymbolicShipmentFiscalError,
+  type SymbolicShipmentFiscalPrepared,
+} from "./infrastructure/fiscal/symbolic-shipment/index.js";
 export {
   consumeRemessaFifoBalance,
   consumeRemessaFifoBalanceForSale,
@@ -53,7 +53,7 @@ export {
   SaldoRemessaInsuficienteError,
   type RemessaCdBalanceRow,
 } from "./infrastructure/fifo/remessa-fifo.js";
-export { emitirCteRemessa } from "./infrastructure/fiscal/cte-remessa-service.js";
+export { emitShipmentCte } from "./infrastructure/fiscal/shipment-cte.service.js";
 
 export {
   emitBranchTransfer,

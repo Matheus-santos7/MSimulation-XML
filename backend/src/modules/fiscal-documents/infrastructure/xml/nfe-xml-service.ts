@@ -151,6 +151,48 @@ export async function persistNfeXmlFromEmission(
   });
 }
 
+export type NfeRowForXmlResolution = Parameters<typeof mapNfe>[0] & {
+  xmlAutorizado: string | null;
+  nfeReferencia: { chave: string } | null;
+  tenant: Tenant;
+  product: Product | null;
+  itens: Array<NonNullable<Parameters<typeof mapNfe>[2]>[number] & { product: Product }>;
+};
+
+/**
+ * Resolves NF-e XML from persisted storage or regenerates it when missing or defective.
+ */
+export async function resolveNfeXmlStringFromLoadedRow(
+  db: DbClient,
+  tenantId: string,
+  row: NfeRowForXmlResolution,
+): Promise<string | null> {
+  const stored = row.xmlAutorizado?.trim();
+  if (stored && !hasKnownNfeXmlDefect(stored)) {
+    return stored;
+  }
+
+  if (!isNfeXmlPersistSupported(row.tipo)) {
+    return null;
+  }
+
+  const settings = await loadEmitterSettings(db, tenantId);
+  const dto = mapNfe(row, row.nfeReferencia?.chave, row.itens);
+  const products = row.itens.length
+    ? row.itens.map((i) => mapProduct(i.product))
+    : row.product
+      ? [mapProduct(row.product)]
+      : undefined;
+
+  return buildNfeXmlAutorizado(
+    dto,
+    row.tenant,
+    row.product ? mapProduct(row.product) : products?.[0],
+    settings,
+    products,
+  );
+}
+
 export async function resolveNfeXml(
   db: DbClient,
   tenantId: string,
@@ -168,32 +210,12 @@ export async function resolveNfeXml(
   if (!row) return null;
 
   const filename = fiscalXmlDownloadFilename("NFe", chave);
-
   const stored = row.xmlAutorizado?.trim();
-  if (stored && !hasKnownNfeXmlDefect(stored)) {
-    return { xml: stored, filename, source: "stored" };
-  }
+  const source = stored && !hasKnownNfeXmlDefect(stored) ? "stored" : "regenerated";
+  const xml = await resolveNfeXmlStringFromLoadedRow(db, tenantId, row);
+  if (!xml) return null;
 
-  if (!isNfeXmlPersistSupported(row.tipo)) {
-    return null;
-  }
-
-  const settings = await loadEmitterSettings(db, tenantId);
-  const dto = mapNfe(row, row.nfeReferencia?.chave, row.itens);
-  const products = row.itens.length
-    ? row.itens.map((i) => mapProduct(i.product))
-    : row.product
-      ? [mapProduct(row.product)]
-      : undefined;
-  const xml = buildNfeXmlAutorizado(
-    dto,
-    row.tenant,
-    row.product ? mapProduct(row.product) : products?.[0],
-    settings,
-    products,
-  );
-
-  return { xml, filename, source: "regenerated" };
+  return { xml, filename, source };
 }
 
 export async function resolveNfeCancelamentoEventoXml(

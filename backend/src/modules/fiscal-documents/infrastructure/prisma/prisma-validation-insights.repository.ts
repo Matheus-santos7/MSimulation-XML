@@ -47,17 +47,27 @@ export async function countValidationStatuses(
   db: DbClient,
   tenantId: string,
   days = 7,
-): Promise<{ approved: number; rejected: number; pending: number }> {
+): Promise<{ approved: number; rejected: number; pending: number; pendingAllTime: number }> {
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-  const rows = await db.nFe.groupBy({
-    by: ["statusValidacao"],
-    where: { tenantId, deletedAt: null, emitidaEm: { gte: since } },
-    _count: { _all: true },
-  });
+  const [rows, pendingAllTime] = await Promise.all([
+    db.nFe.groupBy({
+      by: ["statusValidacao"],
+      where: { tenantId, deletedAt: null, emitidaEm: { gte: since } },
+      _count: { _all: true },
+    }),
+    db.nFe.count({
+      where: {
+        tenantId,
+        deletedAt: null,
+        statusValidacao: NfeValidationStatus.PENDING,
+      },
+    }),
+  ]);
   const map = Object.fromEntries(rows.map((r) => [r.statusValidacao, r._count._all]));
   return {
     approved: map[NfeValidationStatus.APPROVED] ?? 0,
     rejected: map[NfeValidationStatus.REJECTED] ?? 0,
     pending: map[NfeValidationStatus.PENDING] ?? 0,
+    pendingAllTime,
   };
 }

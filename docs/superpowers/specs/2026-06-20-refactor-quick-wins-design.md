@@ -86,6 +86,19 @@ God file ~913 linhas dividido em módulos focados; `remessa-fifo.ts` virou barre
 
 Comportamento inalterado — `pnpm test:backend` 108/108 verde.
 
+## Entregas pós quick wins (2026-06-20)
+
+| Entrega | Commit |
+|---------|--------|
+| Split `fiscal-api` (frontend) | `ee293f9` |
+| CT-e objeto + serializador | `6330d44` |
+
+## Onda 4 — Remessa services (APROVADA)
+
+Ver spec dedicado: [`2026-06-20-refactor-onda4-remessa-services-design.md`](./2026-06-20-refactor-onda4-remessa-services-design.md)
+
+Roadmap restante: **Onda 5** (xml-serializer) → **Onda 6** (frontend EN + forms).
+
 ## Verificação
 
 Após cada onda:

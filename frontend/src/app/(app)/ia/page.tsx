@@ -34,7 +34,6 @@ export default async function IaPage() {
               />
             ) : null}
             <div className="flex items-center gap-2 text-[12px] uppercase tracking-widest font-bold text-accent">
-              <Sparkles className="size-3" />
               MCP Fiscal Brasil
             </div>
           </div>

@@ -12,22 +12,29 @@ describe("HttpFiscalValidatorAdapter", () => {
     const result = await adapter.validateNfe("<nfeProc/>");
 
     assert.equal(result.isValid, true);
-    assert.equal(result.message, "XML aprovado");
+    assert.match(result.message, /aprovada/i);
     assert.deepEqual(result.errors, []);
     assert.equal(fetchMock.mock.calls.length, 1);
   });
 
-  it("maps valida=false to rejected result with errors", async () => {
+  it("maps valida=false to rejected result with errors and resumo", async () => {
     const fetchMock = mock.fn(async () =>
-      new Response(JSON.stringify({ valida: false, erros: ["CFOP inválido"] }), { status: 200 }),
+      new Response(
+        JSON.stringify({
+          valida: false,
+          erros: ["[CRITICO] CFOP 6949 incompatível com CST ICMS 00"],
+          resumo: "NF-e rejeitada: 1 achado(s) crítico(s), 0 alto(s), 1 no total.",
+        }),
+        { status: 200 },
+      ),
     );
     const adapter = new HttpFiscalValidatorAdapter("http://validator.test", fetchMock as typeof fetch);
 
     const result = await adapter.validateNfe("<nfeProc/>");
 
     assert.equal(result.isValid, false);
-    assert.match(result.message, /erros estruturais/i);
-    assert.deepEqual(result.errors, ["CFOP inválido"]);
+    assert.match(result.message, /rejeitada/i);
+    assert.match(result.errors[0] ?? "", /CFOP 6949/i);
   });
 
   it("throws when HTTP status is not ok", async () => {

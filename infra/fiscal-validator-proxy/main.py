@@ -3,7 +3,8 @@ Proxy HTTP para validação de NF-e via corpo XML.
 
 O mcp-fiscal-brasil 0.4.0 expõe apenas POST /v1/nfe/validate com xml_path
 (arquivo no disco do container). Este proxy traduz POST /api/v1/validate-nfe
-{ "xml": "..." } para validate_nfe_full(), compatível com o backend msedit-xml.
+{ "xml": "..." } para a auditoria consolidada (audit_nfe_xml), compatível
+com o backend msedit-xml.
 """
 
 from __future__ import annotations
@@ -15,7 +16,8 @@ from pathlib import Path
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from mcp_fiscal_brasil import __version__ as mcp_version
-from mcp_fiscal_brasil.agentic import validate_nfe_full
+
+from audit import audit_nfe_xml
 
 app = FastAPI(title="MSedit Fiscal Validator Proxy", version="1.0.0")
 
@@ -27,9 +29,17 @@ class ValidateNfeRequest(BaseModel):
     xml: str = Field(min_length=1)
 
 
+class AchadoResponse(BaseModel):
+    severidade: str
+    codigo: str
+    mensagem: str
+
+
 class ValidateNfeResponse(BaseModel):
     valida: bool
     erros: list[str]
+    achados: list[AchadoResponse]
+    resumo: str
 
 
 @app.get("/health")
@@ -44,10 +54,20 @@ async def validate_nfe(body: ValidateNfeRequest) -> ValidateNfeResponse:
     try:
         os.write(fd, body.xml.encode("utf-8"))
         os.close(fd)
-        report = await validate_nfe_full(path)
-        erros = [f"{issue.código}: {issue.descrição}" for issue in report.issues]
-        valida = report.valida_estruturalmente and len(report.issues) == 0
-        return ValidateNfeResponse(valida=valida, erros=erros)
+        report = await audit_nfe_xml(body.xml, xml_path=path)
+        return ValidateNfeResponse(
+            valida=report.valida,
+            erros=report.erros,
+            achados=[
+                AchadoResponse(
+                    severidade=a.severidade.value,
+                    codigo=a.codigo,
+                    mensagem=a.mensagem,
+                )
+                for a in report.achados
+            ],
+            resumo=report.resumo,
+        )
     finally:
         path.unlink(missing_ok=True)
 

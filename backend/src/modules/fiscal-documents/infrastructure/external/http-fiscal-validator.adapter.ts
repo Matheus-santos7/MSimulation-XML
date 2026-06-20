@@ -6,9 +6,11 @@ import type {
 type McpValidateNfeResponse = {
   valida?: boolean;
   erros?: string[];
+  resumo?: string;
+  achados?: Array<{ severidade: string; codigo: string; mensagem: string }>;
 };
 
-const REJECTED_MESSAGE = "Foram encontrados erros estruturais/fiscais no XML.";
+const REJECTED_MESSAGE = "NF-e rejeitada na auditoria fiscal (estrutura, chave ou regras CAT 31).";
 
 /**
  * HTTP adapter for msedit fiscal validator proxy (`POST /api/v1/validate-nfe`).
@@ -34,11 +36,15 @@ export class HttpFiscalValidatorAdapter implements FiscalValidatorPort {
 
     const data = (await response.json()) as McpValidateNfeResponse;
     const isValid = Boolean(data.valida);
+    const errors = Array.isArray(data.erros) ? data.erros.map(String) : [];
+    const resumo = typeof data.resumo === "string" ? data.resumo.trim() : "";
 
     return {
       isValid,
-      message: isValid ? "XML aprovado" : REJECTED_MESSAGE,
-      errors: Array.isArray(data.erros) ? data.erros.map(String) : [],
+      message: isValid
+        ? resumo || "NF-e aprovada na auditoria fiscal"
+        : resumo || REJECTED_MESSAGE,
+      errors,
     };
   }
 }

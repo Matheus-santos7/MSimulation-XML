@@ -12,6 +12,8 @@ export type NfeValidationBackfillState = {
   pending?: number;
   skipped?: number;
   remaining?: number;
+  validatorMessage?: string;
+  samplePendingMessage?: string;
 };
 
 export async function revalidarNfesPendentesAction(): Promise<NfeValidationBackfillState> {
@@ -28,6 +30,8 @@ export async function revalidarNfesPendentesAction(): Promise<NfeValidationBackf
       pending: result.pending,
       skipped: result.skipped,
       remaining: result.remaining,
+      validatorMessage: result.validator.message,
+      samplePendingMessage: result.samplePendingMessage,
     };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Erro ao revalidar NF-es pendentes" };

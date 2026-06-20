@@ -6,6 +6,16 @@
 
 services:
   - type: web
+    name: msimulation-xml-fiscal-validator
+    runtime: image
+    image:
+      url: ghcr.io/dehor-labs/mcp-fiscal-brasil:latest
+    dockerCommand: mcp-fiscal-api
+    plan: starter
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+
+  - type: web
     name: msimulation-xml-api
     runtime: docker
     repo: https://github.com/Matheus-santos7/MSimulation-XML
@@ -44,6 +54,13 @@ services:
         sync: false
       - key: REQUIRE_EMAIL_VERIFICATION
         value: "false"
+      - key: FISCAL_VALIDATOR_ENABLED
+        value: "true"
+      - key: FISCAL_VALIDATOR_URL
+        fromService:
+          type: web
+          name: msimulation-xml-fiscal-validator
+          property: hostport
 
 databases:
   - name: msimulation-xml-db

@@ -12,6 +12,7 @@ import { exportTimelineSpreadsheet } from "../../infrastructure/observability/ti
 import { GetValidationInsightsUseCase } from "../../application/use-cases/get-validation-insights.use-case.js";
 import { BackfillNfeValidationUseCase } from "../../application/use-cases/backfill-nfe-validation.use-case.js";
 import { requireAdminHook } from "../../../../plugins/contexts/guards.js";
+import { getFiscalValidatorStatus } from "../../../../lib/fiscal-validator-status.js";
 
 const fiscalEventIdParam = z.object({ id: z.string().min(1) });
 const backfillValidationBodySchema = z.object({
@@ -160,6 +161,10 @@ export const fiscalObservabilityController: FastifyPluginAsync = async (app) => 
   app.get("/fiscal-validation/insights", async (req) => {
     const tenantId = tenantIdFromRequest(req);
     return getValidationInsights.execute(getDbClient(), tenantId);
+  });
+
+  app.get("/fiscal-validation/status", async () => {
+    return getFiscalValidatorStatus();
   });
 
   app.post("/fiscal-validation/backfill", { onRequest: [requireAdminHook] }, async (req) => {

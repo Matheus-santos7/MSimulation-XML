@@ -1,6 +1,7 @@
 import { NfeValidationStatus } from "../../../../generated/prisma/client.js";
 import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import { loadFiscalValidatorConfig } from "../../../../lib/fiscal-validator-config.js";
+import { getFiscalValidatorStatus, type FiscalValidatorStatus } from "../../../../lib/fiscal-validator-status.js";
 import { getFiscalValidator } from "../../../../lib/fiscal-validator-factory.js";
 import { resolveNfeValidationUpdate } from "./nfe-xml-validation.js";
 import { resolveNfeXmlStringFromLoadedRow } from "./nfe-xml-service.js";
@@ -12,6 +13,8 @@ export type NfeValidationBackfillResult = {
   pending: number;
   skipped: number;
   remaining: number;
+  validator: FiscalValidatorStatus;
+  samplePendingMessage?: string;
 };
 
 const DEFAULT_BATCH_LIMIT = 50;
@@ -28,6 +31,7 @@ export async function backfillPendingNfeValidations(
   const limit = Math.min(Math.max(options.limit ?? DEFAULT_BATCH_LIMIT, 1), MAX_BATCH_LIMIT);
   const config = loadFiscalValidatorConfig();
   const validator = getFiscalValidator();
+  const validatorStatus = await getFiscalValidatorStatus();
 
   const rows = await db.nFe.findMany({
     where: {
@@ -52,7 +56,10 @@ export async function backfillPendingNfeValidations(
     pending: 0,
     skipped: 0,
     remaining: 0,
+    validator: validatorStatus,
   };
+
+  let samplePendingMessage: string | undefined;
 
   for (const row of rows) {
     const xml = await resolveNfeXmlStringFromLoadedRow(db, tenantId, row);
@@ -74,6 +81,9 @@ export async function backfillPendingNfeValidations(
       result.rejected += 1;
     } else {
       result.pending += 1;
+      if (!samplePendingMessage && typeof validationUpdate.mensagemValidacao === "string") {
+        samplePendingMessage = validationUpdate.mensagemValidacao;
+      }
     }
   }
 
@@ -84,6 +94,10 @@ export async function backfillPendingNfeValidations(
       statusValidacao: NfeValidationStatus.PENDING,
     },
   });
+
+  if (samplePendingMessage) {
+    result.samplePendingMessage = samplePendingMessage;
+  }
 
   return result;
 }

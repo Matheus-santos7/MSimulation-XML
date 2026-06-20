@@ -16,8 +16,19 @@ export type ValidationInsightsDto = {
   }[];
 };
 
+export type FiscalValidatorStatusDto = {
+  enabled: boolean;
+  apiUrl: string;
+  reachable: boolean;
+  message: string;
+};
+
 export async function getValidationInsights(): Promise<ValidationInsightsDto> {
   return getJson<ValidationInsightsDto>(buildApiUrl("/api/fiscal-validation/insights"));
+}
+
+export async function getFiscalValidatorStatus(): Promise<FiscalValidatorStatusDto> {
+  return getJson<FiscalValidatorStatusDto>(buildApiUrl("/api/fiscal-validation/status"));
 }
 
 export type NfeValidationBackfillResult = {
@@ -27,6 +38,8 @@ export type NfeValidationBackfillResult = {
   pending: number;
   skipped: number;
   remaining: number;
+  validator: FiscalValidatorStatusDto;
+  samplePendingMessage?: string;
 };
 
 export async function backfillNfeValidation(

@@ -24,11 +24,11 @@ import {
   realignRemessaFifoProductIdsBySku,
   ShipmentError,
 } from "../../../remessas/index.js";
-import { EmitenteFiscalConfigError } from "../../../remessas/infrastructure/fiscal/remessa-service.js";
+import { EmitenteFiscalConfigError } from "../../../org/index.js";
 import {
-  TransferenciaFilialError,
-  emitirTransferenciaFilial,
-} from "../../../remessas/infrastructure/fiscal/transferencia-filial-service.js";
+  BranchTransferError,
+  emitBranchTransfer,
+} from "../../../remessas/infrastructure/fiscal/branch-transfer/index.js";
 import { mapAvancoMercadoriaParaApi } from "../../../remessas/presentation/avanco-api.mapper.js";
 import { LogisticsUnitError } from "../../domain/errors/logistics-unit.error.js";
 import { createLogisticsModule } from "../../infrastructure/factory/logistics-module.factory.js";
@@ -52,7 +52,7 @@ function mapRemessaModuleError(e: unknown): { status: number; message: string } 
   if (e instanceof ShipmentError || e instanceof RemessaSimbolicaFiscalError) {
     return { status: 400, message: e.message };
   }
-  if (e instanceof TransferenciaFilialError || e instanceof EmitenteFiscalConfigError) {
+  if (e instanceof BranchTransferError || e instanceof EmitenteFiscalConfigError) {
     return { status: 400, message: e.message };
   }
   if (e instanceof LogisticsUnitError) {
@@ -103,7 +103,7 @@ export const movementController: FastifyPluginAsync = async (app) => {
       return reply.status(400).send({ error: "Payload inválido", details: parsed.error.flatten() });
     }
     try {
-      return await emitirTransferenciaFilial(getDbClient(), {
+      return await emitBranchTransfer(getDbClient(), {
         tenantId,
         filialId: parsed.data.filialId,
         items: parsed.data.items,

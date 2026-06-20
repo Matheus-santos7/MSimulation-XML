@@ -54,3 +54,9 @@ export {
   type RemessaCdBalanceRow,
 } from "./infrastructure/fifo/remessa-fifo.js";
 export { emitirCteRemessa } from "./infrastructure/fiscal/cte-remessa-service.js";
+
+export {
+  emitBranchTransfer,
+  BranchTransferError,
+  type BranchTransferItemInput,
+} from "./infrastructure/fiscal/branch-transfer/index.js";

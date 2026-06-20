@@ -11,7 +11,9 @@ type McpValidateNfeResponse = {
 const REJECTED_MESSAGE = "Foram encontrados erros estruturais/fiscais no XML.";
 
 /**
- * HTTP adapter for mcp-fiscal-brasil `POST /api/v1/validate-nfe`.
+ * HTTP adapter for msedit fiscal validator proxy (`POST /api/v1/validate-nfe`).
+ * The upstream mcp-fiscal-brasil REST API only accepts xml_path on disk; our
+ * Render image runs a thin proxy that accepts inline XML in the request body.
  */
 export class HttpFiscalValidatorAdapter implements FiscalValidatorPort {
   constructor(

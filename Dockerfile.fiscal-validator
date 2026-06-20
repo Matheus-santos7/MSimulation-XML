@@ -1,13 +1,16 @@
-# Microsserviço MCP Fiscal Brasil (validação de NF-e).
-# Instala via PyPI — a imagem GHCR é privada e não funciona no Render sem credenciais.
+# Proxy MCP Fiscal + endpoint POST /api/v1/validate-nfe { xml }.
 FROM python:3.12-slim-bookworm
 
 ENV PYTHONUNBUFFERED=1 \
     HOST=0.0.0.0 \
     MCP_FISCAL_LOG_LEVEL=INFO \
+    MCP_FISCAL_FILE_BASE_DIR=/tmp/mcp-fiscal-files \
     PIP_NO_CACHE_DIR=1
 
 RUN pip install --no-cache-dir "mcp-fiscal-brasil==0.4.0"
 
-# Render injeta PORT em runtime; mcp-fiscal-api respeita essa variável.
-CMD ["mcp-fiscal-api"]
+WORKDIR /app
+COPY infra/fiscal-validator-proxy/main.py /app/main.py
+
+# Render injeta PORT em runtime.
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { NfeValidationBadge } from "@/components/nfe-validation-badge";
 import { PageHeader, StatusBadge } from "@/components/fiscal-ui";
 import { NfeXmlActions } from "@/components/fiscal-xml-actions";
 import { XMLViewer } from "@/components/xml-viewer";
@@ -66,9 +67,26 @@ export default async function NFeDetailPage({ params }: Props) {
               variant="toolbar"
             />
             <StatusBadge status={nfe.status} />
+            <NfeValidationBadge status={nfe.validationStatus ?? "PENDING"} />
           </div>
         }
       />
+
+      {nfe.validationStatus === "REJECTED" && (
+        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 space-y-2">
+          <p className="text-sm font-semibold text-destructive">Validação MCP — rejeitado</p>
+          {nfe.validationMessage && (
+            <p className="text-sm text-muted-foreground">{nfe.validationMessage}</p>
+          )}
+          {nfe.validationErrors && nfe.validationErrors.length > 0 && (
+            <ul className="list-disc pl-5 text-sm text-destructive/90">
+              {nfe.validationErrors.map((err) => (
+                <li key={err}>{err}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-12 gap-6">
         <div className="col-span-5 space-y-4">

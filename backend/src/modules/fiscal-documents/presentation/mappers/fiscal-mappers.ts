@@ -1,5 +1,5 @@
 import { formatNfeDateTime } from "@msimulation-xml/fiscal-core";
-import type { CteModal, FiscalStatus, NFeTipo, PrismaClient, Product, TimelineStatus } from "../../../../generated/prisma/client.js";
+import type { CteModal, FiscalStatus, NFeTipo, NfeValidationStatus, PrismaClient, Product, TimelineStatus } from "../../../../generated/prisma/client.js";
 import { mapProduct } from "../../../catalog/index.js";
 
 export function num(n: { toString(): string } | number): number {
@@ -41,6 +41,9 @@ type NfeRow = {
   saldoDisponivel?: number | null;
   nfeReferenciaId?: string | null;
   fiscalPayload?: unknown;
+  statusValidacao?: NfeValidationStatus;
+  mensagemValidacao?: string | null;
+  errosValidacao?: unknown;
 };
 
 type NfeItemRow = {
@@ -136,6 +139,11 @@ export function mapNfe(
     itens: mappedItens,
     nfeReferenciaChave: nfeReferenciaChave ?? undefined,
     fiscalPayload: (row.fiscalPayload as Record<string, unknown> | undefined) ?? undefined,
+    validationStatus: row.statusValidacao ?? "PENDING",
+    validationMessage: row.mensagemValidacao ?? undefined,
+    validationErrors: Array.isArray(row.errosValidacao)
+      ? (row.errosValidacao as string[])
+      : undefined,
   };
 }
 

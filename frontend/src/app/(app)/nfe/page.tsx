@@ -5,6 +5,7 @@ import { NfeCancelarButton } from "@/components/nfe-cancelar-button";
 import { NfeDevolucaoButton } from "@/components/nfe-devolucao-button";
 import { NfeInutXmlActions, NfeXmlActions } from "@/components/fiscal-xml-actions";
 import { NfeTipoBadge } from "@/components/nfe-tipo-badge";
+import { NfeValidationBadge } from "@/components/nfe-validation-badge";
 import { InutilizadaStatusBadge, PageHeader, StatusBadge } from "@/components/fiscal-ui";
 import { resolveActiveTenantId } from "@/lib/active-tenant";
 import { listFiscalEvents, listNfes } from "@/lib/fiscal-api";
@@ -61,6 +62,7 @@ export default async function NFeListPage() {
                 <col />
                 <col className="w-[96px]" />
                 <col className="w-[108px]" />
+                <col className="w-[120px]" />
                 <col className="w-[88px]" />
                 <col className="w-[112px]" />
               </colgroup>
@@ -74,6 +76,7 @@ export default async function NFeListPage() {
                   <th className="px-4 py-3 font-medium">Destinatário</th>
                   <th className="px-4 py-3 font-medium">Valor</th>
                   <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 font-medium">Validação</th>
                   <th className="px-4 py-3 font-medium text-right">XML</th>
                   <th className="px-4 py-3 font-medium text-right">Ações</th>
                 </tr>
@@ -104,6 +107,7 @@ export default async function NFeListPage() {
                         <td className="px-4 py-3">
                           <InutilizadaStatusBadge />
                         </td>
+                        <td className="px-4 py-3 text-muted-foreground/50">—</td>
                         <td className="px-4 py-3">
                           <NfeInutXmlActions inutId={inut.id} />
                         </td>
@@ -156,6 +160,9 @@ export default async function NFeListPage() {
                       <td className="px-4 py-3 font-mono whitespace-nowrap">{brl(nfe.valor)}</td>
                       <td className="px-4 py-3">
                         <StatusBadge status={nfe.status} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <NfeValidationBadge status={nfe.validationStatus ?? "PENDING"} />
                       </td>
                       <td className="px-4 py-3">
                         <NfeXmlActions

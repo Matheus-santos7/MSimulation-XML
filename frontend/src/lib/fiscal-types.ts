@@ -248,6 +248,9 @@ export type NFeDto = {
   /** Chave da NF-e referenciada por esta nota (pai na cadeia → vai no XML refNFe). */
   nfeReferenciaChave?: string;
   cteChaveRef?: string;
+  validationStatus: "PENDING" | "APPROVED" | "REJECTED";
+  validationMessage?: string;
+  validationErrors?: string[];
   /** Notas que referenciam esta (filhas na cadeia) — não usar no XML refNFe. */
   referenciadas?: { chave: string; tipo: string; numero: number; serie: number }[];
   fiscalPayload?: Record<string, unknown>;

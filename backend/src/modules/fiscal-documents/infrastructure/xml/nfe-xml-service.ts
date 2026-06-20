@@ -25,6 +25,9 @@ import { mapNfe } from "../../presentation/mappers/fiscal-mappers.js";
 import { mapProduct, type ProductDto } from "../../../catalog/index.js";
 import { mapEmitente } from "../../../org/infrastructure/fiscal/tenant-emitente.mapper.js";
 import { loadEmitterSettings } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
+import { loadFiscalValidatorConfig } from "../../../../lib/fiscal-validator-config.js";
+import { getFiscalValidator } from "../../../../lib/fiscal-validator-factory.js";
+import { resolveNfeValidationUpdate } from "./nfe-xml-validation.js";
 
 export type NfeXmlPersistTx = PrismaTx;
 
@@ -97,9 +100,18 @@ export async function persistNfeXmlAutorizado(
     allProducts,
   );
 
+  const validationUpdate = await resolveNfeValidationUpdate(
+    getFiscalValidator(),
+    xml,
+    loadFiscalValidatorConfig(),
+  );
+
   await tx.nFe.update({
     where: { id: args.nfeId },
-    data: { xmlAutorizado: xml },
+    data: {
+      xmlAutorizado: xml,
+      ...validationUpdate,
+    },
   });
 }
 

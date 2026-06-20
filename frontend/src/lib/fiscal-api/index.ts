@@ -13,3 +13,4 @@ export * from "./logistics";
 export * from "./branches";
 export * from "./movements";
 export * from "./lookup";
+export * from "./validation-insights";

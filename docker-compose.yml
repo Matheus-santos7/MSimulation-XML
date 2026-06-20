@@ -25,6 +25,19 @@ services:
       retries: 10
       start_period: 10s
 
+  fiscal-validator-api:
+    image: ghcr.io/dehor-labs/mcp-fiscal-brasil:latest
+    container_name: msimulation-xml-fiscal-validator
+    restart: unless-stopped
+    ports:
+      - "${FISCAL_VALIDATOR_PORT:-8080}:8000"
+    environment:
+      MCP_FISCAL_LOG_LEVEL: INFO
+    command: ["mcp-fiscal-api"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   postgres_data:
     name: msimulation-xml-postgres-data

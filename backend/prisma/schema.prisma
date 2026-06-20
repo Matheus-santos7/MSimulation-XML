@@ -47,6 +47,12 @@ enum NFeTipo {
   TRANSFERENCIA_FILIAL
 }
 
+enum NfeValidationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum OperacaoFiscalTipo {
   REMESSA
   AVANCO_CD
@@ -417,6 +423,9 @@ model NFe {
   fiscalPayload      Json?         @map("fiscal_payload")
   /// procNFe de simulação gerado na emissão (imutável após autorização).
   xmlAutorizado      String?       @map("xml_autorizado") @db.Text
+  statusValidacao    NfeValidationStatus @default(PENDING) @map("status_validacao")
+  mensagemValidacao  String?       @map("mensagem_validacao")
+  errosValidacao     Json?         @map("erros_validacao")
   nfeReferenciaId    String?       @map("nfe_referencia_id")
   nfeReferencia      NFe?          @relation("NfeReferencia", fields: [nfeReferenciaId], references: [id], onDelete: SetNull)
   nfeReferenciadas   NFe[]         @relation("NfeReferencia")

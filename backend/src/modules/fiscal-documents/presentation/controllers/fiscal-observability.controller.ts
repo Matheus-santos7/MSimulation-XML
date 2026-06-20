@@ -9,8 +9,10 @@ import { ufToCodigo } from "../../domain/services/nfe-chave.js";
 import { mapEmitente } from "../../../org/infrastructure/fiscal/tenant-emitente.mapper.js";
 import { listTimelineChains } from "../../infrastructure/observability/timeline-service.js";
 import { exportTimelineSpreadsheet } from "../../infrastructure/observability/timeline-spreadsheet.service.js";
+import { GetValidationInsightsUseCase } from "../../application/use-cases/get-validation-insights.use-case.js";
 
 const fiscalEventIdParam = z.object({ id: z.string().min(1) });
+const getValidationInsights = new GetValidationInsightsUseCase();
 
 async function listFiscalEventsForTenant(
   prisma: Parameters<typeof listTimelineChains>[0],
@@ -147,5 +149,10 @@ export const fiscalObservabilityController: FastifyPluginAsync = async (app) => 
       orderBy: { sortOrder: "asc" },
     });
     return rows.map(mapTimeline);
+  });
+
+  app.get("/fiscal-validation/insights", async (req) => {
+    const tenantId = tenantIdFromRequest(req);
+    return getValidationInsights.execute(getDbClient(), tenantId);
   });
 };

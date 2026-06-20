@@ -34,9 +34,9 @@ import {
 import { emitirCteRemessa } from "./cte-remessa-service.js";
 import { productUnitPrice } from "@msimulation-xml/fiscal-core";
 import {
-  calcularImpostosNota,
-  inferAliqIcmsRemessa,
-  linhaPedidoFromProduto,
+  calculateInvoiceTaxes,
+  inferIcmsRateForShipment,
+  orderLineFromProduct,
 } from "../../../tax/index.js";
 import { resolveTaxRule } from "../../../tax/index.js";
 import {
@@ -44,11 +44,12 @@ import {
   findProductInTenant,
 } from "../../../logistics/index.js";
 import { persistNfeXmlAutorizado } from "../../../fiscal-documents/infrastructure/xml/nfe-xml-service.js";
-import { chaveEmissaoFromOverride, type EmitenteEmissaoOverride } from "./emitente-emissao-override.js";
 import { realignRemessaFifoProductIdsBySku } from "../fifo/remessa-fifo.js";
 import {
   EmitenteFiscalConfigError,
   resolveEmitenteFiscal,
+  chaveEmissaoFromOverride,
+  type EmitenteEmissaoOverride,
 } from "../../../org/index.js";
 
 export type EmitirRemessaOptions = {
@@ -123,11 +124,11 @@ async function emitirNFeRemessaComItens(
 
   const emitterSettings = await loadEmitterSettings(db, tenant.id);
   const emitUf = emitenteOverride.uf;
-  const aliqFallback = inferAliqIcmsRemessa(emitUf, destino.uf, emitterSettings);
+  const aliqFallback = inferIcmsRateForShipment(emitUf, destino.uf, emitterSettings);
   const pedidoMl = options?.pedidoMl ?? gerarPedidoMl();
 
   // --- Fase 3: por item — regra tributária inbound + linha fiscal ---
-  const linhasComRegras: { linha: ReturnType<typeof linhaPedidoFromProduto>; rule: NonNullable<Awaited<ReturnType<typeof resolveTaxRule>>> }[] = [];
+  const linhasComRegras: { line: ReturnType<typeof orderLineFromProduct>; rule: NonNullable<Awaited<ReturnType<typeof resolveTaxRule>>> }[] = [];
 
   for (const [index, linha] of linhas.entries()) {
     // Remessa valoriza preço de custo (não preço de venda).
@@ -162,8 +163,8 @@ async function emitirNFeRemessaComItens(
     // CFOP 5949 (mesma UF) ou 6949 (interestadual) — alinhado a idDest no XML.
     const cfopRemessa = resolveRemessaCfop(emitUf, destino.uf);
     linhasComRegras.push({
-      linha: {
-        ...linhaPedidoFromProduto(linha.product, {
+      line: {
+        ...orderLineFromProduct(linha.product, {
           cfop: cfopRemessa,
           quantidade: linha.quantidade,
           valorUnitario: unitCusto,
@@ -175,7 +176,7 @@ async function emitirNFeRemessaComItens(
   }
 
   // --- Fase 4: engine tributária (ICMS, PIS, COFINS, totais) ---
-  const nota = calcularImpostosNota(
+  const nota = calculateInvoiceTaxes(
     linhasComRegras,
     {
       ufOrigem: emitUf,
@@ -190,7 +191,7 @@ async function emitirNFeRemessaComItens(
   const valorIcms = nota.totais.vICMS;
   const quantidadeTotal = linhas.reduce((acc, l) => acc + l.quantidade, 0);
   const primeiro = linhas[0]!.product;
-  const cfopHeader = linhasComRegras[0]!.linha.cfop;
+  const cfopHeader = linhasComRegras[0]!.line.cfop;
   const aliqIcms = valor > 0 ? Math.round((valorIcms / valor) * 10000) / 100 : aliqFallback;
 
   // --- Fase 5: chave e numeração NF-e (série remessa do tenant) ---
@@ -288,7 +289,7 @@ async function emitirNFeRemessaComItens(
           valor: engineItem.vProd,
           valorIcms: engineItem.icms.vICMS,
           ncm: linha.product.ncm,
-          cfop: linhasComRegras[index]!.linha.cfop,
+          cfop: linhasComRegras[index]!.line.cfop,
           saldoDisponivel: linha.quantidade,
         },
         include: { product: true },

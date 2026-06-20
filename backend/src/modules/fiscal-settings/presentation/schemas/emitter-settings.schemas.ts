@@ -17,9 +17,6 @@ export const updateEmitterSettingsBodySchema = z
   })
   .strict();
 
-/** @deprecated Use updateEmitterSettingsBodySchema */
-export const fiscalEmitterSettingsPatchBody = updateEmitterSettingsBodySchema;
-
 export const nfeNumeracaoQuerySchema = z.object({
   serie: z.coerce.number().int().min(1).max(999),
   numeroInicial: z.coerce.number().int().min(1).max(999_999_999).optional().default(1),

@@ -61,12 +61,3 @@ export const orderCheckoutBody = z.object({
 export const orderIdParam = z.object({
   id: z.string().uuid(),
 });
-
-/** @deprecated Use orderCheckoutBody */
-export const pedidoCheckoutBody = orderCheckoutBody;
-
-/** @deprecated Use orderIdParam */
-export const pedidoIdParam = orderIdParam;
-
-/** @deprecated Use buyerCheckoutBody */
-export const compradorCheckoutBody = buyerCheckoutBody;

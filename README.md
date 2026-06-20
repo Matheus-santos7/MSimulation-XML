@@ -504,7 +504,7 @@ sequenceDiagram
   UI->>R: POST remessa (produtos + CD destino)
   R->>L: resolve destino fiscal (UF, idCadIntTran)
   loop Por item
-    R->>T: resolveTaxRule + calcularImpostosNota
+    R->>T: resolveTaxRule + calculateInvoiceTaxes
   end
   R->>P: enrichFiscalPayloadMlFulfillment
   R->>P: buildNFeXML

@@ -1,17 +1,4 @@
-import type { PrismaClient } from "../../generated/prisma/client.js";
 import type { PrismaTx } from "../../lib/db/prisma-tx.js";
-import {
-  buildFiscalItem,
-  calculateInboundInvoice,
-  calculateInvoiceTaxes,
-  inferIcmsRateForShipment,
-  inferIntraStateIcmsRate,
-  orderLineFromProduct,
-  type InboundInvoiceResult,
-} from "./application/services/tax-calculation.service.js";
-import type { FiscalContext } from "./domain/entities/fiscal-context.entity.js";
-import type { OrderLine } from "./domain/entities/order-line.entity.js";
-import type { ProductFiscalLine } from "./domain/entities/product-fiscal-line.entity.js";
 import { TaxRuleCatalogError, TaxRuleError } from "./domain/errors/tax-rule.error.js";
 import type { ResolveTaxRuleParams } from "./domain/ports/tax-rule.repository.js";
 import { createTaxModule } from "./infrastructure/factory/tax-module.factory.js";
@@ -25,9 +12,6 @@ export type { TaxRuleCatalogEntry } from "./domain/entities/tax-rule-catalog-ent
 export type { TaxRuleImportRow } from "./domain/entities/tax-rule-import-row.entity.js";
 export type { OrderLine, FiscalContext, ProductFiscalLine, ResolveTaxRuleParams };
 export type { InboundInvoiceResult };
-
-/** @deprecated Use InboundInvoiceResult */
-export type ResultadoNotaInbound = InboundInvoiceResult;
 
 export {
   buildFiscalItem,
@@ -80,40 +64,3 @@ export async function assertProductTaxRuleBaseId(
 export async function deleteAllTaxRules(tenantId: string) {
   return createTaxModule().deleteAllTaxRules.execute(tenantId);
 }
-
-/** @deprecated Use orderLineFromProduct */
-export const linhaPedidoFromProduto = orderLineFromProduct;
-
-/** @deprecated Use calculateInboundInvoice */
-export const calcularNotaInbound = calculateInboundInvoice;
-
-/** @deprecated Use calculateInvoiceTaxes */
-export function calcularImpostosNota(
-  lines: { linha: OrderLine; rule: import("./domain/entities/resolved-tax-rule.entity.js").ResolvedTaxRule | null }[],
-  ctx: FiscalContext,
-  fallbackIcmsRate: number,
-) {
-  return calculateInvoiceTaxes(
-    lines.map(({ linha, rule }) => ({ line: linha, rule })),
-    ctx,
-    fallbackIcmsRate,
-  );
-}
-
-/** @deprecated Use buildFiscalItem */
-export const montarItemFiscal = buildFiscalItem;
-
-/** @deprecated Use inferIcmsRateForShipment */
-export const inferAliqIcmsRemessa = inferIcmsRateForShipment;
-
-/** @deprecated Use inferIntraStateIcmsRate */
-export const inferAliqIcmsIntraestadual = inferIntraStateIcmsRate;
-
-/** @deprecated Use OrderLine */
-export type LinhaPedido = OrderLine;
-
-/** @deprecated Use FiscalContext */
-export type ContextoFiscal = FiscalContext;
-
-/** @deprecated Use ProductFiscalLine */
-export type ProdutoLinhaFiscal = ProductFiscalLine;

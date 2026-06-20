@@ -8,11 +8,7 @@ import { Label } from "@/components/ui/label";
 import { lookupCep, lookupCnpj } from "@/lib/lookup-actions";
 import type { EmpresaFormValues } from "@/lib/empresa-form";
 import type { TenantDto } from "@/lib/fiscal-types";
-
-const UFS = [
-  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG",
-  "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO",
-] as const;
+import { BRAZILIAN_UFS } from "@/lib/brazilian-states";
 
 const CRT_OPTIONS = [
   { value: "1", label: "1 — Simples Nacional" },
@@ -206,7 +202,7 @@ export function TenantFormFields({ tenant, draft, fieldErrors, idPrefix = "tenan
             hint="Se vazio após buscar CNPJ, clique em Buscar CEP"
           />
         </div>
-        <SelectField id={`${idPrefix}-uf`} label="UF" name="uf" value={form.uf} onChange={set} options={UFS} error={err("uf")} />
+        <SelectField id={`${idPrefix}-uf`} label="UF" name="uf" value={form.uf} onChange={set} options={BRAZILIAN_UFS} error={err("uf")} />
       </Section>
 
       <Section title="Contato e ambiente">

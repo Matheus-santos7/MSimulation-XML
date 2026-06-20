@@ -7,7 +7,7 @@ export { LookupValidationError } from "./domain/errors/lookup-validation.error.j
 export { LookupCepUseCase } from "./application/use-cases/lookup-cep.use-case.js";
 export { LookupCnpjUseCase } from "./application/use-cases/lookup-cnpj.use-case.js";
 export { createLookupModule };
-export { lookupController, lookupRoutes } from "./presentation/controllers/lookup.controller.js";
+export { lookupController } from "./presentation/controllers/lookup.controller.js";
 export { cepParamSchema, cnpjParamSchema } from "./presentation/schemas/lookup.schemas.js";
 
 export async function lookupCep(rawValue: string) {

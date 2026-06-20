@@ -5,8 +5,8 @@ import { createSalesModule } from "./infrastructure/factory/sales-module.factory
 import { getDbClient } from "../../lib/db/tenant-rls.js";
 
 export { CheckoutError } from "./domain/errors/checkout.error.js";
-export { OrderLockedError, PedidoLockedError } from "./domain/errors/order-locked.error.js";
-export { SalesChainError, VendaChainError } from "./domain/errors/sales-chain.error.js";
+export { OrderLockedError } from "./domain/errors/order-locked.error.js";
+export { SalesChainError } from "./domain/errors/sales-chain.error.js";
 export type { Buyer } from "./domain/entities/buyer.entity.js";
 export type { OrderCheckoutInput } from "./domain/entities/order-checkout-input.entity.js";
 export type { Order, OrderProductSummary } from "./domain/entities/order.entity.js";
@@ -23,9 +23,6 @@ export {
   buyerCheckoutBody,
   orderCheckoutBody,
   orderIdParam,
-  pedidoCheckoutBody,
-  pedidoIdParam,
-  compradorCheckoutBody,
   digitsOnly,
 } from "./presentation/schemas/order.schemas.js";
 export { SaldoRemessaInsuficienteError } from "../remessas/infrastructure/fifo/remessa-fifo.js";

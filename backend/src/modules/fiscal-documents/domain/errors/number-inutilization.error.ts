@@ -9,5 +9,3 @@ export class NumberInutilizationError extends Error {
   }
 }
 
-/** @deprecated Use NumberInutilizationError */
-export { NumberInutilizationError as InutilizacaoError };

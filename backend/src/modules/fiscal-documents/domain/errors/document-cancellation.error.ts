@@ -9,5 +9,3 @@ export class DocumentCancellationError extends Error {
   }
 }
 
-/** @deprecated Use DocumentCancellationError */
-export { DocumentCancellationError as CancelamentoError };

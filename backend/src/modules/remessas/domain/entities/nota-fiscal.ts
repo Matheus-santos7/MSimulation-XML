@@ -84,6 +84,3 @@ export function criarRemessaAvanco(
     },
   };
 }
-
-/** @deprecated Use {@link criarRemessaAvanco} */
-export const criarRemessaSimbolicaAvanco = criarRemessaAvanco;

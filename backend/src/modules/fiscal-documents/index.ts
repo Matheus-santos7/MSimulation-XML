@@ -1,9 +1,9 @@
 import type { InutilizeNumberInput } from "./domain/ports/fiscal-document-lifecycle.port.js";
 import { createFiscalDocumentsModule } from "./infrastructure/factory/fiscal-documents-module.factory.js";
 
-export { DocumentCancellationError, CancelamentoError } from "./domain/errors/document-cancellation.error.js";
-export { DocumentReturnError, DevolucaoError } from "./domain/errors/document-return.error.js";
-export { NumberInutilizationError, InutilizacaoError } from "./domain/errors/number-inutilization.error.js";
+export { DocumentCancellationError } from "./domain/errors/document-cancellation.error.js";
+export { DocumentReturnError } from "./domain/errors/document-return.error.js";
+export { NumberInutilizationError } from "./domain/errors/number-inutilization.error.js";
 
 export type {
   CancelDocumentResult,
@@ -41,21 +41,9 @@ export { cteController } from "./presentation/controllers/cte.controller.js";
 export { fiscalObservabilityController } from "./presentation/controllers/fiscal-observability.controller.js";
 export {
   nfeAccessKeyParamSchema,
-  chaveParamSchema,
   cancelDocumentBodySchema,
-  cancelamentoBodySchema,
   inutilizeNumberBodySchema,
-  inutilizarBodySchema,
 } from "./presentation/schemas/fiscal-document.schemas.js";
-
-/** @deprecated Use InutilizeNumberInput */
-export type InutilizarNumeracaoInput = {
-  tenantId: string;
-  serie: number;
-  numeroIni: number;
-  numeroFim: number;
-  xJust?: string;
-};
 
 export async function cancelSaleNfe(
   saleNfeKey: string,
@@ -69,9 +57,6 @@ export async function cancelSaleNfe(
   });
 }
 
-/** @deprecated Use cancelSaleNfe */
-export const cancelarVenda = cancelSaleNfe;
-
 export async function processSaleReturn(
   saleNfeKey: string,
   tenantId: string,
@@ -82,24 +67,8 @@ export async function processSaleReturn(
   });
 }
 
-/** @deprecated Use processSaleReturn */
-export const emitirDevolucaoVenda = processSaleReturn;
-
 export async function inutilizeNfeNumberRange(
   input: InutilizeNumberInput,
 ) {
   return createFiscalDocumentsModule().inutilizeNumber.execute(input);
-}
-
-/** @deprecated Use inutilizeNfeNumberRange */
-export async function inutilizarNumeracao(
-  input: InutilizarNumeracaoInput,
-) {
-  return inutilizeNfeNumberRange({
-    tenantId: input.tenantId,
-    series: input.serie,
-    numberStart: input.numeroIni,
-    numberEnd: input.numeroFim,
-    justification: input.xJust,
-  });
 }

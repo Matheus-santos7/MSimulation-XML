@@ -31,6 +31,3 @@ export interface EmitterSettingsView {
   /** Configuração fiscal completa: `basic`, `taxes`, `nfe`. */
   settings: FiscalEmitterSettingsData;
 }
-
-/** @deprecated Use EmitterSettingsView */
-export type FiscalEmitterSettingsView = EmitterSettingsView;

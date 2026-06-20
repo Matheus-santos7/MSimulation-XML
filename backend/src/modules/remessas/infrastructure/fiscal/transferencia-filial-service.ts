@@ -28,20 +28,22 @@ import {
 } from "@msimulation-xml/fiscal-core";
 import { productUnitPrice } from "@msimulation-xml/fiscal-core";
 import {
-  calcularImpostosNota,
-  inferAliqIcmsRemessa,
-  linhaPedidoFromProduto,
+  calculateInvoiceTaxes,
+  inferIcmsRateForShipment,
+  orderLineFromProduct,
   resolveTaxRule,
 } from "../../../tax/index.js";
 import { createLogisticsModule, findProductInTenant } from "../../../logistics/index.js";
 import { persistNfeXmlAutorizado } from "../../../fiscal-documents/infrastructure/xml/nfe-xml-service.js";
+import { realignRemessaFifoProductIdsBySku } from "../fifo/remessa-fifo.js";
 import { mapEmitenteFromFilial } from "../../../org/infrastructure/fiscal/tenant-emitente.mapper.js";
 import {
   EmitenteFiscalConfigError,
   resolveEmitenteFiscal,
   resolveTransferenciaEmitenteId,
+  chaveEmissaoFromOverride,
+  type EmitenteEmissaoOverride,
 } from "../../../org/index.js";
-import { realignRemessaFifoProductIdsBySku } from "../fifo/remessa-fifo.js";
 import {
   TRANSFERENCIA_FILIAL_NAT_OP,
   destinoFiscalToNfeFields,
@@ -49,8 +51,6 @@ import {
   resolveTransferenciaCfop,
 } from "./helpers/transferencia-filial-dest.js";
 import { RemessaError, emitirRemessaComItens } from "./remessa-service.js";
-import type { EmitenteEmissaoOverride } from "./emitente-emissao-override.js";
-import { chaveEmissaoFromOverride } from "./emitente-emissao-override.js";
 
 export type TransferenciaFilialItemInput = {
   productId: string;
@@ -209,10 +209,10 @@ async function emitirNFeTransferenciaComItens(
   const destData = destinoFiscalToNfeFields(destino);
   const matrizUf = matrizEmitente.uf;
   const emitterSettings = await loadEmitterSettings(db, tenant.id);
-  const aliqFallback = inferAliqIcmsRemessa(matrizUf, destino.uf, emitterSettings);
+  const aliqFallback = inferIcmsRateForShipment(matrizUf, destino.uf, emitterSettings);
 
   const linhasComRegras: {
-    linha: ReturnType<typeof linhaPedidoFromProduto>;
+    line: ReturnType<typeof orderLineFromProduct>;
     rule: NonNullable<Awaited<ReturnType<typeof resolveTaxRule>>>;
   }[] = [];
 
@@ -232,8 +232,8 @@ async function emitirNFeTransferenciaComItens(
 
     const cfop = resolveTransferenciaCfop(matrizUf, destino.uf);
     linhasComRegras.push({
-      linha: {
-        ...linhaPedidoFromProduto(linha.product, {
+      line: {
+        ...orderLineFromProduct(linha.product, {
           cfop,
           quantidade: linha.quantidade,
           valorUnitario: unitCusto,
@@ -244,7 +244,7 @@ async function emitirNFeTransferenciaComItens(
     });
   }
 
-  const nota = calcularImpostosNota(
+  const nota = calculateInvoiceTaxes(
     linhasComRegras,
     { ufOrigem: matrizUf, ufDestino: destino.uf, customerType: "taxpayer" },
     aliqFallback,
@@ -254,7 +254,7 @@ async function emitirNFeTransferenciaComItens(
   const valorIcms = nota.totais.vICMS;
   const quantidadeTotal = linhas.reduce((acc, l) => acc + l.quantidade, 0);
   const primeiro = linhas[0]!.product;
-  const cfopHeader = linhasComRegras[0]!.linha.cfop;
+  const cfopHeader = linhasComRegras[0]!.line.cfop;
   const aliqIcms = valor > 0 ? Math.round((valorIcms / valor) * 10000) / 100 : aliqFallback;
 
   const chaveParams = chaveEmissaoFromOverride(matrizEmitente);
@@ -338,7 +338,7 @@ async function emitirNFeTransferenciaComItens(
           valor: engineItem.vProd,
           valorIcms: engineItem.icms.vICMS,
           ncm: linha.product.ncm,
-          cfop: linhasComRegras[index]!.linha.cfop,
+          cfop: linhasComRegras[index]!.line.cfop,
           saldoDisponivel: null,
         },
         include: { product: true },

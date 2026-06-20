@@ -17,9 +17,9 @@ import { taxSnapshotFromRule } from "../../../tax/domain/services/tax-snapshot.j
 import type { Tenant } from "../../../../generated/prisma/client.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import {
-  calcularNotaInbound,
+  calculateInboundInvoice,
   resolveIcmsFallbackRate,
-  linhaPedidoFromProduto,
+  orderLineFromProduct,
 } from "../../../tax/index.js";
 import {
   consumirSaldoRemessaFifoParaVenda,
@@ -67,8 +67,8 @@ export async function emitReturnNote(
 
   const fallbackRate = resolveIcmsFallbackRate(tenant.uf, destUf, "inbound", emitterSettings);
   const cfop = resolveRetornoSimbolicoCfop(tenant.uf, destUf);
-  const calc = calcularNotaInbound(
-    linhaPedidoFromProduto(order.product, {
+  const calc = calculateInboundInvoice(
+    orderLineFromProduct(order.product, {
       cfop,
       quantidade: order.quantidade,
       valorUnitario: ctx.valorUnitCusto,

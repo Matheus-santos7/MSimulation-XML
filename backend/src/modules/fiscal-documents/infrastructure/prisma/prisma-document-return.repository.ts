@@ -26,7 +26,7 @@ import { enrichTaxSnapshot, loadEmitterSettings } from "../../../fiscal-settings
 import { enrichFiscalPayloadWithXTexto, resolveNumeroInicialNfe } from "@msimulation-xml/fiscal-core";
 import { taxSnapshotFromRule } from "../../../tax/domain/services/tax-snapshot.js";
 import { calcularNotaFiscal } from "../../../tax/domain/services/tax-engine.js";
-import { montarItemFiscal, resolveTaxRule, resolveIcmsFallbackRate, type CustomerType } from "../../../tax/index.js";
+import { buildFiscalItem, resolveTaxRule, resolveIcmsFallbackRate, type CustomerType } from "../../../tax/index.js";
 import { persistNfeXmlFromEmission } from "../xml/nfe-xml-service.js";
 import { estornarConsumosRemessa } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
 import {
@@ -100,7 +100,7 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
         resolveIcmsFallbackRate(tenant.uf, sale.destUf, "sale", emitterSettings);
       const referencedSaleCst = extractCstFromPayload(sale.fiscalPayload);
 
-      const fiscalItem = montarItemFiscal(
+      const fiscalItem = buildFiscalItem(
         {
           codigo: product.sku ?? product.id,
           descricao: product.nome,

@@ -9,5 +9,3 @@ export class DocumentReturnError extends Error {
   }
 }
 
-/** @deprecated Use DocumentReturnError */
-export { DocumentReturnError as DevolucaoError };

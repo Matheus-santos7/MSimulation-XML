@@ -14,7 +14,7 @@ import { taxSnapshotFromRule } from "../../../tax/domain/services/tax-snapshot.j
 import { calcularNotaFiscal } from "../../../tax/domain/services/tax-engine.js";
 import type { Tenant } from "../../../../generated/prisma/client.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
-import { montarItemFiscal } from "../../../tax/index.js";
+import { buildFiscalItem } from "../../../tax/index.js";
 import { persistNfeXmlFromEmission } from "../../../fiscal-documents/infrastructure/xml/nfe-xml-service.js";
 import type { EmissionContext } from "../../domain/entities/emission-context.entity.js";
 import type { OrderForEmit } from "../../domain/entities/order-for-emit.entity.js";
@@ -62,7 +62,7 @@ export async function emitSaleNote(
   const autXmlCpfs = autXmlCpfsFromSettings(emitterSettings);
   const nfci = order.product.nfci?.trim() || undefined;
 
-  const saleItem = montarItemFiscal(
+  const saleItem = buildFiscalItem(
     {
       codigo: order.product.sku ?? order.product.id,
       descricao: order.product.nome ?? "Mercadoria",

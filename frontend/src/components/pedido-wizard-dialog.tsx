@@ -22,16 +22,12 @@ import {
   PEDIDO_FORM_EXAMPLES,
   findPedidoFormExample,
 } from "@/lib/pedido-form";
+import { BRAZILIAN_UFS } from "@/lib/brazilian-states";
 import {
   PEDIDO_FORM_EMPTY,
   pedidoToFormValues,
   type PedidoFormValues,
 } from "@/lib/pedido-form";
-
-const UFS = [
-  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG",
-  "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO",
-] as const;
 
 const STEPS = ["Produto", "Comprador", "Endereço", "Revisão"] as const;
 
@@ -286,7 +282,7 @@ export function PedidoWizardDialog({ open, onOpenChange, products, pedido }: Pro
                   onChange={(e) => set("uf", e.target.value)}
                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
                 >
-                  {UFS.map((u) => (
+                  {BRAZILIAN_UFS.map((u) => (
                     <option key={u} value={u}>
                       {u}
                     </option>

@@ -44,6 +44,3 @@ export const emitterSettingsController: FastifyPluginAsync = async (app) => {
     }
   });
 };
-
-/** @deprecated Use emitterSettingsController */
-export const fiscalSettingsRoutes = emitterSettingsController;

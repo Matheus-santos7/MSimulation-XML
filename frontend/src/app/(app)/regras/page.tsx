@@ -7,38 +7,9 @@ import { isAdminRole } from "@/lib/auth/roles";
 import { getAuthMe } from "@/lib/auth/session";
 import { listTaxRules } from "@/lib/fiscal-api";
 import type { TaxRuleDto } from "@/lib/fiscal-types";
+import { BRAZILIAN_UFS } from "@/lib/brazilian-states";
 
 export const metadata: Metadata = { title: "Regras Tributárias" };
-
-const UFS = [
-  "AC",
-  "AL",
-  "AM",
-  "AP",
-  "BA",
-  "CE",
-  "DF",
-  "ES",
-  "GO",
-  "MA",
-  "MG",
-  "MS",
-  "MT",
-  "PA",
-  "PB",
-  "PE",
-  "PI",
-  "PR",
-  "RJ",
-  "RN",
-  "RO",
-  "RR",
-  "RS",
-  "SC",
-  "SE",
-  "SP",
-  "TO",
-] as const;
 
 /** Larguras das colunas fixas à esquerda (scroll horizontal nas demais) */
 const STICKY_W = { nome: 220, origem: 72, destinatario: 200 } as const;
@@ -342,7 +313,7 @@ export default async function RegrasPage({
                   <th className="px-3 py-2 font-semibold border-r border-border" colSpan={3}>
                     IBS/CBS
                   </th>
-                  {UFS.map((uf) => (
+                  {BRAZILIAN_UFS.map((uf) => (
                     <th key={uf} className="px-3 py-2 font-semibold border-r border-border" colSpan={UF_FIELDS.length}>
                       {`(${uf}) ${uf === "DF" ? "DISTRITO FEDERAL" : ""}`.trim()}
                     </th>
@@ -396,7 +367,7 @@ export default async function RegrasPage({
                   <th className="px-2 py-1.5 text-[10px] font-semibold border-r border-border align-bottom max-w-[72px]">
                     <CompactHeader title="Redução CBS (%)" lines={["Red.", "CBS %"]} />
                   </th>
-                  {UFS.map((uf) => (
+                  {BRAZILIAN_UFS.map((uf) => (
                     <Fragment key={`h-${uf}`}>
                       {UF_FIELDS.map((f, idx) => (
                         <th
@@ -465,7 +436,7 @@ export default async function RegrasPage({
                         <td className="px-3 py-2 text-[12px]">{softText(ibsCbs.cClassTrib)}</td>
                         <td className="px-3 py-2 text-[12px] font-mono text-right border-r border-border">{formatAliquotaPercent(ibsCbs.reducao, 2)}</td>
 
-                        {UFS.map((uf) => (
+                        {BRAZILIAN_UFS.map((uf) => (
                           <Fragment key={`${group.groupId}-${idx}-${uf}`}>
                             {UF_FIELDS.map((f, fIdx) => (
                               <td

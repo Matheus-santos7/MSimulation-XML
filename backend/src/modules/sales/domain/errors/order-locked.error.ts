@@ -4,11 +4,3 @@ export class OrderLockedError extends Error {
     this.name = "OrderLockedError";
   }
 }
-
-/** @deprecated Use OrderLockedError */
-export class PedidoLockedError extends OrderLockedError {
-  constructor() {
-    super();
-    this.name = "PedidoLockedError";
-  }
-}

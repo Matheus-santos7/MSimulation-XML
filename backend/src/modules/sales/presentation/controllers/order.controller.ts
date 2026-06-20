@@ -3,18 +3,16 @@ import { tenantIdFromRequest } from "../../../../lib/auth/request-context.js";
 import { handleRouteError } from "../../../../lib/http/domain-errors.js";
 import { SaldoRemessaInsuficienteError } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
 import { CheckoutError } from "../../domain/errors/checkout.error.js";
-import { OrderLockedError, PedidoLockedError } from "../../domain/errors/order-locked.error.js";
-import { SalesChainError, VendaChainError } from "../../domain/errors/sales-chain.error.js";
+import { OrderLockedError } from "../../domain/errors/order-locked.error.js";
+import { SalesChainError } from "../../domain/errors/sales-chain.error.js";
 import { createSalesModule } from "../../infrastructure/factory/sales-module.factory.js";
 import { orderCheckoutBody, orderIdParam } from "../schemas/order.schemas.js";
 
 /** Mapeamento de erros de domínio da venda para códigos HTTP na API. */
 const ORDER_ERROR_MAPPINGS = [
   { type: OrderLockedError, status: 409 },
-  { type: PedidoLockedError, status: 409 },
   { type: CheckoutError, status: 400 },
   { type: SalesChainError, status: 400 },
-  { type: VendaChainError, status: 400 },
   {
     type: SaldoRemessaInsuficienteError,
     status: 422,

@@ -63,6 +63,3 @@ export const lookupController: FastifyPluginAsync = async (app) => {
     },
   );
 };
-
-/** @deprecated Use lookupController */
-export const lookupRoutes = lookupController;

@@ -19,9 +19,9 @@ import { taxSnapshotFromRule } from "../../../tax/domain/services/tax-snapshot.j
 import { proximoNumeroNfe } from "../../../fiscal-documents/domain/services/nfe-sequencia.js";
 import { loadRemessaDestinoRetorno } from "../fifo/remessa-fifo.js";
 import {
-  calcularNotaInbound,
+  calculateInboundInvoice,
   resolveIcmsFallbackRate,
-  linhaPedidoFromProduto,
+  orderLineFromProduct,
 } from "../../../tax/index.js";
 import { resolveTaxRule } from "../../../tax/index.js";
 import { prepararRemessaSimbolicaFiscal } from "./remessa-simbolica-fiscal.js";
@@ -112,8 +112,8 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
 
     const aliqFallback = resolveIcmsFallbackRate(tenant.uf, destUf, "inbound", emitterSettings);
     const cfop = resolveRetornoSimbolicoCfop(tenant.uf, destUf);
-    const calc = calcularNotaInbound(
-      linhaPedidoFromProduto(product, {
+    const calc = calculateInboundInvoice(
+      orderLineFromProduct(product, {
         cfop,
         quantidade,
         valorUnitario: unitCusto,

@@ -13,11 +13,11 @@ import {
 } from "@msimulation-xml/fiscal-core";
 import { taxSnapshotFromRule } from "../../../tax/domain/services/tax-snapshot.js";
 import {
-  calcularNotaInbound,
-  inferAliqIcmsRemessa,
-  linhaPedidoFromProduto,
-  type ProdutoLinhaFiscal,
-  type ResultadoNotaInbound,
+  calculateInboundInvoice,
+  inferIcmsRateForShipment,
+  orderLineFromProduct,
+  type ProductFiscalLine,
+  type InboundInvoiceResult,
 } from "../../../tax/index.js";
 import { resolveTaxRule } from "../../../tax/index.js";
 
@@ -26,13 +26,13 @@ type ProductPrices = {
   precoCusto: { toString(): string } | number;
 };
 
-export type ProdutoRemessaSimbolica = ProdutoLinhaFiscal &
+export type ProdutoRemessaSimbolica = ProductFiscalLine &
   ProductPrices & {
     taxRuleBaseId: string | null;
   };
 
 export type RemessaSimbolicaFiscalPreparada = {
-  calc: ResultadoNotaInbound;
+  calc: InboundInvoiceResult;
   cfop: string;
   natOp: string;
   fiscalPayload: Record<string, unknown>;
@@ -98,10 +98,10 @@ export async function prepararRemessaSimbolicaFiscal(
   }
 
   const emitterSettings = await loadEmitterSettings(prisma, input.tenantId);
-  const aliqFallback = inferAliqIcmsRemessa(input.emitUf, input.destUf, emitterSettings);
+  const aliqFallback = inferIcmsRateForShipment(input.emitUf, input.destUf, emitterSettings);
   const cfop = resolveRemessaCfop(input.emitUf, input.destUf);
-  const calc = calcularNotaInbound(
-    linhaPedidoFromProduto(input.product, {
+  const calc = calculateInboundInvoice(
+    orderLineFromProduct(input.product, {
       cfop,
       quantidade: input.quantidade,
       valorUnitario: unitCusto,

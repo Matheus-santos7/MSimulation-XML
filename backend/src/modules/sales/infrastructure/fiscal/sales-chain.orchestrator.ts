@@ -55,7 +55,15 @@ export class SalesChainOrchestrator implements SalesChainPort {
         rules.emitterSettings,
       );
 
-      const saleRow = await emitSaleNote(tx, order, ctx, rules, returnNote, fifoPreview.destUf);
+      const saleRow = await emitSaleNote(
+        tx,
+        order,
+        ctx,
+        rules,
+        returnNote,
+        fifoPreview.destUf,
+        fifoPreview.destCodigoMunicipio,
+      );
       const saleCte = await emitSaleCte(tx, order.tenant as Tenant, saleRow);
 
       const returnWithRef = await tx.nFe.findUniqueOrThrow({

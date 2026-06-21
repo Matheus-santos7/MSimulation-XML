@@ -43,6 +43,7 @@ export async function emitSaleNote(
   rules: SalesChainRules,
   returnNote: ReturnNoteCreated,
   stockUf: string,
+  stockCodigoMunicipio?: string,
 ) {
   const { tenant } = order;
   const { saleTaxRule, customerType, emitterSettings } = rules;
@@ -93,7 +94,7 @@ export async function emitSaleNote(
   const icmsRate = saleItem.icms.pICMS || fallbackRate;
   const icmsValue = saleInvoice.totais.vICMS;
   const crossUfFulfillment = fiscalExitUf.toUpperCase() !== tenant.uf.toUpperCase();
-  const cMunSaidaFisica = fifoPreview.destCodigoMunicipio.trim() || undefined;
+  const cMunSaidaFisica = stockCodigoMunicipio?.trim() || undefined;
 
   const saleRow = await tx.nFe.create({
     data: {

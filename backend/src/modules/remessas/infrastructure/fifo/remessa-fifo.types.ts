@@ -31,6 +31,8 @@ export type PreviewRemessaFifoVenda = {
   remessaNfeId: string;
   remessaChave: string;
   destUf: string;
+  /** IBGE do CD de origem (para `cMunFG` na venda fulfillment). */
+  destCodigoMunicipio: string;
 };
 
 export type FifoItemRow = {

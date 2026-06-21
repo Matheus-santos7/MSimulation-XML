@@ -189,10 +189,16 @@ export async function previewRemessaPrincipalFifoParaVenda(
     select: REMESSA_DEST_SELECT,
   });
 
+  const destCodigoMunicipio =
+    remessa.destCodigoMunicipio?.trim() ||
+    remessa.unidadeDestino?.codigoMunicipio?.trim() ||
+    "";
+
   return {
     remessaNfeId: remessa.id,
     remessaChave: remessa.chave,
     destUf: remessa.destUf,
+    destCodigoMunicipio,
   };
 }
 

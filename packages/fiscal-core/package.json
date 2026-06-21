@@ -12,7 +12,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "pnpm run build && node --import tsx --test src/nfe-datetime.test.ts src/nfe-xtexto.test.ts src/nfe-numeracao.test.ts src/remessa-ml-payload.test.ts src/product-pricing.test.ts src/fiscal-emitter-runtime.test.ts src/xml-signature.test.ts src/xml-download.test.ts src/nprot.test.ts src/interstate-icms.test.ts src/sale-ml-xml.test.ts src/pis-cofins-cst.test.ts src/cte-xml.test.ts src/cte-template.test.ts src/xml-serializer.test.ts"
+    "test": "pnpm run build && node --import tsx --test src/nfe-datetime.test.ts src/nfe-xtexto.test.ts src/nfe-numeracao.test.ts src/remessa-ml-payload.test.ts src/product-pricing.test.ts src/fiscal-emitter-runtime.test.ts src/xml-signature.test.ts src/xml-download.test.ts src/nprot.test.ts src/interstate-icms.test.ts src/sale-ml-xml.test.ts src/venda-ide-fields.test.ts src/pis-cofins-cst.test.ts src/cte-xml.test.ts src/cte-template.test.ts src/xml-serializer.test.ts"
   },
   "devDependencies": {
     "@types/xmldom": "^0.1.34",

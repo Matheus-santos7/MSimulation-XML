@@ -37,6 +37,10 @@ export type BaseNFeBuildContext = {
 /** Opções do grupo `<ide>` variáveis por estratégia (venda vs remessa). */
 export type IdeBuildOptions = {
   stockUf: string;
+  /** UF do emitente para `<cUF>`; default = stockUf (remessas). */
+  cUfIde?: string;
+  /** IBGE para `<cMunFG>`; default = município do emitente. */
+  cMunFGIde?: string;
   idDest: number;
   finNFe: number;
   indFinal: number;

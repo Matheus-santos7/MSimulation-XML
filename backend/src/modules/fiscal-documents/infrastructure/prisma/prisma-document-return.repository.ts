@@ -150,6 +150,8 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
         cstVendaReferencia: referencedSaleCst,
       });
 
+      const saleFiscalPayload = sale.fiscalPayload as Record<string, unknown> | undefined;
+
       const returnRow = await tx.nFe.create({
         data: {
           tenantId: tenant.id,
@@ -185,7 +187,16 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
           saldoDisponivel: null,
           nfeReferenciaId: sale.id,
           fiscalPayload: enrichFiscalPayloadWithXTexto(
-            { ...taxSnapshot, engine: invoice } as Record<string, unknown>,
+            {
+              ...taxSnapshot,
+              engine: invoice,
+              ...(typeof saleFiscalPayload?.ufSaidaFisica === "string"
+                ? { ufSaidaFisica: saleFiscalPayload.ufSaidaFisica }
+                : {}),
+              ...(typeof saleFiscalPayload?.cMunSaidaFisica === "string"
+                ? { cMunSaidaFisica: saleFiscalPayload.cMunSaidaFisica }
+                : {}),
+            } as Record<string, unknown>,
             {
               tipo: NFeTipo.DEVOLUCAO,
               cfop,

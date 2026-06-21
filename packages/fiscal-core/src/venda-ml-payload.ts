@@ -25,6 +25,7 @@ export const VENDA_ML_CD_DEPOSITO = {
   complemento: "",
   bairro: "Guaporanga",
   municipio: "Governador Celso Ramos",
+  codigoMunicipio: "4204509",
   cep: "88195900",
   uf: "SC",
   pais: "BR",

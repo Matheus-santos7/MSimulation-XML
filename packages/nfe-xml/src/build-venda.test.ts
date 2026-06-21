@@ -310,5 +310,89 @@ describe("buildNFeXmlFromBuilder — VENDA", () => {
     assert.match(xml, /<pICMSInterPart>100\.00<\/pICMSInterPart>/);
     assert.match(xml, /<vICMSUFDest>83\.48<\/vICMSUFDest>/);
     assert.match(xml, /<infCpl>[^<]*DIFAL da UF destino R\$83,48/);
+    assert.match(xml, /<cUF>41<\/cUF>/);
+    assert.match(xml, /<cMunFG>4118501<\/cMunFG>/);
+  });
+
+  it("fulfillment cross-UF: cUF emitente, cMunFG CD e idDest=1 quando comprador no mesmo UF do CD", () => {
+    const spEmit: EmitenteXml = {
+      ...emit,
+      uf: "SP",
+      endereco: {
+        ...emit.endereco,
+        uf: "SP",
+        cMun: "3525201",
+        xMun: "Jarinu",
+      },
+    };
+    const nfe: NFeXmlInput = {
+      chave: "35260601490698006689550580000000311306171272",
+      numero: 31,
+      serie: 58,
+      natOp: VENDA_ML_NAT_OP,
+      cfop: "5105",
+      ncm: "85094010",
+      destinatario: {
+        nome: "Consumidor Final SC",
+        doc: "10255555385",
+        uf: "SC",
+        indIEDest: 9,
+        docTipo: "CPF",
+        endereco: {
+          logradouro: "Rua Felipe Schmidt",
+          numero: "123",
+          bairro: "Centro",
+          codigoMunicipio: "4205407",
+          municipio: "Florianopolis",
+          uf: "SC",
+          cep: "88010000",
+          codigoPais: 1058,
+          nomePais: "Brasil",
+        },
+      },
+      valor: 809,
+      valorICMS: 137.53,
+      aliqICMS: 17,
+      status: "AUTORIZADA",
+      emitidaEm: "2026-06-19T15:04:58-03:00",
+      pedidoML: "ML-781892298163",
+      quantidade: 1,
+      tipo: "VENDA",
+      fiscalPayload: enrichFiscalPayloadMlVenda(
+        {
+          ufSaidaFisica: "SC",
+          cMunSaidaFisica: "4204509",
+          engine: {
+            itens: [
+              {
+                vProd: 809,
+                quantidade: 1,
+                valorUnitario: 809,
+                icms: { cst: "00", orig: 2, vBC: 809, pICMS: 17, vICMS: 137.53 },
+                pis: { cst: "01", vBC: 809, pPIS: 1.65, vPIS: 13.35 },
+                cofins: { cst: "01", vBC: 809, pCOFINS: 7.6, vCOFINS: 61.48 },
+              },
+            ],
+            totais: {
+              vBC: 809,
+              vICMS: 137.53,
+              vProd: 809,
+              vPIS: 13.35,
+              vCOFINS: 61.48,
+              vNF: 809,
+            },
+          },
+        },
+        { quantidade: 1, xPed: "ML-781892298163" },
+      ),
+    };
+
+    const xml = buildNFeXML(nfe, spEmit, product);
+    assert.match(xml, /<cUF>35<\/cUF>/);
+    assert.match(xml, /<cMunFG>4204509<\/cMunFG>/);
+    assert.match(xml, /<idDest>1<\/idDest>/);
+    assert.match(xml, /<CFOP>5105<\/CFOP>/);
+    assert.match(xml, /<enderEmit>[\s\S]*?<UF>SP<\/UF>/);
+    assert.match(xml, /<enderDest>[\s\S]*?<UF>SC<\/UF>/);
   });
 });

@@ -107,6 +107,11 @@ export {
   resolveInterstateIcmsRateForProductOrigin,
 } from "./interstate-icms.js";
 export {
+  resolveVendaIdeFields,
+  type ResolveVendaIdeFieldsInput,
+  type ResolveVendaIdeFieldsResult,
+} from "./venda-ide-fields.js";
+export {
   buildEmitterSnapshot,
   calcTributoBase,
   composicaoChannel,

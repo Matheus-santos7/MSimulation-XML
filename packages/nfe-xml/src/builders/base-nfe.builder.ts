@@ -140,8 +140,8 @@ export abstract class BaseNFeBuilder {
     const opts = this.getIdeOptions();
     return buildIdeNode({
       nfe: this.ctx.nfe,
-      emitUf: opts.stockUf,
-      cMunFG: this.ctx.emit.endereco.cMun,
+      emitUf: opts.cUfIde ?? opts.stockUf,
+      cMunFG: opts.cMunFGIde ?? this.ctx.emit.endereco.cMun,
       dhEmi: this.ctx.dhEmi,
       options: opts,
     });

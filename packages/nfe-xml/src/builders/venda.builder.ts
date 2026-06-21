@@ -11,6 +11,7 @@ import {
   productUnitPriceForNfe,
   resolveFiscalExitUf,
   resolveSaleCfop,
+  resolveVendaIdeFields,
 } from "@msimulation-xml/fiscal-core";
 import type { XmlObject } from "../core/xml-serializer.js";
 import { icmsTotFromEngine, type EngineItem } from "../fiscal-engine-xml.js";
@@ -222,9 +223,21 @@ export class VendaNFeStrategyBuilder extends BaseNFeBuilder {
 
   protected getIdeOptions(): IdeBuildOptions {
     const d = this.ctx.nfe.destinatario;
+    const fiscal = this.ctx.fiscal;
+    const ideFields = resolveVendaIdeFields({
+      emitUf: this.ctx.emit.endereco.uf,
+      emitCMun: this.ctx.emit.endereco.cMun,
+      ufSaidaFisica:
+        typeof fiscal.ufSaidaFisica === "string" ? fiscal.ufSaidaFisica : undefined,
+      cMunSaidaFisica:
+        typeof fiscal.cMunSaidaFisica === "string" ? fiscal.cMunSaidaFisica : undefined,
+    });
+
     return {
       ...vendaIdeOptions(this.vendaCtx.stockUf, d.endereco.uf),
       idDest: this.vendaCtx.idDest,
+      cUfIde: ideFields.cUf,
+      cMunFGIde: ideFields.cMunFG,
     };
   }
 

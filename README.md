@@ -24,8 +24,9 @@ Monorepo · pnpm workspaces · `@msimulation-xml/backend` · `@msimulation-xml/f
 14. [Testes e qualidade](#testes-e-qualidade)
 15. [Guia do estagiário: por onde começar](#guia-do-estagiário-por-onde-começar)
 16. [Scripts úteis](#scripts-úteis)
-17. [Documentação complementar](#documentação-complementar)
-18. [Problemas comuns](#problemas-comuns)
+17. [Validador MCP Fiscal Brasil](#validador-mcp-fiscal-brasil)
+18. [Documentação complementar](#documentação-complementar)
+19. [Problemas comuns](#problemas-comuns)
 
 ---
 
@@ -94,7 +95,9 @@ msedit-xml/                          ← você está aqui (raiz)
 │   ├── fiscal-core/                 ← Utilitários fiscais puros (sem DB)
 │   └── nfe-xml/                     ← Geração de XML NF-e/CT-e
 ├── docs/assets/                     ← Logo e assets de documentação
-├── docker-compose.yml               ← PostgreSQL local
+├── docker-compose.yml               ← PostgreSQL + validador MCP (opcional)
+├── Dockerfile.fiscal-validator      ← Imagem do proxy MCP para Render/Docker
+├── infra/fiscal-validator-proxy/    ← FastAPI + auditoria CAT 31 (Python)
 ├── pnpm-workspace.yaml              ← Declara os workspaces
 ├── package.json                     ← Scripts globais (dev, build, test)
 └── README.md                        ← este arquivo
@@ -142,14 +145,15 @@ graph TB
 ## Stack tecnológica
 
 
-| Camada          | Tecnologias                                                         | Para que serve                            |
-| --------------- | ------------------------------------------------------------------- | ----------------------------------------- |
-| **Monorepo**    | pnpm 9, concurrently                                                | Instalar deps e subir front + back juntos |
-| **Backend**     | Fastify 5, TypeScript, Zod, Prisma 7, PostgreSQL                    | API REST, regras de negócio, persistência |
-| **Frontend**    | Next.js 15, React 19, Tailwind v4, shadcn/ui, React Hook Form + Zod | Interface do cockpit fiscal               |
-| **Auth**        | JWT (access + refresh), 2FA TOTP, Resend (e-mail)                   | Login, sessão, reset de senha             |
-| **Packages**    | TypeScript puro                                                     | Lógica fiscal reutilizável e testável     |
-| **Infra local** | Docker Compose (Postgres 16)                                        | Banco de dados de desenvolvimento         |
+| Camada          | Tecnologias                                                                | Para que serve                               |
+| --------------- | -------------------------------------------------------------------------- | -------------------------------------------- |
+| **Monorepo**    | pnpm 9, concurrently                                                       | Instalar deps e subir front + back juntos    |
+| **Backend**     | Fastify 5, TypeScript, Zod, Prisma 7, PostgreSQL                           | API REST, regras de negócio, persistência    |
+| **Frontend**    | Next.js 15, React 19, Tailwind v4, shadcn/ui, React Hook Form + Zod        | Interface do cockpit fiscal                  |
+| **Auth**        | JWT (access + refresh), 2FA TOTP, Resend (e-mail)                          | Login, sessão, reset de senha                |
+| **Packages**    | TypeScript puro                                                            | Lógica fiscal reutilizável e testável        |
+| **Infra local** | Docker Compose (Postgres 16 + validador MCP opcional)                      | Banco e auditoria fiscal de XML              |
+| **Validador**   | `mcp-fiscal-brasil` 0.4.0 + proxy FastAPI (`infra/fiscal-validator-proxy`) | Auditoria estrutural e regras CAT 31 de NF-e |
 
 
 ---
@@ -183,12 +187,13 @@ pnpm dev
 ```
 
 
-| Serviço       | URL                                                                  |
-| ------------- | -------------------------------------------------------------------- |
-| Frontend      | [http://localhost:3000](http://localhost:3000)                       |
-| Backend (API) | [http://localhost:3001](http://localhost:3001)                       |
-| Health check  | [http://localhost:3001/api/health](http://localhost:3001/api/health) |
-| Prisma Studio | `pnpm --filter @msimulation-xml/backend exec prisma studio`          |
+| Serviço       | URL                                                                                |
+| ------------- | ---------------------------------------------------------------------------------- |
+| Frontend      | [http://localhost:3000](http://localhost:3000)                                     |
+| Backend (API) | [http://localhost:3001](http://localhost:3001)                                     |
+| Health check  | [http://localhost:3001/api/health](http://localhost:3001/api/health)               |
+| Validador MCP | [http://localhost:8080/health](http://localhost:8080/health) (se `pnpm docker:up`) |
+| Prisma Studio | `pnpm --filter @msimulation-xml/backend exec prisma studio`                        |
 
 
 ### Variáveis obrigatórias (backend)
@@ -439,7 +444,9 @@ flowchart LR
   subgraph Backend
     TE[tax-engine — cálculo por item]
     RS[remessa-service — orquestração]
-    PERSIST[nfe-xml-service — persistência]
+    BUILD[buildNfeXmlAutorizado]
+    VAL[resolveNfeValidationUpdate]
+    PERSIST[persistNfeXmlAutorizado]
   end
 
   subgraph Packages
@@ -447,11 +454,19 @@ flowchart LR
     NX[nfe-xml — buildNFeXML]
   end
 
+  subgraph MCP["Validador MCP (opcional)"]
+    PROXY[fiscal-validator-proxy]
+  end
+
   RS --> TE
   TE --> FC
   FC --> NX
-  NX --> PERSIST
-  PERSIST --> DB[(nfe + xml)]
+  NX --> BUILD
+  BUILD --> VAL
+  VAL --> PROXY
+  PROXY --> VAL
+  VAL --> PERSIST
+  PERSIST --> DB[(nfe + xml + auditoria)]
 ```
 
 
@@ -741,9 +756,286 @@ Sugestão de ordem de leitura/exploração (1–2 semanas):
 | `pnpm build`        | Build packages + frontend + backend     |
 | `pnpm db:setup`     | Docker up + migrations                  |
 | `pnpm docker:up`    | Sobe Postgres                           |
-| `pnpm docker:down`  | Para Postgres                           |
+| `pnpm docker:down`  | Para Postgres + validador MCP           |
 | `pnpm docker:reset` | Apaga volume do banco (cuidado!)        |
 | `pnpm test:backend` | Testes fiscais + backend                |
+
+
+---
+
+## Validador MCP Fiscal Brasil
+
+O simulador integra o pacote **[mcp-fiscal-brasil](https://github.com/dehor-labs/mcp-fiscal-brasil)** para auditar o XML de NF-e **depois** de gerado e **antes** de persistir na transação de emissão. O objetivo é **rastreabilidade e diagnóstico** — a emissão **não é bloqueada** quando o XML é rejeitado ou quando o validador está offline.
+
+> **Escopo v1:** apenas NF-e. CT-e fica fora. Validação fiscal pesada roda no backend; o frontend só exibe status e erros retornados pela API.
+
+### O que o validador faz
+
+O proxy Python (`infra/fiscal-validator-proxy/`) orquestra o MCP e regras do simulador (fulfillment ML / Portaria CAT 31):
+
+
+| Etapa                | Responsável                                   | Exemplos de checagem                            |
+| -------------------- | --------------------------------------------- | ----------------------------------------------- |
+| Parse e estrutura    | `mcp-fiscal-brasil`                           | XML bem formado, tags NF-e v4.00                |
+| Chave e assinatura   | `validar_chave_nfe`, `validar_assinatura_nfe` | 44 dígitos, digest (simulado)                   |
+| Regras de negócio    | `audit.py`                                    | CFOP 5949/6949, CST ICMS, `infIntermed`, totais |
+| Resposta consolidada | `POST /api/v1/validate-nfe`                   | `valida`, `resumo`, `erros[]`, `achados[]`      |
+
+
+### Arquitetura (visão geral)
+
+```mermaid
+flowchart TB
+  subgraph Emissao["Backend — emissão de NF-e"]
+    UC[Use cases de remessa / venda / devolução]
+    BUILD[buildNfeXmlAutorizado]
+    PERSIST[persistNfeXmlAutorizado]
+    RESOLVE[resolveNfeValidationUpdate]
+    UC --> PERSIST
+    PERSIST --> BUILD
+    BUILD --> XML[String XML]
+    XML --> RESOLVE
+  end
+
+  subgraph Adapter["Camada de integração"]
+    CFG[loadFiscalValidatorConfig]
+    FACT[getFiscalValidator]
+    HTTP[HttpFiscalValidatorAdapter]
+    RESOLVE --> CFG
+    RESOLVE --> FACT
+    FACT --> HTTP
+  end
+
+  subgraph Validator["Microsserviço MCP"]
+    PROXY[FastAPI proxy :8080]
+    AUDIT[audit_nfe_xml]
+    MCP[mcp-fiscal-brasil 0.4.0]
+    HTTP -->|POST /api/v1/validate-nfe| PROXY
+    PROXY --> AUDIT
+    AUDIT --> MCP
+  end
+
+  subgraph Persist["PostgreSQL — nfes"]
+    COLS[status_validacao · mensagem_validacao · erros_validacao · auditoria_mcp · xml_autorizado]
+    RESOLVE --> COLS
+  end
+
+  subgraph UI["Frontend (thin client)"]
+    LIST[Lista NF-e — badge]
+    DET[Detalhe NF-e — painel de auditoria]
+    IA[Página IA Insights]
+    COLS --> LIST
+    COLS --> DET
+    COLS --> IA
+  end
+```
+
+
+
+### Fluxo na emissão (ponto único de integração)
+
+Todas as emissões que persistem XML passam por `persistNfeXmlAutorizado` — remessa física, venda, devolução, transferência, etc. Não há validação duplicada em cada use case.
+
+```mermaid
+sequenceDiagram
+  participant TX as Transação Prisma
+  participant SVC as nfe-xml-service
+  participant NX as nfe-xml builder
+  participant VAL as resolveNfeValidationUpdate
+  participant MCP as Validador MCP
+  participant DB as nfes
+
+  TX->>SVC: persistNfeXmlAutorizado(nfeId, ...)
+  SVC->>NX: buildNfeXmlAutorizado(...)
+  NX-->>SVC: xml (string)
+  SVC->>VAL: validate + map status
+  alt FISCAL_VALIDATOR_ENABLED=true e MCP online
+    VAL->>MCP: POST /api/v1/validate-nfe { xml }
+    MCP-->>VAL: { valida, resumo, erros, achados }
+    VAL-->>SVC: APPROVED ou REJECTED + auditoriaMcp
+  else Validador desabilitado
+    VAL-->>SVC: PENDING — "Validação desabilitada"
+  else MCP offline / timeout
+    VAL-->>SVC: PENDING — "Validador indisponível: …"
+  end
+  SVC->>DB: UPDATE xml_autorizado + campos de validação
+  Note over TX,DB: Emissão continua — validação não aborta a transação
+```
+
+
+
+### Regras de comportamento
+
+
+| Cenário                          | `statusValidacao`             | Emissão abortada?         |
+| -------------------------------- | ----------------------------- | ------------------------- |
+| XML aprovado (`valida: true`)    | `APPROVED`                    | Não                       |
+| XML rejeitado (`valida: false`)  | `REJECTED` + `errosValidacao` | **Não** — apenas rastreio |
+| `FISCAL_VALIDATOR_ENABLED=false` | `PENDING`                     | Não                       |
+| MCP indisponível (HTTP/timeout)  | `PENDING`                     | Não                       |
+
+
+Implementação: `backend/src/modules/fiscal-documents/infrastructure/xml/nfe-xml-validation.ts`.
+
+### Configuração
+
+#### Variáveis de ambiente (backend)
+
+
+| Variável                    | Default dev             | Descrição                                              |
+| --------------------------- | ----------------------- | ------------------------------------------------------ |
+| `FISCAL_VALIDATOR_URL`      | `http://localhost:8080` | Base URL do proxy (aceita URL completa ou `host:port`) |
+| `FISCAL_VALIDATOR_HOSTPORT` | —                       | Alternativa ao URL (ex.: host interno Render)          |
+| `FISCAL_VALIDATOR_ENABLED`  | `true`                  | `false` ou `0` pula a chamada ao MCP                   |
+
+
+Raiz (Docker): `FISCAL_VALIDATOR_PORT=8080` mapeia host → container `:8000`.
+
+Consulte também `backend/.env.example` e `.env.example`.
+
+#### Docker Compose (desenvolvimento local)
+
+O serviço `fiscal-validator-api` sobe com `pnpm docker:up` (junto com Postgres):
+
+```yaml
+# docker-compose.yml (resumo)
+fiscal-validator-api:
+  build:
+    dockerfile: Dockerfile.fiscal-validator
+  ports:
+    - "${FISCAL_VALIDATOR_PORT:-8080}:8000"
+```
+
+Smoke test:
+
+```bash
+pnpm docker:up
+curl -sf http://localhost:8080/health
+curl -sf -X POST http://localhost:8080/api/v1/validate-nfe \
+  -H 'Content-Type: application/json' \
+  -d '{"xml":"<nfeProc/>"}'
+```
+
+Para desenvolver **sem** Docker do validador, use `FISCAL_VALIDATOR_ENABLED=false` no `backend/.env`.
+
+#### Produção (Render)
+
+O blueprint `render.yaml` declara dois web services:
+
+1. `**msimulation-xml-fiscal-validator`** — imagem `Dockerfile.fiscal-validator`, health em `/health`
+2. `**msimulation-xml-api**` — recebe `FISCAL_VALIDATOR_URL` via `fromService` (hostport privado do validador)
+
+O proxy existe porque o `mcp-fiscal-brasil` 0.4.0 expõe nativamente `POST /v1/nfe/validate` com `**xml_path` em disco**; o proxy traduz `POST /api/v1/validate-nfe` com `**{ "xml": "..." }` inline**, compatível com o backend Node.
+
+Arquivos principais:
+
+
+| Arquivo                                 | Função                                            |
+| --------------------------------------- | ------------------------------------------------- |
+| `Dockerfile.fiscal-validator`           | Imagem Python 3.12 + `mcp-fiscal-brasil==0.4.0`   |
+| `infra/fiscal-validator-proxy/main.py`  | FastAPI — `/health`, `/api/v1/validate-nfe`       |
+| `infra/fiscal-validator-proxy/audit.py` | Auditoria consolidada (CAT 31, CFOP remessa, CST) |
+| `render.yaml`                           | Deploy API + validador no Render                  |
+
+
+### Backend — código e persistência
+
+
+| Camada           | Arquivo                                                                      | Responsabilidade                   |
+| ---------------- | ---------------------------------------------------------------------------- | ---------------------------------- |
+| Port             | `backend/src/modules/fiscal-documents/domain/ports/fiscal-validator.port.ts` | Contrato `validateNfe(xml)`        |
+| Adapter HTTP     | `.../infrastructure/external/http-fiscal-validator.adapter.ts`               | Cliente REST do proxy              |
+| Config / factory | `backend/src/lib/fiscal-validator-config.ts`, `fiscal-validator-factory.ts`  | Env + singleton                    |
+| Integração       | `.../infrastructure/xml/nfe-xml-service.ts`                                  | Choke point na persistência do XML |
+| Status           | `backend/src/lib/fiscal-validator-status.ts`                                 | Probe `GET /health`                |
+| Backfill         | `.../infrastructure/xml/nfe-validation-backfill.service.ts`                  | Revalida NF-es `PENDING`           |
+| Insights         | `.../application/use-cases/get-validation-insights.use-case.ts`              | Agregados para IA                  |
+
+
+Campos Prisma em `NFe` (`backend/prisma/schema.prisma`):
+
+- `statusValidacao` — `PENDING` | `APPROVED` | `REJECTED`
+- `mensagemValidacao` — resumo legível
+- `errosValidacao` — JSON com lista de strings
+- `auditoriaMcp` — payload completo (`valida`, `resumo`, `erros`, `achados`)
+
+### API REST exposta pelo backend
+
+
+| Método | Rota                              | Auth                     | Descrição                                 |
+| ------ | --------------------------------- | ------------------------ | ----------------------------------------- |
+| `GET`  | `/api/fiscal-validation/status`   | JWT + tenant             | MCP habilitado? alcançável?               |
+| `GET`  | `/api/fiscal-validation/insights` | JWT + tenant             | Contadores, top erros, rejeições (7 dias) |
+| `POST` | `/api/fiscal-validation/backfill` | JWT + tenant + **ADMIN** | Revalida lote de NF-es `PENDING`          |
+
+
+Controller: `backend/src/modules/fiscal-documents/presentation/controllers/fiscal-observability.controller.ts`.
+
+### Frontend — como a UI consome
+
+O browser **nunca** chama o MCP diretamente. Tudo passa pelo backend (`/api/fiscal-validation/`* e campos em `NFeDto`).
+
+```mermaid
+flowchart LR
+  subgraph Pages
+    NFE_LIST[/nfe — lista]
+    NFE_DET[/nfe/chave — detalhe]
+    IA[/ia — insights]
+  end
+
+  subgraph Components
+    BADGE[nfe-validation-badge]
+    PANEL[nfe-validation-audit-panel]
+    INSIGHTS[fiscal-validation-insights]
+    BANNER[fiscal-validator-status-banner]
+    BACKFILL[fiscal-validation-backfill-button]
+  end
+
+  subgraph API
+    BFF[Server Components / fiscal-api]
+    BE[Backend Fastify]
+  end
+
+  NFE_LIST --> BADGE
+  NFE_DET --> PANEL
+  IA --> INSIGHTS
+  IA --> BANNER
+  IA --> BACKFILL
+  BADGE --> BFF
+  PANEL --> BFF
+  INSIGHTS --> BFF
+  BANNER --> BFF
+  BACKFILL --> BFF
+  BFF --> BE
+```
+
+
+
+
+| Componente                              | Onde            | Dados exibidos                            |
+| --------------------------------------- | --------------- | ----------------------------------------- |
+| `nfe-validation-badge.tsx`              | Lista de NF-e   | Badge `PENDING` / `APPROVED` / `REJECTED` |
+| `nfe-validation-audit-panel.tsx`        | Detalhe da NF-e | `validationAudit` — achados MCP completos |
+| `fiscal-validation-insights.tsx`        | `/ia`           | Métricas e rejeições recentes             |
+| `fiscal-validator-status-banner.tsx`    | `/ia` (admin)   | Alerta se MCP offline                     |
+| `fiscal-validation-backfill-button.tsx` | `/ia` (admin)   | Dispara backfill de pendentes             |
+
+
+Cliente API: `frontend/src/lib/fiscal-api/validation-insights.ts`.
+
+### Backfill de NF-es pendentes
+
+NF-es emitidas enquanto o validador estava offline ficam com `statusValidacao = PENDING`. Admins podem reprocessar em lote (até 200 por chamada) via botão na página **IA Insights** ou `POST /api/fiscal-validation/backfill`.
+
+O backfill regenera o XML se necessário (`resolveNfeXmlStringFromLoadedRow`), reenvia ao MCP e atualiza os quatro campos de auditoria.
+
+### Documentação de design
+
+
+| Documento                                                               | Conteúdo                                  |
+| ----------------------------------------------------------------------- | ----------------------------------------- |
+| `docs/superpowers/specs/2026-06-20-mcp-fiscal-xml-validation-design.md` | Spec funcional (status: concluída)        |
+| `docs/superpowers/plans/2026-06-20-mcp-fiscal-xml-validation.md`        | Plano de implementação e mapa de arquivos |
 
 
 ---
@@ -751,14 +1043,15 @@ Sugestão de ordem de leitura/exploração (1–2 semanas):
 ## Documentação complementar
 
 
-| Documento                                                                                            | Conteúdo                                              |
-| ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| `[backend/README.md](backend/README.md)`                                                             | Arquitetura detalhada do backend, módulos, convenções |
-| `[frontend/README.md](frontend/README.md)`                                                           | Rotas, marca, execução do frontend                    |
-| `[backend/docs/fiscal/regras-fulfillment-cat31.md](backend/docs/fiscal/regras-fulfillment-cat31.md)` | Regras ML Full / Portaria CAT 31                      |
-| `[backend/docs/fiscal/manual-nfe-moc.md](backend/docs/fiscal/manual-nfe-moc.md)`                     | Referência estrutural NF-e (MOC)                      |
-| `[backend/.env.example](backend/.env.example)`                                                       | Variáveis da API                                      |
-| `[frontend/.env.example](frontend/.env.example)`                                                     | Variáveis do Next.js                                  |
+| Documento                                                                                                                                        | Conteúdo                                              |
+| ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- |
+| `[backend/README.md](backend/README.md)`                                                                                                         | Arquitetura detalhada do backend, módulos, convenções |
+| `[frontend/README.md](frontend/README.md)`                                                                                                       | Rotas, marca, execução do frontend                    |
+| `[backend/docs/fiscal/regras-fulfillment-cat31.md](backend/docs/fiscal/regras-fulfillment-cat31.md)`                                             | Regras ML Full / Portaria CAT 31                      |
+| `[backend/docs/fiscal/manual-nfe-moc.md](backend/docs/fiscal/manual-nfe-moc.md)`                                                                 | Referência estrutural NF-e (MOC)                      |
+| `[backend/.env.example](backend/.env.example)`                                                                                                   | Variáveis da API (incl. `FISCAL_VALIDATOR_`*)         |
+| `[frontend/.env.example](frontend/.env.example)`                                                                                                 | Variáveis do Next.js                                  |
+| `[docs/superpowers/specs/2026-06-20-mcp-fiscal-xml-validation-design.md](docs/superpowers/specs/2026-06-20-mcp-fiscal-xml-validation-design.md)` | Design do validador MCP Fiscal Brasil                 |
 
 
 ---
@@ -766,14 +1059,17 @@ Sugestão de ordem de leitura/exploração (1–2 semanas):
 ## Problemas comuns
 
 
-| Sintoma                  | Causa provável                     | Solução                                                                                            |
-| ------------------------ | ---------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `ECONNREFUSED :5432`     | Postgres não está rodando          | `pnpm docker:up`                                                                                   |
-| API retorna 401 em tudo  | JWT expirado ou `JWT_SECRET` mudou | Logout, login de novo; confira `backend/.env`                                                      |
-| Frontend não alcança API | `API_URL` errada                   | Confira `frontend/.env.local` → `http://127.0.0.1:3001`                                            |
-| Migration falha          | Banco desatualizado                | `pnpm --filter @msimulation-xml/backend exec prisma migrate deploy`                                |
-| Build falha em packages  | `dist/` desatualizado              | `pnpm --filter @msimulation-xml/fiscal-core build && pnpm --filter @msimulation-xml/nfe-xml build` |
-| CORS error no browser    | Origem não listada                 | Adicione `http://localhost:3000` em `CORS_ORIGINS`                                                 |
+| Sintoma                    | Causa provável                        | Solução                                                                                                  |
+| -------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `ECONNREFUSED :5432`       | Postgres não está rodando             | `pnpm docker:up`                                                                                         |
+| API retorna 401 em tudo    | JWT expirado ou `JWT_SECRET` mudou    | Logout, login de novo; confira `backend/.env`                                                            |
+| Frontend não alcança API   | `API_URL` errada                      | Confira `frontend/.env.local` → `http://127.0.0.1:3001`                                                  |
+| Migration falha            | Banco desatualizado                   | `pnpm --filter @msimulation-xml/backend exec prisma migrate deploy`                                      |
+| Build falha em packages    | `dist/` desatualizado                 | `pnpm --filter @msimulation-xml/fiscal-core build && pnpm --filter @msimulation-xml/nfe-xml build`       |
+| CORS error no browser      | Origem não listada                    | Adicione `http://localhost:3000` em `CORS_ORIGINS`                                                       |
+| NF-es sempre `PENDING`     | Validador MCP offline ou desabilitado | `pnpm docker:up`; confira `FISCAL_VALIDATOR_URL` e `/health`; ou `FISCAL_VALIDATOR_ENABLED=false` em dev |
+| Badge rejeitado na UI      | XML reprovado pelo MCP (esperado)     | Abra detalhe da NF-e → painel de auditoria; corrija regra/XML no backend                                 |
+| Backfill não processa nada | Validador ainda indisponível          | Suba `fiscal-validator-api`; admin → página IA → botão de revalidação                                    |
 
 
 ---

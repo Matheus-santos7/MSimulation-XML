@@ -55,16 +55,16 @@ export default async function NFeListPage() {
             <table className="w-full text-left border-collapse table-fixed">
               <colgroup>
                 <col className="w-[88px]" />
-                <col className="w-[120px]" />
+                <col className="w-[130px]" />
                 <col className="w-[108px]" />
                 <col className="w-[64px]" />
                 <col className="w-[72px]" />
                 <col />
-                <col className="w-[96px]" />
+                <col className="w-[150px]" />
                 <col className="w-[108px]" />
                 <col className="w-[120px]" />
-                <col className="w-[88px]" />
-                <col className="w-[112px]" />
+                <col className="w-[120px]" />
+                <col className="w-[40px]" />
               </colgroup>
               <thead className="sticky top-0 z-10 bg-card">
                 <tr className="text-[12px] text-muted-foreground uppercase tracking-tighter border-b border-border bg-muted/30">
@@ -76,7 +76,7 @@ export default async function NFeListPage() {
                   <th className="px-4 py-3 font-medium">Destinatário</th>
                   <th className="px-4 py-3 font-medium">Valor</th>
                   <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 font-medium">Validação</th>
+                  {/* <th className="px-4 py-3 font-medium">Validação</th> */}
                   <th className="px-4 py-3 font-medium text-right">XML</th>
                   <th className="px-4 py-3 font-medium text-right">Ações</th>
                 </tr>
@@ -161,9 +161,9 @@ export default async function NFeListPage() {
                       <td className="px-4 py-3">
                         <StatusBadge status={nfe.status} />
                       </td>
-                      <td className="px-4 py-3">
+                      {/* <td className="px-4 py-3">
                         <NfeValidationBadge status={nfe.validationStatus ?? "PENDING"} />
-                      </td>
+                      </td> */}
                       <td className="px-4 py-3">
                         <NfeXmlActions
                           chave={nfe.chave}

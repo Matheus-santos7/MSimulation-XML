@@ -16,7 +16,7 @@ export function FiscalValidationInsights({ data }: Props) {
         <StatCard icon={Clock} label="Pendentes" value={data.counts.pending} tone="muted" />
       </div>
 
-      {data.topErrors.length > 0 && (
+      {/* {data.topErrors.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
             Erros mais frequentes
@@ -28,7 +28,7 @@ export function FiscalValidationInsights({ data }: Props) {
             </div>
           ))}
         </section>
-      )}
+      )} */}
 
       <section className="space-y-3">
         <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">

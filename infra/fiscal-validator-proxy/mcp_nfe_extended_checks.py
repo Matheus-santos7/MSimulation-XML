@@ -4,6 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
+from catalog_helpers import (
+    is_catalog_gap_error,
+    is_strict_catalog_enabled,
+    is_valid_cest_format,
+    is_valid_ncm_format,
+)
 from nfe_xml_context import (
     NfeValidationContext,
     issue_dict,
@@ -182,15 +188,24 @@ async def _check_item_tables(
                 )
 
         if item.ncm:
-            try:
-                await consultar_ncm(item.ncm)
-            except FiscalValidationError as exc:
+            if not is_valid_ncm_format(item.ncm):
                 _append_issue(
                     issues,
                     "alto",
-                    "NCM_INVALIDO",
-                    f"{label}: NCM {item.ncm} inválido ou não encontrado: {exc}",
+                    "NCM_FORMATO",
+                    f"{label}: NCM '{item.ncm}' inválido — informe 8 dígitos numéricos.",
                 )
+            else:
+                try:
+                    await consultar_ncm(item.ncm)
+                except FiscalValidationError as exc:
+                    if is_strict_catalog_enabled() or not is_catalog_gap_error(exc):
+                        _append_issue(
+                            issues,
+                            "alto",
+                            "NCM_INVALIDO",
+                            f"{label}: NCM {item.ncm} inválido ou não encontrado: {exc}",
+                        )
 
         tax_code = item.csosn if regime == "simples" and item.csosn else item.cst_icms
         if tax_code:
@@ -221,16 +236,31 @@ async def _check_item_tables(
                     "CEST_OBRIGATORIO",
                     f"{label}: CST/CSOSN de ST exige <CEST> preenchido.",
                 )
+            elif not is_valid_cest_format(item.cest):
+                _append_issue(
+                    issues,
+                    "alto",
+                    "CEST_FORMATO",
+                    f"{label}: CEST '{item.cest}' inválido — informe 7 dígitos numéricos.",
+                )
             else:
                 try:
                     await consultar_cest(item.cest)
                 except FiscalValidationError as exc:
-                    _append_issue(
-                        issues,
-                        "alto",
-                        "CEST_INVALIDO",
-                        f"{label}: CEST {item.cest} inválido ou não encontrado: {exc}",
-                    )
+                    if is_strict_catalog_enabled() or not is_catalog_gap_error(exc):
+                        _append_issue(
+                            issues,
+                            "alto",
+                            "CEST_INVALIDO",
+                            f"{label}: CEST {item.cest} inválido ou não encontrado: {exc}",
+                        )
+        elif item.cest and not is_valid_cest_format(item.cest):
+            _append_issue(
+                issues,
+                "medio",
+                "CEST_FORMATO",
+                f"{label}: CEST opcional '{item.cest}' com formato inválido (esperado 7 dígitos).",
+            )
 
 
 async def run_mcp_extended_checks(xml_content: str) -> list[dict[str, str]]:

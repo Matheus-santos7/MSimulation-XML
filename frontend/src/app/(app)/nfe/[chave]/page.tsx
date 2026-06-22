@@ -105,7 +105,7 @@ export default async function NFeDetailPage({ params }: Props) {
             </div>
           )}
 
-          {nfe.referenciadas && nfe.referenciadas.length > 0 && (
+          {/* {nfe.referenciadas && nfe.referenciadas.length > 0 && (
             <div className="border border-border rounded-lg bg-card p-4 space-y-2">
               <h3 className="text-[12px] uppercase tracking-widest font-bold text-muted-foreground">Documentos posteriores</h3>
               <ul className="space-y-1">
@@ -118,7 +118,7 @@ export default async function NFeDetailPage({ params }: Props) {
                 ))}
               </ul>
             </div>
-          )}
+          )} */}
 
           {(nfe.tipo === "REMESSA" || nfe.tipo === "REMESSA_AVANCO") && (
             <div className="border border-border rounded-lg bg-card p-4">

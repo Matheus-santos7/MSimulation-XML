@@ -127,3 +127,9 @@ async def enrich_validate_nfe_full_payload(
 
     _rebuild_resumo(payload, chave)
     return payload
+
+
+def finalize_validate_nfe_full_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Recalcula o resumo após anexar issues incrementais."""
+    _rebuild_resumo(payload, str(payload.get("chave_acesso") or ""))
+    return payload

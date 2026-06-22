@@ -11,6 +11,8 @@ RUN pip install --no-cache-dir "mcp-fiscal-brasil==0.5.1"
 
 WORKDIR /app
 COPY infra/fiscal-validator-proxy/audit.py /app/audit.py
+COPY infra/fiscal-validator-proxy/nfe_xml_context.py /app/nfe_xml_context.py
+COPY infra/fiscal-validator-proxy/mcp_nfe_extended_checks.py /app/mcp_nfe_extended_checks.py
 COPY infra/fiscal-validator-proxy/validate_nfe_full_response.py /app/validate_nfe_full_response.py
 COPY infra/fiscal-validator-proxy/validate_nfe_full_runner.py /app/validate_nfe_full_runner.py
 COPY infra/fiscal-validator-proxy/main.py /app/main.py

@@ -3,7 +3,8 @@ Proxy HTTP para validação de NF-e via corpo XML.
 
 O mcp-fiscal-brasil 0.4.0 expõe `validate_nfe_full` com `xml_path` em disco.
 Este proxy traduz POST /api/v1/validate-nfe { "xml": "..." } para o retorno cru
-do MCP. A auditoria estendida (CAT 31) permanece em POST /api/v1/audit-nfe.
+do MCP com validações incrementais (CST, CFOP, NCM, CEST, CEP/IBGE).
+A auditoria legada CAT 31 permanece em POST /api/v1/audit-nfe.
 """
 
 from __future__ import annotations

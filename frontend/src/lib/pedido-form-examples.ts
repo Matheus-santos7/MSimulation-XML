@@ -115,6 +115,7 @@ function cpfExampleForState(capital: StateCapital, index: number): PedidoFormExa
       cep: `${capital.cep.slice(0, 5)}-${capital.cep.slice(5)}`,
       telefone: `119${String(90000000 + index).slice(-8)}`,
       indIEDest: "9",
+      ie: "",
     }),
   };
 }
@@ -143,6 +144,7 @@ export const PEDIDO_FORM_EXAMPLES: PedidoFormExample[] = [
       cep: "01310-100",
       telefone: "1133334444",
       indIEDest: "1",
+      ie: "225184297",
     }),
   },
   {
@@ -163,6 +165,7 @@ export const PEDIDO_FORM_EXAMPLES: PedidoFormExample[] = [
       cep: "20040-002",
       telefone: "21988887777",
       indIEDest: "9",
+      ie: "",
     }),
   },
   {
@@ -183,6 +186,7 @@ export const PEDIDO_FORM_EXAMPLES: PedidoFormExample[] = [
       cep: "80020-310",
       telefone: "4132221100",
       indIEDest: "1",
+      ie: "9041234567",
     }),
   },
 ];

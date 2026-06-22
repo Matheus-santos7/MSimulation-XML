@@ -94,6 +94,9 @@ export function mapNfe(
   saldoFifoOverride?: number,
 ) {
   const doc = row.destDoc.replace(/\D/g, "");
+  const fiscalRoot = (row.fiscalPayload as Record<string, unknown> | undefined) ?? {};
+  const destIeFromPayload =
+    typeof fiscalRoot.destIe === "string" ? fiscalRoot.destIe.replace(/\D/g, "") : undefined;
   const mappedItens = itens?.map(mapNfeItem);
   return {
     id: row.id,
@@ -110,6 +113,7 @@ export function mapNfe(
       doc: row.destDoc,
       uf: row.destUf,
       indIEDest: row.destIndIeDest,
+      ...(destIeFromPayload ? { ie: destIeFromPayload } : {}),
       endereco: {
         logradouro: row.destLogradouro,
         numero: row.destNumero,

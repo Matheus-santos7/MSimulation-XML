@@ -21,6 +21,7 @@ import type { OrderForEmit } from "../../domain/entities/order-for-emit.entity.j
 import type { ReturnNoteCreated, SalesChainRules } from "../../application/dto/sales-chain.dto.js";
 import {
   inferIcmsRateForSale,
+  resolveDestIeForFiscalPayload,
   saleDestinationAddress,
 } from "../../domain/services/sales-chain.service.js";
 
@@ -95,6 +96,7 @@ export async function emitSaleNote(
   const icmsValue = saleInvoice.totais.vICMS;
   const crossUfFulfillment = fiscalExitUf.toUpperCase() !== tenant.uf.toUpperCase();
   const cMunSaidaFisica = stockCodigoMunicipio?.trim() || undefined;
+  const destIe = resolveDestIeForFiscalPayload(order.destIndIeDest, order.destIe);
 
   const saleRow = await tx.nFe.create({
     data: {
@@ -135,6 +137,7 @@ export async function emitSaleNote(
             ...(nfci ? { nfci } : {}),
             ...(xPed ? { xPed } : {}),
             ...(valorFrete > 0 ? { valorFrete } : {}),
+            ...(destIe ? { destIe } : {}),
           } as Record<string, unknown>,
           {
             quantidade: order.quantidade,

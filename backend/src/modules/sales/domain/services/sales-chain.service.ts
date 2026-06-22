@@ -85,6 +85,18 @@ export function saleDestinationAddress(order: OrderForEmit) {
 }
 
 /**
+ * Normaliza IE do destinatário para o XML quando `indIEDest === 1` (contribuinte ICMS).
+ */
+export function resolveDestIeForFiscalPayload(
+  destIndIeDest: number,
+  destIe?: string | null,
+): string | undefined {
+  if (destIndIeDest !== 1) return undefined;
+  const digits = destIe?.replace(/\D/g, "").trim();
+  return digits || undefined;
+}
+
+/**
  * Garante que a resolução de regra fiscal do módulo tax devolveu linha aplicável.
  *
  * @param rule - Regra resolvida ou `null`

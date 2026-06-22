@@ -19,4 +19,6 @@ export type Buyer = {
   codigoPais: number;
   nomePais: string;
   indIEDest: number;
+  /** Inscrição estadual do destinatário — obrigatória quando `indIEDest === 1`. */
+  ie?: string;
 };

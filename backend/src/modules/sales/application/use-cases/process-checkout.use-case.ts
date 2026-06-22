@@ -48,6 +48,7 @@ export class ProcessCheckoutUseCase {
       destNomePais: c.nomePais,
       destTelefone: c.telefone?.replace(/\D/g, "") ?? null,
       destIndIeDest: c.indIEDest,
+      destIe: c.ie?.replace(/\D/g, "") || null,
       product,
       tenant,
     };

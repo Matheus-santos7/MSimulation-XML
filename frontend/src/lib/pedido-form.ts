@@ -30,6 +30,8 @@ export type PedidoFormValues = {
   telefone: string;
   /** indIEDest SEFAZ: 1=contribuinte, 2=isento, 9=não contribuinte (consumidor final). */
   indIEDest: string;
+  /** IE do destinatário — obrigatória quando indIEDest=1. */
+  ie: string;
 };
 
 export const PEDIDO_FORM_EMPTY: PedidoFormValues = {
@@ -47,6 +49,7 @@ export const PEDIDO_FORM_EMPTY: PedidoFormValues = {
   cep: "",
   telefone: "",
   indIEDest: "9",
+  ie: "",
 };
 
 /** @deprecated Preferir `PEDIDO_FORM_EXAMPLES` ou `findPedidoFormExample`. */
@@ -70,6 +73,7 @@ export function pedidoToFormValues(p: PedidoDto): PedidoFormValues {
     cep: c.cep,
     telefone: c.telefone ?? "",
     indIEDest: String(c.indIEDest ?? 9),
+    ie: c.ie ?? "",
   };
 }
 
@@ -94,6 +98,7 @@ export function parsePedidoForm(formData: FormData): PedidoCheckoutInput {
     codigoPais: 1058,
     nomePais: "Brasil",
     indIEDest: Number(formData.get("indIEDest") ?? 9),
+    ie: opt("ie"),
   };
 
   return {

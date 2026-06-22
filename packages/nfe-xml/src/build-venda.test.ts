@@ -395,4 +395,68 @@ describe("buildNFeXmlFromBuilder — VENDA", () => {
     assert.match(xml, /<enderEmit>[\s\S]*?<UF>SP<\/UF>/);
     assert.match(xml, /<enderDest>[\s\S]*?<UF>SC<\/UF>/);
   });
+
+  it("inclui IE no dest quando indIEDest=1 e fiscalPayload.destIe informado", () => {
+    const nfe: NFeXmlInput = {
+      chave: "41260678242849000169550050000000061423282897",
+      numero: 6,
+      serie: 5,
+      natOp: VENDA_ML_NAT_OP,
+      cfop: "6102",
+      ncm: "73211100",
+      destinatario: {
+        nome: "Comercial Atlas Distribuidora LTDA",
+        doc: "78242849000169",
+        uf: "SP",
+        indIEDest: 1,
+        docTipo: "CNPJ",
+        endereco: {
+          logradouro: "Avenida Paulista",
+          numero: "1000",
+          bairro: "Bela Vista",
+          codigoMunicipio: "3550308",
+          municipio: "Sao Paulo",
+          uf: "SP",
+          cep: "01310100",
+          codigoPais: 1058,
+          nomePais: "Brasil",
+        },
+      },
+      valor: 815.86,
+      valorICMS: 97.9,
+      aliqICMS: 12,
+      status: "AUTORIZADA",
+      emitidaEm: "2026-06-22T10:00:00-03:00",
+      pedidoML: "46766952869",
+      quantidade: 1,
+      tipo: "VENDA",
+      fiscalPayload: {
+        destIe: "225184297",
+        engine: {
+          itens: [
+            {
+              vProd: 815.86,
+              quantidade: 1,
+              valorUnitario: 815.86,
+              icms: { cst: "00", orig: 5, vBC: 815.86, pICMS: 12, vICMS: 97.9 },
+              pis: { cst: "01", vBC: 815.86, pPIS: 1.65, vPIS: 13.46 },
+              cofins: { cst: "01", vBC: 815.86, pCOFINS: 7.6, vCOFINS: 62.01 },
+            },
+          ],
+          totais: {
+            vBC: 815.86,
+            vICMS: 97.9,
+            vProd: 815.86,
+            vPIS: 13.46,
+            vCOFINS: 62.01,
+            vNF: 815.86,
+          },
+        },
+      },
+    };
+
+    const xml = buildNFeXML(nfe, emit, product);
+    assert.match(xml, /<indIEDest>1<\/indIEDest>\s*<IE>225184297<\/IE>/);
+    assert.doesNotMatch(xml, /<indIEDest>9<\/indIEDest>\s*<IE>/);
+  });
 });

@@ -175,6 +175,14 @@ export function PedidoWizardDialog({ open, onOpenChange, products, pedido }: Pro
                   Define a regra tributária (taxpayer / non_taxpayer) e validações SEFAZ na emissão da NF-e.
                 </p>
               </div>
+              {form.indIEDest === "1" && (
+                <Field
+                  label="Inscrição Estadual (IE)"
+                  value={form.ie}
+                  onChange={(v) => set("ie", v)}
+                  mono
+                />
+              )}
             </div>
           )}
 
@@ -221,7 +229,7 @@ export function PedidoWizardDialog({ open, onOpenChange, products, pedido }: Pro
               <ReviewRow label="Produto" value={selected ? `${selected.sku} — ${selected.nome}` : "—"} />
               <ReviewRow label="Qtd / Total" value={`${qty} × ${brl(selected?.preco ?? 0)} = ${brl(total)}`} />
               <ReviewRow label="Comprador" value={`${form.nome} (${form.cpf})`} />
-              <ReviewRow label="Perfil fiscal" value={formatIndIEDest(form.indIEDest, form.cpf)} />
+              <ReviewRow label="Perfil fiscal" value={formatIndIEDest(form.indIEDest, form.cpf, form.ie)} />
               <ReviewRow
                 label="Entrega"
                 value={`${form.logradouro}, ${form.numero}${form.complemento ? ` — ${form.complemento}` : ""} — ${form.bairro}, ${form.municipio}/${form.uf} — CEP ${form.cep}`}
@@ -286,7 +294,7 @@ function Field({
   );
 }
 
-function formatIndIEDest(indIEDest: string, doc: string): string {
+function formatIndIEDest(indIEDest: string, doc: string, ie?: string): string {
   const digits = doc.replace(/\D/g, "");
   const docLabel = digits.length === 14 ? "CNPJ" : "CPF";
   const profile =
@@ -295,7 +303,8 @@ function formatIndIEDest(indIEDest: string, doc: string): string {
       : indIEDest === "2"
         ? "Contribuinte isento"
         : "Não contribuinte";
-  return `${docLabel} · indIEDest ${indIEDest} (${profile})`;
+  const ieSuffix = indIEDest === "1" && ie?.trim() ? ` · IE ${ie.replace(/\D/g, "")}` : "";
+  return `${docLabel} · indIEDest ${indIEDest} (${profile})${ieSuffix}`;
 }
 
 function ReviewRow({ label, value }: { label: string; value: string }) {

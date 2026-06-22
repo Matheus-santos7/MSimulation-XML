@@ -337,7 +337,7 @@ export class VendaNFeStrategyBuilder extends BaseNFeBuilder {
   }
 
   protected shouldIncludeDestIe(): boolean {
-    return false;
+    return true;
   }
 }
 

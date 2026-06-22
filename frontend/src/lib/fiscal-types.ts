@@ -179,6 +179,8 @@ export type CompradorCheckoutInput = {
   codigoPais?: number;
   nomePais?: string;
   indIEDest?: number;
+  /** Inscrição estadual — obrigatória quando indIEDest=1. */
+  ie?: string;
 };
 
 export type PedidoCheckoutInput = {

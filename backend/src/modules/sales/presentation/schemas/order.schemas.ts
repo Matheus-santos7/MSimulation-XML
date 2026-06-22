@@ -50,6 +50,15 @@ export const buyerCheckoutBody = z.object({
     .int()
     .refine((v) => [1, 2, 9].includes(v), "indIEDest deve ser 1, 2 ou 9")
     .default(9),
+  ie: optionalTrimmed,
+}).superRefine((data, ctx) => {
+  if (data.indIEDest === 1 && !digitsOnly(data.ie ?? "")) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "IE do destinatário é obrigatória para contribuinte ICMS (indIEDest=1)",
+      path: ["ie"],
+    });
+  }
 });
 
 export const orderCheckoutBody = z.object({

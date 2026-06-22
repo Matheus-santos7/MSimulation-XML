@@ -26,6 +26,7 @@ type OrderRow = {
   destNomePais: string;
   destTelefone: string | null;
   destIndIeDest: number;
+  destIe: string | null;
   createdAt: Date;
   updatedAt: Date;
   product: Product;
@@ -67,6 +68,7 @@ export function mapOrderFromPrisma(row: OrderRow): Order {
       codigoPais: row.destCodigoPais,
       nomePais: row.destNomePais,
       indIEDest: row.destIndIeDest,
+      ie: row.destIe ?? undefined,
     },
     valorTotal: unitPrice * row.quantidade,
     nfe: row.nfe
@@ -107,6 +109,7 @@ export function mapOrderForEmitFromPrisma(
     destNomePais: pedido.destNomePais,
     destTelefone: pedido.destTelefone,
     destIndIeDest: pedido.destIndIeDest,
+    destIe: pedido.destIe,
     product: pedido.product,
     tenant: pedido.tenant,
   };
@@ -128,5 +131,6 @@ export function buyerToDestColumns(comprador: Buyer) {
     destNomePais: comprador.nomePais,
     destTelefone: comprador.telefone?.replace(/\D/g, "") || undefined,
     destIndIeDest: comprador.indIEDest,
+    destIe: comprador.ie?.replace(/\D/g, "") || null,
   };
 }

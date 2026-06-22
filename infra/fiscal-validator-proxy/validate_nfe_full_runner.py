@@ -9,7 +9,10 @@ from typing import Any
 
 from mcp_fiscal_brasil.agentic import validate_nfe_full
 
-from validate_nfe_full_response import serialize_validate_nfe_full_report
+from validate_nfe_full_response import (
+    enrich_validate_nfe_full_payload,
+    serialize_validate_nfe_full_report,
+)
 
 
 async def run_validate_nfe_full(xml_content: str, base_dir: Path) -> dict[str, Any]:
@@ -26,6 +29,7 @@ async def run_validate_nfe_full(xml_content: str, base_dir: Path) -> dict[str, A
         os.write(fd, xml_content.encode("utf-8"))
         os.close(fd)
         report = await validate_nfe_full(path)
-        return serialize_validate_nfe_full_report(report)
+        payload = serialize_validate_nfe_full_report(report)
+        return await enrich_validate_nfe_full_payload(payload, xml_content)
     finally:
         path.unlink(missing_ok=True)

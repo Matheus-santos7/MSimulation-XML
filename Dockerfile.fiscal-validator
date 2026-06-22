@@ -7,7 +7,7 @@ ENV PYTHONUNBUFFERED=1 \
     MCP_FISCAL_FILE_BASE_DIR=/tmp/mcp-fiscal-files \
     PIP_NO_CACHE_DIR=1
 
-RUN pip install --no-cache-dir "mcp-fiscal-brasil==0.4.0"
+RUN pip install --no-cache-dir "mcp-fiscal-brasil==0.5.1"
 
 WORKDIR /app
 COPY infra/fiscal-validator-proxy/audit.py /app/audit.py

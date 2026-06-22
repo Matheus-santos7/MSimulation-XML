@@ -4,12 +4,12 @@ import { Prisma } from "../../../../generated/prisma/client.js";
 import {
   VALIDATION_DISABLED_MESSAGE,
   validatorUnavailableMessage,
-} from "../../domain/constants/operational-validation-messages.js";
+} from "../constants/operational-validation-messages.js";
 import {
   buildFakeMcpAudit,
   FakeMcpFiscalValidatorAdapter,
-} from "../external/fake-mcp-fiscal-validator.adapter.js";
-import { resolveNfeValidation } from "../../domain/services/resolve-nfe-validation.service.js";
+} from "../../infrastructure/external/fake-mcp-fiscal-validator.adapter.js";
+import { resolveNfeValidation } from "./resolve-nfe-validation.service.js";
 
 describe("resolveNfeValidation", () => {
   it("returns APPROVED with MCP resumo as message", async () => {
@@ -73,7 +73,7 @@ describe("resolveNfeValidation", () => {
 
 describe("toPrismaNfeValidationUpdate", () => {
   it("maps APPROVED outcome to Prisma fields", async () => {
-    const { toPrismaNfeValidationUpdate } = await import("../prisma/nfe-validation-persistence.mapper.js");
+    const { toPrismaNfeValidationUpdate } = await import("../../infrastructure/prisma/nfe-validation-persistence.mapper.js");
     const audit = buildFakeMcpAudit({ valida: true, resumo: "ok" });
     const update = toPrismaNfeValidationUpdate({
       status: "APPROVED",

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from nfe_xml_context import (
     expected_cfop_prefix,
+    expected_cfop_tipo,
     item_requires_cest,
     parse_nfe_validation_context,
     resolve_tax_regime,
@@ -20,6 +21,7 @@ def test_parse_nfe_validation_context_from_project_xml() -> None:
 
     ctx = parse_nfe_validation_context(PROJECT_XML.read_text(encoding="utf-8"))
     assert ctx is not None
+    assert ctx.tp_nf == "1"
     assert ctx.crt == "3"
     assert ctx.id_dest == "1"
     assert ctx.uf_emit == "SP"
@@ -36,6 +38,9 @@ def test_resolve_tax_regime_and_cfop_prefix() -> None:
     assert resolve_tax_regime("3") == "normal"
     assert resolve_tax_regime("1") == "simples"
     assert expected_cfop_prefix("2") == "6"
+    assert expected_cfop_prefix("2", "0") == "2"
+    assert expected_cfop_tipo("1") == "saida"
+    assert expected_cfop_tipo("0") == "entrada"
 
 
 def test_item_requires_cest_only_for_st() -> None:

@@ -17,6 +17,7 @@ from nfe_xml_context import (
     parse_nfe_validation_context,
     resolve_tax_regime,
     expected_cfop_prefix,
+    expected_cfop_tipo,
     _normalize_city,
 )
 
@@ -139,7 +140,8 @@ async def _check_item_tables(
     )
 
     regime = resolve_tax_regime(ctx.crt)
-    cfop_prefix = expected_cfop_prefix(ctx.id_dest)
+    cfop_prefix = expected_cfop_prefix(ctx.id_dest, ctx.tp_nf)
+    expected_tipo = expected_cfop_tipo(ctx.tp_nf)
 
     for item in ctx.itens:
         label = f"item {item.numero}" if item.numero else "item"
@@ -147,12 +149,13 @@ async def _check_item_tables(
         if item.cfop:
             try:
                 cfop_data = await consultar_cfop(item.cfop)
-                if cfop_data.tipo != "saida":
+                if expected_tipo and cfop_data.tipo != expected_tipo:
+                    tipo_label = "saída" if expected_tipo == "saida" else "entrada"
                     _append_issue(
                         issues,
                         "alto",
                         "CFOP_TIPO_INVALIDO",
-                        f"{label}: CFOP {item.cfop} não é de saída ({cfop_data.tipo}).",
+                        f"{label}: CFOP {item.cfop} não é de {tipo_label} ({cfop_data.tipo}).",
                     )
                 if cfop_prefix and not item.cfop.startswith(cfop_prefix):
                     _append_issue(

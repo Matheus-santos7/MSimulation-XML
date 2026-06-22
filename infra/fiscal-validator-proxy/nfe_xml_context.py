@@ -30,6 +30,7 @@ class NfeItemContext:
 class NfeValidationContext:
     """Campos do XML usados pelas checagens MCP offline/online."""
 
+    tp_nf: str
     crt: str
     id_dest: str
     uf_emit: str
@@ -112,6 +113,7 @@ def parse_nfe_validation_context(xml_content: str) -> NfeValidationContext | Non
         )
 
     return NfeValidationContext(
+        tp_nf=_text(ide.find("nfe:tpNF", NS)) if ide is not None else "",
         crt=_text(emit.find("nfe:CRT", NS)) if emit is not None else "",
         id_dest=_text(ide.find("nfe:idDest", NS)) if ide is not None else "",
         uf_emit=_text(ender_emit.find("nfe:UF", NS)) if ender_emit is not None else "",
@@ -132,14 +134,24 @@ def resolve_tax_regime(crt: str) -> str:
     return "normal"
 
 
-def expected_cfop_prefix(id_dest: str) -> str | None:
-    """Primeiro dígito esperado do CFOP de saída conforme idDest."""
+def expected_cfop_tipo(tp_nf: str) -> str | None:
+    """Tipo de CFOP esperado conforme tpNF (0=entrada, 1=saída)."""
+    if tp_nf == "1":
+        return "saida"
+    if tp_nf == "0":
+        return "entrada"
+    return None
+
+
+def expected_cfop_prefix(id_dest: str, tp_nf: str = "1") -> str | None:
+    """Primeiro dígito esperado do CFOP conforme idDest e tpNF."""
+    is_entrada = tp_nf == "0"
     if id_dest == "1":
-        return "5"
+        return "1" if is_entrada else "5"
     if id_dest == "2":
-        return "6"
+        return "2" if is_entrada else "6"
     if id_dest == "3":
-        return "7"
+        return "3" if is_entrada else "7"
     return None
 
 

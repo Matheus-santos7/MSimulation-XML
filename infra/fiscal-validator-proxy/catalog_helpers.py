@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+import unicodedata
 
 _NCM_DIGITS_RE = re.compile(r"^\d{8}$")
 _CEST_DIGITS_RE = re.compile(r"^\d{7}$")
@@ -31,19 +32,34 @@ def is_valid_cest_format(cest: str) -> bool:
     return bool(_CEST_DIGITS_RE.match(normalize_cest(cest)))
 
 
+def _exception_message(exc: Exception) -> str:
+    message = getattr(exc, "message", None)
+    if isinstance(message, str) and message.strip():
+        return message
+    return str(exc)
+
+
+def _normalize_lookup_text(value: str) -> str:
+    decomposed = unicodedata.normalize("NFKD", value)
+    without_accents = "".join(
+        char for char in decomposed if not unicodedata.combining(char)
+    )
+    return without_accents.lower()
+
+
 def is_catalog_gap_error(exc: Exception) -> bool:
     """
     Detecta ausência no catálogo bundled do MCP (amostra incompleta).
 
     O wheel distribui ~250 NCM e ~100 CEST de exemplo, não a TIPI/CEST integral.
     """
-    message = str(exc).lower()
+    message = _normalize_lookup_text(_exception_message(exc))
     markers = (
-        "não encontrado",
         "nao encontrado",
         "incompleto",
         "build_tabelas_db",
         "tabela tipi",
         "tabela completa",
+        "nao encontrada",
     )
     return any(marker in message for marker in markers)

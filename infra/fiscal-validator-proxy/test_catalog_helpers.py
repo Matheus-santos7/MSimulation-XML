@@ -28,6 +28,21 @@ def test_catalog_gap_error_detection() -> None:
     )
     assert is_catalog_gap_error(exc)
 
+    class _FiscalLike(Exception):
+        def __init__(self, message: str) -> None:
+            super().__init__(message)
+            self.message = message
+
+        def __str__(self) -> str:
+            return self.message
+
+    assert is_catalog_gap_error(
+        _FiscalLike(
+            "NCM '85094010' não encontrado. O banco NCM pode estar incompleto; "
+            "execute scripts/build_tabelas_db.py para popular a tabela TIPI completa."
+        )
+    )
+
 
 if __name__ == "__main__":
     test_ncm_and_cest_format()

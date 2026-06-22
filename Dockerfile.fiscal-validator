@@ -7,10 +7,7 @@ ENV PYTHONUNBUFFERED=1 \
     MCP_FISCAL_FILE_BASE_DIR=/tmp/mcp-fiscal-files \
     PIP_NO_CACHE_DIR=1
 
-RUN pip install --no-cache-dir "mcp-fiscal-brasil==0.5.1" && \
-    curl -fsSL "https://raw.githubusercontent.com/DeHor-Labs/mcp-fiscal-brasil/v0.5.1/scripts/build_tabelas_db.py" \
-      -o /tmp/build_tabelas_db.py && \
-    python /tmp/build_tabelas_db.py --output "$(python -c "import importlib.resources as r; print(r.files('mcp_fiscal_brasil.tabelas.data').joinpath('tabelas_fiscais.db'))")"
+RUN pip install --no-cache-dir "mcp-fiscal-brasil==0.5.1"
 
 WORKDIR /app
 COPY infra/fiscal-validator-proxy/audit.py /app/audit.py

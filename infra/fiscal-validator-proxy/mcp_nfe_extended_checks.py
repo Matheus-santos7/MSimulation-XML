@@ -10,6 +10,7 @@ from catalog_helpers import (
     is_valid_cest_format,
     is_valid_ncm_format,
 )
+from cep_lookup import CepNotFoundError, lookup_dest_cep
 from nfe_xml_context import (
     NfeValidationContext,
     issue_dict,
@@ -42,7 +43,6 @@ async def _check_destination(
     ctx: NfeValidationContext,
 ) -> None:
     from mcp_fiscal_brasil._core import FiscalValidationError
-    from mcp_fiscal_brasil.cep.tools import consultar_cep
     from mcp_fiscal_brasil.ibge.tools import consultar_municipios_ibge
 
     if not ctx.dest_cep:
@@ -55,7 +55,7 @@ async def _check_destination(
         return
 
     try:
-        endereco = await consultar_cep(ctx.dest_cep)
+        endereco = await lookup_dest_cep(ctx.dest_cep)
         if ctx.uf_dest and endereco.state and ctx.uf_dest.upper() != endereco.state.upper():
             _append_issue(
                 issues,
@@ -72,12 +72,19 @@ async def _check_destination(
                     f"CEP {ctx.dest_cep} retornou município '{endereco.city}', "
                     f"mas o XML informa '{ctx.dest_x_mun}'.",
                 )
-    except FiscalValidationError as exc:
+    except CepNotFoundError as exc:
         _append_issue(
             issues,
             "medio",
             "DEST_CEP_INVALIDO",
             f"CEP do destinatário inválido ou não encontrado: {exc}",
+        )
+    except ValueError as exc:
+        _append_issue(
+            issues,
+            "medio",
+            "DEST_CEP_INVALIDO",
+            f"CEP do destinatário inválido: {exc}",
         )
     except Exception as exc:
         _append_issue(

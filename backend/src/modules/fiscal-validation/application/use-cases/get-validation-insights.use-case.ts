@@ -1,15 +1,13 @@
-import type { DbClient } from "../../../../lib/db/prisma-tx.js";
-import {
-  countValidationStatuses,
-  listRecentRejectedNfes,
-} from "../../infrastructure/prisma/prisma-validation-insights.repository.js";
+import type { ValidationInsightsRepository } from "../../domain/ports/validation-insights.repository.js";
 
 /** Aggregates MCP validation metrics for IA Insights and dashboards. */
 export class GetValidationInsightsUseCase {
-  async execute(db: DbClient, tenantId: string) {
+  constructor(private readonly repository: ValidationInsightsRepository) {}
+
+  async execute(tenantId: string) {
     const [counts, rejected] = await Promise.all([
-      countValidationStatuses(db, tenantId, 7),
-      listRecentRejectedNfes(db, tenantId, 7, 20),
+      this.repository.countValidationStatuses(tenantId, 7),
+      this.repository.listRecentRejectedNfes(tenantId, 7, 20),
     ]);
 
     const errorFrequency = new Map<string, number>();

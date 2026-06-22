@@ -25,9 +25,8 @@ import { mapNfe } from "../../presentation/mappers/fiscal-mappers.js";
 import { mapProduct, type ProductDto } from "../../../catalog/index.js";
 import { mapEmitente } from "../../../org/infrastructure/fiscal/tenant-emitente.mapper.js";
 import { loadEmitterSettings } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
-import { loadFiscalValidatorConfig } from "../../../../lib/fiscal-validator-config.js";
-import { getFiscalValidator } from "../../../../lib/fiscal-validator-factory.js";
-import { resolveNfeValidationUpdate } from "./nfe-xml-validation.js";
+import { createFiscalValidationModule } from "../../../fiscal-validation/infrastructure/factory/fiscal-validation-module.factory.js";
+import { toPrismaNfeValidationUpdate } from "../../../fiscal-validation/infrastructure/prisma/nfe-validation-persistence.mapper.js";
 
 export type NfeXmlPersistTx = PrismaTx;
 
@@ -100,11 +99,9 @@ export async function persistNfeXmlAutorizado(
     allProducts,
   );
 
-  const validationUpdate = await resolveNfeValidationUpdate(
-    getFiscalValidator(),
-    xml,
-    loadFiscalValidatorConfig(),
-  );
+  const fiscalValidation = createFiscalValidationModule();
+  const outcome = await fiscalValidation.validateNfeXml.execute(xml);
+  const validationUpdate = toPrismaNfeValidationUpdate(outcome);
 
   await tx.nFe.update({
     where: { id: args.nfeId },

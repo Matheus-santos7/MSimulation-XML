@@ -9,17 +9,8 @@ import { ufToCodigo } from "../../domain/services/nfe-chave.js";
 import { mapEmitente } from "../../../org/infrastructure/fiscal/tenant-emitente.mapper.js";
 import { listTimelineChains } from "../../infrastructure/observability/timeline-service.js";
 import { exportTimelineSpreadsheet } from "../../infrastructure/observability/timeline-spreadsheet.service.js";
-import { GetValidationInsightsUseCase } from "../../application/use-cases/get-validation-insights.use-case.js";
-import { BackfillNfeValidationUseCase } from "../../application/use-cases/backfill-nfe-validation.use-case.js";
-import { requireAdminHook } from "../../../../plugins/contexts/guards.js";
-import { getFiscalValidatorStatus } from "../../../../lib/fiscal-validator-status.js";
 
 const fiscalEventIdParam = z.object({ id: z.string().min(1) });
-const backfillValidationBodySchema = z.object({
-  limit: z.number().int().min(1).max(200).optional(),
-});
-const getValidationInsights = new GetValidationInsightsUseCase();
-const backfillNfeValidation = new BackfillNfeValidationUseCase();
 
 async function listFiscalEventsForTenant(
   prisma: Parameters<typeof listTimelineChains>[0],
@@ -156,20 +147,5 @@ export const fiscalObservabilityController: FastifyPluginAsync = async (app) => 
       orderBy: { sortOrder: "asc" },
     });
     return rows.map(mapTimeline);
-  });
-
-  app.get("/fiscal-validation/insights", async (req) => {
-    const tenantId = tenantIdFromRequest(req);
-    return getValidationInsights.execute(getDbClient(), tenantId);
-  });
-
-  app.get("/fiscal-validation/status", async () => {
-    return getFiscalValidatorStatus();
-  });
-
-  app.post("/fiscal-validation/backfill", { onRequest: [requireAdminHook] }, async (req) => {
-    const tenantId = tenantIdFromRequest(req);
-    const body = backfillValidationBodySchema.parse(req.body ?? {});
-    return backfillNfeValidation.execute(getDbClient(), tenantId, { limit: body.limit });
   });
 };

@@ -23,9 +23,7 @@ export function resolveFiscalValidatorApiUrl(): string {
   return "http://localhost:8080";
 }
 
-/**
- * Reads MCP fiscal validator settings from environment.
- */
+/** Reads MCP fiscal validator settings from environment. */
 export function loadFiscalValidatorConfig(): FiscalValidatorConfig {
   const enabledRaw = process.env.FISCAL_VALIDATOR_ENABLED?.trim().toLowerCase();
   const enabled = enabledRaw !== "false" && enabledRaw !== "0";

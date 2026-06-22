@@ -1,7 +1,7 @@
 # Módulo fiscal-validation (MCP) — Design Spec
 
 **Data:** 2026-06-22  
-**Status:** Aprovado  
+**Status:** Concluída (2026-06-22)  
 **Escopo:** Backend + documentação fiscal  
 **Relacionado:** [mcp-fiscal-xml-validation-design.md](./2026-06-20-mcp-fiscal-xml-validation-design.md) (v1 concluída)
 

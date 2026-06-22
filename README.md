@@ -1034,7 +1034,9 @@ O backfill regenera o XML se necessário (`resolveNfeXmlStringFromLoadedRow`), r
 
 | Documento                                                               | Conteúdo                                  |
 | ----------------------------------------------------------------------- | ----------------------------------------- |
-| `docs/superpowers/specs/2026-06-20-mcp-fiscal-xml-validation-design.md` | Spec funcional (status: concluída)        |
+| `docs/fiscal/mcp-nfe-validation-flow.md`                                | Fluxo envio/devolutiva MCP + mapeamento   |
+| `docs/superpowers/specs/2026-06-22-fiscal-validation-module-design.md` | Módulo DDD `fiscal-validation` (pass-through) |
+| `docs/superpowers/specs/2026-06-20-mcp-fiscal-xml-validation-design.md` | Spec funcional v1 (status: concluída)        |
 | `docs/superpowers/plans/2026-06-20-mcp-fiscal-xml-validation.md`        | Plano de implementação e mapa de arquivos |
 
 

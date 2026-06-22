@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
-import { resolveFiscalValidatorApiUrl } from "./fiscal-validator-config.js";
+import { resolveFiscalValidatorApiUrl } from "./fiscal-validator.config.js";
 
 describe("resolveFiscalValidatorApiUrl", () => {
   const env = process.env;

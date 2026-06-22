@@ -1,28 +1,20 @@
-import { loadFiscalValidatorConfig } from "./fiscal-validator-config.js";
-
-export type FiscalValidatorStatus = {
-  enabled: boolean;
-  apiUrl: string;
-  reachable: boolean;
-  message: string;
-};
+import { VALIDATION_DISABLED_MESSAGE } from "../../domain/constants/operational-validation-messages.js";
+import type { FiscalValidatorConfig } from "../config/fiscal-validator.config.js";
+import type { ValidatorHealthDto } from "../../application/dto/validator-health.dto.js";
 
 const HEALTH_TIMEOUT_MS = 5_000;
 
-/**
- * Probes MCP fiscal validator availability for diagnostics and admin UI.
- */
-export async function getFiscalValidatorStatus(
+/** Probes MCP fiscal validator availability for diagnostics and admin UI. */
+export async function probeValidatorHealth(
+  config: FiscalValidatorConfig,
   fetchImpl: typeof fetch = fetch,
-): Promise<FiscalValidatorStatus> {
-  const config = loadFiscalValidatorConfig();
-
+): Promise<ValidatorHealthDto> {
   if (!config.enabled) {
     return {
       enabled: false,
       apiUrl: config.apiUrl,
       reachable: false,
-      message: "Validação desabilitada (FISCAL_VALIDATOR_ENABLED=false)",
+      message: `${VALIDATION_DISABLED_MESSAGE} (FISCAL_VALIDATOR_ENABLED=false)`,
     };
   }
 

@@ -2,7 +2,11 @@ import {
   VALIDATION_DISABLED_MESSAGE,
   validatorUnavailableMessage,
 } from "../constants/operational-validation-messages.js";
-import type { NfeMcpAudit } from "../entities/nfe-mcp-audit.entity.js";
+import {
+  isNfeMcpAuditApproved,
+  nfeMcpIssuesToErrors,
+  type NfeMcpAudit,
+} from "../entities/nfe-mcp-audit.entity.js";
 import type { NfeValidationOutcome } from "../entities/nfe-validation-outcome.entity.js";
 import type { McpFiscalValidatorPort } from "../ports/mcp-fiscal-validator.port.js";
 
@@ -11,10 +15,12 @@ export type FiscalValidatorRuntimeConfig = {
 };
 
 function outcomeFromAudit(audit: NfeMcpAudit): NfeValidationOutcome {
+  const errors = nfeMcpIssuesToErrors(audit.issues);
+
   return {
-    status: audit.valida ? "APPROVED" : "REJECTED",
+    status: isNfeMcpAuditApproved(audit) ? "APPROVED" : "REJECTED",
     message: audit.resumo.length > 0 ? audit.resumo : null,
-    errors: audit.erros.length > 0 ? audit.erros : null,
+    errors: errors.length > 0 ? errors : null,
     audit,
   };
 }

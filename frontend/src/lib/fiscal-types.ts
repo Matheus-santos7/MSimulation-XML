@@ -270,6 +270,13 @@ export type NfeMcpAuditDto = {
   resumo: string;
   erros: string[];
   achados: NfeMcpAuditAchadoDto[];
+  chave_acesso?: string;
+  valida_estruturalmente?: boolean;
+  chave_consistente?: boolean;
+  emissor_ativo?: boolean;
+  cnpj_emissor?: string;
+  valor_total?: number;
+  data_emissao?: string;
 };
 
 export type EmitenteEnderecoDto = {

@@ -159,6 +159,39 @@ function parseNfeMcpAudit(value: unknown) {
   }
 
   const record = value as Record<string, unknown>;
+
+  if (Array.isArray(record.issues)) {
+    const issues = record.issues
+      .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
+      .map((item) => ({
+        severidade: String(item.severidade ?? ""),
+        codigo: String(item.código ?? item.codigo ?? ""),
+        mensagem: String(item.descrição ?? item.descricao ?? ""),
+      }));
+
+    const valida =
+      Boolean(record.valida_estruturalmente) &&
+      Boolean(record.chave_consistente) &&
+      Boolean(record.emissor_ativo) &&
+      issues.length === 0;
+
+    return {
+      valida,
+      resumo: typeof record.resumo === "string" ? record.resumo : "",
+      erros: issues.map((issue) =>
+        issue.severidade ? `[${issue.severidade.toUpperCase()}] ${issue.mensagem}` : issue.mensagem,
+      ),
+      achados: issues,
+      chave_acesso: typeof record.chave_acesso === "string" ? record.chave_acesso : undefined,
+      valida_estruturalmente: Boolean(record.valida_estruturalmente),
+      chave_consistente: Boolean(record.chave_consistente),
+      emissor_ativo: Boolean(record.emissor_ativo),
+      cnpj_emissor: typeof record.cnpj_emissor === "string" ? record.cnpj_emissor : undefined,
+      valor_total: typeof record.valor_total === "number" ? record.valor_total : undefined,
+      data_emissao: typeof record.data_emissao === "string" ? record.data_emissao : undefined,
+    };
+  }
+
   const achados = Array.isArray(record.achados)
     ? record.achados
         .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")

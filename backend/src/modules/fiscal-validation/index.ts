@@ -1,4 +1,8 @@
-export type { NfeMcpAudit, NfeValidationAchado } from "./domain/entities/nfe-mcp-audit.entity.js";
+export type { NfeMcpAudit, NfeMcpIssue, NfeValidationAchado } from "./domain/entities/nfe-mcp-audit.entity.js";
+export {
+  isNfeMcpAuditApproved,
+  nfeMcpIssuesToErrors,
+} from "./domain/entities/nfe-mcp-audit.entity.js";
 export type { NfeValidationOutcome, NfeValidationStatus } from "./domain/entities/nfe-validation-outcome.entity.js";
 export type { McpFiscalValidatorPort } from "./domain/ports/mcp-fiscal-validator.port.js";
 export { resolveNfeValidation } from "./domain/services/resolve-nfe-validation.service.js";

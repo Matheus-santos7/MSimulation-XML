@@ -4,7 +4,7 @@ import { mapMcpValidateNfeResponse } from "./mcp-validate-nfe-response.mapper.js
 
 /**
  * HTTP adapter for fiscal-validator-proxy (`POST /api/v1/validate-nfe`).
- * Returns MCP audit payload without inventing approval/rejection messages.
+ * Returns raw MCP `validate_nfe_full` payload without inventing approval/rejection messages.
  */
 export class HttpMcpFiscalValidatorAdapter implements McpFiscalValidatorPort {
   constructor(

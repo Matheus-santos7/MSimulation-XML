@@ -13,7 +13,7 @@ import { resolveNfeValidation } from "./resolve-nfe-validation.service.js";
 
 describe("resolveNfeValidation", () => {
   it("returns APPROVED with MCP resumo as message", async () => {
-    const audit = buildFakeMcpAudit({ valida: true, resumo: "XML aprovado pelo proxy" });
+    const audit = buildFakeMcpAudit({ approved: true, resumo: "XML aprovado pelo proxy" });
     const validator = new FakeMcpFiscalValidatorAdapter(audit);
 
     const outcome = await resolveNfeValidation(validator, "<xml/>", { enabled: true });
@@ -24,7 +24,7 @@ describe("resolveNfeValidation", () => {
   });
 
   it("returns null message when MCP resumo is empty", async () => {
-    const audit = buildFakeMcpAudit({ valida: true, resumo: "" });
+    const audit = buildFakeMcpAudit({ approved: true, resumo: "" });
     const validator = new FakeMcpFiscalValidatorAdapter(audit);
 
     const outcome = await resolveNfeValidation(validator, "<xml/>", { enabled: true });
@@ -32,22 +32,28 @@ describe("resolveNfeValidation", () => {
     assert.equal(outcome.message, null);
   });
 
-  it("returns REJECTED with MCP errors", async () => {
+  it("returns REJECTED with MCP issue errors", async () => {
     const audit = buildFakeMcpAudit({
-      valida: false,
-      resumo: "NF-e rejeitada",
-      erros: ["CST 00 exige vBC"],
+      approved: false,
+      resumo: "NFe falhou no parse XML.",
+      issues: [
+        {
+          severidade: "critico",
+          código: "XML_PARSE_ERROR",
+          descrição: "CST 00 exige vBC",
+        },
+      ],
     });
     const validator = new FakeMcpFiscalValidatorAdapter(audit);
 
     const outcome = await resolveNfeValidation(validator, "<xml/>", { enabled: true });
 
     assert.equal(outcome.status, "REJECTED");
-    assert.deepEqual(outcome.errors, ["CST 00 exige vBC"]);
+    assert.deepEqual(outcome.errors, ["[CRITICO] CST 00 exige vBC"]);
   });
 
   it("returns PENDING when validator is disabled", async () => {
-    const validator = new FakeMcpFiscalValidatorAdapter(buildFakeMcpAudit({ valida: true }));
+    const validator = new FakeMcpFiscalValidatorAdapter(buildFakeMcpAudit({ approved: true }));
 
     const outcome = await resolveNfeValidation(validator, "<xml/>", { enabled: false });
 
@@ -74,7 +80,7 @@ describe("resolveNfeValidation", () => {
 describe("toPrismaNfeValidationUpdate", () => {
   it("maps APPROVED outcome to Prisma fields", async () => {
     const { toPrismaNfeValidationUpdate } = await import("../../infrastructure/prisma/nfe-validation-persistence.mapper.js");
-    const audit = buildFakeMcpAudit({ valida: true, resumo: "ok" });
+    const audit = buildFakeMcpAudit({ approved: true, resumo: "ok" });
     const update = toPrismaNfeValidationUpdate({
       status: "APPROVED",
       message: "ok",

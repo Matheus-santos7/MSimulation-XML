@@ -37,13 +37,14 @@ export async function loginAction(
 ): Promise<LoginState> {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
+  const captchaToken = String(formData.get("captchaToken") ?? "").trim() || undefined;
 
   if (!email || !password) {
     return { error: "Informe e-mail e senha" };
   }
 
   try {
-    const result = await loginApi(email, password);
+    const result = await loginApi(email, password, captchaToken);
     if (!isTwoFactorPending(result)) {
       await setAuthSession(result);
       redirectAfterAuth(result);

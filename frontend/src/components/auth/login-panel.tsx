@@ -71,6 +71,7 @@ export function LoginPanel() {
       {mode === "login" ? (
         <form action={loginFormAction} className="space-y-4">
           <AuthFields mode="login" />
+          <RegisterCaptchaField />
           {error ? <AuthError message={error} /> : null}
           <SubmitButton pending={pending} label={pending ? "Entrando…" : "Entrar"} />
         </form>

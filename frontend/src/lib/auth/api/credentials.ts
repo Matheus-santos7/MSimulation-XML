@@ -1,8 +1,16 @@
 import { postAuthJson } from "./client";
 import type { AuthSessionDto, LoginResultDto } from "../types";
 
-export async function loginApi(email: string, password: string): Promise<LoginResultDto> {
-  return postAuthJson<LoginResultDto>("/api/auth/login", { email, password });
+export async function loginApi(
+  email: string,
+  password: string,
+  captchaToken?: string,
+): Promise<LoginResultDto> {
+  return postAuthJson<LoginResultDto>("/api/auth/login", {
+    email,
+    password,
+    ...(captchaToken ? { captchaToken } : {}),
+  });
 }
 
 export async function verify2faApi(twoFactorToken: string, code: string): Promise<AuthSessionDto> {

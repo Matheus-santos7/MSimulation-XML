@@ -20,8 +20,8 @@ const TAX_RULE_ERROR_MAPPINGS = [{ type: TaxRuleError, status: 400 }] as const;
  * |--------|------|----------|
  * | GET | `/tax-rules/catalog` | GetTaxRuleCatalogUseCase |
  * | GET | `/tax-rules` | GetTaxRulesUseCase |
- * | POST | `/tax-rules/bulk-upsert` | BulkUpsertTaxRulesUseCase |
- * | POST | `/tax-rules/import-spreadsheet` | ImportTaxRulesSpreadsheetUseCase |
+ * | POST | `/tax-rules/bulk-upsert` | BulkUpsertTaxRulesUseCase (ADMIN) |
+ * | POST | `/tax-rules/import-spreadsheet` | ImportTaxRulesSpreadsheetUseCase (ADMIN) |
  * | DELETE | `/tax-rules` | DeleteAllTaxRulesUseCase (ADMIN) |
  */
 export const taxRuleController: FastifyPluginAsync = async (app) => {
@@ -37,14 +37,14 @@ export const taxRuleController: FastifyPluginAsync = async (app) => {
     return tax.getTaxRules.execute(tenantId);
   });
 
-  app.post("/tax-rules/bulk-upsert", async (req, reply) => {
+  app.post("/tax-rules/bulk-upsert", { onRequest: [requireAdminHook] }, async (req, reply) => {
     const tenantId = tenantIdFromRequest(req);
     const { rows } = taxRulesBulkBodySchema.parse(req.body);
     const result = await tax.bulkUpsertTaxRules.execute(tenantId, rows);
     return reply.status(200).send(result);
   });
 
-  app.post("/tax-rules/import-spreadsheet", async (req, reply) => {
+  app.post("/tax-rules/import-spreadsheet", { onRequest: [requireAdminHook] }, async (req, reply) => {
     const tenantId = tenantIdFromRequest(req);
     const payload = await resolveTaxRuleSpreadsheetUpload(req);
     if (!payload.ok) {

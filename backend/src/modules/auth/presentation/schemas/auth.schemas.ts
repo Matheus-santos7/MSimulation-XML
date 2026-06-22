@@ -23,6 +23,7 @@ export const passwordField = z
 export const loginBodySchema = z.object({
   email: emailField,
   password: z.string().min(1, "Senha obrigatória").max(128),
+  captchaToken: z.string().trim().optional(),
 });
 
 const DISPOSABLE_EMAIL_DOMAINS = new Set([

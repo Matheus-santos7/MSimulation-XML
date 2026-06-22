@@ -1,4 +1,4 @@
-import XLSX from "xlsx-js-style";
+import ExcelJS from "exceljs";
 import type {
   TimelineChainStepDto,
   TimelineRemessaGroupDto,
@@ -34,9 +34,23 @@ export type TimelineSpreadsheetDataRow = {
   scenarioStripe: number;
 };
 
-const HEADER_FILL = { patternType: "solid" as const, fgColor: { rgb: "FFE5E7EB" } };
-const ROW_FILL_EVEN = { patternType: "solid" as const, fgColor: { rgb: "FFFFFFFF" } };
-const ROW_FILL_ODD = { patternType: "solid" as const, fgColor: { rgb: "FFF3F4F6" } };
+const HEADER_FILL: ExcelJS.Fill = {
+  type: "pattern",
+  pattern: "solid",
+  fgColor: { argb: "FFE5E7EB" },
+};
+const ROW_FILL_EVEN: ExcelJS.Fill = {
+  type: "pattern",
+  pattern: "solid",
+  fgColor: { argb: "FFFFFFFF" },
+};
+const ROW_FILL_ODD: ExcelJS.Fill = {
+  type: "pattern",
+  pattern: "solid",
+  fgColor: { argb: "FFF3F4F6" },
+};
+
+const COLUMN_WIDTHS = [12, 18, 18, 14, 48, 48, 12, 10, 8, 16] as const;
 
 function formatSpreadsheetDate(iso: string): string {
   return new Date(iso).toLocaleString("pt-BR", {
@@ -150,47 +164,20 @@ function rowToArray(row: TimelineSpreadsheetRow): string[] {
   return TIMELINE_SPREADSHEET_HEADERS.map((header) => row[header]);
 }
 
-function applyScenarioStripes(worksheet: XLSX.WorkSheet, dataRows: TimelineSpreadsheetDataRow[]): void {
-  const colCount = TIMELINE_SPREADSHEET_HEADERS.length;
+function applyHeaderStyle(row: ExcelJS.Row): void {
+  row.eachCell((cell) => {
+    cell.fill = HEADER_FILL;
+    cell.font = { bold: true, color: { argb: "FF111827" } };
+    cell.alignment = { vertical: "middle", horizontal: "center" };
+  });
+}
 
-  for (let col = 0; col < colCount; col += 1) {
-    const headerRef = XLSX.utils.encode_cell({ r: 0, c: col });
-    const headerCell = worksheet[headerRef];
-    if (!headerCell) continue;
-    headerCell.s = {
-      fill: HEADER_FILL,
-      font: { bold: true, color: { rgb: "FF111827" } },
-      alignment: { vertical: "center", horizontal: "center" },
-    };
-  }
-
-  for (let rowIndex = 0; rowIndex < dataRows.length; rowIndex += 1) {
-    const fill = dataRows[rowIndex]!.scenarioStripe % 2 === 0 ? ROW_FILL_EVEN : ROW_FILL_ODD;
-    const sheetRow = rowIndex + 1;
-
-    for (let col = 0; col < colCount; col += 1) {
-      const cellRef = XLSX.utils.encode_cell({ r: sheetRow, c: col });
-      const cell = worksheet[cellRef];
-      if (!cell) continue;
-      cell.s = {
-        fill,
-        alignment: { vertical: "center" },
-      };
-    }
-  }
-
-  worksheet["!cols"] = [
-    { wch: 12 },
-    { wch: 18 },
-    { wch: 18 },
-    { wch: 14 },
-    { wch: 48 },
-    { wch: 48 },
-    { wch: 12 },
-    { wch: 10 },
-    { wch: 8 },
-    { wch: 16 },
-  ];
+function applyDataRowStyle(row: ExcelJS.Row, scenarioStripe: number): void {
+  const fill = scenarioStripe % 2 === 0 ? ROW_FILL_EVEN : ROW_FILL_ODD;
+  row.eachCell((cell) => {
+    cell.fill = fill;
+    cell.alignment = { vertical: "middle" };
+  });
 }
 
 /**
@@ -202,17 +189,25 @@ function applyScenarioStripes(worksheet: XLSX.WorkSheet, dataRows: TimelineSprea
  * @param nfeDetails - Detalhes fiscais por chave de NF-e.
  * @returns Buffer `.xlsx` da aba "Cenários".
  */
-export function buildTimelineSpreadsheetXlsx(
+export async function buildTimelineSpreadsheetXlsx(
   groups: TimelineRemessaGroupDto[],
   ufEmitente: string,
   nfeDetails: Map<string, TimelineNfeExportDetail>,
-): Buffer {
+): Promise<Buffer> {
   const dataRows = buildTimelineSpreadsheetExportData(groups, ufEmitente, nfeDetails);
-  const matrix = [TIMELINE_SPREADSHEET_HEADERS.slice(), ...dataRows.map((entry) => rowToArray(entry.row))];
-  const worksheet = XLSX.utils.aoa_to_sheet(matrix);
-  applyScenarioStripes(worksheet, dataRows);
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Cenários");
 
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Cenários");
-  return Buffer.from(XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }));
+  worksheet.columns = COLUMN_WIDTHS.map((width) => ({ width }));
+
+  const headerRow = worksheet.addRow(TIMELINE_SPREADSHEET_HEADERS.slice());
+  applyHeaderStyle(headerRow);
+
+  for (const entry of dataRows) {
+    const row = worksheet.addRow(rowToArray(entry.row));
+    applyDataRowStyle(row, entry.scenarioStripe);
+  }
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  return Buffer.from(buffer);
 }

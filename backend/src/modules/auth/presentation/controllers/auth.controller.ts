@@ -100,9 +100,10 @@ export const authController: FastifyPluginAsync = async (app) => {
     { config: { rateLimit: { max: 10, timeWindow: "15 minutes" } } },
     async (request, reply) => {
       try {
-        const { email, password } = loginBodySchema.parse(request.body);
+        const body = loginBodySchema.parse(request.body);
+        await verifyTurnstileToken(body.captchaToken, request.ip);
         const result = await auth.login.execute(
-          { email, password },
+          { email: body.email, password: body.password },
           signAccess,
           buildAuthMeta(request),
           signTwoFactorPending,

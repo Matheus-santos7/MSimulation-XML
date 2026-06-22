@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { tenantIdFromRequest } from "../../../../lib/auth/request-context.js";
 import { handleRouteError } from "../../../../lib/http/domain-errors.js";
+import { requireAdminHook } from "../../../../plugins/contexts/guards.js";
 import { DocumentCancellationError } from "../../domain/errors/document-cancellation.error.js";
 import { DocumentReturnError } from "../../domain/errors/document-return.error.js";
 import { NumberInutilizationError } from "../../domain/errors/number-inutilization.error.js";
@@ -18,13 +19,13 @@ const NFE_LIFECYCLE_ERRORS = [
 ] as const;
 
 /**
- * NF-e lifecycle routes: inutilization, return, cancellation.
+ * NF-e lifecycle routes: inutilization, return, cancellation (ADMIN only).
  * Static `/nfes/inutilizar` is registered before parameterized routes.
  */
 export const nfeLifecycleController: FastifyPluginAsync = async (app) => {
   const fiscalDocuments = createFiscalDocumentsModule();
 
-  app.post("/nfes/inutilizar", async (req, reply) => {
+  app.post("/nfes/inutilizar", { onRequest: [requireAdminHook] }, async (req, reply) => {
     try {
       const tenantId = tenantIdFromRequest(req);
       const body = inutilizeNumberBodySchema.parse(req.body ?? {});
@@ -42,7 +43,7 @@ export const nfeLifecycleController: FastifyPluginAsync = async (app) => {
     }
   });
 
-  app.post("/nfes/:chave/devolucao", async (req, reply) => {
+  app.post("/nfes/:chave/devolucao", { onRequest: [requireAdminHook] }, async (req, reply) => {
     try {
       const tenantId = tenantIdFromRequest(req);
       const { chave } = nfeAccessKeyParamSchema.parse(req.params);
@@ -57,7 +58,7 @@ export const nfeLifecycleController: FastifyPluginAsync = async (app) => {
     }
   });
 
-  app.post("/nfes/:chave/cancelamento", async (req, reply) => {
+  app.post("/nfes/:chave/cancelamento", { onRequest: [requireAdminHook] }, async (req, reply) => {
     try {
       const tenantId = tenantIdFromRequest(req);
       const { chave } = nfeAccessKeyParamSchema.parse(req.params);

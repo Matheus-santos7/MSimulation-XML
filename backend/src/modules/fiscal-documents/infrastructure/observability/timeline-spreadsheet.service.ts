@@ -84,5 +84,5 @@ export async function exportTimelineSpreadsheet(db: DbClient, tenantId: string):
     loadNfeExportDetails(db, tenantId),
   ]);
 
-  return buildTimelineSpreadsheetXlsx(groups, tenant.uf, nfeDetails);
+  return await buildTimelineSpreadsheetXlsx(groups, tenant.uf, nfeDetails);
 }

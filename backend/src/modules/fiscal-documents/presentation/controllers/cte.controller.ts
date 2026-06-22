@@ -1,6 +1,7 @@
 import { prepareFiscalXmlForDownload } from "@msimulation-xml/fiscal-core";
 import type { FastifyPluginAsync } from "fastify";
 import { tenantIdFromRequest } from "../../../../lib/auth/request-context.js";
+import { requireAdminHook } from "../../../../plugins/contexts/guards.js";
 import { mapEmitente } from "../../../org/infrastructure/fiscal/tenant-emitente.mapper.js";
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import { createFiscalDocumentsModule } from "../../infrastructure/factory/fiscal-documents-module.factory.js";
@@ -51,7 +52,7 @@ export const cteController: FastifyPluginAsync = async (app) => {
     return cte;
   });
 
-  app.delete("/ctes/:chave", async (req, reply) => {
+  app.delete("/ctes/:chave", { onRequest: [requireAdminHook] }, async (req, reply) => {
     const tenantId = tenantIdFromRequest(req);
     const { chave } = nfeAccessKeyParamSchema.parse(req.params);
     const removed = await fiscalDocuments.softDeleteCte.execute(chave, tenantId);

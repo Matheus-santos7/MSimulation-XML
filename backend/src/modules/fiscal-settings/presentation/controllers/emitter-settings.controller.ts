@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { tenantIdFromRequest } from "../../../../lib/auth/request-context.js";
 import { handleRouteError } from "../../../../lib/http/domain-errors.js";
+import { requireAdminHook } from "../../../../plugins/contexts/guards.js";
 import { createFiscalSettingsModule } from "../../infrastructure/factory/fiscal-settings-module.factory.js";
 import { updateEmitterSettingsBodySchema, nfeNumeracaoQuerySchema } from "../schemas/emitter-settings.schemas.js";
 
@@ -11,7 +12,7 @@ import { updateEmitterSettingsBodySchema, nfeNumeracaoQuerySchema } from "../sch
  * |--------|------|----------|
  * | GET | `/fiscal-settings` | GetEmitterSettingsUseCase |
  * | GET | `/fiscal-settings/nfe-numeracao` | GetNfeNumeracaoPreviewUseCase |
- * | PATCH | `/fiscal-settings` | UpdateEmitterSettingsUseCase |
+ * | PATCH | `/fiscal-settings` | UpdateEmitterSettingsUseCase (ADMIN) |
  */
 export const emitterSettingsController: FastifyPluginAsync = async (app) => {
   const fiscalSettings = createFiscalSettingsModule();
@@ -31,7 +32,7 @@ export const emitterSettingsController: FastifyPluginAsync = async (app) => {
     return view;
   });
 
-  app.patch("/fiscal-settings", async (req, reply) => {
+  app.patch("/fiscal-settings", { onRequest: [requireAdminHook] }, async (req, reply) => {
     try {
       const tenantId = tenantIdFromRequest(req);
       const body = updateEmitterSettingsBodySchema.parse(req.body);

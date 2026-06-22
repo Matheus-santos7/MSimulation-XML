@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { tenantIdFromRequest } from "../../../../lib/auth/request-context.js";
 import { handleRouteError } from "../../../../lib/http/domain-errors.js";
+import { requireAdminHook } from "../../../../plugins/contexts/guards.js";
 import { TenantFilialError } from "../../domain/errors/tenant-filial.error.js";
 import { createOrgModule } from "../../infrastructure/factory/org-module.factory.js";
 import {
@@ -19,10 +20,10 @@ const TENANT_FILIAL_ERROR_MAPPINGS = [{ type: TenantFilialError, status: 400 }] 
  * | Método | Rota | Use case |
  * |--------|------|----------|
  * | GET | `/empresas/filiais` | ListTenantFiliaisUseCase |
- * | POST | `/empresas/filiais` | AddTenantFilialUseCase |
- * | PUT | `/empresas/filiais/:id` | UpdateTenantFilialUseCase |
- * | DELETE | `/empresas/filiais/:id` | RemoveTenantFilialUseCase |
- * | PATCH | `/empresas/papeis-fiscais` | SetTenantFiscalRolesUseCase |
+ * | POST | `/empresas/filiais` | AddTenantFilialUseCase (ADMIN) |
+ * | PUT | `/empresas/filiais/:id` | UpdateTenantFilialUseCase (ADMIN) |
+ * | DELETE | `/empresas/filiais/:id` | RemoveTenantFilialUseCase (ADMIN) |
+ * | PATCH | `/empresas/papeis-fiscais` | SetTenantFiscalRolesUseCase (ADMIN) |
  */
 export const tenantFilialController: FastifyPluginAsync = async (app) => {
   const org = createOrgModule();
@@ -32,7 +33,7 @@ export const tenantFilialController: FastifyPluginAsync = async (app) => {
     return org.listTenantFiliais.execute(tenantId);
   });
 
-  app.post("/empresas/filiais", async (request, reply) => {
+  app.post("/empresas/filiais", { onRequest: [requireAdminHook] }, async (request, reply) => {
     const tenantId = tenantIdFromRequest(request);
     const parsed = tenantFilialCreateBody.safeParse(request.body);
     if (!parsed.success) {
@@ -65,7 +66,7 @@ export const tenantFilialController: FastifyPluginAsync = async (app) => {
     }
   });
 
-  app.put("/empresas/filiais/:id", async (request, reply) => {
+  app.put("/empresas/filiais/:id", { onRequest: [requireAdminHook] }, async (request, reply) => {
     const tenantId = tenantIdFromRequest(request);
     const { id } = tenantFilialIdParam.parse(request.params);
     const parsed = tenantFilialUpdateBody.safeParse(request.body);
@@ -103,7 +104,7 @@ export const tenantFilialController: FastifyPluginAsync = async (app) => {
     }
   });
 
-  app.delete("/empresas/filiais/:id", async (request, reply) => {
+  app.delete("/empresas/filiais/:id", { onRequest: [requireAdminHook] }, async (request, reply) => {
     const tenantId = tenantIdFromRequest(request);
     const { id } = tenantFilialIdParam.parse(request.params);
     try {
@@ -116,7 +117,7 @@ export const tenantFilialController: FastifyPluginAsync = async (app) => {
     }
   });
 
-  app.patch("/empresas/papeis-fiscais", async (request, reply) => {
+  app.patch("/empresas/papeis-fiscais", { onRequest: [requireAdminHook] }, async (request, reply) => {
     const tenantId = tenantIdFromRequest(request);
     const parsed = tenantFiscalRolesBody.safeParse(request.body);
     if (!parsed.success) {

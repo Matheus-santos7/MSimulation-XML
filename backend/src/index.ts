@@ -8,7 +8,7 @@ import "dotenv/config";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import Fastify from "fastify";
-import { requireJwtSecret, requirePasswordPepper } from "./lib/auth/config.js";
+import { assertProductionSecurityConfig } from "./lib/auth/production-env.js";
 import { buildCorsOptions } from "./lib/http/cors-config.js";
 import { registerGlobalErrorHandler } from "./lib/http/error-handler.js";
 import { buildHelmetOptions } from "./lib/http/helmet-config.js";
@@ -22,10 +22,7 @@ import { protectedApiPlugin } from "./plugins/protected-api.js";
 const trustProxy = process.env.TRUST_PROXY === "true" || process.env.NODE_ENV === "production";
 const app = Fastify({ logger: true, trustProxy });
 
-if (process.env.NODE_ENV === "production") {
-  requireJwtSecret();
-  requirePasswordPepper();
-}
+assertProductionSecurityConfig();
 
 registerGlobalErrorHandler(app);
 

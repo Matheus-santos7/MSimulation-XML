@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from typing import Any
@@ -52,7 +53,10 @@ def _normalize_digits(value: str) -> str:
 
 
 def _normalize_city(value: str) -> str:
-    return re.sub(r"\s+", " ", value.strip().lower())
+    """Normaliza nome de município para comparação (case, espaços, acentos)."""
+    collapsed = re.sub(r"\s+", " ", value.strip().lower())
+    decomposed = unicodedata.normalize("NFD", collapsed)
+    return "".join(char for char in decomposed if unicodedata.category(char) != "Mn")
 
 
 def _extract_icms_codes(det: ET.Element) -> tuple[str, str]:

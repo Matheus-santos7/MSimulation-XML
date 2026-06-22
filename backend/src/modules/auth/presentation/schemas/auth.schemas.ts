@@ -64,6 +64,7 @@ export const logoutBodySchema = z.object({
 
 export const forgotPasswordBodySchema = z.object({
   email: emailField,
+  captchaToken: z.string().trim().optional(),
 });
 
 export const totpCodeField = z
@@ -80,6 +81,7 @@ export const resetPasswordBodySchema = z.object({
 export const verify2faBodySchema = z.object({
   twoFactorToken: z.string().min(20, "Sessão de verificação inválida"),
   code: totpCodeField,
+  captchaToken: z.string().trim().optional(),
 });
 
 export const enable2faBodySchema = z.object({

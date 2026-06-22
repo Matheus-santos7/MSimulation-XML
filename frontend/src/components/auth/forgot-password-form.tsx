@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { forgotPasswordAction, type ForgotPasswordState } from "@/lib/auth/actions";
+import { RegisterCaptchaField } from "@/components/auth/register-captcha-field";
 
 const initial: ForgotPasswordState = {};
 
@@ -34,6 +35,7 @@ export function ForgotPasswordForm() {
           className="w-full rounded-md border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
         />
       </div>
+      <RegisterCaptchaField />
       {state.error ? (
         <p className="text-sm text-destructive" role="alert">
           {state.error}

@@ -5,14 +5,16 @@
  *
  * | Método | Rota | Responsabilidade |
  * |--------|------|------------------|
- * | POST | `/movimentacoes/remessa` | Remessa física inicial → remessas |
- * | POST | `/movimentacoes/avanco-cd` | Avanço de mercadoria entre CDs |
+ * | POST | `/movimentacoes/remessa` | Remessa física inicial (ADMIN) |
+ * | POST | `/movimentacoes/transferencia-filial` | Transferência entre filiais (ADMIN) |
+ * | POST | `/movimentacoes/avanco-cd` | Avanço de mercadoria entre CDs (ADMIN) |
  * | GET | `/movimentacoes-produto` | ListProductMovementsUseCase |
  * | GET | `/movimentacoes/saldo-cd` | Saldo FIFO por CD (remessas) |
- * | POST | `/movimentacoes/remessa/realign-fifo` | Realinhamento productId por SKU |
+ * | POST | `/movimentacoes/remessa/realign-fifo` | Realinhamento FIFO (ADMIN) |
  */
 import type { FastifyPluginAsync } from "fastify";
 import { tenantIdFromRequest } from "../../../../lib/auth/request-context.js";
+import { requireAdminHook } from "../../../../plugins/contexts/guards.js";
 import { SymbolicShipmentFiscalError } from "../../../remessas/infrastructure/fiscal/symbolic-shipment/index.js";
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import {
@@ -77,7 +79,7 @@ export const movementController: FastifyPluginAsync = async (app) => {
   const logistics = createLogisticsModule();
   const remessas = createRemessasModule();
 
-  app.post("/movimentacoes/remessa", async (req, reply) => {
+  app.post("/movimentacoes/remessa", { onRequest: [requireAdminHook] }, async (req, reply) => {
     const tenantId = tenantIdFromRequest(req);
     const parsed = manualShipmentBody.safeParse(req.body);
     if (!parsed.success) {
@@ -96,7 +98,7 @@ export const movementController: FastifyPluginAsync = async (app) => {
     }
   });
 
-  app.post("/movimentacoes/transferencia-filial", async (req, reply) => {
+  app.post("/movimentacoes/transferencia-filial", { onRequest: [requireAdminHook] }, async (req, reply) => {
     const tenantId = tenantIdFromRequest(req);
     const parsed = transferenciaFilialBody.safeParse(req.body);
     if (!parsed.success) {
@@ -115,7 +117,7 @@ export const movementController: FastifyPluginAsync = async (app) => {
     }
   });
 
-  app.post("/movimentacoes/avanco-cd", async (req, reply) => {
+  app.post("/movimentacoes/avanco-cd", { onRequest: [requireAdminHook] }, async (req, reply) => {
     const tenantId = tenantIdFromRequest(req);
     const parsed = advanceWarehouseBody.safeParse(req.body);
     if (!parsed.success) {
@@ -173,7 +175,7 @@ export const movementController: FastifyPluginAsync = async (app) => {
     });
   });
 
-  app.post("/movimentacoes/remessa/realign-fifo", async (req, reply) => {
+  app.post("/movimentacoes/remessa/realign-fifo", { onRequest: [requireAdminHook] }, async (req, reply) => {
     const tenantId = tenantIdFromRequest(req);
     const parsed = realignFifoBody.safeParse(req.body);
     if (!parsed.success) {

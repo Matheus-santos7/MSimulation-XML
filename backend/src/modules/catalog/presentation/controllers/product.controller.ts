@@ -5,6 +5,7 @@ import {
   buildProductSpreadsheetXlsx,
 } from "../../application/services/product-spreadsheet.export.js";
 import { handleRouteError } from "../../../../lib/http/domain-errors.js";
+import { requireAdminHook } from "../../../../plugins/contexts/guards.js";
 import {
   productBulkUpsertBody,
   productCreateBody,
@@ -39,7 +40,7 @@ export const productController: FastifyPluginAsync = async (app) => {
     return product;
   });
 
-  app.post("/products", async (request, reply) => {
+  app.post("/products", { onRequest: [requireAdminHook] }, async (request, reply) => {
     try {
       const tenantId = tenantIdFromRequest(request);
       const body = productCreateBody.parse(request.body);
@@ -75,7 +76,7 @@ export const productController: FastifyPluginAsync = async (app) => {
       .send(buffer);
   });
 
-  app.post("/products/import-spreadsheet", async (request, reply) => {
+  app.post("/products/import-spreadsheet", { onRequest: [requireAdminHook] }, async (request, reply) => {
     const tenantId = tenantIdFromRequest(request);
     const payload = await resolveProductSpreadsheetUpload(request);
     if (!payload.ok) {
@@ -101,7 +102,7 @@ export const productController: FastifyPluginAsync = async (app) => {
     }
   });
 
-  app.post("/products/bulk-upsert", async (request, reply) => {
+  app.post("/products/bulk-upsert", { onRequest: [requireAdminHook] }, async (request, reply) => {
     try {
       const tenantId = tenantIdFromRequest(request);
       const { rows } = productBulkUpsertBody.parse(request.body);
@@ -116,7 +117,7 @@ export const productController: FastifyPluginAsync = async (app) => {
     }
   });
 
-  app.patch("/products/:id", async (request, reply) => {
+  app.patch("/products/:id", { onRequest: [requireAdminHook] }, async (request, reply) => {
     try {
       const { id } = productIdParam.parse(request.params);
       const tenantId = tenantIdFromRequest(request);
@@ -130,7 +131,7 @@ export const productController: FastifyPluginAsync = async (app) => {
     }
   });
 
-  app.delete("/products/:id", async (request, reply) => {
+  app.delete("/products/:id", { onRequest: [requireAdminHook] }, async (request, reply) => {
     try {
       const { id } = productIdParam.parse(request.params);
       const tenantId = tenantIdFromRequest(request);

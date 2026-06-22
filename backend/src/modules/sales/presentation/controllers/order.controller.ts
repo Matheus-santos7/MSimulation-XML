@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { tenantIdFromRequest } from "../../../../lib/auth/request-context.js";
 import { handleRouteError } from "../../../../lib/http/domain-errors.js";
+import { requireAdminHook } from "../../../../plugins/contexts/guards.js";
 import { SaldoRemessaInsuficienteError } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
 import { CheckoutError } from "../../domain/errors/checkout.error.js";
 import { OrderLockedError } from "../../domain/errors/order-locked.error.js";
@@ -40,8 +41,8 @@ const ORDER_ERROR_MAPPINGS = [
  * | POST | `/pedidos` | CreateOrderDraftUseCase |
  * | PATCH | `/pedidos/:id` | UpdateOrderDraftUseCase |
  * | DELETE | `/pedidos/:id` | RemoveOrderUseCase |
- * | POST | `/pedidos/:id/faturar` | InvoiceOrderUseCase (Sales Chain) |
- * | POST | `/pedidos/checkout` | ProcessCheckoutUseCase (Sales Chain direto) |
+ * | POST | `/pedidos/:id/faturar` | InvoiceOrderUseCase (ADMIN) |
+ * | POST | `/pedidos/checkout` | ProcessCheckoutUseCase (ADMIN) |
  */
 export const orderController: FastifyPluginAsync = async (app) => {
   const sales = createSalesModule();
@@ -85,7 +86,7 @@ export const orderController: FastifyPluginAsync = async (app) => {
     }
   });
 
-  app.post("/pedidos/:id/faturar", async (req, reply) => {
+  app.post("/pedidos/:id/faturar", { onRequest: [requireAdminHook] }, async (req, reply) => {
     try {
       const { id } = orderIdParam.parse(req.params);
       const tenantId = tenantIdFromRequest(req);
@@ -111,7 +112,7 @@ export const orderController: FastifyPluginAsync = async (app) => {
     }
   });
 
-  app.post("/pedidos/checkout", async (req, reply) => {
+  app.post("/pedidos/checkout", { onRequest: [requireAdminHook] }, async (req, reply) => {
     try {
       const tenantId = tenantIdFromRequest(req);
       const body = orderCheckoutBody.parse(req.body);

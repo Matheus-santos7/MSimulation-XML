@@ -34,7 +34,7 @@ function signTwoFactorPendingToken(
  * Controller HTTP de autenticação e gestão de sessão.
  *
  * Regista rotas sob `/auth`. Valida entrada com Zod, aplica rate-limit por rota,
- * Turnstile no registo e traduz erros de domínio via `handleAuthError`.
+ * Turnstile no registo, login, forgot-password e verify-2fa.
  * O sub-plugin `onboardingController` trata o vínculo inicial empresa ↔ utilizador.
  *
  * | Método | Rota | Use case |
@@ -121,7 +121,8 @@ export const authController: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       try {
         const body = forgotPasswordBodySchema.parse(request.body);
-        const result = await auth.requestPasswordReset.execute(body);
+        await verifyTurnstileToken(body.captchaToken, request.ip);
+        const result = await auth.requestPasswordReset.execute({ email: body.email });
         return reply.status(200).send(result);
       } catch (error) {
         return handleAuthError(error, reply);
@@ -149,8 +150,9 @@ export const authController: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       try {
         const body = verify2faBodySchema.parse(request.body);
+        await verifyTurnstileToken(body.captchaToken, request.ip);
         const session = await auth.verifyTwoFactorLogin.execute(
-          body,
+          { twoFactorToken: body.twoFactorToken, code: body.code },
           buildAuthMeta(request),
           signAccess,
           (token) => request.server.jwt.verify<TwoFactorPendingPayload>(token),

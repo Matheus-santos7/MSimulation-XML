@@ -13,8 +13,16 @@ export async function loginApi(
   });
 }
 
-export async function verify2faApi(twoFactorToken: string, code: string): Promise<AuthSessionDto> {
-  return postAuthJson<AuthSessionDto>("/api/auth/login/verify-2fa", { twoFactorToken, code });
+export async function verify2faApi(
+  twoFactorToken: string,
+  code: string,
+  captchaToken?: string,
+): Promise<AuthSessionDto> {
+  return postAuthJson<AuthSessionDto>("/api/auth/login/verify-2fa", {
+    twoFactorToken,
+    code,
+    ...(captchaToken ? { captchaToken } : {}),
+  });
 }
 
 export async function registerApi(input: {
@@ -30,8 +38,14 @@ export async function verifyEmailApi(token: string): Promise<{ message: string }
   return postAuthJson<{ message: string }>("/api/auth/verify-email", { token });
 }
 
-export async function forgotPasswordApi(email: string): Promise<{ message: string }> {
-  return postAuthJson<{ message: string }>("/api/auth/forgot-password", { email });
+export async function forgotPasswordApi(
+  email: string,
+  captchaToken?: string,
+): Promise<{ message: string }> {
+  return postAuthJson<{ message: string }>("/api/auth/forgot-password", {
+    email,
+    ...(captchaToken ? { captchaToken } : {}),
+  });
 }
 
 export async function resetPasswordApi(

@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { verify2faAction, type Verify2faState } from "@/lib/auth/actions";
+import { RegisterCaptchaField } from "@/components/auth/register-captcha-field";
 
 const initial: Verify2faState = {};
 
@@ -27,6 +28,7 @@ export function Verify2faForm() {
           className="w-full rounded-md border border-border bg-background px-3 py-2.5 text-sm tracking-[0.3em] text-center font-mono focus:outline-none focus:ring-2 focus:ring-accent/40"
         />
       </div>
+      <RegisterCaptchaField />
       {state.error ? (
         <p className="text-sm text-destructive" role="alert">
           {state.error}

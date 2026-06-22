@@ -65,6 +65,7 @@ export async function verify2faAction(
   formData: FormData,
 ): Promise<Verify2faState> {
   const code = String(formData.get("code") ?? "").trim();
+  const captchaToken = String(formData.get("captchaToken") ?? "").trim() || undefined;
   const twoFactorToken =
     (await getTwoFactorPending()) ?? String(formData.get("twoFactorToken") ?? "").trim();
 
@@ -76,7 +77,7 @@ export async function verify2faAction(
   }
 
   try {
-    const session = await verify2faApi(twoFactorToken, code);
+    const session = await verify2faApi(twoFactorToken, code, captchaToken);
     await clearTwoFactorPending();
     await setAuthSession(session);
     redirectAfterAuth(session);
@@ -118,12 +119,13 @@ export async function forgotPasswordAction(
   formData: FormData,
 ): Promise<ForgotPasswordState> {
   const email = String(formData.get("email") ?? "").trim();
+  const captchaToken = String(formData.get("captchaToken") ?? "").trim() || undefined;
   if (!email) {
     return { error: "Informe seu e-mail" };
   }
 
   try {
-    const result = await forgotPasswordApi(email);
+    const result = await forgotPasswordApi(email, captchaToken);
     return { success: result.message };
   } catch (e) {
     return formatAuthError(e);

@@ -18,7 +18,26 @@
  *  3. O bloco <total> (ICMSTot) é EXCLUSIVAMENTE a soma (reduce) dos valores já
  *     arredondados de cada item. Nunca recalculamos imposto sobre o total da
  *     nota. Assim o vNF "bate na vírgula" com a soma dos itens.
+ *
+ *  4. PIS/COFINS — base de cálculo composta pela configuração do tenant
+ *     (`fiscal-settings.composicaoBaseCalculo.pisCofins`) injetada via
+ *     {@link PisCofinsInput.baseConfig}. O engine NÃO conhece o que está no
+ *     painel "Config. fiscais"; recebe apenas o vetor de 8 flags
+ *     (`frete`, `desconto`, `icms`, `difal`, `fcpIcms`, `fcpDifal`, `ipi`,
+ *     `acrescimo`) já resolvido para o canal da operação (venda × remessa).
+ *
+ *     Quando o tenant adota a Tese do Século (STF RE 574.706/PR), `icms` e
+ *     `difal` virão como `DEDUCT` — exatamente como nos defaults do
+ *     `fiscal-settings`. A trava `Math.max(0, …)` impede base negativa em
+ *     cenários atípicos (descontos > receita).
  */
+
+import {
+  LEGACY_BASE_PIS_COFINS_CONFIG,
+  type BasePisCofinsConfig,
+} from "../entities/base-pis-cofins-config.entity.js";
+
+export type { BasePisCofinsConfig } from "../entities/base-pis-cofins-config.entity.js";
 
 /** Arredondamento comercial para 2 casas (meio-para-cima), nível de item. */
 export function round2(value: number): number {
@@ -65,6 +84,15 @@ export type PisCofinsInput = {
   aliquota: number;
   /** % de redução da base (alguns benefícios reduzem a base do PIS/COFINS). */
   pRedBC?: number;
+  /**
+   * Composição da base de cálculo (8 componentes) já resolvida para o canal
+   * (venda × remessa) pela camada `application`. Vem de
+   * `FiscalEmitterSettings.taxes.composicaoBaseCalculo.pisCofins`.
+   *
+   * Ausente: usa {@link LEGACY_BASE_PIS_COFINS_CONFIG} — comportamento legado
+   * (frete na base + desconto subtraído; sem exclusão de ICMS/DIFAL).
+   */
+  baseConfig?: BasePisCofinsConfig;
 };
 
 /** Partilha do ICMS interestadual para consumidor final (ICMSUFDest / DIFAL). */
@@ -206,8 +234,10 @@ export type NotaFiscalResult = {
  *   vBC ICMS                    = baseICMS × (1 − pRedBC/100)
  *   vICMS                       = vBC × pICMS
  *   vFCP                        = vBC × pFCP                  (tag separada)
- *   PIS/COFINS                  = (baseBruta × (1 − pRedBC)) × alíquota
- *   DIFAL (consumidor final UF) = vBC × (pInterna − pInter)
+ *   DIFAL (consumidor final UF) = vBCUFDest × (pInterna − pInter)
+ *   PIS/COFINS                  = (basePisCofins) × (1 − pRedBC) × alíquota
+ *     onde basePisCofins é montada item-a-item pela `baseConfig` (vinda do
+ *     `fiscal-settings` do tenant, projetada para o canal venda/remessa).
  */
 export function calcularItem(input: ItemFiscalInput): ItemFiscalResult {
   const frete = round2(pct(input.frete));
@@ -249,18 +279,12 @@ export function calcularItem(input: ItemFiscalInput): ItemFiscalResult {
   const vICMS = semTributacaoIcms ? 0 : round2(vBCIcms * (pICMS / 100));
   const vFCP = semTributacaoIcms ? 0 : round2(vBCIcms * (pFCP / 100));
 
-  // 5) PIS e COFINS — base pode ter redução própria.
-  const pPIS = pct(input.pis.aliquota);
-  const pCOFINS = pct(input.cofins.aliquota);
-  const vBCPisBruta = round2(baseBruta * (1 - pct(input.pis.pRedBC) / 100));
-  const vBCCofinsBruta = round2(baseBruta * (1 - pct(input.cofins.pRedBC) / 100));
-  const vBCPis = pPIS === 0 ? 0 : vBCPisBruta;
-  const vBCCofins = pCOFINS === 0 ? 0 : vBCCofinsBruta;
-  const vPIS = round2(vBCPis * (pPIS / 100));
-  const vCOFINS = round2(vBCCofins * (pCOFINS / 100));
-
-  // 6) DIFAL (ICMSUFDest) — partilha para consumidor final em operação interestadual.
+  // 5) DIFAL (ICMSUFDest) — partilha para consumidor final em operação interestadual.
+  //    Calculado ANTES de PIS/COFINS para que possa ser deduzido da base (Tese
+  //    do Século aplicada ao diferencial — STF RE 574.706 + Lei 14.395/2022).
   let difalResult: ItemFiscalResult["difal"];
+  let vICMSUFDest = 0;
+  let vICMSUFRemet = 0;
   if (input.difal) {
     const pRedDifal = pct(input.difal.pRedBC);
     const vBCUFDest = round2(baseAntesReducao * (1 - pRedDifal / 100));
@@ -272,8 +296,8 @@ export function calcularItem(input: ItemFiscalInput): ItemFiscalResult {
       round2(vBCUFDest * (pICMSUFDest / 100)) - round2(vBCUFDest * (pICMSInter / 100)),
     );
     const vDifalPositivo = Math.max(0, vDifalTotal);
-    const vICMSUFDest = round2(vDifalPositivo * (pICMSInterPart / 100));
-    const vICMSUFRemet = round2(vDifalPositivo - vICMSUFDest);
+    vICMSUFDest = round2(vDifalPositivo * (pICMSInterPart / 100));
+    vICMSUFRemet = round2(vDifalPositivo - vICMSUFDest);
     const pFCPUFDest = pct(input.difal.pFCPUFDest);
     const vBCFCPUFDest = pFCPUFDest > 0 ? vBCUFDest : 0;
     const vFCPUFDest = round2(vBCFCPUFDest * (pFCPUFDest / 100));
@@ -289,6 +313,58 @@ export function calcularItem(input: ItemFiscalInput): ItemFiscalResult {
       vFCPUFDest,
     };
   }
+
+  // 6) PIS e COFINS — base composta pelos 8 componentes do `baseConfig` (vindo
+  //    de `fiscal-settings.composicaoBaseCalculo.pisCofins` projetado para o
+  //    canal da operação) + redução opcional por benefício. A composição é
+  //    aplicada ANTES da redução; trava `Math.max(0, …)` impede base negativa.
+  //
+  //    Fórmula (canal já resolvido pelo caller):
+  //      base = vProd
+  //           + vSeg                                  (seguro sempre compõe)
+  //           + (frete    === INCLUDE ? vFrete    : 0)
+  //           + (acrescimo === INCLUDE ? vOutro    : 0)
+  //           + (ipi       === INCLUDE ? vIPI      : 0)
+  //           − (desconto  === DEDUCT  ? vDesc     : 0)
+  //           − (icms      === DEDUCT  ? vICMS     : 0)
+  //           − (difal     === DEDUCT  ? vICMSUFDest + vICMSUFRemet : 0)
+  //           − (fcpIcms   === DEDUCT  ? vFCP      : 0)
+  //           − (fcpDifal  === DEDUCT  ? vFCPUFDest: 0)
+  const pPIS = pct(input.pis.aliquota);
+  const pCOFINS = pct(input.cofins.aliquota);
+  const vFCPUFDest = difalResult?.vFCPUFDest ?? 0;
+  const baseAjustePisCofins = (config: BasePisCofinsConfig | undefined): number => {
+    const cfg = config ?? LEGACY_BASE_PIS_COFINS_CONFIG;
+    const incluirFrete = cfg.frete === "INCLUDE";
+    const incluirIpi = cfg.ipi === "INCLUDE";
+    const incluirAcrescimo = cfg.acrescimo === "INCLUDE";
+    const subtrairDesconto = cfg.desconto === "DEDUCT";
+    const subtrairIcms = cfg.icms === "DEDUCT";
+    const subtrairDifal = cfg.difal === "DEDUCT";
+    const subtrairFcpIcms = cfg.fcpIcms === "DEDUCT";
+    const subtrairFcpDifal = cfg.fcpDifal === "DEDUCT";
+
+    const incluirParts =
+      (incluirFrete ? frete : 0) +
+      (incluirAcrescimo ? outras : 0) +
+      (incluirIpi ? vIPI : 0);
+    const subtrairParts =
+      (subtrairDesconto ? desconto : 0) +
+      (subtrairIcms ? vICMS : 0) +
+      (subtrairDifal ? round2(vICMSUFDest + vICMSUFRemet) : 0) +
+      (subtrairFcpIcms ? vFCP : 0) +
+      (subtrairFcpDifal ? vFCPUFDest : 0);
+
+    return round2(vProd + seguro + incluirParts - subtrairParts);
+  };
+  const basePisBruta = Math.max(0, baseAjustePisCofins(input.pis.baseConfig));
+  const baseCofinsBruta = Math.max(0, baseAjustePisCofins(input.cofins.baseConfig));
+  const vBCPisBruta = round2(basePisBruta * (1 - pct(input.pis.pRedBC) / 100));
+  const vBCCofinsBruta = round2(baseCofinsBruta * (1 - pct(input.cofins.pRedBC) / 100));
+  const vBCPis = pPIS === 0 ? 0 : vBCPisBruta;
+  const vBCCofins = pCOFINS === 0 ? 0 : vBCCofinsBruta;
+  const vPIS = round2(vBCPis * (pPIS / 100));
+  const vCOFINS = round2(vBCCofins * (pCOFINS / 100));
 
   return {
     numeroItem: input.numeroItem,

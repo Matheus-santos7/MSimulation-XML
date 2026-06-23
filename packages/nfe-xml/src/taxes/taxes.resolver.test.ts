@@ -77,6 +77,19 @@ describe("resolvePisCofinsFromEngine", () => {
     assert.ok(nodes.pis.PIS.PISOutr);
     assert.ok(nodes.cofins.COFINS.COFINSOutr);
   });
+
+  it("PISAliq/COFINSAliq propagam <vBC> reduzido (Tese do Século) do engine", () => {
+    // Caso paridade ML Full: engine entrega vBC = 646.72 já com ICMS/DIFAL excluídos.
+    const pis = { cst: "01", vBC: 646.72, pPIS: 1.65, vPIS: 10.67 };
+    const cofins = { cst: "01", vBC: 646.72, pCOFINS: 7.6, vCOFINS: 49.15 };
+    const nodes = resolvePisCofinsFromEngine(pis, cofins);
+    const pisAliq = nodes.pis.PIS.PISAliq as Record<string, string>;
+    const cofinsAliq = nodes.cofins.COFINS.COFINSAliq as Record<string, string>;
+    assert.equal(pisAliq.vBC, "646.72");
+    assert.equal(pisAliq.vPIS, "10.67");
+    assert.equal(cofinsAliq.vBC, "646.72");
+    assert.equal(cofinsAliq.vCOFINS, "49.15");
+  });
 });
 
 describe("resolveIbsCbsImposto", () => {

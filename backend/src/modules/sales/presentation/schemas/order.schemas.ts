@@ -61,9 +61,26 @@ export const buyerCheckoutBody = z.object({
   }
 });
 
+/**
+ * Valor monetário em R$ não negativo com até 2 casas decimais (centavos).
+ *
+ * Aceita string vazia/undefined como `0` para retrocompatibilidade com forms
+ * que não enviam o campo. `multipleOf(0.01)` evita rejeição 528 da SEFAZ por
+ * casas decimais excedentes em `<vDesc>` / `<vFrete>`.
+ */
+const monetaryValueField = z.preprocess(
+  (v) => (v === "" || v === null || v === undefined ? 0 : v),
+  z.coerce
+    .number({ invalid_type_error: "Valor inválido" })
+    .nonnegative("Valor não pode ser negativo")
+    .multipleOf(0.01, "Valor com no máximo 2 casas decimais"),
+);
+
 export const orderCheckoutBody = z.object({
   productId: z.string().uuid(),
   quantidade: z.coerce.number().positive().max(9999).default(1),
+  desconto: monetaryValueField.default(0),
+  frete: monetaryValueField.default(0),
   comprador: buyerCheckoutBody,
 });
 

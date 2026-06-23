@@ -37,7 +37,15 @@ export function usePedidoWizard({ open, onOpenChange, products, pedido }: UsePed
   const isEdit = Boolean(pedido);
   const selected = products.find((p) => p.id === form.productId);
   const qty = Math.max(1, Number(form.quantidade) || 1);
-  const total = selected ? selected.preco * qty : 0;
+  /** Lê input monetário aceitando vírgula como separador decimal. */
+  const parseMoney = (raw: string): number => {
+    const n = Number(String(raw).replace(",", "."));
+    return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0;
+  };
+  const desconto = parseMoney(form.desconto);
+  const frete = parseMoney(form.frete);
+  const subtotal = selected ? selected.preco * qty : 0;
+  const total = Math.max(0, Math.round((subtotal + frete - desconto) * 100) / 100);
 
   useEffect(() => {
     if (!open) return;
@@ -123,6 +131,9 @@ export function usePedidoWizard({ open, onOpenChange, products, pedido }: UsePed
     isEdit,
     selected,
     qty,
+    subtotal,
+    desconto,
+    frete,
     total,
     applyExample,
     submit,

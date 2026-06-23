@@ -42,6 +42,7 @@ export function ibsCbsBcInputFromEngineItem(engineItem?: EngineItem): IbsCbsVBcI
   return {
     vProd: engineItem?.vProd ?? 0,
     vFrete: engineItem?.vFrete ?? 0,
+    vDesc: engineItem?.vDesc ?? 0,
     vPIS: engineItem?.pis.vPIS ?? 0,
     vCOFINS: engineItem?.cofins.vCOFINS ?? 0,
     vICMS: engineItem?.icms.vICMS ?? 0,

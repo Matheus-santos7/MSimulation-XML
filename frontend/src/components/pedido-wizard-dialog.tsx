@@ -42,6 +42,9 @@ export function PedidoWizardDialog({ open, onOpenChange, products, pedido }: Pro
     isEdit,
     selected,
     qty,
+    subtotal,
+    desconto,
+    frete,
     total,
     applyExample,
     submit,
@@ -101,7 +104,7 @@ export function PedidoWizardDialog({ open, onOpenChange, products, pedido }: Pro
                   ))}
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-2">
                   <Label>Quantidade</Label>
                   <Input
@@ -111,9 +114,51 @@ export function PedidoWizardDialog({ open, onOpenChange, products, pedido }: Pro
                     onChange={(e) => set("quantidade", e.target.value)}
                   />
                 </div>
-                <div className="flex items-end text-[14px]">
-                  <span className="text-muted-foreground">Total: </span>
-                  <span className="ml-1 font-mono font-bold text-accent">{brl(total)}</span>
+                <div className="space-y-2">
+                  <Label htmlFor="pedidoDesconto">Desconto (R$)</Label>
+                  <Input
+                    id="pedidoDesconto"
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    inputMode="decimal"
+                    value={form.desconto}
+                    onChange={(e) => set("desconto", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="pedidoFrete">Frete (R$)</Label>
+                  <Input
+                    id="pedidoFrete"
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    inputMode="decimal"
+                    value={form.frete}
+                    onChange={(e) => set("frete", e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="rounded-md border border-border/60 bg-background/40 px-3 py-2 text-[13px] space-y-0.5">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Subtotal ({qty} × {brl(selected?.preco ?? 0)})</span>
+                  <span className="font-mono">{brl(subtotal)}</span>
+                </div>
+                {frete > 0 && (
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>+ Frete</span>
+                    <span className="font-mono">{brl(frete)}</span>
+                  </div>
+                )}
+                {desconto > 0 && (
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>− Desconto</span>
+                    <span className="font-mono">{brl(desconto)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between border-t border-border/60 pt-1 text-[14px] font-bold">
+                  <span>Total da linha</span>
+                  <span className="font-mono text-accent">{brl(total)}</span>
                 </div>
               </div>
               {!isEdit ? (
@@ -227,16 +272,24 @@ export function PedidoWizardDialog({ open, onOpenChange, products, pedido }: Pro
           {step === 3 && (
             <div className="space-y-3 text-[14px]">
               <ReviewRow label="Produto" value={selected ? `${selected.sku} — ${selected.nome}` : "—"} />
-              <ReviewRow label="Qtd / Total" value={`${qty} × ${brl(selected?.preco ?? 0)} = ${brl(total)}`} />
+              <ReviewRow
+                label="Qtd × preço"
+                value={`${qty} × ${brl(selected?.preco ?? 0)} = ${brl(subtotal)}`}
+              />
+              {(frete > 0 || desconto > 0) && (
+                <ReviewRow
+                  label="Frete / Desconto"
+                  value={`+ ${brl(frete)} frete / − ${brl(desconto)} desconto`}
+                />
+              )}
+              <ReviewRow label="Total da linha" value={brl(total)} />
               <ReviewRow label="Comprador" value={`${form.nome} (${form.cpf})`} />
               <ReviewRow label="Perfil fiscal" value={formatIndIEDest(form.indIEDest, form.cpf, form.ie)} />
               <ReviewRow
                 label="Entrega"
                 value={`${form.logradouro}, ${form.numero}${form.complemento ? ` — ${form.complemento}` : ""} — ${form.bairro}, ${form.municipio}/${form.uf} — CEP ${form.cep}`}
               />
-              <p className="text-[12px] text-muted-foreground pt-2">
-                Ao faturar, a NF-e recebe o próximo número da série desta empresa. Pedidos faturados não podem ser editados.
-              </p>
+
             </div>
           )}
         </div>

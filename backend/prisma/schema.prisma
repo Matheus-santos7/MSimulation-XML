@@ -359,6 +359,8 @@ model Pedido {
   productId          String       @map("product_id")
   product            Product      @relation(fields: [productId], references: [id], onDelete: Restrict)
   quantidade         Int          @default(1)
+  desconto           Decimal      @default(0) @db.Decimal(15, 2)
+  frete              Decimal      @default(0) @db.Decimal(15, 2)
   status             PedidoStatus @default(RASCUNHO)
   pedidoMl           String?      @map("pedido_ml")
   nfeId              String?      @unique @map("nfe_id")

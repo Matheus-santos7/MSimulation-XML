@@ -28,7 +28,7 @@ export function buildIcmsTotNode(t: IcmsTotValues): XmlObject {
     vProd: formatMoney2(t.vProd),
     vFrete: formatMoney2(t.vFrete),
     vSeg: "0.00",
-    vDesc: "0.00",
+    vDesc: formatMoney2(t.vDesc ?? 0),
     vII: "0.00",
     vIPI: formatMoney2(t.vIPI),
     vIPIDevol: "0.00",

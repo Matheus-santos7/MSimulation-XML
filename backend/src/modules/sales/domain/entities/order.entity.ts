@@ -29,6 +29,8 @@ export type Order = {
   pedidoMl?: string;
   productId: string;
   quantidade: number;
+  desconto: number;
+  frete: number;
   product: OrderProductSummary;
   comprador: Buyer;
   valorTotal: number;

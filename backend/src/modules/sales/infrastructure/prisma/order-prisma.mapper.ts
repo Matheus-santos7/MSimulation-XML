@@ -9,6 +9,8 @@ type OrderRow = {
   tenantId: string;
   productId: string;
   quantidade: number;
+  desconto: { toString(): string };
+  frete: { toString(): string };
   status: PedidoStatus;
   pedidoMl: string | null;
   nfeId: string | null;
@@ -40,6 +42,8 @@ type OrderRow = {
 
 export function mapOrderFromPrisma(row: OrderRow): Order {
   const unitPrice = num(row.product.preco);
+  const desconto = num(row.desconto);
+  const frete = num(row.frete);
   return {
     id: row.id,
     tenantId: row.tenantId,
@@ -47,6 +51,8 @@ export function mapOrderFromPrisma(row: OrderRow): Order {
     pedidoMl: row.pedidoMl ?? undefined,
     productId: row.productId,
     quantidade: row.quantidade,
+    desconto,
+    frete,
     product: {
       id: row.product.id,
       sku: row.product.sku,
@@ -70,7 +76,7 @@ export function mapOrderFromPrisma(row: OrderRow): Order {
       indIEDest: row.destIndIeDest,
       ie: row.destIe ?? undefined,
     },
-    valorTotal: unitPrice * row.quantidade,
+    valorTotal: unitPrice * row.quantidade + frete - desconto,
     nfe: row.nfe
       ? {
           chave: row.nfe.chave,
@@ -91,6 +97,8 @@ export function mapOrderForEmitFromPrisma(
     tenant: OrderForEmit["tenant"];
   },
 ): OrderForEmit {
+  const desconto = num(pedido.desconto);
+  const frete = num(pedido.frete);
   return {
     tenantId: pedido.tenantId,
     productId: pedido.productId,
@@ -112,6 +120,21 @@ export function mapOrderForEmitFromPrisma(
     destIe: pedido.destIe,
     product: pedido.product,
     tenant: pedido.tenant,
+    valorFrete: frete > 0 ? frete : undefined,
+    valorDesconto: desconto > 0 ? desconto : undefined,
+  };
+}
+
+/**
+ * Normaliza desconto/frete vindos do payload de checkout em valores comerciais
+ * (≥ 0 e arredondados em 2 casas) para colunas `Decimal` do Prisma.
+ */
+export function discountAndFreightColumns(input: { desconto?: number; frete?: number }) {
+  const desconto = Number(input.desconto ?? 0);
+  const frete = Number(input.frete ?? 0);
+  return {
+    desconto: Number.isFinite(desconto) && desconto > 0 ? Number(desconto.toFixed(2)) : 0,
+    frete: Number.isFinite(frete) && frete > 0 ? Number(frete.toFixed(2)) : 0,
   };
 }
 

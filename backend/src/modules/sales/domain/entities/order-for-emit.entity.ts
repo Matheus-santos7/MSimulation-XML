@@ -48,12 +48,10 @@ export type OrderForEmit = {
   destNomePais: string;
   destTelefone: string | null;
   destIndIeDest: number;
-  /** IE do comprador (contribuinte ICMS) — vai para `fiscalPayload.destIe` na NF-e de venda. */
   destIe?: string | null;
   product: OrderProductForEmit;
   tenant: TenantForSalesEmit;
-  /** Frete do pedido ML (opcional) — compõe `<vFrete>` e bases de ICMS/IPI. */
   valorFrete?: number;
-  /** ID numérico do pack/pedido ML para `<xPed>` (ex.: 200001579233992). */
+  valorDesconto?: number;
   mlPackId?: string;
 };

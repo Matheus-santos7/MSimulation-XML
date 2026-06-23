@@ -117,6 +117,8 @@ Desktop.ini
 .cursor/*
 !.cursor/rules/
 !.cursor/rules/**
+!.cursor/skills/
+!.cursor/skills/**
 .agents/
 .claude/
 .gemini/

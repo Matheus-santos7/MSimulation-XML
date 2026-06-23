@@ -13,6 +13,8 @@ Use este checklist nos stages **bugbot** e **code-reviewer** quando o diff tocar
 
 ## XML (regra 04-refactory-xml)
 
+Aplica também a `packages/nfe-xml/**`.
+
 - [ ] XML montado como objeto JS/TS puro; serialização só no final
 - [ ] Proibido template strings para tags (`<tag>${valor}</tag>`)
 - [ ] Funções pequenas por node (`buildIde`, `buildDest`, etc.)

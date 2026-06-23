@@ -19,6 +19,8 @@ Ao implementar plans com `subagent-driven-development`:
 3. **unified-code-review** post-task
 4. mark task done
 
+**Substitui** code quality reviewer do superpowers — não rodar `requesting-code-review` em paralelo.
+
 Após última task: **unified-code-review** pre-merge → só então merge/PR.
 
 ## Referências

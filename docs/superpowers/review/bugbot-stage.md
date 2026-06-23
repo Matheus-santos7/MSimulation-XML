@@ -12,17 +12,17 @@ Primeiro stage do pipeline `unified-code-review`. Foco: bugs, regressões, secur
 ## Prompt shape
 
 ```text
-Full Repository Path: /Users/matheus/Documents/msedit-xml
+Full Repository Path: <absolute workspace root — use `git rev-parse --show-toplevel`>
 Diff: <ver tabela abaixo>
-Change Description: <obrigatório se Diff = natural language>
-Custom Instructions: Review for runtime bugs, regressions, null/edge cases, and security issues. Apply docs/superpowers/review/fiscal-ca-checklist.md when diff touches backend/src/modules/**/tax*, **/xml/**, **/fiscal-*, or frontend fiscal logic.
+Change Description: <obrigatório para post-task e retry>
+Custom Instructions: Review for runtime bugs, regressions, null/edge cases, and security issues. Apply docs/superpowers/review/fiscal-ca-checklist.md when diff touches backend/src/modules/**/tax*, packages/nfe-xml/**, **/xml/**, **/fiscal-*, or frontend fiscal logic.
 ```
 
 ## Diff por gate
 
 | Gate | Diff value | Notas |
 |------|------------|-------|
-| post-task | Omitir `Diff: branch changes`. Usar SHAs: informar ao subagent `Review git range BASE_SHA..HEAD_SHA` na Custom Instructions | BASE = commit antes da task; HEAD = HEAD atual |
+| post-task | `natural language` | Gerar `Change Description` via `git diff --stat BASE_SHA..HEAD_SHA` + `git diff BASE_SHA..HEAD_SHA` (um bloco por arquivo) |
 | pre-merge | `branch changes` | Base branch default `main` |
 
 ## Retry

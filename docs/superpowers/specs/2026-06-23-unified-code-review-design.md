@@ -1,7 +1,7 @@
 # Unified Code Review — Design Spec
 
 **Data:** 2026-06-23  
-**Status:** Aprovado (aguardando review escrito)  
+**Status:** Implementado (v1)  
 **Escopo:** Workflow superpowers + skills Cursor (sem CI)  
 **Relacionado:** `subagent-driven-development`, `requesting-code-review`, `review-bugbot`, `caveman-review`
 

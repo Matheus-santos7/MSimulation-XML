@@ -11,6 +11,32 @@ Orquestrador de review para msedit-xml. Unifica `bugbot`, `code-reviewer` e form
 
 **Spec:** `docs/superpowers/specs/2026-06-23-unified-code-review-design.md`
 
+## Substituição no subagent-driven-development
+
+Este skill **substitui** `requesting-code-review` / code quality reviewer do superpowers.
+Manter apenas **spec reviewer** antes do gate post-task. Não rodar code-reviewer duplicado.
+
+## Invocation (Task tool)
+
+**Stage 1 — bugbot:**
+
+```
+Task(subagent_type="bugbot", readonly=true, description="Bugbot stage 1")
+```
+
+Prompt conforme `docs/superpowers/review/bugbot-stage.md`.
+`Full Repository Path` = output de `git rev-parse --show-toplevel`.
+
+**Stage 2 — code-reviewer:**
+
+```
+Task(subagent_type="code-reviewer", readonly=true, description="Code reviewer stage 2")
+```
+
+Prompt conforme `docs/superpowers/review/code-reviewer-stage.md` com placeholders preenchidos.
+
+**Stage 3 — caveman:** agent pai formata; não é subagent. Ver `caveman-output.md`.
+
 ## When to use
 
 1. **post-task gate** — após implementer commitar task N e spec reviewer PASS; antes de marcar task done
@@ -48,6 +74,8 @@ HEAD_SHA=$(git rev-parse HEAD)
 
 Abort se HEAD não tiver commit da task.
 
+**post-task diff:** sempre `Diff: natural language` + `Change Description` gerada de `git diff BASE_SHA..HEAD_SHA`.
+
 ## Gate rules
 
 - **BLOCKED** se Critical ou Important em qualquer stage
@@ -64,7 +92,7 @@ Salvar em `docs/superpowers/reviews/`:
 
 Usar template: `docs/superpowers/reviews/_artifact-template.md`
 
-Commitar artefato após cada gate PASS.
+Commitar artefato após cada gate (PASS ou BLOCKED após loop 3).
 
 ## Integration with subagent-driven-development
 
@@ -87,6 +115,7 @@ Após última task:
 | bugbot diff fail | retry natural language (1×) |
 | code-reviewer empty | retry (1×) → escalar |
 | empty diff post-task | WARN; PASS se spec reviewer OK |
+| SHA inválido / sem commit | abort gate; commitar antes de re-rodar |
 
 ## Do NOT
 

@@ -16,8 +16,12 @@ export const VENDA_ML_TRANSPORTA: RemessaMlTransporta = {
   uf: "SP",
 };
 
-/** CD fulfillment padrão ML (SC) — texto do `<infCpl>` de venda. */
+/**
+ * Fallback do CD operador logístico ML (SC) usado no `<infCpl>` da NF-e de venda
+ * quando a nota de retorno simbólico não fornece o destinatário real.
+ */
 export const VENDA_ML_CD_DEPOSITO = {
+  xNome: "EBAZAR.COM.BR LTDA",
   cnpj: "03007331012077",
   ie: "261755994",
   logradouro: "Av. Papenborg",
@@ -45,10 +49,34 @@ export const VENDA_ML_IBS_CBS_DEFAULT = {
   pCBS: 0.9,
 } as const;
 
+/**
+ * Destinatário da NF-e de retorno simbólico (CFOP 1949/2949) que faz par com a venda.
+ *
+ * Esses dados representam o CD operador logístico real (Mercado Livre Full,
+ * conforme Portaria CAT 31/2019 + MOC 7.0) de onde a mercadoria sai fisicamente.
+ * São copiados para o `<infCpl>` da NF-e de venda para evidenciar a triangulação
+ * fiscal **remessa → retorno → venda** com o mesmo participante.
+ */
+export type VendaMlReturnNoteDestinatario = {
+  xNome?: string | null;
+  cnpj?: string | null;
+  ie?: string | null;
+  logradouro?: string | null;
+  numero?: string | null;
+  complemento?: string | null;
+  bairro?: string | null;
+  municipio?: string | null;
+  codigoMunicipio?: string | null;
+  cep?: string | null;
+  uf?: string | null;
+  pais?: string | null;
+};
+
 export type VendaMlReturnNoteRef = {
   numero: number;
   serie: number;
   emitidaEm: Date | string;
+  destinatario?: VendaMlReturnNoteDestinatario;
 };
 
 export type EnrichMlVendaPayloadInput = {
@@ -60,7 +88,6 @@ export type EnrichMlVendaPayloadInput = {
   vTotTrib?: number | null;
   returnNote?: VendaMlReturnNoteRef | null;
   cardAuthorization?: string | null;
-  cdDeposito?: Partial<typeof VENDA_ML_CD_DEPOSITO>;
 };
 
 export type VendaEngineTaxSnapshot = {
@@ -103,13 +130,67 @@ function formatBrDate(value: Date | string): string {
   return `${dd}/${mm}/${yyyy}`;
 }
 
+type ResolvedInfCplDeposito = {
+  xNome: string;
+  cnpj: string;
+  ie: string;
+  logradouro: string;
+  numero: string;
+  complemento: string;
+  bairro: string;
+  municipio: string;
+  cep: string;
+  uf: string;
+  pais: string;
+};
+
+/**
+ * Resolve os dados do CD operador logístico para o texto do `<infCpl>` da venda.
+ *
+ * Fonte primária: destinatário da NF-e de retorno simbólico que faz par com a
+ * venda (mesmo CD da remessa FIFO referenciada). Fallback: {@link VENDA_ML_CD_DEPOSITO}.
+ */
+function resolveInfCplDeposito(
+  destinatario?: VendaMlReturnNoteDestinatario,
+): ResolvedInfCplDeposito {
+  const pickText = (incoming: string | null | undefined, fallback: string): string => {
+    const cleaned = incoming?.trim();
+    return cleaned ? cleaned : fallback;
+  };
+  const pickDigits = (incoming: string | null | undefined, fallback: string): string => {
+    const digits = incoming ? incoming.replace(/\D/g, "") : "";
+    return digits || fallback;
+  };
+  return {
+    xNome: pickText(destinatario?.xNome, VENDA_ML_CD_DEPOSITO.xNome),
+    cnpj: pickDigits(destinatario?.cnpj, VENDA_ML_CD_DEPOSITO.cnpj),
+    ie: pickDigits(destinatario?.ie, VENDA_ML_CD_DEPOSITO.ie),
+    logradouro: pickText(destinatario?.logradouro, VENDA_ML_CD_DEPOSITO.logradouro),
+    numero: pickText(destinatario?.numero, VENDA_ML_CD_DEPOSITO.numero),
+    complemento: destinatario?.complemento?.trim() ?? VENDA_ML_CD_DEPOSITO.complemento,
+    bairro: pickText(destinatario?.bairro, VENDA_ML_CD_DEPOSITO.bairro),
+    municipio: pickText(destinatario?.municipio, VENDA_ML_CD_DEPOSITO.municipio),
+    cep: pickDigits(destinatario?.cep, VENDA_ML_CD_DEPOSITO.cep),
+    uf: pickText(destinatario?.uf, VENDA_ML_CD_DEPOSITO.uf),
+    pais: pickText(destinatario?.pais, VENDA_ML_CD_DEPOSITO.pais),
+  };
+}
+
+/**
+ * Monta o texto do `<infCpl>` da NF-e de venda Mercado Livre Full.
+ *
+ * O bloco "operador logístico" é preenchido com os dados do destinatário da
+ * NF-e de retorno simbólico (`returnNote.destinatario`), garantindo a
+ * consistência triangular **remessa → retorno → venda**. Quando o destinatário
+ * não é fornecido, o CD ML padrão ({@link VENDA_ML_CD_DEPOSITO}) é usado como
+ * fallback.
+ */
 export function buildVendaInfCplText(
   vTotTrib: number,
   returnNote?: VendaMlReturnNoteRef | null,
-  cd: Partial<typeof VENDA_ML_CD_DEPOSITO> = {},
   difal?: { vICMSUFDest?: number; vFCPUFDest?: number; vICMSUFRemet?: number },
 ): string {
-  const dep = { ...VENDA_ML_CD_DEPOSITO, ...cd };
+  const dep = resolveInfCplDeposito(returnNote?.destinatario);
   const ibpt = vTotTrib.toFixed(2).replace(".", ",");
   const retornoPart = returnNote
     ? ` Nota fiscal de retorno simbolico n ${returnNote.numero}, emitida em ${formatBrDate(returnNote.emitidaEm)}, serie ${returnNote.serie}.`
@@ -118,7 +199,7 @@ export function buildVendaInfCplText(
   const vFcpDest = (difal?.vFCPUFDest ?? 0).toFixed(2).replace(".", ",");
   const vDifalOrig = (difal?.vICMSUFRemet ?? 0).toFixed(2).replace(".", ",");
   return (
-    `Enviado diretamente do deposito temporario - operador logistico: EBAZAR.COM.BR LTDA, Cnpj: ${dep.cnpj}, Inscricao Estadual: ${dep.ie}, saindo do endereco: ${dep.logradouro}, Numero: ${dep.numero}, Complemento: ${dep.complemento}, Bairro: ${dep.bairro}, Cidade: ${dep.municipio}, Cep: ${dep.cep}, Estado: ${dep.uf}, Pais: ${dep.pais}.${retornoPart} Valor aproximado dos tributos (IBPT) R$${ibpt}. Valores totais do ICMS Interestadual: DIFAL da UF destino R$${vDifalDest} + FCP R$${vFcpDest}; DIFAL da UF Origem R$${vDifalOrig}. N/A ${ibpt.replace(",", ".")} 0,00`
+    `Enviado diretamente do deposito temporario - operador logistico: ${dep.xNome}, Cnpj: ${dep.cnpj}, Inscricao Estadual: ${dep.ie}, saindo do endereco: ${dep.logradouro}, Numero: ${dep.numero}, Complemento: ${dep.complemento}, Bairro: ${dep.bairro}, Cidade: ${dep.municipio}, Cep: ${dep.cep}, Estado: ${dep.uf}, Pais: ${dep.pais}.${retornoPart} Valor aproximado dos tributos (IBPT) R$${ibpt}. Valores totais do ICMS Interestadual: DIFAL da UF destino R$${vDifalDest} + FCP R$${vFcpDest}; DIFAL da UF Origem R$${vDifalOrig}. N/A ${ibpt.replace(",", ".")} 0,00`
   );
 }
 
@@ -176,7 +257,7 @@ export function enrichFiscalPayloadMlVenda(
     transp: payload.transp ?? { qVol: input.quantidade, pesoL, pesoB },
     vTotTrib,
     infAdProd: buildVendaInfAdProdText(xPed, vTotTrib),
-    infCplVenda: buildVendaInfCplText(vTotTrib, input.returnNote, input.cdDeposito, difalTotais),
+    infCplVenda: buildVendaInfCplText(vTotTrib, input.returnNote, difalTotais),
     pagamento: {
       tPag: "03",
       card: {

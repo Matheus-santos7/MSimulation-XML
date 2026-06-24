@@ -96,6 +96,7 @@ export {
   enrichFiscalPayloadMlVenda,
   estimateVendaVTotTrib,
   type EnrichMlVendaPayloadInput,
+  type VendaMlReturnNoteDestinatario,
   type VendaMlReturnNoteRef,
 } from "./venda-ml-payload.js";
 export { normalizeTaxPercent, parseTaxPercent } from "./tax-percent.js";

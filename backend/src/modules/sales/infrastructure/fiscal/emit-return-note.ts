@@ -2,6 +2,7 @@ import {
   enrichFiscalPayloadMlFulfillment,
   enrichFiscalPayloadWithXTexto,
   resolveNumeroInicialNfe,
+  type VendaMlReturnNoteDestinatario,
 } from "@msimulation-xml/fiscal-core";
 import { FiscalStatus, NFeTipo, Prisma } from "../../../../generated/prisma/client.js";
 import { buildChaveNFe } from "../../../fiscal-documents/domain/services/nfe-chave.js";
@@ -12,6 +13,7 @@ import {
   destinoRetornoFromRemessa,
   resolveRetornoSimbolicoCfop,
   RETORNO_SIMBOLICO_NAT_OP,
+  type CamposDestinoRetorno,
 } from "../../../remessas/domain/services/retorno-simbolico-dest.js";
 import { taxSnapshotFromRule } from "../../../tax/domain/services/tax-snapshot.js";
 import type { Tenant } from "../../../../generated/prisma/client.js";
@@ -36,6 +38,31 @@ function autXmlCpfsFromSettings(
 ): string[] | undefined {
   const cpfs = settings.nfe.autXmlCpfs?.filter((c) => c.replace(/\D/g, "").length === 11);
   return cpfs?.length ? cpfs : undefined;
+}
+
+/**
+ * Mapeia o destinatário do retorno simbólico para o formato consumido pelo
+ * `<infCpl>` da NF-e VENDA pareada. Preserva o mesmo CD operador logístico
+ * (CNPJ, IE e endereço) referenciado na remessa FIFO.
+ */
+function destinatarioFromReturnNote(
+  destino: CamposDestinoRetorno,
+  destIe?: string,
+): VendaMlReturnNoteDestinatario {
+  return {
+    xNome: destino.destNome,
+    cnpj: destino.destDoc,
+    ie: destIe ?? null,
+    logradouro: destino.destLogradouro,
+    numero: destino.destNumero,
+    complemento: destino.destComplemento,
+    bairro: destino.destBairro,
+    municipio: destino.destMunicipio,
+    codigoMunicipio: destino.destCodigoMunicipio,
+    cep: destino.destCep,
+    uf: destino.destUf,
+    pais: destino.destNomePais,
+  };
 }
 
 /**
@@ -146,6 +173,7 @@ export async function emitReturnNote(
     numero: row.numero,
     serie: row.serie,
     emitidaEm: row.emitidaEm,
+    destinatario: destinatarioFromReturnNote(destino, destIe),
   };
 }
 

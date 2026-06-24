@@ -149,6 +149,7 @@ export async function emitSaleNote(
               numero: returnNote.numero,
               serie: returnNote.serie,
               emitidaEm: returnNote.emitidaEm,
+              destinatario: returnNote.destinatario,
             },
           },
         ),

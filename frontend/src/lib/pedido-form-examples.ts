@@ -87,10 +87,14 @@ function formatCnpj(digits: string): string {
   return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12, 14)}`;
 }
 
-function buildBaseForm(partial: Omit<PedidoFormValues, "productId" | "quantidade">): PedidoFormValues {
+function buildBaseForm(
+  partial: Omit<PedidoFormValues, "productId" | "quantidade" | "desconto" | "frete">,
+): PedidoFormValues {
   return {
     productId: "",
     quantidade: "1",
+    desconto: "0",
+    frete: "0",
     ...partial,
   };
 }

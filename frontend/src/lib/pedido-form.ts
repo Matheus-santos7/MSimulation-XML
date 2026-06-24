@@ -17,6 +17,10 @@ export type PedidoFormState = {
 export type PedidoFormValues = {
   productId: string;
   quantidade: string;
+  /** Desconto comercial da linha em R$ (string para input controlado). */
+  desconto: string;
+  /** Frete rateado para a linha em R$ (string para input controlado). */
+  frete: string;
   cpf: string;
   nome: string;
   logradouro: string;
@@ -37,6 +41,8 @@ export type PedidoFormValues = {
 export const PEDIDO_FORM_EMPTY: PedidoFormValues = {
   productId: "",
   quantidade: "1",
+  desconto: "0",
+  frete: "0",
   cpf: "",
   nome: "",
   logradouro: "",
@@ -56,11 +62,20 @@ export const PEDIDO_FORM_EMPTY: PedidoFormValues = {
 export const PEDIDO_FORM_EXAMPLE: PedidoFormValues =
   PEDIDO_FORM_EXAMPLES.find((e) => e.id === "cpf-pr")?.values ?? PEDIDO_FORM_EXAMPLES[0]!.values;
 
+/** Formata um número monetário como string com no máximo 2 casas (sem zero-padding). */
+function brValueToInput(value: number | null | undefined): string {
+  const n = Number(value ?? 0);
+  if (!Number.isFinite(n) || n <= 0) return "0";
+  return String(Math.round(n * 100) / 100);
+}
+
 export function pedidoToFormValues(p: PedidoDto): PedidoFormValues {
   const c = p.comprador;
   return {
     productId: p.productId,
     quantidade: String(p.quantidade),
+    desconto: brValueToInput(p.desconto),
+    frete: brValueToInput(p.frete),
     cpf: c.cpf,
     nome: c.nome,
     logradouro: c.logradouro,
@@ -75,6 +90,20 @@ export function pedidoToFormValues(p: PedidoDto): PedidoFormValues {
     indIEDest: String(c.indIEDest ?? 9),
     ie: c.ie ?? "",
   };
+}
+
+/**
+ * Converte input controlado (string) em número monetário >= 0.
+ *
+ * Aceita vírgula como decimal e descarta valores inválidos / negativos.
+ */
+function parseMonetaryInput(raw: FormDataEntryValue | null): number {
+  if (raw == null) return 0;
+  const normalized = String(raw).replace(",", ".").trim();
+  if (!normalized) return 0;
+  const n = Number(normalized);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return Math.round(n * 100) / 100;
 }
 
 export function parsePedidoForm(formData: FormData): PedidoCheckoutInput {
@@ -104,6 +133,8 @@ export function parsePedidoForm(formData: FormData): PedidoCheckoutInput {
   return {
     productId: String(formData.get("productId") ?? ""),
     quantidade: Number(formData.get("quantidade") ?? 1),
+    desconto: parseMonetaryInput(formData.get("desconto")),
+    frete: parseMonetaryInput(formData.get("frete")),
     comprador,
   };
 }

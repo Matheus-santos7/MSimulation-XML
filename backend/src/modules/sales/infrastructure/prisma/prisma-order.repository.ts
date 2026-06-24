@@ -6,6 +6,7 @@ import type { OrderRepository } from "../../domain/ports/order.repository.js";
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import {
   buyerToDestColumns,
+  discountAndFreightColumns,
   mapOrderForEmitFromPrisma,
   mapOrderFromPrisma,
 } from "./order-prisma.mapper.js";
@@ -68,6 +69,7 @@ export class PrismaOrderRepository implements OrderRepository {
         tenantId,
         productId: product.id,
         quantidade: input.quantidade,
+        ...discountAndFreightColumns(input),
         status: "RASCUNHO",
         ...buyerToDestColumns(input.comprador),
       },
@@ -92,6 +94,7 @@ export class PrismaOrderRepository implements OrderRepository {
       data: {
         productId: product.id,
         quantidade: input.quantidade,
+        ...discountAndFreightColumns(input),
         ...buyerToDestColumns(input.comprador),
       },
       include: orderInclude,

@@ -60,6 +60,7 @@ export async function emitSaleNote(
   const cfop = resolveSaleCfop(fiscalExitUf, order.destUf, customerType, saleTaxRule.cfop);
   const natOp = VENDA_ML_NAT_OP;
   const valorFrete = order.valorFrete ?? 0;
+  const valorDesconto = order.valorDesconto ?? 0;
   const xPed = order.mlPackId?.trim() || undefined;
   const autXmlCpfs = autXmlCpfsFromSettings(emitterSettings);
   const nfci = order.product.nfci?.trim() || undefined;
@@ -78,6 +79,7 @@ export async function emitSaleNote(
       quantidade: order.quantidade,
       valorUnitario: ctx.valorUnitVenda,
       frete: valorFrete,
+      desconto: valorDesconto,
     },
     saleTaxRule,
     {
@@ -137,6 +139,7 @@ export async function emitSaleNote(
             ...(nfci ? { nfci } : {}),
             ...(xPed ? { xPed } : {}),
             ...(valorFrete > 0 ? { valorFrete } : {}),
+            ...(valorDesconto > 0 ? { valorDesconto } : {}),
             ...(destIe ? { destIe } : {}),
           } as Record<string, unknown>,
           {

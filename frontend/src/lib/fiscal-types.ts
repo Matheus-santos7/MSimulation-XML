@@ -186,6 +186,8 @@ export type CompradorCheckoutInput = {
 export type PedidoCheckoutInput = {
   productId: string;
   quantidade: number;
+  desconto?: number;
+  frete?: number;
   comprador: CompradorCheckoutInput;
 };
 
@@ -196,6 +198,8 @@ export type PedidoDto = {
   pedidoMl?: string;
   productId: string;
   quantidade: number;
+  desconto: number;
+  frete: number;
   product: { id: string; sku: string; nome: string; preco: number };
   comprador: CompradorCheckoutInput;
   valorTotal: number;

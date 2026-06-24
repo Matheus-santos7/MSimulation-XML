@@ -57,6 +57,8 @@ export type VendaStrategyContext = {
     vUnCom: number;
     vProd: number;
     vFrete: number;
+    /** Desconto comercial da linha em R$ (vai para `<vDesc>` em `<prod>`). */
+    vDesc: number;
     cest?: string;
     exTipi?: string;
     nfci?: string;
@@ -110,6 +112,10 @@ export class VendaNFeStrategyBuilder extends BaseNFeBuilder {
           ? payloadFrete
           : this.ctx.emitter.bases.vFrete;
 
+    const engineDesconto = this.ctx.engine?.itens[0]?.vDesc ?? this.ctx.engine?.totais.vDesc ?? 0;
+    const payloadDesconto = asNum(fiscal.valorDesconto, 0);
+    const vDescPayload = engineDesconto > 0 ? engineDesconto : payloadDesconto;
+
     const qCom = nfe.quantidade ?? 1;
     const vUnCom = productUnitPriceForNfe(product, nfe);
     const vProd = nfe.valor;
@@ -118,7 +124,8 @@ export class VendaNFeStrategyBuilder extends BaseNFeBuilder {
     let vProdOut = vProd;
     let qComOut = qCom;
     let vFreteOut = vFrete;
-    let vNFOut = nfe.valor + vFrete;
+    let vDescOut = vDescPayload;
+    let vNFOut = nfe.valor + vFrete - vDescPayload;
     let icmsTot: IcmsTotValues;
 
     const icms = (fiscal.icms as Record<string, unknown> | undefined) ?? {};
@@ -135,6 +142,7 @@ export class VendaNFeStrategyBuilder extends BaseNFeBuilder {
       vProdOut = item.vProd;
       qComOut = item.quantidade;
       vFreteOut = item.vFrete ?? 0;
+      vDescOut = item.vDesc ?? 0;
       vNFOut = this.ctx.engine.totais.vNF;
     } else {
       const vBcIcms = asNum(icms.vBc, this.ctx.emitter.bases.vBcIcms);
@@ -200,6 +208,7 @@ export class VendaNFeStrategyBuilder extends BaseNFeBuilder {
         vUnCom: vUnComOut,
         vProd: vProdOut,
         vFrete: vFreteOut,
+        vDesc: vDescOut,
         cest: product?.cest,
         exTipi: product?.exTipi,
         nfci: nfciRaw,
@@ -282,6 +291,7 @@ export class VendaNFeStrategyBuilder extends BaseNFeBuilder {
     if (item.cest) prod.CEST = item.cest;
     if (item.exTipi) prod.EXTIPI = item.exTipi;
     if (item.vFrete > 0) prod.vFrete = item.vFrete.toFixed(2);
+    if (item.vDesc > 0) prod.vDesc = item.vDesc.toFixed(2);
     if (item.xPed) prod.xPed = item.xPed;
     if (item.nfci) prod.nFCI = item.nfci;
 

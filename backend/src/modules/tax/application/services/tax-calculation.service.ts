@@ -15,6 +15,8 @@ import {
   type NotaFiscalResult,
 } from "../../domain/services/tax-engine.js";
 import { taxSnapshotFromRule } from "../../domain/services/tax-snapshot.js";
+import type { BasePisCofinsConfig } from "../../domain/entities/base-pis-cofins-config.entity.js";
+import { resolveBasePisCofinsConfig } from "../../domain/services/base-pis-cofins-config.resolver.js";
 import type {
   FiscalContext,
   FiscalOperationTipo,
@@ -308,6 +310,13 @@ export function buildFiscalItem(
   const cofinsCst = resolvePisCofinsCst(snapshot.cofins.st, ctx, "cofins");
   const pisRedBc = taxPayloadRedBc(rule, "pis");
   const cofinsRedBc = taxPayloadRedBc(rule, "cofins");
+  // Composição da base PIS/COFINS — vem do `fiscal-settings` do tenant,
+  // projetada para o canal aplicável (venda vs remessa) por `operationTipo`.
+  // O tax-engine não sabe se é venda ou remessa: recebe só o vetor final.
+  const basePisCofinsConfig: BasePisCofinsConfig = resolveBasePisCofinsConfig(
+    ctx.emitterSettings ?? null,
+    ctx.operationTipo,
+  );
 
   return {
     numeroItem: line.numeroItem ?? 1,
@@ -345,11 +354,13 @@ export function buildFiscalItem(
       cst: pisCst,
       aliquota: snapshot.pis.aliquota,
       ...(pisRedBc != null ? { pRedBC: pisRedBc } : {}),
+      baseConfig: basePisCofinsConfig,
     },
     cofins: {
       cst: cofinsCst,
       aliquota: snapshot.cofins.aliquota,
       ...(cofinsRedBc != null ? { pRedBC: cofinsRedBc } : {}),
+      baseConfig: basePisCofinsConfig,
     },
     difal: appliesDifal
       ? {

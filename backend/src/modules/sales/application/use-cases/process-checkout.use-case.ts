@@ -30,6 +30,8 @@ export class ProcessCheckoutUseCase {
     );
     const c = input.comprador;
 
+    const desconto = Number(input.desconto ?? 0);
+    const frete = Number(input.frete ?? 0);
     const orderForEmit: OrderForEmit = {
       tenantId,
       productId: product.id,
@@ -51,6 +53,8 @@ export class ProcessCheckoutUseCase {
       destIe: c.ie?.replace(/\D/g, "") || null,
       product,
       tenant,
+      ...(frete > 0 ? { valorFrete: frete } : {}),
+      ...(desconto > 0 ? { valorDesconto: desconto } : {}),
     };
 
     const result = await this.salesChain.emit(getDbClient(), orderForEmit);

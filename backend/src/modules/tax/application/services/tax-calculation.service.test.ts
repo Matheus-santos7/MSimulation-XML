@@ -7,7 +7,7 @@ import {
   orderLineFromProduct,
 } from "./tax-calculation.service.js";
 import { DEFAULT_FISCAL_EMITTER_SETTINGS } from "../../../fiscal-settings/domain/services/fiscal-emitter-settings-defaults.js";
-import { calcularNotaFiscal } from "../../domain/services/tax-engine.js";
+import { calcularNotaFiscal, round2 } from "../../domain/services/tax-engine.js";
 
 const product = {
   id: "prod-1",
@@ -313,5 +313,165 @@ describe("buildFiscalItem — venda ML Full importada interestadual", () => {
     assert.ok(r.difal!.vICMSUFDest > 0);
     assert.equal(r.difal!.vICMSUFRemet, 0);
     assert.equal(nota.totais.vICMSUFDest, r.difal!.vICMSUFDest);
+  });
+});
+
+describe("buildFiscalItem — composição base PIS/COFINS por canal (fiscal-settings)", () => {
+  /**
+   * Cenário paridade ML Full: VENDA interestadual com consumidor final.
+   * Settings = default (`DEFAULT_FISCAL_EMITTER_SETTINGS`), em que a coluna
+   * "Sobre a venda" tem `icms: SUBTRAIR_DA_BASE` e `difal: SUBTRAIR_DA_BASE`
+   * (Tese do Século). Verifica end-to-end: (1) wiring do baseConfig vindo do
+   * tenant, (2) impacto correto da Tese na base PIS/COFINS.
+   */
+  it("VENDA: aplica composição da coluna 'Sobre a venda' (default = Tese do Século)", () => {
+    // Produto com origem nacional (origem 0) para evitar override de 4% Senado.
+    const nationalProduct = { ...product, origem: 0 };
+    const stfRule: ResolvedTaxRule = {
+      ruleId: "sku-PR-non_taxpayer-sale",
+      // pICMS interna 26.1738% → DIFAL = (26.1738 − 7)% = 19.1738%
+      aliquotaIcmsInterna: 26.1738,
+      cfop: "6108",
+      payload: {
+        taxes: {
+          pis: { st: "01 - Operação Tributável com Alíquota Básica", aliquota: 1.65 },
+          cofins: { st: "01 - Operação Tributável com Alíquota Básica", aliquota: 7.6 },
+          ipi: { st: "50 - Saída Tributada", aliquota: 0, codEnq: "999" },
+        },
+        icmsByUf: {
+          ICMS_SP_CST: "00",
+          ICMS_SP_PICMS_INTERNAL: 26.1738,
+          ICMS_SP_PICMS_INTERSTATE: 7,
+        },
+      },
+      icms: { cst: "00", pIcmsInternal: 26.1738, pIcmsInterstate: 7 },
+    };
+
+    const line = orderLineFromProduct(nationalProduct, {
+      cfop: "6108",
+      quantidade: 1,
+      valorUnitario: 857.84,
+    });
+
+    const item = buildFiscalItem(
+      { ...line, frete: 12.99 },
+      stfRule,
+      {
+        ufOrigem: "PR",
+        ufDestino: "SP",
+        customerType: "non_taxpayer",
+        operationTipo: "VENDA",
+        emitterSettings: DEFAULT_FISCAL_EMITTER_SETTINGS,
+      },
+      7,
+    );
+    // Partilha 65/35 — espelha XML real do fulfillment ML.
+    item.difal = { ...(item.difal as NonNullable<typeof item.difal>), pICMSInterPart: 65 };
+
+    const nota = calcularNotaFiscal([item]);
+    const r = nota.itens[0]!;
+
+    // pICMS interestadual = 7% (rule.icms.pIcmsInterstate), origem 0 nacional.
+    assert.equal(r.icms.pICMS, 7);
+    // baseBruta = 857.84 + 12.99 = 870.83; vICMS = round2(870.83 × 0.07) = 60.96.
+    assert.equal(r.icms.vICMS, 60.96);
+    // vBCUFDest = 870.83; vDifal = round2(870.83×0.18) − round2(870.83×0.07)
+    //                            = 156.75 − 60.96 = 95.79; partilha 65/35.
+    const vDifalTotal = round2((r.difal?.vICMSUFDest ?? 0) + (r.difal?.vICMSUFRemet ?? 0));
+    // base PIS/COFINS (Tese do Século) = baseBruta − vICMS − vDifal
+    //                                  = 870.83 − 60.96 − 95.79 = 714.08.
+    const baseEsperada = round2(870.83 - r.icms.vICMS - vDifalTotal);
+    assert.equal(r.pis.vBC, baseEsperada);
+    assert.equal(r.cofins.vBC, baseEsperada);
+    // Em particular: a base é menor que a bruta — prova que a exclusão fluiu.
+    assert.ok(r.pis.vBC < 870.83, "base PIS deve ser menor que baseBruta com STF ativo");
+
+    // Confirma que a config injetada veio da coluna "venda" do default.
+    assert.equal(item.pis.baseConfig?.icms, "DEDUCT");
+    assert.equal(item.pis.baseConfig?.difal, "DEDUCT");
+    assert.equal(item.pis.baseConfig?.frete, "INCLUDE");
+    assert.equal(item.pis.baseConfig?.desconto, "DEDUCT");
+  });
+
+  /**
+   * RETORNO_SIMBOLICO usa a coluna "Sobre a remessa". No default ela é idêntica
+   * à "venda", mas o teste prova que o canal selecionado é o correto.
+   */
+  it("REMESSA: aplica composição da coluna 'Sobre a remessa' (canal distinto)", () => {
+    // Settings customizadas: venda mantém Tese do Século; remessa
+    // intencionalmente NÃO subtrai ICMS (para diferenciar do canal venda).
+    const settings = {
+      ...DEFAULT_FISCAL_EMITTER_SETTINGS,
+      taxes: {
+        ...DEFAULT_FISCAL_EMITTER_SETTINGS.taxes,
+        composicaoBaseCalculo: {
+          ...DEFAULT_FISCAL_EMITTER_SETTINGS.taxes.composicaoBaseCalculo,
+          pisCofins: {
+            ...DEFAULT_FISCAL_EMITTER_SETTINGS.taxes.composicaoBaseCalculo.pisCofins,
+            icms: {
+              ...DEFAULT_FISCAL_EMITTER_SETTINGS.taxes.composicaoBaseCalculo.pisCofins.icms,
+              remessa: "NAO_SUBTRAIR" as const,
+            },
+          },
+        },
+      },
+    };
+
+    const line = orderLineFromProduct(product, {
+      cfop: "2949",
+      quantidade: 1,
+      valorUnitario: 609,
+    });
+
+    const item = buildFiscalItem(
+      line,
+      inboundRuleZero,
+      {
+        ufOrigem: "SP",
+        ufDestino: "MG",
+        customerType: "taxpayer",
+        operationTipo: "RETORNO_SIMBOLICO",
+        emitterSettings: settings,
+      },
+      4,
+    );
+
+    // Canal "remessa" — alterado para NAO_SUBTRAIR.
+    assert.equal(item.pis.baseConfig?.icms, "NONE");
+    assert.equal(item.cofins.baseConfig?.icms, "NONE");
+    // Demais lados (defaults da remessa) continuam idênticos à venda.
+    assert.equal(item.pis.baseConfig?.frete, "INCLUDE");
+    assert.equal(item.pis.baseConfig?.desconto, "DEDUCT");
+    assert.equal(item.pis.baseConfig?.difal, "DEDUCT");
+  });
+
+  it("sem emitterSettings: cai no default conservador (LEGACY) sem exclusão ICMS/DIFAL", () => {
+    const line = orderLineFromProduct(product, {
+      cfop: "5102",
+      quantidade: 1,
+      valorUnitario: 1000,
+    });
+
+    const item = buildFiscalItem(
+      { ...line, frete: 50, desconto: 20 },
+      saleRule,
+      {
+        ufOrigem: "SP",
+        ufDestino: "SP",
+        customerType: "non_taxpayer",
+        operationTipo: "VENDA",
+      },
+      18,
+    );
+
+    assert.equal(item.pis.baseConfig?.icms, "NONE");
+    assert.equal(item.pis.baseConfig?.difal, "NONE");
+    assert.equal(item.pis.baseConfig?.frete, "INCLUDE");
+    assert.equal(item.pis.baseConfig?.desconto, "DEDUCT");
+
+    const nota = calcularNotaFiscal([item]);
+    // base = vProd + vFrete − vDesc = 1000 + 50 − 20 = 1030.
+    assert.equal(nota.itens[0]!.pis.vBC, 1030);
+    assert.equal(nota.itens[0]!.cofins.vBC, 1030);
   });
 });

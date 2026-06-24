@@ -5,6 +5,12 @@
  * Campos `ICMS_{UF}_*` no payload são extraídos usando a UF de **destino** da operação.
  *
  * Usada por `buildFiscalItem` para montar CST, alíquotas, reduções e benefícios.
+ *
+ * Importante: regras de composição da base PIS/COFINS (Tese do Século — STF RE
+ * 574.706/PR — e demais inclusões/deduções) NÃO vivem aqui. Elas são por tenant
+ * e ficam em `FiscalEmitterSettings.taxes.composicaoBaseCalculo.pisCofins`. O
+ * `buildFiscalItem` resolve a config aplicável (venda × remessa) e injeta no
+ * engine via `PisCofinsInput.baseConfig`.
  */
 export type ResolvedTaxRule = {
   ruleId: string;

@@ -47,6 +47,8 @@ export type EngineDifal = {
 export type EngineItem = {
   vProd: number;
   vFrete?: number;
+  /** Desconto comercial do item (R$). Vai para `<vDesc>` em `<prod>` da NF-e. */
+  vDesc?: number;
   quantidade: number;
   valorUnitario: number;
   icms: EngineIcms;
@@ -62,6 +64,8 @@ export type EngineTotais = {
   vFCP?: number;
   vProd: number;
   vFrete?: number;
+  /** Somatório dos `vDesc` dos itens (já arredondados). Vai para `<ICMSTot><vDesc>`. */
+  vDesc?: number;
   vIPI: number;
   vPIS: number;
   vCOFINS: number;
@@ -82,6 +86,7 @@ export type IcmsTotInput = {
   vICMS: number;
   vProd: number;
   vFrete: number;
+  vDesc?: number;
   vIPI: number;
   vPIS: number;
   vCOFINS: number;
@@ -133,6 +138,7 @@ export function parseEngineFromFiscalPayload(
     return {
       vProd: num(item.vProd),
       vFrete: num(item.vFrete),
+      vDesc: num(item.vDesc),
       quantidade: num(item.quantidade, 1),
       valorUnitario: num(item.valorUnitario),
       icms: {
@@ -191,6 +197,7 @@ export function parseEngineFromFiscalPayload(
     vFCP: num(totaisRaw.vFCP),
     vProd: num(totaisRaw.vProd),
     vFrete: num(totaisRaw.vFrete),
+    vDesc: num(totaisRaw.vDesc),
     vIPI: num(totaisRaw.vIPI),
     vPIS: num(totaisRaw.vPIS),
     vCOFINS: num(totaisRaw.vCOFINS),
@@ -210,6 +217,7 @@ export function icmsTotFromEngine(totais: EngineTotais, vFrete: number): IcmsTot
     vICMS: totais.vICMS,
     vProd: totais.vProd,
     vFrete,
+    vDesc: totais.vDesc,
     vIPI: totais.vIPI,
     vPIS: totais.vPIS,
     vCOFINS: totais.vCOFINS,

@@ -8,5 +8,9 @@ import type { Buyer } from "./buyer.entity.js";
 export type OrderCheckoutInput = {
   productId: string;
   quantidade: number;
+  /** Desconto da linha em R$ (default 0). */
+  desconto?: number;
+  /** Frete da linha em R$ (default 0). */
+  frete?: number;
   comprador: Buyer;
 };

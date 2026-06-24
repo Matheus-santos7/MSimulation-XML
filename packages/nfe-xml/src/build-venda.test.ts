@@ -396,6 +396,80 @@ describe("buildNFeXmlFromBuilder — VENDA", () => {
     assert.match(xml, /<enderDest>[\s\S]*?<UF>SC<\/UF>/);
   });
 
+  it("emite <vDesc>/<vFrete> em <prod> e somatórios em <ICMSTot> quando engine fornece desconto e frete por item", () => {
+    const nfe: NFeXmlInput = {
+      chave: "41260678242849000169550050000000071423282898",
+      numero: 7,
+      serie: 5,
+      natOp: VENDA_ML_NAT_OP,
+      cfop: "5105",
+      ncm: "73211100",
+      destinatario: {
+        nome: "Consumidor Final PR",
+        doc: "07629167962",
+        uf: "PR",
+        indIEDest: 9,
+        docTipo: "CPF",
+        endereco: {
+          logradouro: "Rua A",
+          numero: "1",
+          bairro: "Centro",
+          codigoMunicipio: "4107207",
+          municipio: "Dois Vizinhos",
+          uf: "PR",
+          cep: "85660000",
+          codigoPais: 1058,
+          nomePais: "Brasil",
+        },
+      },
+      valor: 1000,
+      valorICMS: 195,
+      aliqICMS: 19.5,
+      status: "AUTORIZADA",
+      emitidaEm: "2026-06-23T10:00:00-03:00",
+      pedidoML: "46766952870",
+      quantidade: 1,
+      tipo: "VENDA",
+      fiscalPayload: {
+        engine: {
+          itens: [
+            {
+              vProd: 1000,
+              vFrete: 50,
+              vDesc: 20,
+              quantidade: 1,
+              valorUnitario: 1000,
+              icms: { cst: "00", orig: 5, vBC: 1030, pICMS: 19.5, vICMS: 200.85 },
+              pis: { cst: "01", vBC: 1030, pPIS: 1.65, vPIS: 17 },
+              cofins: { cst: "01", vBC: 1030, pCOFINS: 7.6, vCOFINS: 78.28 },
+            },
+          ],
+          totais: {
+            vBC: 1030,
+            vICMS: 200.85,
+            vProd: 1000,
+            vFrete: 50,
+            vDesc: 20,
+            vIPI: 0,
+            vPIS: 17,
+            vCOFINS: 78.28,
+            vNF: 1030,
+          },
+        },
+      },
+    };
+
+    const xml = buildNFeXML(nfe, emit, product);
+    // <vDesc> e <vFrete> dentro do <prod> da linha
+    assert.match(xml, /<prod>[\s\S]*?<vFrete>50\.00<\/vFrete>[\s\S]*?<\/prod>/);
+    assert.match(xml, /<prod>[\s\S]*?<vDesc>20\.00<\/vDesc>[\s\S]*?<\/prod>/);
+    // Somatórios em <ICMSTot> refletem os totais do engine (sem recalculo)
+    assert.match(xml, /<ICMSTot>[\s\S]*?<vFrete>50\.00<\/vFrete>/);
+    assert.match(xml, /<ICMSTot>[\s\S]*?<vDesc>20\.00<\/vDesc>/);
+    // vNF segue a fórmula SEFAZ vProd + vFrete - vDesc = 1000 + 50 - 20 = 1030
+    assert.match(xml, /<ICMSTot>[\s\S]*?<vNF>1030\.00<\/vNF>/);
+  });
+
   it("inclui IE no dest quando indIEDest=1 e fiscalPayload.destIe informado", () => {
     const nfe: NFeXmlInput = {
       chave: "41260678242849000169550050000000061423282897",

@@ -81,6 +81,10 @@ export {
   resolvePisCofinsCstFromSnapshot,
 } from "./pis-cofins-cst.js";
 export {
+  CFOP_VENDA_CONTRIB_INTRA,
+  CFOP_VENDA_CONTRIB_INTER,
+  CFOP_VENDA_NAO_CONTRIB_INTRA,
+  CFOP_VENDA_NAO_CONTRIB_INTER,
   ML_NFE_VER_PROC,
   resolveSaleCfop,
   VENDA_ML_NAT_OP,

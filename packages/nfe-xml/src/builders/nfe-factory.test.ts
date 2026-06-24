@@ -183,6 +183,6 @@ describe("VendaNFeStrategyBuilder", () => {
     assert.equal(doc.root.nfeProc["@versao"], "4.00");
     const det = doc.root.nfeProc.NFe.infNFe.det;
     const firstDet = Array.isArray(det) ? det[0] : det;
-    assert.equal(firstDet?.prod?.CFOP, "5105");
+    assert.equal(firstDet?.prod?.CFOP, "5106");
   });
 });

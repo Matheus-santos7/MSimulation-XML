@@ -137,7 +137,7 @@ describe("buildNFeXmlFromBuilder — VENDA", () => {
     assert.match(xml, /<natOp>Venda de mercadorias<\/natOp>/);
     assert.match(xml, new RegExp(`<verProc>${ML_NFE_VER_PROC}<\\/verProc>`));
     assert.match(xml, /<autXML>\s*<CPF>07116024921<\/CPF>\s*<\/autXML>/);
-    assert.match(xml, /<CFOP>5105<\/CFOP>/);
+    assert.match(xml, /<CFOP>5106<\/CFOP>/);
     assert.match(xml, /<vFrete>55\.99<\/vFrete>/);
     assert.match(xml, /<xPed>200001579233992<\/xPed>/);
     assert.match(xml, /<nFCI>A7B816FF-59CC-41D9-97C1-B39BCED07B17<\/nFCI>/);
@@ -160,7 +160,7 @@ describe("buildNFeXmlFromBuilder — VENDA", () => {
     assert.equal(verifySimulationXmlSignature(xml), true);
   });
 
-  it("resolve CFOP 5105 quando nfe.cfop está vazio (intra + não contribuinte)", () => {
+  it("resolve CFOP 5106 quando nfe.cfop está vazio (intra + não contribuinte)", () => {
     const nfe: NFeXmlInput = {
       chave: "41260678242849000169550050000000051423282896",
       numero: 5,
@@ -211,7 +211,7 @@ describe("buildNFeXmlFromBuilder — VENDA", () => {
     };
 
     const xml = buildNFeXML(nfe, emit, product);
-    assert.match(xml, /<CFOP>5105<\/CFOP>/);
+    assert.match(xml, /<CFOP>5106<\/CFOP>/);
   });
 
   it("emite ICMSUFDest e idDest=2 em venda interestadual com DIFAL no engine", () => {
@@ -303,7 +303,7 @@ describe("buildNFeXmlFromBuilder — VENDA", () => {
 
     const xml = buildNFeXML(nfe, emit, importedProduct);
     assert.match(xml, /<idDest>2<\/idDest>/);
-    assert.match(xml, /<CFOP>6105<\/CFOP>/);
+    assert.match(xml, /<CFOP>6106<\/CFOP>/);
     assert.match(xml, /<pICMS>4\.0000<\/pICMS>/);
     assert.match(xml, /<ICMSUFDest>/);
     assert.match(xml, /<pICMSInter>4\.00<\/pICMSInter>/);
@@ -391,7 +391,7 @@ describe("buildNFeXmlFromBuilder — VENDA", () => {
     assert.match(xml, /<cUF>35<\/cUF>/);
     assert.match(xml, /<cMunFG>4204509<\/cMunFG>/);
     assert.match(xml, /<idDest>1<\/idDest>/);
-    assert.match(xml, /<CFOP>5105<\/CFOP>/);
+    assert.match(xml, /<CFOP>6106<\/CFOP>/);
     assert.match(xml, /<enderEmit>[\s\S]*?<UF>SP<\/UF>/);
     assert.match(xml, /<enderDest>[\s\S]*?<UF>SC<\/UF>/);
   });

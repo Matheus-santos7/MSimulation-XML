@@ -57,7 +57,7 @@ export async function emitSaleNote(
   const numero = await proximoNumeroNfe(tx, tenant.id, ctx.serie, numeroInicial);
   const chave = buildChaveNFe({ uf: tenant.uf, cnpj: tenant.cnpj, serie: ctx.serie, numero });
   const fallbackRate = inferIcmsRateForSale(fiscalExitUf, order.destUf, emitterSettings);
-  const cfop = resolveSaleCfop(fiscalExitUf, order.destUf, customerType, saleTaxRule.cfop);
+  const cfop = resolveSaleCfop(tenant.uf, order.destUf, customerType, saleTaxRule.cfop);
   const natOp = VENDA_ML_NAT_OP;
   const valorFrete = order.valorFrete ?? 0;
   const valorDesconto = order.valorDesconto ?? 0;

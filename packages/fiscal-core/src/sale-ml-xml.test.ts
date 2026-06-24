@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { normalizeTaxPercent, parseTaxPercent } from "./tax-percent.js";
-import { ML_NFE_VER_PROC, resolveSaleCfop, VENDA_ML_NAT_OP } from "./sale-cfop.js";
+import {
+  CFOP_VENDA_NAO_CONTRIB_INTRA,
+  CFOP_VENDA_NAO_CONTRIB_INTER,
+  ML_NFE_VER_PROC,
+  resolveSaleCfop,
+  VENDA_ML_NAT_OP,
+} from "./sale-cfop.js";
 
 describe("normalizeTaxPercent", () => {
   it("converte alíquotas ML sem decimal (260 → 2,6)", () => {
@@ -21,16 +27,28 @@ describe("normalizeTaxPercent", () => {
 });
 
 describe("resolveSaleCfop", () => {
-  it("usa CFOP explícito da regra quando informado", () => {
+  it("usa CFOP explícito da regra quando compatível com a operação", () => {
     assert.equal(resolveSaleCfop("PR", "PR", "non_taxpayer", "5101"), "5101");
   });
 
-  it("5105 intraestadual para não contribuinte (ML produção)", () => {
-    assert.equal(resolveSaleCfop("PR", "PR", "non_taxpayer", ""), "5105");
+  it("5106 intraestadual para não contribuinte (emitente → comprador)", () => {
+    assert.equal(resolveSaleCfop("PR", "PR", "non_taxpayer", ""), CFOP_VENDA_NAO_CONTRIB_INTRA);
   });
 
-  it("6105 interestadual para não contribuinte", () => {
-    assert.equal(resolveSaleCfop("PR", "SC", "non_taxpayer", null), "6105");
+  it("6106 interestadual para não contribuinte", () => {
+    assert.equal(resolveSaleCfop("PR", "SC", "non_taxpayer", null), CFOP_VENDA_NAO_CONTRIB_INTER);
+  });
+
+  it("normaliza CFOP legado 5105 para 6106 em operação interestadual SP→MG", () => {
+    assert.equal(resolveSaleCfop("SP", "MG", "non_taxpayer", "5105"), CFOP_VENDA_NAO_CONTRIB_INTER);
+  });
+
+  it("normaliza CFOP legado 6105 para 5106 em operação intraestadual", () => {
+    assert.equal(resolveSaleCfop("SP", "SP", "non_taxpayer", "6105"), CFOP_VENDA_NAO_CONTRIB_INTRA);
+  });
+
+  it("não usa UF do CD: MG→MG com emitente SP deve ser interestadual", () => {
+    assert.equal(resolveSaleCfop("SP", "MG", "non_taxpayer", ""), CFOP_VENDA_NAO_CONTRIB_INTER);
   });
 });
 

@@ -97,9 +97,12 @@ export class VendaNFeStrategyBuilder extends BaseNFeBuilder {
       e.uf,
       typeof fiscal.ufSaidaFisica === "string" ? fiscal.ufSaidaFisica : undefined,
     );
-    const cfop =
-      nfe.cfop?.trim() ||
-      resolveSaleCfop(stockUf, de.uf, d.indIEDest === 9 ? "non_taxpayer" : "taxpayer");
+    const cfop = resolveSaleCfop(
+      e.uf,
+      de.uf,
+      d.indIEDest === 9 ? "non_taxpayer" : "taxpayer",
+      nfe.cfop,
+    );
     const idDest = stockUf.toUpperCase() === de.uf.toUpperCase() ? 1 : 2;
     const vTotTrib = asNum(fiscal.vTotTrib, 0);
 

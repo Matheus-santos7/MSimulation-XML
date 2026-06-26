@@ -41,12 +41,6 @@ export default function LoginPage() {
               </span>
             </li>
           </ul>
-
-          {/* <footer className="text-[11px] text-muted-foreground">
-            <span className="font-mono text-accent/80">{BRAND.fullName}</span>
-            <span className="mx-2 opacity-40">·</span>
-            <span>{BRAND.author}</span>
-          </footer> */}
         </aside>
 
         <main className="w-full max-w-md mx-auto lg:mx-0 lg:shrink-0">

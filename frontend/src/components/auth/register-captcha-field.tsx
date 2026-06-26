@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { TurnstileWidget } from "@/components/auth/turnstile-widget";
 
 const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim();
@@ -10,15 +10,26 @@ export function isTurnstileRequired(): boolean {
 }
 
 type RegisterCaptchaFieldProps = {
+  /** Incrementado a cada troca de aba para forçar novo desafio Turnstile. */
+  turnstileKey?: number;
   onReadyChange?: (ready: boolean) => void;
 };
 
 /**
  * Turnstile nos formulários de auth, com callback de prontidão para o submit.
  */
-export function RegisterCaptchaField({ onReadyChange }: RegisterCaptchaFieldProps) {
+export function RegisterCaptchaField({
+  turnstileKey = 0,
+  onReadyChange,
+}: RegisterCaptchaFieldProps) {
   const [isReady, setIsReady] = useState(!turnstileSiteKey);
   const [loadError, setLoadError] = useState(false);
+
+  useEffect(() => {
+    setIsReady(!turnstileSiteKey);
+    setLoadError(false);
+    onReadyChange?.(!turnstileSiteKey);
+  }, [turnstileKey, onReadyChange]);
 
   const handleToken = useCallback(
     (token: string) => {
@@ -38,7 +49,12 @@ export function RegisterCaptchaField({ onReadyChange }: RegisterCaptchaFieldProp
 
   return (
     <div className="space-y-1.5">
-      <TurnstileWidget onToken={handleToken} onError={handleError} />
+      <TurnstileWidget
+        key={turnstileKey}
+        instanceKey={turnstileKey}
+        onToken={handleToken}
+        onError={handleError}
+      />
       {turnstileSiteKey && !isReady && !loadError ? (
         <p className="text-xs text-muted-foreground">Aguardando verificação de segurança…</p>
       ) : null}

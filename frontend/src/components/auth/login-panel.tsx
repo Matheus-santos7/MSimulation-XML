@@ -15,6 +15,7 @@ export function LoginPanel() {
   const {
     mode,
     setMode,
+    turnstileKey,
     loginState,
     submitLogin,
     isLoginPending,
@@ -32,21 +33,32 @@ export function LoginPanel() {
       <AuthModeToggle mode={mode} onModeChange={setMode} />
 
       {mode === "login" ? (
-        <LoginForm state={loginState} action={submitLogin} pending={isLoginPending} />
+        <LoginForm
+          turnstileKey={turnstileKey}
+          state={loginState}
+          action={submitLogin}
+          pending={isLoginPending}
+        />
       ) : (
-        <RegisterForm state={registerState} action={submitRegister} pending={isRegisterPending} />
+        <RegisterForm
+          turnstileKey={turnstileKey}
+          state={registerState}
+          action={submitRegister}
+          pending={isRegisterPending}
+        />
       )}
     </div>
   );
 }
 
 type LoginFormProps = {
+  turnstileKey: number;
   state: LoginState;
   action: (formData: FormData) => void;
   pending: boolean;
 };
 
-function LoginForm({ state, action, pending }: LoginFormProps) {
+function LoginForm({ turnstileKey, state, action, pending }: LoginFormProps) {
   const [captchaReady, setCaptchaReady] = useState(!isTurnstileRequired());
 
   return (
@@ -60,7 +72,7 @@ function LoginForm({ state, action, pending }: LoginFormProps) {
         required
       />
       <AuthPasswordField id="password" mode="login" />
-      <RegisterCaptchaField onReadyChange={setCaptchaReady} />
+      <RegisterCaptchaField turnstileKey={turnstileKey} onReadyChange={setCaptchaReady} />
       <AuthFormError message={state.error} />
       <AuthSubmitButton
         pending={pending}
@@ -73,12 +85,13 @@ function LoginForm({ state, action, pending }: LoginFormProps) {
 }
 
 type RegisterFormProps = {
+  turnstileKey: number;
   state: RegisterState;
   action: (formData: FormData) => void;
   pending: boolean;
 };
 
-function RegisterForm({ state, action, pending }: RegisterFormProps) {
+function RegisterForm({ turnstileKey, state, action, pending }: RegisterFormProps) {
   const [captchaReady, setCaptchaReady] = useState(!isTurnstileRequired());
 
   return (
@@ -100,7 +113,7 @@ function RegisterForm({ state, action, pending }: RegisterFormProps) {
         required
       />
       <AuthPasswordField id="reg-password" mode="register" />
-      <RegisterCaptchaField onReadyChange={setCaptchaReady} />
+      <RegisterCaptchaField turnstileKey={turnstileKey} onReadyChange={setCaptchaReady} />
       <AuthFormError message={state.error} />
       <AuthSubmitButton
         pending={pending}

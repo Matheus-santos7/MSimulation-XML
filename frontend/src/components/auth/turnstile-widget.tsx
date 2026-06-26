@@ -29,6 +29,8 @@ declare global {
 }
 
 type Props = {
+  /** Identificador da instância; alterar força remount do widget. */
+  instanceKey: number;
   onToken: (token: string) => void;
   onError?: () => void;
 };
@@ -36,7 +38,7 @@ type Props = {
 /**
  * Widget Cloudflare Turnstile (renderização explícita) com campo hidden controlado por React.
  */
-export function TurnstileWidget({ onToken, onError }: Props) {
+export function TurnstileWidget({ instanceKey, onToken, onError }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
   const onTokenRef = useRef(onToken);
@@ -64,6 +66,11 @@ export function TurnstileWidget({ onToken, onError }: Props) {
   }, [markScriptReady]);
 
   useEffect(() => {
+    setToken("");
+    onTokenRef.current("");
+  }, [instanceKey]);
+
+  useEffect(() => {
     if (!siteKey || !scriptReady || !containerRef.current) return;
 
     let cancelled = false;
@@ -75,6 +82,8 @@ export function TurnstileWidget({ onToken, onError }: Props) {
         window.turnstile.remove(widgetIdRef.current);
         widgetIdRef.current = null;
       }
+
+      containerRef.current.replaceChildren();
 
       widgetIdRef.current = window.turnstile.render(containerRef.current, {
         sitekey: siteKey,
@@ -95,6 +104,8 @@ export function TurnstileWidget({ onToken, onError }: Props) {
       });
     };
 
+    if (!window.turnstile) return;
+
     window.turnstile.ready(mountWidget);
 
     return () => {
@@ -104,7 +115,7 @@ export function TurnstileWidget({ onToken, onError }: Props) {
         widgetIdRef.current = null;
       }
     };
-  }, [siteKey, scriptReady, emitToken]);
+  }, [siteKey, scriptReady, instanceKey, emitToken]);
 
   if (!siteKey) {
     if (process.env.NODE_ENV === "production") {

@@ -34,12 +34,14 @@ export function AuthPasswordField({ id, mode }: AuthPasswordFieldProps) {
           maxLength={128}
           className={cn(authFieldInputClass, "pr-10")}
         />
-        <button
-          type="button"
-          onClick={() => setShowPassword((visible) => !visible)}
-          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:text-foreground transition-colors"
-          aria-label={showPassword ? "Ocultar senha" : "Exibir senha"}
-        >
+          <button
+            type="button"
+            onClick={() => setShowPassword((visible) => !visible)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label={showPassword ? "Ocultar senha" : "Exibir senha"}
+            aria-controls={id}
+            aria-pressed={showPassword}
+          >
           {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
         </button>
       </div>

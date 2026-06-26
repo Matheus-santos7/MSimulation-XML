@@ -28,6 +28,28 @@ declare global {
 
 let turnstileScriptPromise: Promise<void> | null = null;
 
+function waitForTurnstileApi(timeoutMs = 15_000): Promise<void> {
+  if (window.turnstile) return Promise.resolve();
+
+  return new Promise((resolve, reject) => {
+    const startedAt = Date.now();
+
+    const check = () => {
+      if (window.turnstile) {
+        resolve();
+        return;
+      }
+      if (Date.now() - startedAt >= timeoutMs) {
+        reject(new Error("Turnstile API timeout"));
+        return;
+      }
+      window.setTimeout(check, 50);
+    };
+
+    check();
+  });
+}
+
 /**
  * Carrega o script do Turnstile sem async/defer (exigência da API explícita).
  */
@@ -37,6 +59,12 @@ function loadTurnstileScript(): Promise<void> {
   if (turnstileScriptPromise) return turnstileScriptPromise;
 
   turnstileScriptPromise = new Promise((resolve, reject) => {
+    const finish = () => {
+      waitForTurnstileApi()
+        .then(resolve)
+        .catch(reject);
+    };
+
     const existing = document.getElementById(TURNSTILE_SCRIPT_ID) as HTMLScriptElement | null;
 
     if (existing) {
@@ -44,9 +72,12 @@ function loadTurnstileScript(): Promise<void> {
         resolve();
         return;
       }
-      existing.addEventListener("load", () => resolve(), { once: true });
+      existing.addEventListener("load", finish, { once: true });
       existing.addEventListener("error", () => reject(new Error("Turnstile load failed")), {
         once: true,
+      });
+      void waitForTurnstileApi().then(resolve).catch(() => {
+        // O evento load pode já ter disparado antes do listener — polling cobre esse caso.
       });
       return;
     }
@@ -54,7 +85,7 @@ function loadTurnstileScript(): Promise<void> {
     const script = document.createElement("script");
     script.id = TURNSTILE_SCRIPT_ID;
     script.src = TURNSTILE_SCRIPT_SRC;
-    script.onload = () => resolve();
+    script.onload = finish;
     script.onerror = () => reject(new Error("Turnstile load failed"));
     document.head.appendChild(script);
   });

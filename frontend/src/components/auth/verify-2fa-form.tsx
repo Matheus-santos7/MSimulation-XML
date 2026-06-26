@@ -1,13 +1,14 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { verify2faAction, type Verify2faState } from "@/lib/auth/actions";
-import { RegisterCaptchaField } from "@/components/auth/register-captcha-field";
+import { RegisterCaptchaField, isTurnstileRequired } from "@/components/auth/register-captcha-field";
 
 const initial: Verify2faState = {};
 
 export function Verify2faForm() {
   const [state, formAction, pending] = useActionState(verify2faAction, initial);
+  const [captchaReady, setCaptchaReady] = useState(!isTurnstileRequired());
 
   return (
     <form action={formAction} className="space-y-4">
@@ -28,7 +29,7 @@ export function Verify2faForm() {
           className="w-full rounded-md border border-border bg-background px-3 py-2.5 text-sm tracking-[0.3em] text-center font-mono focus:outline-none focus:ring-2 focus:ring-accent/40"
         />
       </div>
-      <RegisterCaptchaField />
+      <RegisterCaptchaField onReadyChange={setCaptchaReady} />
       {state.error ? (
         <p className="text-sm text-destructive" role="alert">
           {state.error}
@@ -36,7 +37,7 @@ export function Verify2faForm() {
       ) : null}
       <button
         type="submit"
-        disabled={pending}
+        disabled={pending || !captchaReady}
         className="w-full rounded-md bg-accent text-accent-foreground py-2.5 text-sm font-semibold hover:opacity-90 disabled:opacity-60"
       >
         {pending ? "Verificando…" : "Confirmar"}

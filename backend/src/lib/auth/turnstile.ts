@@ -12,8 +12,16 @@ export class CaptchaVerificationError extends Error {
   }
 }
 
-/** Valida token Cloudflare Turnstile. Em dev sem secret, aceita ausência do token. */
-export async function verifyTurnstileToken(token: string | undefined, remoteIp?: string): Promise<void> {
+/**
+ * Valida token Cloudflare Turnstile.
+ * Em dev sem secret, aceita ausência do token.
+ *
+ * O IP do visitante não é enviado ao siteverify: o login/registro passa por
+ * server actions do Next.js (BFF). O `request.ip` da API seria o IP de saída
+ * da Vercel, não o navegador que resolveu o desafio — isso fazia a verificação
+ * falhar sistematicamente em produção.
+ */
+export async function verifyTurnstileToken(token: string | undefined): Promise<void> {
   const secret = turnstileSecretKey();
   if (!secret) {
     if (process.env.NODE_ENV === "production") {
@@ -30,7 +38,6 @@ export async function verifyTurnstileToken(token: string | undefined, remoteIp?:
     secret,
     response: token,
   });
-  if (remoteIp) body.set("remoteip", remoteIp);
 
   const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
     method: "POST",

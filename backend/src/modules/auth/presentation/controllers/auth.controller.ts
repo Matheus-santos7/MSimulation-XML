@@ -86,7 +86,7 @@ export const authController: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       try {
         const body = registerBodySchema.parse(request.body);
-        await verifyTurnstileToken(body.captchaToken, request.ip);
+        await verifyTurnstileToken(body.captchaToken);
         const session = await auth.registerUser.execute(body, signAccess, buildAuthMeta(request));
         return reply.status(201).send(session);
       } catch (error) {
@@ -101,7 +101,7 @@ export const authController: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       try {
         const body = loginBodySchema.parse(request.body);
-        await verifyTurnstileToken(body.captchaToken, request.ip);
+        await verifyTurnstileToken(body.captchaToken);
         const result = await auth.login.execute(
           { email: body.email, password: body.password },
           signAccess,
@@ -121,7 +121,7 @@ export const authController: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       try {
         const body = forgotPasswordBodySchema.parse(request.body);
-        await verifyTurnstileToken(body.captchaToken, request.ip);
+        await verifyTurnstileToken(body.captchaToken);
         const result = await auth.requestPasswordReset.execute({ email: body.email });
         return reply.status(200).send(result);
       } catch (error) {
@@ -150,7 +150,7 @@ export const authController: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       try {
         const body = verify2faBodySchema.parse(request.body);
-        await verifyTurnstileToken(body.captchaToken, request.ip);
+        await verifyTurnstileToken(body.captchaToken);
         const session = await auth.verifyTwoFactorLogin.execute(
           { twoFactorToken: body.twoFactorToken, code: body.code },
           buildAuthMeta(request),

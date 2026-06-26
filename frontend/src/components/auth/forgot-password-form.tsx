@@ -1,13 +1,14 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { forgotPasswordAction, type ForgotPasswordState } from "@/lib/auth/actions";
-import { RegisterCaptchaField } from "@/components/auth/register-captcha-field";
+import { RegisterCaptchaField, isTurnstileRequired } from "@/components/auth/register-captcha-field";
 
 const initial: ForgotPasswordState = {};
 
 export function ForgotPasswordForm() {
   const [state, formAction, pending] = useActionState(forgotPasswordAction, initial);
+  const [captchaReady, setCaptchaReady] = useState(!isTurnstileRequired());
 
   if (state.success) {
     return (
@@ -35,7 +36,7 @@ export function ForgotPasswordForm() {
           className="w-full rounded-md border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
         />
       </div>
-      <RegisterCaptchaField />
+      <RegisterCaptchaField onReadyChange={setCaptchaReady} />
       {state.error ? (
         <p className="text-sm text-destructive" role="alert">
           {state.error}
@@ -43,7 +44,7 @@ export function ForgotPasswordForm() {
       ) : null}
       <button
         type="submit"
-        disabled={pending}
+        disabled={pending || !captchaReady}
         className="w-full rounded-md bg-accent text-accent-foreground py-2.5 text-sm font-semibold hover:opacity-90 disabled:opacity-60"
       >
         {pending ? "Enviando…" : "Enviar link"}

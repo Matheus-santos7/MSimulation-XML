@@ -1,7 +1,7 @@
 "use client";
 
-import { Suspense } from "react";
-import { RegisterCaptchaField } from "@/components/auth/register-captcha-field";
+import { Suspense, useState } from "react";
+import { RegisterCaptchaField, isTurnstileRequired } from "@/components/auth/register-captcha-field";
 import { SessionExpiredBanner } from "@/components/auth/session-expired-banner";
 import { AuthFormField } from "@/components/auth/auth-form-field";
 import { AuthFormError } from "@/components/auth/auth-form-error";
@@ -47,6 +47,8 @@ type LoginFormProps = {
 };
 
 function LoginForm({ state, action, pending }: LoginFormProps) {
+  const [captchaReady, setCaptchaReady] = useState(!isTurnstileRequired());
+
   return (
     <form action={action} className="space-y-4">
       <AuthFormField
@@ -58,9 +60,14 @@ function LoginForm({ state, action, pending }: LoginFormProps) {
         required
       />
       <AuthPasswordField id="password" mode="login" />
-      <RegisterCaptchaField />
+      <RegisterCaptchaField onReadyChange={setCaptchaReady} />
       <AuthFormError message={state.error} />
-      <AuthSubmitButton pending={pending} idleLabel="Entrar" pendingLabel="Entrando…" />
+      <AuthSubmitButton
+        pending={pending}
+        disabled={!captchaReady}
+        idleLabel="Entrar"
+        pendingLabel="Entrando…"
+      />
     </form>
   );
 }
@@ -72,6 +79,8 @@ type RegisterFormProps = {
 };
 
 function RegisterForm({ state, action, pending }: RegisterFormProps) {
+  const [captchaReady, setCaptchaReady] = useState(!isTurnstileRequired());
+
   return (
     <form action={action} className="space-y-4">
       <AuthFormField
@@ -91,10 +100,11 @@ function RegisterForm({ state, action, pending }: RegisterFormProps) {
         required
       />
       <AuthPasswordField id="reg-password" mode="register" />
-      <RegisterCaptchaField />
+      <RegisterCaptchaField onReadyChange={setCaptchaReady} />
       <AuthFormError message={state.error} />
       <AuthSubmitButton
         pending={pending}
+        disabled={!captchaReady}
         idleLabel="Criar conta e continuar"
         pendingLabel="Criando…"
       />

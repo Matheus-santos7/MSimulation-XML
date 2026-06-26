@@ -1,6 +1,5 @@
 "use client";
 
-import Script from "next/script";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const TURNSTILE_SCRIPT_ID = "cloudflare-turnstile";
@@ -10,7 +9,6 @@ const TURNSTILE_SCRIPT_SRC =
 declare global {
   interface Window {
     turnstile?: {
-      ready: (callback: () => void) => void;
       render: (
         container: HTMLElement,
         options: {
@@ -28,6 +26,42 @@ declare global {
   }
 }
 
+let turnstileScriptPromise: Promise<void> | null = null;
+
+/**
+ * Carrega o script do Turnstile sem async/defer (exigência da API explícita).
+ */
+function loadTurnstileScript(): Promise<void> {
+  if (typeof window === "undefined") return Promise.resolve();
+  if (window.turnstile) return Promise.resolve();
+  if (turnstileScriptPromise) return turnstileScriptPromise;
+
+  turnstileScriptPromise = new Promise((resolve, reject) => {
+    const existing = document.getElementById(TURNSTILE_SCRIPT_ID) as HTMLScriptElement | null;
+
+    if (existing) {
+      if (window.turnstile) {
+        resolve();
+        return;
+      }
+      existing.addEventListener("load", () => resolve(), { once: true });
+      existing.addEventListener("error", () => reject(new Error("Turnstile load failed")), {
+        once: true,
+      });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.id = TURNSTILE_SCRIPT_ID;
+    script.src = TURNSTILE_SCRIPT_SRC;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Turnstile load failed"));
+    document.head.appendChild(script);
+  });
+
+  return turnstileScriptPromise;
+}
+
 type Props = {
   /** Identificador da instância; alterar força remount do widget. */
   instanceKey: number;
@@ -43,7 +77,6 @@ export function TurnstileWidget({ instanceKey, onToken, onError }: Props) {
   const widgetIdRef = useRef<string | null>(null);
   const onTokenRef = useRef(onToken);
   const onErrorRef = useRef(onError);
-  const [scriptReady, setScriptReady] = useState(() => typeof window !== "undefined" && !!window.turnstile);
   const [token, setToken] = useState("");
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim();
 
@@ -55,23 +88,13 @@ export function TurnstileWidget({ instanceKey, onToken, onError }: Props) {
     onTokenRef.current(value);
   }, []);
 
-  const markScriptReady = useCallback(() => {
-    setScriptReady(true);
-  }, []);
-
-  useEffect(() => {
-    if (window.turnstile) {
-      markScriptReady();
-    }
-  }, [markScriptReady]);
-
   useEffect(() => {
     setToken("");
     onTokenRef.current("");
   }, [instanceKey]);
 
   useEffect(() => {
-    if (!siteKey || !scriptReady || !containerRef.current) return;
+    if (!siteKey || !containerRef.current) return;
 
     let cancelled = false;
 
@@ -104,9 +127,13 @@ export function TurnstileWidget({ instanceKey, onToken, onError }: Props) {
       });
     };
 
-    if (!window.turnstile) return;
-
-    window.turnstile.ready(mountWidget);
+    loadTurnstileScript()
+      .then(() => {
+        if (!cancelled) mountWidget();
+      })
+      .catch(() => {
+        if (!cancelled) onErrorRef.current?.();
+      });
 
     return () => {
       cancelled = true;
@@ -115,7 +142,7 @@ export function TurnstileWidget({ instanceKey, onToken, onError }: Props) {
         widgetIdRef.current = null;
       }
     };
-  }, [siteKey, scriptReady, instanceKey, emitToken]);
+  }, [siteKey, instanceKey, emitToken]);
 
   if (!siteKey) {
     if (process.env.NODE_ENV === "production") {
@@ -130,13 +157,6 @@ export function TurnstileWidget({ instanceKey, onToken, onError }: Props) {
 
   return (
     <>
-      <Script
-        id={TURNSTILE_SCRIPT_ID}
-        src={TURNSTILE_SCRIPT_SRC}
-        strategy="afterInteractive"
-        onLoad={markScriptReady}
-        onReady={markScriptReady}
-      />
       <input type="hidden" name="captchaToken" value={token} readOnly />
       <div ref={containerRef} className="min-h-[65px]" aria-label="Verificação de segurança" />
     </>

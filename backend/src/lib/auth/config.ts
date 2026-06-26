@@ -118,4 +118,8 @@ export function emailVerificationTtlMs(): number {
 export const EMAIL_VERIFICATION_GENERIC_MESSAGE =
   "Se o e-mail estiver cadastrado, você receberá um link de verificação em instantes.";
 
+/** Resposta genérica no registro — evita enumeração de contas existentes. */
+export const REGISTER_GENERIC_FAILURE_MESSAGE =
+  "Não foi possível concluir o cadastro. Verifique os dados informados ou entre na sua conta.";
+
 export const TOTP_ISSUER = BRAND_FULL_NAME;

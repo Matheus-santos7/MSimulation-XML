@@ -2,6 +2,7 @@ import {
   appPublicUrl,
   EMAIL_VERIFICATION_GENERIC_MESSAGE,
   PASSWORD_RESET_GENERIC_MESSAGE,
+  REGISTER_GENERIC_FAILURE_MESSAGE,
   emailVerificationTtlMs,
   passwordResetTtlMs,
   refreshTokenTtlMs,
@@ -83,9 +84,18 @@ export function createAuthModule() {
   );
 
   return {
-    registerUser: new RegisterUserUseCase(userRepository, finishLogin, sendVerificationEmail, passwordHasher, {
-      requireEmailVerification: requireEmailVerification(),
-    }),
+    registerUser: new RegisterUserUseCase(
+      userRepository,
+      finishLogin,
+      sendVerificationEmail,
+      passwordHasher,
+      emailSender,
+      {
+        requireEmailVerification: requireEmailVerification(),
+        genericFailureMessage: REGISTER_GENERIC_FAILURE_MESSAGE,
+        appPublicUrl: appPublicUrl(),
+      },
+    ),
     login: new LoginUseCase(userRepository, passwordHasher, loginLockout, sessionResponse, finishLogin),
     refreshSession: new RefreshSessionUseCase(
       userSessionRepository,

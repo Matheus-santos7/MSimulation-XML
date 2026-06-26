@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import { buildEmailVerificationEmailHtml } from "../../../../lib/emails/templates/email-verification-email.js";
 import { buildPasswordResetEmailHtml } from "../../../../lib/emails/templates/password-reset-email.js";
+import { buildRegistrationAttemptEmailHtml } from "../../../../lib/emails/templates/registration-attempt-email.js";
 import { resendApiKey, resendFromEmail } from "../../../../lib/auth/config.js";
 import { BRAND_FULL_NAME } from "../../../../lib/brand.js";
 import { EmailDeliveryError } from "../../domain/errors/email-delivery.error.js";
@@ -8,6 +9,7 @@ import type {
   EmailSenderPort,
   SendEmailVerificationParams,
   SendPasswordResetEmailParams,
+  SendRegistrationAttemptParams,
 } from "../../domain/ports/email-sender.port.js";
 
 export class ResendEmailAdapter implements EmailSenderPort {
@@ -107,6 +109,45 @@ export class ResendEmailAdapter implements EmailSenderPort {
         label: "E-mail de verificação",
         to: params.to,
         url: params.verifyUrl,
+      });
+    }
+  }
+
+  async sendRegistrationAttemptAlert(params: SendRegistrationAttemptParams): Promise<void> {
+    const subject = `Tentativa de cadastro — ${BRAND_FULL_NAME}`;
+    const html = buildRegistrationAttemptEmailHtml({
+      loginUrl: params.loginUrl,
+      forgotPasswordUrl: params.forgotPasswordUrl,
+      recipientName: params.recipientName,
+    });
+
+    if (!this.resend) {
+      if (process.env.NODE_ENV === "production") {
+        throw new EmailDeliveryError("RESEND_API_KEY não configurada");
+      }
+      this.logDevEmailFallback(
+        "Alerta de tentativa de cadastro (RESEND_API_KEY ausente)",
+        params.to,
+        params.loginUrl,
+      );
+      return;
+    }
+
+    const { error } = await this.resend.emails.send(
+      {
+        from: resendFromEmail(),
+        to: [params.to],
+        subject,
+        html,
+      },
+      { idempotencyKey: params.idempotencyKey },
+    );
+
+    if (error) {
+      this.handleResendError(error, {
+        label: "Alerta de tentativa de cadastro",
+        to: params.to,
+        url: params.loginUrl,
       });
     }
   }

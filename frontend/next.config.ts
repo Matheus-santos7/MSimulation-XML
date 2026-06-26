@@ -33,7 +33,7 @@ const securityHeaders = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob:",
+      "img-src 'self' data: blob: https://challenges.cloudflare.com",
       `connect-src 'self' ${apiOrigin} https://challenges.cloudflare.com`,
       "frame-src https://challenges.cloudflare.com",
       "object-src 'none'",

@@ -61,13 +61,13 @@ services:
       - key: BREVO_API_KEY
         sync: false
       - key: BREVO_SENDER_EMAIL
-        sync: false
+        value: msimulationxml@gmail.com
       - key: BREVO_SENDER_NAME
-        sync: false
+        value: MSimulation XML
       - key: TURNSTILE_SECRET_KEY
         sync: false
       - key: REQUIRE_EMAIL_VERIFICATION
-        value: "false"
+        value: "true"
       - key: FISCAL_VALIDATOR_ENABLED
         value: "true"
       - key: FISCAL_VALIDATOR_URL

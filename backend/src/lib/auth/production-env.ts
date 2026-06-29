@@ -1,3 +1,4 @@
+import { brevoApiKey, brevoSenderEmail } from "../brevo/config.js";
 import {
   appPublicUrl,
   requireEmailVerification,
@@ -50,5 +51,14 @@ export function assertProductionSecurityConfig(): void {
 
   if (!requireEmailVerification()) {
     throw new Error("REQUIRE_EMAIL_VERIFICATION deve ser true em produção");
+  }
+
+  if (!brevoApiKey()) {
+    throw new Error("BREVO_API_KEY é obrigatório em produção");
+  }
+
+  const senderEmail = brevoSenderEmail();
+  if (!senderEmail || senderEmail === "noreply@example.com") {
+    throw new Error("BREVO_SENDER_EMAIL deve ser um remetente verificado em produção");
   }
 }

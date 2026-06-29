@@ -17,7 +17,7 @@ export type RequestPasswordResetDeps = {
  * Inicia fluxo de redefinição de senha por e-mail.
  *
  * Resposta genérica mesmo quando o e-mail não existe (evita enumeração de contas).
- * Gera token opaco, persiste hash e envia link via Resend.
+ * Gera token opaco, persiste hash e envia link via Brevo.
  *
  * @param command - E-mail do utilizador
  * @returns Mensagem genérica de confirmação
@@ -60,7 +60,7 @@ export class RequestPasswordResetUseCase {
       if (error instanceof EmailDeliveryError && process.env.NODE_ENV !== "production") {
         console.warn("[dev] Falha ao enviar e-mail:", error.message);
       } else if (error instanceof EmailDeliveryError) {
-        console.error("Falha Resend:", error.message);
+        console.error("Falha Brevo:", error.message);
       } else {
         throw error;
       }

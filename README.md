@@ -150,7 +150,7 @@ graph TB
 | **Monorepo**    | pnpm 9, concurrently                                                       | Instalar deps e subir front + back juntos    |
 | **Backend**     | Fastify 5, TypeScript, Zod, Prisma 7, PostgreSQL                           | API REST, regras de negócio, persistência    |
 | **Frontend**    | Next.js 15, React 19, Tailwind v4, shadcn/ui, React Hook Form + Zod        | Interface do cockpit fiscal                  |
-| **Auth**        | JWT (access + refresh), 2FA TOTP, Resend (e-mail)                          | Login, sessão, reset de senha                |
+| **Auth**        | JWT (access + refresh), 2FA TOTP, Brevo (e-mail)                           | Login, sessão, reset de senha                |
 | **Packages**    | TypeScript puro                                                            | Lógica fiscal reutilizável e testável        |
 | **Infra local** | Docker Compose (Postgres 16 + validador MCP opcional)                      | Banco e auditoria fiscal de XML              |
 | **Validador**   | `mcp-fiscal-brasil` 0.4.0 + proxy FastAPI (`infra/fiscal-validator-proxy`) | Auditoria estrutural e regras CAT 31 de NF-e |
@@ -210,7 +210,7 @@ Consulte `[backend/.env.example](backend/.env.example)`. Mínimo para dev local:
 | `APP_PUBLIC_URL`  | `http://localhost:3000`                                                             |
 
 
-Sem `RESEND_API_KEY`, links de reset de senha aparecem no **console da API** (comportamento esperado em dev).
+Sem `BREVO_API_KEY`, links de reset de senha aparecem no **console da API** (comportamento esperado em dev).
 
 ---
 

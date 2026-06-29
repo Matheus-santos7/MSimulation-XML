@@ -103,7 +103,7 @@ export class RegisterUserUseCase {
       if (error instanceof EmailDeliveryError && process.env.NODE_ENV !== "production") {
         console.warn("[dev] Falha ao enviar alerta de tentativa de cadastro:", error.message);
       } else if (error instanceof EmailDeliveryError) {
-        console.error("Falha Resend (tentativa de cadastro):", error.message);
+        console.error("Falha Brevo (tentativa de cadastro):", error.message);
       }
     }
 

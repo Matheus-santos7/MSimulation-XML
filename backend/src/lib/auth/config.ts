@@ -63,18 +63,6 @@ export function appPublicUrl(): string {
   return normalized;
 }
 
-export function resendApiKey(): string | undefined {
-  const key = process.env.RESEND_API_KEY?.trim();
-  return key && key.length > 0 ? key : undefined;
-}
-
-export function resendFromEmail(): string {
-  return (
-    process.env.RESEND_FROM_EMAIL?.trim() ??
-    `${BRAND_FULL_NAME} <onboarding@resend.dev>`
-  );
-}
-
 export function loginMaxFailedAttempts(): number {
   const n = Number(process.env.LOGIN_MAX_FAILED_ATTEMPTS ?? "5");
   return Number.isFinite(n) && n >= 3 ? Math.floor(n) : 5;

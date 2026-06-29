@@ -31,7 +31,7 @@ API REST em **Fastify + TypeScript + Prisma + PostgreSQL** que sustenta o simula
 | **Zod** | Validação HTTP (presentation) |
 | **Prisma 7** | ORM + migrations PostgreSQL |
 | **@fastify/jwt** | Access / refresh tokens |
-| **Resend** | E-mails transacionais |
+| **Brevo** | E-mails transacionais |
 | **otplib** | 2FA TOTP |
 
 ```bash

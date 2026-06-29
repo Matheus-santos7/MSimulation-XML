@@ -37,7 +37,7 @@ import { VerifyTwoFactorLoginUseCase } from "../../application/use-cases/verify-
 import { LoginLockoutAdapter } from "../external/login-lockout.adapter.js";
 import { PasswordHasherAdapter } from "../external/password-hasher.adapter.js";
 import { RefreshTokenAdapter } from "../external/refresh-token.adapter.js";
-import { ResendEmailAdapter } from "../external/resend-email.adapter.js";
+import { BrevoEmailAdapter } from "../external/brevo-email.adapter.js";
 import { SessionResponseAdapter } from "../external/session-response.adapter.js";
 import { TotpAdapter } from "../external/totp.adapter.js";
 import { PrismaEmailVerificationRepository } from "../prisma/prisma-email-verification.repository.js";
@@ -57,7 +57,7 @@ export function createAuthModule() {
   const passwordHasher = new PasswordHasherAdapter();
   const refreshTokenPort = new RefreshTokenAdapter();
   const sessionResponse = new SessionResponseAdapter();
-  const emailSender = new ResendEmailAdapter();
+  const emailSender = new BrevoEmailAdapter();
   const loginLockout = new LoginLockoutAdapter();
   const totp = new TotpAdapter();
 

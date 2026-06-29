@@ -58,9 +58,11 @@ services:
         value: https://msimulation-xml.vercel.app
       - key: APP_PUBLIC_URL
         value: https://msimulation-xml.vercel.app
-      - key: RESEND_API_KEY
+      - key: BREVO_API_KEY
         sync: false
-      - key: RESEND_FROM_EMAIL
+      - key: BREVO_SENDER_EMAIL
+        sync: false
+      - key: BREVO_SENDER_NAME
         sync: false
       - key: TURNSTILE_SECRET_KEY
         sync: false

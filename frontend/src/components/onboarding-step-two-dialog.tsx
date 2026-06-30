@@ -42,7 +42,7 @@ export function OnboardingStepTwoDialog({ open, controller, onContinue, onBack }
         <DialogHeader className={ONBOARDING_MODAL_HEADER_CLASS}>
           <div className="pr-6">
             <p className="text-[11px] font-bold uppercase tracking-widest text-accent">Etapa 2 de 3</p>
-            <DialogTitle className="mt-1 text-lg sm:text-xl">Endereço</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">Endereço</DialogTitle>
           </div>
         </DialogHeader>
 

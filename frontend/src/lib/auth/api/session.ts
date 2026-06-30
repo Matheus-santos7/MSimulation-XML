@@ -25,16 +25,24 @@ export async function logoutApi(refreshToken?: string, accessToken?: string): Pr
   }
 }
 
+/**
+ * Carrega o perfil autenticado. Retorna `null` quando a sessão é inválida ou a API
+ * está indisponível — evita derrubar Server Components com erro genérico em produção.
+ */
 export async function fetchAuthMe(accessToken: string): Promise<AuthMeDto | null> {
-  const res = await fetch(authApiUrl("/api/auth/me"), {
-    cache: "no-store",
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (res.status === 401 || res.status === 404) return null;
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(text || "Falha ao carregar perfil");
+  let res: Response;
+  try {
+    res = await fetch(authApiUrl("/api/auth/me"), {
+      cache: "no-store",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+  } catch {
+    return null;
   }
+
+  if (res.status === 401 || res.status === 404) return null;
+  if (!res.ok) return null;
+
   return res.json() as Promise<AuthMeDto>;
 }
 

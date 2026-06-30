@@ -120,12 +120,13 @@ export function EmpresaCard({ tenant }: { tenant: TenantDto }) {
               draft={editState.values}
               fieldErrors={editState.fieldErrors}
               idPrefix={`edit-${tenant.id}`}
+              layout="compact"
             />
-            <div className="flex gap-3 pt-2">
-              <Button type="submit" disabled={editPending}>
+            <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row">
+              <Button type="submit" disabled={editPending} className="w-full sm:w-auto">
                 {editPending ? "Salvando…" : "Salvar"}
               </Button>
-              <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setEditOpen(false)} className="w-full sm:w-auto">
                 Cancelar
               </Button>
             </div>

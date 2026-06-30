@@ -1,23 +1,12 @@
 import type { Metadata } from "next";
-import { onboardingEmpresaAction } from "@/lib/onboarding/actions";
-import { PageHeader } from "@/components/fiscal-ui";
-import { TenantForm } from "@/components/tenant-form";
+import { OnboardingTenantForm } from "@/components/onboarding-tenant-form";
 
 export const metadata: Metadata = { title: "Cadastrar empresa" };
 
 export default function OnboardingEmpresaPage() {
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <PageHeader
-        title="Cadastre sua empresa"
-        subtitle="Dados do emitente NF-e vinculados à sua conta."
-      />
-      <TenantForm
-        action={onboardingEmpresaAction}
-        submitLabel="Cadastrar empresa"
-        cancelHref={undefined}
-        hideCancel
-      />
+    <div className="mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-6xl items-center justify-center px-4 py-6 sm:px-6 lg:px-8">
+      <OnboardingTenantForm />
     </div>
   );
 }

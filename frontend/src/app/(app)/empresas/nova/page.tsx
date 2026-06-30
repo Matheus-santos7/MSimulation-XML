@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Nova empresa" };
 
 export default function NovaEmpresaPage() {
   return (
-    <div className="p-6">
+    <div className="px-4 py-4 sm:px-6 sm:py-6">
       <Link
         href="/empresas"
         className="text-[12px] uppercase font-bold tracking-widest text-muted-foreground hover:text-foreground"

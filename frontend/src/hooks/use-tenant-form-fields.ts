@@ -131,3 +131,5 @@ export function useTenantFormFields({ tenant, draft, fieldErrors }: UseTenantFor
     onLookupCep,
   };
 }
+
+export type TenantFormFieldsController = ReturnType<typeof useTenantFormFields>;

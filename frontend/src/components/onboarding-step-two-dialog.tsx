@@ -43,9 +43,6 @@ export function OnboardingStepTwoDialog({ open, controller, onContinue, onBack }
           <div className="pr-6">
             <p className="text-[11px] font-bold uppercase tracking-widest text-accent">Etapa 2 de 3</p>
             <DialogTitle className="mt-1 text-lg sm:text-xl">Endereço</DialogTitle>
-            <DialogDescription className="mt-1.5 text-[14px]">
-              Informe o endereço fiscal do emitente (enderEmit).
-            </DialogDescription>
           </div>
         </DialogHeader>
 

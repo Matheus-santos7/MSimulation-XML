@@ -89,31 +89,34 @@ export async function backfillCteLegado(
   const fiscalPayloadExistente = row.fiscalPayload as CteFiscalPayload | null;
 
   if (fiscalPayloadExistente?.nfeChaveRef && fiscalPayloadExistente.destinatario) {
-    const { cfop, natOp } = resolveCteDocumento(vinculo, nfe.destIndIeDest);
-    return {
-      chave: row.chave,
-      numero: row.numero,
-      serie: row.serie,
-      cfop: row.cfop || cfop,
-      natOp: row.natOp || natOp,
-      modal: row.modal,
-      origem: row.origem,
-      destino: row.destino,
-      valor: Number(row.valor),
-      valorCarga: Number(row.valorCarga),
-      pesoCarga: Number(row.pesoCarga),
-      status: row.status,
-      emitidoEm: row.emitidoEm,
-      fiscalPayload: fiscalPayloadExistente,
-      nfeRemessaId: row.nfeRemessaId ?? undefined,
-      nfeVendaId: row.nfeVendaId ?? undefined,
-    };
+    if (fiscalPayloadExistente.ibsCbs) {
+      const { cfop, natOp } = resolveCteDocumento(vinculo, nfe.destIndIeDest);
+      return {
+        chave: row.chave,
+        numero: row.numero,
+        serie: row.serie,
+        cfop: row.cfop || cfop,
+        natOp: row.natOp || natOp,
+        modal: row.modal,
+        origem: row.origem,
+        destino: row.destino,
+        valor: Number(row.valor),
+        valorCarga: Number(row.valorCarga),
+        pesoCarga: Number(row.pesoCarga),
+        status: row.status,
+        emitidoEm: row.emitidoEm,
+        fiscalPayload: fiscalPayloadExistente,
+        nfeRemessaId: row.nfeRemessaId ?? undefined,
+        nfeVendaId: row.nfeVendaId ?? undefined,
+      };
+    }
   }
 
   const dados = await montarDadosCteFromNfe(prisma, tenant, nfe, vinculo, {
     serie: row.serie,
     numero: row.numero,
     emitidoEm: row.emitidoEm,
+    valorFrete: Number(row.valor),
   });
 
   await prisma.cTe.update({

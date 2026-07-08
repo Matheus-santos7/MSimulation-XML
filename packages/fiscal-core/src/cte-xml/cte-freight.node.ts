@@ -4,7 +4,7 @@
  * @module cte-xml/cte-freight.node
  */
 
-import { CTE_RNTRC, type CteIcmsFrete } from "../cte-template.js";
+import { CTE_RNTRC, type CteIbsCbsFrete, type CteIcmsFrete } from "../cte-template.js";
 import type { XmlObject } from "../xml-serializer.js";
 import { formatMoney2, formatWeight4 } from "./cte-xml.util.js";
 
@@ -19,21 +19,45 @@ export function buildCteVPrestNode(valorFrete: number): XmlObject {
   };
 }
 
-/** Monta grupo `<imp>` com ICMS00 simulado. */
-export function buildCteImpNode(icms: CteIcmsFrete): XmlObject {
-  return {
-    imp: {
-      ICMS: {
-        ICMS00: {
-          CST: icms.cst,
-          vBC: formatMoney2(icms.vBC),
-          pICMS: formatMoney2(icms.pICMS),
-          vICMS: formatMoney2(icms.vICMS),
+/** Monta grupo `<imp>` com ICMS00, IBSCBS (reforma) e vTotDFe. */
+export function buildCteImpNode(icms: CteIcmsFrete, ibsCbs?: CteIbsCbsFrete): XmlObject {
+  const imp: XmlObject = {
+    ICMS: {
+      ICMS00: {
+        CST: icms.cst,
+        vBC: formatMoney2(icms.vBC),
+        pICMS: formatMoney2(icms.pICMS),
+        vICMS: formatMoney2(icms.vICMS),
+      },
+    },
+    vTotTrib: formatMoney2(icms.vICMS),
+  };
+
+  if (ibsCbs) {
+    imp.IBSCBS = {
+      CST: ibsCbs.cst,
+      cClassTrib: ibsCbs.cClassTrib,
+      gIBSCBS: {
+        vBC: formatMoney2(ibsCbs.vBC),
+        gIBSUF: {
+          pIBSUF: formatMoney2(ibsCbs.pIBSUF),
+          vIBSUF: formatMoney2(ibsCbs.vIBSUF),
+        },
+        gIBSMun: {
+          pIBSMun: formatMoney2(ibsCbs.pIBSMun),
+          vIBSMun: formatMoney2(ibsCbs.vIBSMun),
+        },
+        vIBS: formatMoney2(ibsCbs.vIBS),
+        gCBS: {
+          pCBS: formatMoney2(ibsCbs.pCBS),
+          vCBS: formatMoney2(ibsCbs.vCBS),
         },
       },
-      vTotTrib: formatMoney2(icms.vICMS),
-    },
-  };
+    };
+    imp.vTotDFe = formatMoney2(ibsCbs.vTotDFe);
+  }
+
+  return { imp };
 }
 
 export type CteInfCteNormNodeInput = {

@@ -297,6 +297,16 @@ export function mapCte(row: CteRow) {
   const nfeChaveRef = nfeRef.chave;
   const fp = row.fiscalPayload as Record<string, unknown> | null | undefined;
   const icms = fp?.icms as { pICMS?: number; vICMS?: number } | undefined;
+  const ibsCbs = fp?.ibsCbs as {
+    vBC?: number;
+    vIBS?: number;
+    vCBS?: number;
+    vPIS?: number;
+    vCOFINS?: number;
+    vTotDFe?: number;
+    pIBSUF?: number;
+    pCBS?: number;
+  } | undefined;
 
   return {
     id: row.id,
@@ -320,6 +330,14 @@ export function mapCte(row: CteRow) {
     fiscalPayload: fp ?? undefined,
     aliqIcms: typeof icms?.pICMS === "number" ? icms.pICMS : undefined,
     valorIcms: typeof icms?.vICMS === "number" ? icms.vICMS : undefined,
+    ibsCbsVBc: typeof ibsCbs?.vBC === "number" ? ibsCbs.vBC : undefined,
+    valorIbs: typeof ibsCbs?.vIBS === "number" ? ibsCbs.vIBS : undefined,
+    valorCbs: typeof ibsCbs?.vCBS === "number" ? ibsCbs.vCBS : undefined,
+    valorPis: typeof ibsCbs?.vPIS === "number" ? ibsCbs.vPIS : undefined,
+    valorCofins: typeof ibsCbs?.vCOFINS === "number" ? ibsCbs.vCOFINS : undefined,
+    vTotDFe: typeof ibsCbs?.vTotDFe === "number" ? ibsCbs.vTotDFe : undefined,
+    aliqIbsUf: typeof ibsCbs?.pIBSUF === "number" ? ibsCbs.pIBSUF : undefined,
+    aliqCbs: typeof ibsCbs?.pCBS === "number" ? ibsCbs.pCBS : undefined,
     vinculadoRemessa: Boolean(row.nfeRemessaId),
     vinculadoVenda: Boolean(row.nfeVendaId),
   };

@@ -72,6 +72,7 @@ export default async function CTeDetailPage({ params }: Props) {
 
           <div className="border border-border rounded-lg bg-card p-4 space-y-2">
             <h3 className="text-[12px] uppercase tracking-widest font-bold text-muted-foreground mb-2">Valores</h3>
+            <Row label="Valor do frete" value={brl(cte.valor)} mono />
             <Row label="Valor da carga" value={brl(cte.valorCarga)} />
             <Row label="Peso bruto (kg)" value={cte.pesoCarga.toFixed(4)} mono />
             {cte.aliqIcms != null && (
@@ -80,6 +81,34 @@ export default async function CTeDetailPage({ params }: Props) {
                 value={brl(cte.valorIcms ?? 0)}
                 mono
               />
+            )}
+            {cte.valorPis != null && (
+              <Row label="PIS (1,65%)" value={brl(cte.valorPis)} mono muted />
+            )}
+            {cte.valorCofins != null && (
+              <Row label="COFINS (7,60%)" value={brl(cte.valorCofins)} mono muted />
+            )}
+            {cte.ibsCbsVBc != null && (
+              <Row label="Base IBS/CBS" value={brl(cte.ibsCbsVBc)} mono muted />
+            )}
+            {cte.valorIbs != null && cte.aliqIbsUf != null && (
+              <Row
+                label={`IBS UF (${cte.aliqIbsUf}%)`}
+                value={brl(cte.valorIbs)}
+                mono
+              />
+            )}
+            {cte.valorCbs != null && cte.aliqCbs != null && (
+              <Row
+                label={`CBS (${cte.aliqCbs}%)`}
+                value={brl(cte.valorCbs)}
+                mono
+              />
+            )}
+            {cte.vTotDFe != null && (
+              <div className="border-t border-border pt-2 mt-2">
+                <Row label="Total do CT-e (vTotDFe)" value={brl(cte.vTotDFe)} mono bold />
+              </div>
             )}
           </div>
         </div>
@@ -101,11 +130,11 @@ function Field({ label, value, mono }: { label: string; value: string; mono?: bo
   );
 }
 
-function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+function Row({ label, value, mono, muted, bold }: { label: string; value: string; mono?: boolean; muted?: boolean; bold?: boolean }) {
   return (
     <div className="flex justify-between text-[14px]">
-      <span className="text-muted-foreground">{label}</span>
-      <span className={mono ? "font-mono" : ""}>{value}</span>
+      <span className={muted ? "text-muted-foreground" : ""}>{label}</span>
+      <span className={`${mono ? "font-mono" : ""} ${bold ? "font-bold" : ""}`}>{value}</span>
     </div>
   );
 }

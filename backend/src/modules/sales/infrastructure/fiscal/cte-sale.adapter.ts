@@ -4,6 +4,7 @@ import { proximoNumeroCte } from "../../../fiscal-documents/domain/services/cte-
 import { mapCte } from "../../../fiscal-documents/presentation/mappers/fiscal-mappers.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { buildCteXmlAutorizado } from "../../../fiscal-documents/infrastructure/xml/cte-xml-service.js";
+import { SalesChainError } from "../../domain/errors/sales-chain.error.js";
 
 /**
  * Emite **CT-e de venda** (transporte CD → consumidor) referenciando a NF-e VENDA.
@@ -16,6 +17,11 @@ export async function emitSaleCte(
   saleNfe: NFe,
   valorFrete?: number,
 ) {
+  if (valorFrete == null || valorFrete <= 0) {
+    throw new SalesChainError(
+      "Informe frete consumidor e/ou frete seller — ao menos um deve ser maior que zero para emitir CT-e de venda",
+    );
+  }
   const serie = tenant.serieCte;
   const numero = await proximoNumeroCte(prisma, tenant.id, serie);
   const data = await montarDadosCteFromNfe(prisma, tenant, saleNfe, "venda", {

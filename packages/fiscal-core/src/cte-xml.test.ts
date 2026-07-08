@@ -2,7 +2,15 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { verifySimulationXmlSignature } from "./xml-signature.js";
 import { buildCTeXML } from "./cte-xml.js";
-import type { CteFiscalPayload } from "./cte-template.js";
+import {
+  calcularIbsCbsFreteCte,
+  calcularIcmsFreteCte,
+  type CteFiscalPayload,
+} from "./cte-template.js";
+
+const vFrete = 41.78;
+const icms = calcularIcmsFreteCte(vFrete, "SP", "SC", 0);
+const ibsCbs = calcularIbsCbsFreteCte(vFrete, icms);
 
 const fiscalPayload: CteFiscalPayload = {
   nfeChaveRef: "35260612345678000199550010000000011000000012",
@@ -36,7 +44,8 @@ const fiscalPayload: CteFiscalPayload = {
       cep: "88190000",
     },
   },
-  icms: { cst: "00", vBC: 41.78, pICMS: 12, vICMS: 5.01 },
+  icms,
+  ibsCbs,
   rota: {
     cMunIni: "3550308",
     xMunIni: "São Paulo",
@@ -73,6 +82,9 @@ describe("buildCTeXML", () => {
     assert.match(xml, /<chave>35260612345678000199550010000000011000000012<\/chave>/);
     assert.match(xml, /<pICMS>12\.00<\/pICMS>/);
     assert.match(xml, /<vICMS>5\.01<\/vICMS>/);
+    assert.match(xml, /<IBSCBS>[\s\S]*<CST>000<\/CST>/);
+    assert.match(xml, new RegExp(`<vBC>${ibsCbs.vBC.toFixed(2).replace(".", "\\.")}<\\/vBC>`));
+    assert.match(xml, new RegExp(`<vTotDFe>${ibsCbs.vTotDFe.toFixed(2).replace(".", "\\.")}<\\/vTotDFe>`));
     assert.doesNotMatch(xml, /<CNPJ>03007331012077<\/CNPJ>[\s\S]*<emit>/);
     assert.equal(verifySimulationXmlSignature(xml), true);
   });

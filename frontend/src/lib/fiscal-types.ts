@@ -342,6 +342,14 @@ export type CTeDto = {
   fiscalPayload?: Record<string, unknown>;
   aliqIcms?: number;
   valorIcms?: number;
+  ibsCbsVBc?: number;
+  valorIbs?: number;
+  valorCbs?: number;
+  valorPis?: number;
+  valorCofins?: number;
+  vTotDFe?: number;
+  aliqIbsUf?: number;
+  aliqCbs?: number;
   vinculadoRemessa: boolean;
   vinculadoVenda?: boolean;
 };

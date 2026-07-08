@@ -70,6 +70,34 @@ export type CteIcmsFrete = {
   vICMS: number;
 };
 
+/** Alíquotas cumulativas PIS/COFINS sobre prestação de transporte (CT-e ML). */
+export const CTE_FRETE_PIS_ALIQ = 1.65;
+export const CTE_FRETE_COFINS_ALIQ = 7.6;
+
+export const CTE_IBS_CBS_DEFAULT = {
+  cst: "000",
+  cClassTrib: "000001",
+  pIBSUF: 0.1,
+  pIBSMun: 0,
+  pCBS: 0.9,
+} as const;
+
+export type CteIbsCbsFrete = {
+  cst: string;
+  cClassTrib: string;
+  vBC: number;
+  pIBSUF: number;
+  vIBSUF: number;
+  pIBSMun: number;
+  vIBSMun: number;
+  vIBS: number;
+  pCBS: number;
+  vCBS: number;
+  vPIS: number;
+  vCOFINS: number;
+  vTotDFe: number;
+};
+
 export type CteRota = {
   cMunIni: string;
   xMunIni: string;
@@ -87,6 +115,7 @@ export type CteFiscalPayload = {
   remetente: CteParticipante;
   destinatario: CteParticipante;
   icms: CteIcmsFrete;
+  ibsCbs: CteIbsCbsFrete;
   rota: CteRota;
 };
 
@@ -151,6 +180,49 @@ export function calcularIcmsFreteCte(
   const vBC = round2(vFrete);
   const vICMS = round2(vBC * (pICMS / 100));
   return { cst: "00", vBC, pICMS, vICMS };
+}
+
+/** PIS/COFINS cumulativos sobre o frete líquido de ICMS (base UB16-10 para CT-e). */
+export function calcularPisCofinsFreteCte(vFrete: number, vICMS: number) {
+  const vBC = round2(Math.max(0, vFrete - vICMS));
+  const vPIS = round2(vBC * (CTE_FRETE_PIS_ALIQ / 100));
+  const vCOFINS = round2(vBC * (CTE_FRETE_COFINS_ALIQ / 100));
+  return { vBC, vPIS, vCOFINS };
+}
+
+/**
+ * IBS/CBS do frete: base = vPrest − ICMS − PIS − COFINS (reforma tributária / NT 2025.002).
+ */
+export function calcularIbsCbsFreteCte(
+  vFrete: number,
+  icms: CteIcmsFrete,
+  rates: Partial<typeof CTE_IBS_CBS_DEFAULT> = {},
+): CteIbsCbsFrete {
+  const { vPIS, vCOFINS } = calcularPisCofinsFreteCte(vFrete, icms.vICMS);
+  const vBC = round2(Math.max(0, vFrete - icms.vICMS - vPIS - vCOFINS));
+  const pIBSUF = rates.pIBSUF ?? CTE_IBS_CBS_DEFAULT.pIBSUF;
+  const pIBSMun = rates.pIBSMun ?? CTE_IBS_CBS_DEFAULT.pIBSMun;
+  const pCBS = rates.pCBS ?? CTE_IBS_CBS_DEFAULT.pCBS;
+  const vIBSUF = round2(vBC * (pIBSUF / 100));
+  const vIBSMun = round2(vBC * (pIBSMun / 100));
+  const vIBS = round2(vIBSUF + vIBSMun);
+  const vCBS = round2(vBC * (pCBS / 100));
+
+  return {
+    cst: rates.cst ?? CTE_IBS_CBS_DEFAULT.cst,
+    cClassTrib: rates.cClassTrib ?? CTE_IBS_CBS_DEFAULT.cClassTrib,
+    vBC,
+    pIBSUF,
+    vIBSUF,
+    pIBSMun,
+    vIBSMun,
+    vIBS,
+    pCBS,
+    vCBS,
+    vPIS,
+    vCOFINS,
+    vTotDFe: round2(vFrete),
+  };
 }
 
 export type NfeDestinoInput = {
@@ -236,15 +308,19 @@ export function participanteRemetenteFromTenant(tenant: TenantRemetenteInput): C
 export function buildCteFiscalPayload(
   nfe: NfeDestinoInput,
   tenant: TenantRemetenteInput,
-  opts?: { taxRule?: CteTaxRuleIcms | null },
+  opts?: { taxRule?: CteTaxRuleIcms | null; vFrete?: number },
 ): CteFiscalPayload {
   const remetente = participanteRemetenteFromTenant(tenant);
   const destinatario = participanteDestinoFromNfe(nfe);
   const ufIni = tenant.uf;
   const ufFim = nfe.destUf;
   const valorCarga = num(nfe.valor);
-  const vFrete = calcularValorFreteRemessa(valorCarga);
+  const vFrete =
+    typeof opts?.vFrete === "number" && opts.vFrete > 0
+      ? round2(opts.vFrete)
+      : calcularValorFreteRemessa(valorCarga);
   const icms = calcularIcmsFreteCte(vFrete, ufIni, ufFim, num(nfe.aliqIcms), opts?.taxRule);
+  const ibsCbs = calcularIbsCbsFreteCte(vFrete, icms);
 
   return {
     nfeChaveRef: nfe.chave,
@@ -252,6 +328,7 @@ export function buildCteFiscalPayload(
     remetente,
     destinatario,
     icms,
+    ibsCbs,
     rota: {
       cMunIni: tenant.codigoMunicipio,
       xMunIni: tenant.municipio,

@@ -93,7 +93,7 @@ export function buildCteXmlDocument(input: BuildCteXmlDocumentInput): XmlDocumen
 
   infCteChildren.push(
     buildCteVPrestNode(input.valor),
-    buildCteImpNode(icms),
+    buildCteImpNode(icms, fp?.ibsCbs),
     buildCteInfCteNormNode({
       valorCarga: input.valorCarga,
       pesoCarga: input.pesoCarga,

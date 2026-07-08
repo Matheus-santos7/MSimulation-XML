@@ -55,6 +55,8 @@ describe("montarDadosCteFromNfe", () => {
     });
 
     assert.equal(dados.valor, 33.4);
+    assert.equal(dados.fiscalPayload.icms.vBC, 33.4);
+    assert.equal(dados.fiscalPayload.ibsCbs.vTotDFe, 33.4);
   });
 
   it("vincula venda e monta destinatário a partir da NF-e", async () => {

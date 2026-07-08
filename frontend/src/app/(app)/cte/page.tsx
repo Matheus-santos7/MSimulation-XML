@@ -5,7 +5,7 @@ import { DeleteConfirmButton } from "@/components/delete-confirm-button";
 import { PageHeader, StatusBadge } from "@/components/fiscal-ui";
 import { resolveActiveTenantId } from "@/lib/active-tenant";
 import { listCtes } from "@/lib/fiscal-api";
-import { brl, formatChave } from "@/lib/format";
+import { brl } from "@/lib/format";
 
 export const metadata: Metadata = { title: "CT-e" };
 
@@ -50,7 +50,7 @@ export default async function CTePage() {
                       <span className="text-muted-foreground">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 font-mono text-[13px] text-muted-foreground">{formatChave(c.chave)}</td>
+                  <td className="px-4 py-3 font-mono text-[13px] text-muted-foreground break-all">{c.chave}</td>
                   <td className="px-4 py-3 text-[14px]">
                     {c.origem} → {c.destino}
                   </td>

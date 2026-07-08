@@ -4,7 +4,7 @@ import {
   resolveNumeroInicialNfe,
   type VendaMlReturnNoteDestinatario,
 } from "@msimulation-xml/fiscal-core";
-import { FiscalStatus, NFeTipo, Prisma } from "../../../../generated/prisma/client.js";
+import { FiscalStatus, NFeTipo, Prisma, type Product, type Tenant } from "../../../../generated/prisma/client.js";
 import { buildChaveNFe } from "../../../fiscal-documents/domain/services/nfe-chave.js";
 import { enrichTaxSnapshot } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
 import { proximoNumeroNfe } from "../../../fiscal-documents/domain/services/nfe-sequencia.js";
@@ -16,13 +16,13 @@ import {
   type CamposDestinoRetorno,
 } from "../../../remessas/domain/services/retorno-simbolico-dest.js";
 import { taxSnapshotFromRule } from "../../../tax/domain/services/tax-snapshot.js";
-import type { Tenant } from "../../../../generated/prisma/client.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import {
-  calculateInboundInvoice,
-  resolveIcmsFallbackRate,
+  buildFiscalItem,
   orderLineFromProduct,
+  resolveIcmsFallbackRate,
 } from "../../../tax/index.js";
+import { calcularNotaFiscal } from "../../../tax/domain/services/tax-engine.js";
 import {
   consumeRemessaFifoBalanceForSale,
   loadRemessaForReturnDestination,
@@ -30,9 +30,17 @@ import {
 } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
 import { persistNfeXmlFromEmission } from "../../../fiscal-documents/infrastructure/xml/nfe-xml-service.js";
 import type { EmissionContext } from "../../domain/entities/emission-context.entity.js";
-import type { OrderForEmit } from "../../domain/entities/order-for-emit.entity.js";
+import type { OrderForEmit, OrderItemForEmit } from "../../domain/entities/order-for-emit.entity.js";
 import type { ReturnNoteCreated, SalesChainRules } from "../../application/dto/sales-chain.dto.js";
 import { requirePrimaryOrderItem } from "../../domain/services/order-for-emit.helpers.js";
+import { sumOrderQuantidade } from "../../domain/services/sales-chain.service.js";
+
+/** Dados resolvidos por linha antes de emitir o retorno consolidado. */
+export type ReturnLinePrep = {
+  item: OrderItemForEmit;
+  preview: PreviewRemessaFifoVenda;
+  rules: SalesChainRules;
+};
 
 function autXmlCpfsFromSettings(
   settings: SalesChainRules["emitterSettings"],
@@ -67,25 +75,59 @@ function destinatarioFromReturnNote(
 }
 
 /**
- * Emite NF-e **RETORNO_SIMBOLICO** referenciando a remessa física FIFO.
+ * Emite uma única NF-e **RETORNO_SIMBOLICO** com todos os itens do pedido (`<det>` múltiplos).
  *
- * Usa `valorTotalCusto` do contexto e regra inbound; persiste XML autorizado.
+ * A referência de remessa (`nfeReferenciaId`) usa a FIFO principal da primeira linha;
+ * o consumo FIFO de cada SKU é vinculado depois via {@link consumeShipmentForReturn}.
  */
-export async function emitReturnNote(
+export async function emitConsolidatedReturnNote(
   tx: PrismaTx,
   order: OrderForEmit,
   ctx: EmissionContext,
-  rules: SalesChainRules,
-  fifoPreview: PreviewRemessaFifoVenda,
+  lines: ReturnLinePrep[],
 ): Promise<ReturnNoteCreated> {
-  const { tenant } = order;
-  const item = requirePrimaryOrderItem(order);
-  const { inboundTaxRule, emitterSettings } = rules;
+  if (lines.length === 0) {
+    throw new Error("Retorno consolidado exige ao menos uma linha");
+  }
 
-  const remessa = await loadRemessaForReturnDestination(tx, fifoPreview.remessaNfeId);
+  const { tenant } = order;
+  const primaryItem = requirePrimaryOrderItem(order);
+  const primaryLine = lines[0]!;
+  const { emitterSettings } = primaryLine.rules;
+
+  const remessa = await loadRemessaForReturnDestination(tx, primaryLine.preview.remessaNfeId);
   const destUf = remessa.destUf;
   const destino = destinoRetornoFromRemessa(remessa, remessa.unidadeDestino);
   const destIe = destIeRetornoFromRemessa(remessa, remessa.unidadeDestino);
+  const fallbackRate = resolveIcmsFallbackRate(tenant.uf, destUf, "inbound", emitterSettings);
+  const cfop = resolveRetornoSimbolicoCfop(tenant.uf, destUf);
+
+  const inboundFiscalItems = lines.map((line) => {
+    const { inboundTaxRule } = line.rules;
+    const lineFallback = resolveIcmsFallbackRate(tenant.uf, destUf, "inbound", line.rules.emitterSettings);
+    return buildFiscalItem(
+      orderLineFromProduct(line.item.product, {
+        cfop,
+        quantidade: line.item.quantidade,
+        valorUnitario: Number(line.item.product.precoCusto),
+      }),
+      inboundTaxRule,
+      {
+        ufOrigem: tenant.uf,
+        ufDestino: destUf,
+        customerType: "taxpayer",
+        operationTipo: "RETORNO_SIMBOLICO",
+        emitterSettings: line.rules.emitterSettings,
+      },
+      lineFallback,
+    );
+  });
+
+  const returnInvoice = calcularNotaFiscal(inboundFiscalItems);
+  const valor = returnInvoice.totais.vNF;
+  const valorIcms = returnInvoice.totais.vICMS;
+  const aliqIcms = inboundFiscalItems[0]?.icms.pICMS ?? fallbackRate;
+  const quantidadeTotal = sumOrderQuantidade(order);
 
   const numeroInicial = resolveNumeroInicialNfe(emitterSettings, ctx.serie, {
     serieRemessa: tenant.serieRemessa,
@@ -94,35 +136,20 @@ export async function emitReturnNote(
   const numero = await proximoNumeroNfe(tx, tenant.id, ctx.serie, numeroInicial);
   const chave = buildChaveNFe({ uf: tenant.uf, cnpj: tenant.cnpj, serie: ctx.serie, numero });
 
-  const fallbackRate = resolveIcmsFallbackRate(tenant.uf, destUf, "inbound", emitterSettings);
-  const cfop = resolveRetornoSimbolicoCfop(tenant.uf, destUf);
-  const calc = calculateInboundInvoice(
-    orderLineFromProduct(item.product, {
-      cfop,
-      quantidade: item.quantidade,
-      valorUnitario: ctx.valorUnitCusto,
-    }),
-    inboundTaxRule,
-    tenant.uf,
-    destUf,
-    fallbackRate,
-    { operationTipo: "RETORNO_SIMBOLICO", emitterSettings },
-  );
-  const { valor, valorIcms, aliqIcms } = calc;
-
   const idCadIntTran = remessa.unidadeDestino?.idCadIntTran?.trim() || undefined;
   const autXmlCpfs = autXmlCpfsFromSettings(emitterSettings);
+  const primaryExTipi = primaryItem.product.exTipi?.trim();
 
   const row = await tx.nFe.create({
     data: {
       tenantId: tenant.id,
-      productId: item.product.id,
+      productId: primaryItem.product.id,
       chave,
       numero,
       serie: ctx.serie,
       natOp: RETORNO_SIMBOLICO_NAT_OP,
       cfop,
-      ncm: item.product.ncm,
+      ncm: primaryItem.product.ncm,
       ...destino,
       valor,
       valorIcms,
@@ -130,25 +157,28 @@ export async function emitReturnNote(
       status: FiscalStatus.AUTORIZADA,
       emitidaEm: ctx.emitidaEm,
       pedidoMl: ctx.pedidoMl,
-      quantidade: item.quantidade,
+      quantidade: quantidadeTotal,
       tipo: NFeTipo.RETORNO_SIMBOLICO,
       saldoDisponivel: null,
       nfeReferenciaId: remessa.id,
       fiscalPayload: enrichFiscalPayloadMlFulfillment(
         enrichFiscalPayloadWithXTexto(
           {
-            ...enrichTaxSnapshot(taxSnapshotFromRule(inboundTaxRule, fallbackRate, emitterSettings), {
-              settings: emitterSettings,
-              tipo: NFeTipo.RETORNO_SIMBOLICO,
-              valor,
-              valorIcms,
-              emitUf: tenant.uf,
-              destUf,
-              indFinal: 0,
-            }),
-            engine: calc.nota,
+            ...enrichTaxSnapshot(
+              taxSnapshotFromRule(primaryLine.rules.inboundTaxRule, fallbackRate, emitterSettings),
+              {
+                settings: emitterSettings,
+                tipo: NFeTipo.RETORNO_SIMBOLICO,
+                valor,
+                valorIcms,
+                emitUf: tenant.uf,
+                destUf,
+                indFinal: 0,
+              },
+            ),
+            engine: returnInvoice,
             ...(destIe ? { destIe } : {}),
-            ...(item.product.exTipi ? { exTipi: item.product.exTipi } : {}),
+            ...(primaryExTipi ? { exTipi: primaryExTipi } : {}),
           } as Record<string, unknown>,
           {
             tipo: NFeTipo.RETORNO_SIMBOLICO,
@@ -158,7 +188,7 @@ export async function emitReturnNote(
           },
         ),
         {
-          quantidadeTotal: item.quantidade,
+          quantidadeTotal,
           withLogistics: false,
           destIe,
           idCadIntTran,
@@ -171,7 +201,7 @@ export async function emitReturnNote(
   return {
     id: row.id,
     chave: row.chave,
-    remessaChave: fifoPreview.remessaChave,
+    remessaChave: primaryLine.preview.remessaChave,
     numero: row.numero,
     serie: row.serie,
     emitidaEm: row.emitidaEm,
@@ -180,34 +210,41 @@ export async function emitReturnNote(
 }
 
 /**
- * Debita saldo FIFO da remessa e associa consumos ao retorno simbólico emitido.
- *
- * @returns Alocações `{ remessaNfeId, nfeItemId, quantidade }` para auditoria
+ * Debita saldo FIFO da remessa e associa consumos ao retorno simbólico consolidado.
  */
-export async function consumeShipmentAndLinkReturn(
+export async function consumeShipmentForReturn(
   tx: PrismaTx,
   order: OrderForEmit,
-  returnNote: ReturnNoteCreated,
-  emitterSettings: SalesChainRules["emitterSettings"],
+  item: OrderItemForEmit,
+  returnNoteId: string,
 ) {
-  const item = requirePrimaryOrderItem(order);
-  const allocations = await consumeRemessaFifoBalanceForSale(
+  return consumeRemessaFifoBalanceForSale(
     tx,
     order.tenant.id,
     item.product.id,
     item.quantidade,
-    returnNote.id,
+    returnNoteId,
     order.destUf,
     item.product.sku,
   );
+}
 
+/**
+ * Persiste o XML autorizado do retorno consolidado com todos os produtos do pedido.
+ */
+export async function persistConsolidatedReturnXml(
+  tx: PrismaTx,
+  returnNote: ReturnNoteCreated,
+  order: OrderForEmit,
+  emitterSettings: SalesChainRules["emitterSettings"],
+) {
+  const primaryItem = requirePrimaryOrderItem(order);
   await persistNfeXmlFromEmission(tx, {
     nfeId: returnNote.id,
     tenant: order.tenant as Tenant,
-    productId: item.product.id,
+    productId: primaryItem.product.id,
+    products: order.items.map((line) => line.product as Product),
     settings: emitterSettings,
     nfeReferenciaChave: returnNote.remessaChave,
   });
-
-  return allocations;
 }

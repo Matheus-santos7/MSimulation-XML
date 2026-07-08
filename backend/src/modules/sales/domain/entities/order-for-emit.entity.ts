@@ -29,7 +29,6 @@ export type OrderItemForEmit = {
   productId: string;
   quantidade: number;
   product: OrderProductForEmit;
-  valorFrete?: number;
   valorDesconto?: number;
 };
 
@@ -37,11 +36,16 @@ export type OrderItemForEmit = {
  * Snapshot mínimo de um pedido (ou checkout) para emitir a cadeia fiscal completa.
  *
  * Contém destinatário final (comprador), itens, tenant e quantidades por linha.
+ * Fretes são do pedido como um todo (`valorFreteConsumidor` / `valorFreteSeller` no root).
  * Usado por `SalesChainOrchestrator` — não depende de registo prévio em `pedido`.
  */
 export type OrderForEmit = {
   tenantId: string;
   items: OrderItemForEmit[];
+  /** Order consumer freight for NF-e. */
+  valorFreteConsumidor?: number;
+  /** Order seller freight for CT-e. */
+  valorFreteSeller?: number;
   destCpf: string;
   destNome: string;
   destLogradouro: string;

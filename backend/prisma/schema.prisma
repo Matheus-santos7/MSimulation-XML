@@ -375,6 +375,8 @@ model Pedido {
   destTelefone       String?      @map("dest_telefone")
   destIndIeDest      Int          @default(9) @map("dest_ind_ie_dest")
   destIe             String?      @map("dest_ie") @db.VarChar(20)
+  freteConsumidor    Decimal      @default(0) @map("frete_consumidor") @db.Decimal(15, 2)
+  freteSeller        Decimal      @default(0) @map("frete_seller") @db.Decimal(15, 2)
   createdAt          DateTime     @default(now()) @map("created_at")
   updatedAt          DateTime     @updatedAt @map("updated_at")
   itens              PedidoItem[]
@@ -394,7 +396,6 @@ model PedidoItem {
   numeroItem Int      @map("numero_item")
   quantidade Int      @default(1)
   desconto   Decimal  @default(0) @db.Decimal(15, 2)
-  frete      Decimal  @default(0) @db.Decimal(15, 2)
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 

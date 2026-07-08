@@ -36,15 +36,14 @@ export function sumOrderEmitTotals(order: OrderForEmit): {
   valorTotalVenda: number;
   valorTotalCusto: number;
 } {
-  let valorTotalVenda = 0;
+  let valorTotalVenda = order.valorFreteConsumidor ?? 0;
   let valorTotalCusto = 0;
 
   for (const item of order.items) {
     const unitSalePrice = Number(item.product.preco);
     const unitCostPrice = Number(item.product.precoCusto);
-    const frete = item.valorFrete ?? 0;
     const desconto = item.valorDesconto ?? 0;
-    const lineSale = lineTotal(unitSalePrice, item.quantidade) + frete - desconto;
+    const lineSale = lineTotal(unitSalePrice, item.quantidade) - desconto;
     const lineCost = lineTotal(unitCostPrice, item.quantidade);
 
     valorTotalVenda += lineSale;

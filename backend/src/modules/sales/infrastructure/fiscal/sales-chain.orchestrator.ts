@@ -5,25 +5,37 @@ import { mapNfe } from "../../../fiscal-documents/presentation/mappers/fiscal-ma
 import { previewRemessaPrincipalFifoParaVenda } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
 import type { SalesChainResult } from "../../application/dto/sales-chain.dto.js";
 import type { OrderForEmit } from "../../domain/entities/order-for-emit.entity.js";
+import { sumOrderFreteCte } from "../../domain/services/order-freight.validation.js";
 import type { SalesChainPort } from "../../domain/ports/sales-chain.port.js";
 import { sliceOrderForEmitItem } from "../../domain/services/order-for-emit.helpers.js";
 import {
   assertProductWithTaxRule,
   buildEmissionContext,
 } from "../../domain/services/sales-chain.service.js";
-import { consumeShipmentAndLinkReturn, emitReturnNote } from "./emit-return-note.js";
+import {
+  consumeShipmentForReturn,
+  emitConsolidatedReturnNote,
+  persistConsolidatedReturnXml,
+  type ReturnLinePrep,
+} from "./emit-return-note.js";
 import { emitSaleNote } from "./emit-sale-note.js";
 import { emitSaleCte } from "./cte-sale.adapter.js";
 import { resolveSalesChainRules } from "./resolve-sales-chain-rules.js";
-import type { ReturnNoteCreated } from "../../application/dto/sales-chain.dto.js";
 import type { SalesChainRules } from "../../application/dto/sales-chain.dto.js";
 import type { PreviewRemessaFifoVenda } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
+
+function sumOrderFreteCteFromOrder(order: OrderForEmit): number {
+  return sumOrderFreteCte({
+    freteConsumidor: order.valorFreteConsumidor ?? 0,
+    freteSeller: order.valorFreteSeller ?? 0,
+  });
+}
 
 /**
  * Orquestrador da **Cadeia de Vendas** (Sales Chain).
  *
- * Para pedidos multi-item, executa FIFO + retorno simbólico por linha e emite
- * uma única NF-e de VENDA com todos os `<det>`.
+ * Para pedidos multi-item: uma NF-e de RETORNO_SIMBOLICO com todos os `<det>`,
+ * consumo FIFO por linha e uma NF-e de VENDA consolidada.
  */
 export class SalesChainOrchestrator implements SalesChainPort {
   async emit(db: DbClient, order: OrderForEmit): Promise<SalesChainResult> {
@@ -31,10 +43,10 @@ export class SalesChainOrchestrator implements SalesChainPort {
     const ctx = buildEmissionContext(order, ruleBaseId);
 
     return runFiscalTransaction(db, order.tenantId, async (tx) => {
-      const returnNotes: ReturnNoteCreated[] = [];
       const allocations: unknown[] = [];
       let lastRules: SalesChainRules | null = null;
       let fifoPreview: PreviewRemessaFifoVenda | null = null;
+      const returnLines: ReturnLinePrep[] = [];
 
       for (const item of order.items) {
         const itemOrder = sliceOrderForEmitItem(order, item);
@@ -56,37 +68,41 @@ export class SalesChainOrchestrator implements SalesChainPort {
           itemRuleBaseId,
         );
         lastRules = rules;
+        returnLines.push({ item, preview, rules });
+      }
 
-        const returnNote = await emitReturnNote(tx, itemOrder, ctx, rules, preview);
-        returnNotes.push(returnNote);
-        const itemAllocations = await consumeShipmentAndLinkReturn(
+      const returnNote = await emitConsolidatedReturnNote(tx, order, ctx, returnLines);
+
+      for (const line of returnLines) {
+        const itemAllocations = await consumeShipmentForReturn(
           tx,
-          itemOrder,
-          returnNote,
-          rules.emitterSettings,
+          order,
+          line.item,
+          returnNote.id,
         );
         allocations.push(...itemAllocations);
       }
 
-      const primaryReturn = returnNotes[0]!;
+      await persistConsolidatedReturnXml(tx, returnNote, order, lastRules!.emitterSettings);
+
       const saleRow = await emitSaleNote(
         tx,
         order,
         ctx,
         lastRules!,
-        primaryReturn,
+        returnNote,
         fifoPreview!.destUf,
         fifoPreview!.destCodigoMunicipio,
       );
-      const saleCte = await emitSaleCte(tx, order.tenant as Tenant, saleRow);
+      const saleCte = await emitSaleCte(tx, order.tenant as Tenant, saleRow, sumOrderFreteCteFromOrder(order));
 
       const returnWithRef = await tx.nFe.findUniqueOrThrow({
-        where: { id: primaryReturn.id },
+        where: { id: returnNote.id },
         include: { nfeReferencia: { select: { chave: true, numero: true, serie: true } } },
       });
 
       return {
-        venda: mapNfe(saleRow, primaryReturn.chave),
+        venda: mapNfe(saleRow, returnNote.chave),
         retorno: mapNfe(returnWithRef, returnWithRef.nfeReferencia?.chave),
         cteVenda: saleCte,
         alocacoes: allocations,

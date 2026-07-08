@@ -47,6 +47,16 @@ const prismaStub = {
 } as Parameters<typeof montarDadosCteFromNfe>[0];
 
 describe("montarDadosCteFromNfe", () => {
+  it("usa valor de frete informado na venda", async () => {
+    const dados = await montarDadosCteFromNfe(prismaStub, tenant as never, nfeVenda, "venda", {
+      serie: 1,
+      numero: 42,
+      valorFrete: 33.4,
+    });
+
+    assert.equal(dados.valor, 33.4);
+  });
+
   it("vincula venda e monta destinatário a partir da NF-e", async () => {
     const dados = await montarDadosCteFromNfe(prismaStub, tenant as never, nfeVenda, "venda", {
       serie: 1,

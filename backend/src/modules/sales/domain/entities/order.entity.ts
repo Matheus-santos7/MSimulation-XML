@@ -14,9 +14,8 @@ export type OrderItemSummary = {
   productId: string;
   quantidade: number;
   desconto: number;
-  frete: number;
   product: OrderProductSummary;
-  /** Total value of this line (unit price * qty + frete - desconto). */
+  /** Total value of this line (unit price * qty - desconto). */
   valorTotalLinha: number;
 };
 
@@ -45,6 +44,10 @@ export type Order = {
   pedidoMl?: string;
   /** Flat list of order items (at least one). */
   items: OrderItemSummary[];
+  /** Consumer freight on NF-e (`<vFrete>`), order-level. */
+  freteConsumidor: number;
+  /** Seller freight — complements CT-e value (not on NF-e), order-level. */
+  freteSeller: number;
   comprador: Buyer;
   /** Total value of the order (sum of line totals). */
   valorTotal: number;

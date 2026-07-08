@@ -34,8 +34,9 @@ export function pedidoToFormValues(p: PedidoDto): PedidoFormValues {
       productId: item.productId,
       quantidade: String(item.quantidade),
       desconto: brValueToInput(item.desconto),
-      frete: brValueToInput(item.frete),
     })),
+    freteConsumidor: brValueToInput(p.freteConsumidor),
+    freteSeller: brValueToInput(p.freteSeller),
     cpf: c.cpf,
     nome: c.nome,
     logradouro: c.logradouro,
@@ -95,10 +96,14 @@ export function parsePedidoForm(formData: FormData): PedidoCheckoutInput {
     productId: String(formData.get(`items[${index}].productId`) ?? ""),
     quantidade: Number(formData.get(`items[${index}].quantidade`) ?? 1),
     desconto: parseMonetaryInput(formData.get(`items[${index}].desconto`)),
-    frete: parseMonetaryInput(formData.get(`items[${index}].frete`)),
   })).filter((item) => item.productId);
 
-  return { items, comprador };
+  return {
+    items,
+    comprador,
+    freteConsumidor: parseMonetaryInput(formData.get("freteConsumidor")),
+    freteSeller: parseMonetaryInput(formData.get("freteSeller")),
+  };
 }
 
 export function formValuesToFormData(v: PedidoFormValues): FormData {
@@ -108,8 +113,9 @@ export function formValuesToFormData(v: PedidoFormValues): FormData {
     fd.set(`items[${index}].productId`, item.productId);
     fd.set(`items[${index}].quantidade`, item.quantidade);
     fd.set(`items[${index}].desconto`, item.desconto);
-    fd.set(`items[${index}].frete`, item.frete);
   });
+  fd.set("freteConsumidor", v.freteConsumidor);
+  fd.set("freteSeller", v.freteSeller);
   fd.set("cpf", v.cpf);
   fd.set("nome", v.nome);
   fd.set("logradouro", v.logradouro);

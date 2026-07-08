@@ -18,9 +18,10 @@ import { icmsTotFromEngine, type EngineItem } from "../fiscal-engine-xml.js";
 import type { IcmsTotValues } from "../fiscal/fiscal-xml.util.js";
 import {
   resolveIbsCbsItemVBc,
+  sumIbsCbsVBc,
   VENDA_IBS_CBS_DEFAULTS,
 } from "../fiscal/fiscal-xml.util.js";
-import type { ProductXmlInput } from "../types.js";
+import type { NFeItemXmlInput, ProductXmlInput } from "../types.js";
 import { BaseNFeBuilder } from "./base-nfe.builder.js";
 import type { DetBuildResult, IdeBuildOptions, NFeBuilderInput } from "./builder.types.js";
 import {
@@ -40,34 +41,41 @@ import { buildItemImpostoNode } from "./nodes/imposto.node.js";
 import { buildTotalNode } from "./nodes/total.node.js";
 import { buildTranspFromEmitter } from "./nodes/transp.node.js";
 
-export type VendaStrategyContext = {
+type VendaItemContext = {
+  index: number;
+  qCom: number;
+  cProd: string;
+  cEAN: string;
+  xProd: string;
+  ncm: string;
+  uCom: string;
+  vUnCom: number;
+  vProd: number;
+  vFrete: number;
+  vDesc: number;
+  orig: number;
+  cest?: string;
+  exTipi?: string;
+  nfci?: string;
+  xPed?: string;
+  infAdProd?: string;
+  vBcIcms: number;
+  valorIcms: number;
+  ibsCbsVBc: number | null;
+  product?: ProductXmlInput;
+};
+
+type VendaStrategyContext = {
   stockUf: string;
   cfop: string;
   idDest: number;
   vTotTrib: number;
-  vFrete: number;
-  item: {
-    qCom: number;
-    cProd: string;
-    cEAN: string;
-    xProd: string;
-    ncm: string;
-    uCom: string;
-    orig: number;
-    vUnCom: number;
-    vProd: number;
-    vFrete: number;
-    /** Desconto comercial da linha em R$ (vai para `<vDesc>` em `<prod>`). */
-    vDesc: number;
-    cest?: string;
-    exTipi?: string;
-    nfci?: string;
-    xPed?: string;
-    infAdProd?: string;
-  };
+  items: VendaItemContext[];
+  totalQty: number;
   taxes: {
     icmsTot: IcmsTotValues;
     vNF: number;
+    vProdTotal: number;
     includeReforma: boolean;
     vBCIBSCBS: number | null;
     vTotTrib: number;
@@ -84,6 +92,22 @@ export class VendaNFeStrategyBuilder extends BaseNFeBuilder {
   constructor(input: NFeBuilderInput) {
     super(input);
     this.vendaCtx = this.resolveVendaContext();
+  }
+
+  private resolveItemCount(): number {
+    const { nfe, product, products } = this.input;
+    return Math.max(
+      this.ctx.engine?.itens.length ?? 0,
+      nfe.itens?.length ?? 0,
+      products?.length ?? 0,
+      1,
+    );
+  }
+
+  private resolveProductAt(index: number): ProductXmlInput | undefined {
+    const { nfe, product, products } = this.input;
+    const dtoItem = nfe.itens?.[index];
+    return products?.[index] ?? dtoItem?.product ?? (index === 0 ? product : undefined);
   }
 
   private resolveVendaContext(): VendaStrategyContext {
@@ -106,7 +130,7 @@ export class VendaNFeStrategyBuilder extends BaseNFeBuilder {
     const idDest = stockUf.toUpperCase() === de.uf.toUpperCase() ? 1 : 2;
     const vTotTrib = asNum(fiscal.vTotTrib, 0);
 
-    const engineFrete = this.ctx.engine?.itens[0]?.vFrete ?? this.ctx.engine?.totais.vFrete ?? 0;
+    const engineFrete = this.ctx.engine?.totais.vFrete ?? this.ctx.engine?.itens[0]?.vFrete ?? 0;
     const payloadFrete = asNum(fiscal.valorFrete, 0);
     const vFrete =
       engineFrete > 0
@@ -115,38 +139,40 @@ export class VendaNFeStrategyBuilder extends BaseNFeBuilder {
           ? payloadFrete
           : this.ctx.emitter.bases.vFrete;
 
-    const engineDesconto = this.ctx.engine?.itens[0]?.vDesc ?? this.ctx.engine?.totais.vDesc ?? 0;
+    const engineDesconto = this.ctx.engine?.totais.vDesc ?? this.ctx.engine?.itens[0]?.vDesc ?? 0;
     const payloadDesconto = asNum(fiscal.valorDesconto, 0);
     const vDescPayload = engineDesconto > 0 ? engineDesconto : payloadDesconto;
-
-    const qCom = nfe.quantidade ?? 1;
-    const vUnCom = productUnitPriceForNfe(product, nfe);
-    const vProd = nfe.valor;
-
-    let vUnComOut = vUnCom;
-    let vProdOut = vProd;
-    let qComOut = qCom;
-    let vFreteOut = vFrete;
-    let vDescOut = vDescPayload;
-    let vNFOut = nfe.valor + vFrete - vDescPayload;
-    let icmsTot: IcmsTotValues;
 
     const icms = (fiscal.icms as Record<string, unknown> | undefined) ?? {};
     const ipi = (fiscal.ipi as Record<string, unknown> | undefined) ?? {};
     const pis = (fiscal.pis as Record<string, unknown> | undefined) ?? {};
     const cofins = (fiscal.cofins as Record<string, unknown> | undefined) ?? {};
     const ibsCbs = (fiscal.ibsCbs as Record<string, unknown> | undefined) ?? {};
-    const orig = product?.origem ?? 0;
 
-    if (this.ctx.engine?.itens[0]) {
-      const item = this.ctx.engine.itens[0];
+    const itemCount = this.resolveItemCount();
+    const totalQty =
+      this.ctx.engine?.itens.reduce((sum, item) => sum + item.quantidade, 0) ??
+      nfe.itens?.reduce((sum, item) => sum + item.quantidade, 0) ??
+      nfe.quantidade;
+
+    const nfciRaw =
+      optionalText(typeof fiscal.nfci === "string" ? fiscal.nfci : undefined) ||
+      optionalText(product?.nfci);
+    const xPed =
+      optionalText(typeof fiscal.xPed === "string" ? fiscal.xPed : undefined) ||
+      optionalText(nfe.pedidoML);
+    const infAdProd = optionalText(
+      typeof fiscal.infAdProd === "string" ? fiscal.infAdProd : undefined,
+    );
+
+    let icmsTot: IcmsTotValues;
+    let vNFOut: number;
+    let vProdTotal: number;
+
+    if (this.ctx.engine?.itens.length) {
       icmsTot = { ...icmsTotFromEngine(this.ctx.engine.totais, vFrete), vTotTrib };
-      vUnComOut = item.valorUnitario;
-      vProdOut = item.vProd;
-      qComOut = item.quantidade;
-      vFreteOut = item.vFrete ?? 0;
-      vDescOut = item.vDesc ?? 0;
       vNFOut = this.ctx.engine.totais.vNF;
+      vProdTotal = this.ctx.engine.totais.vProd;
     } else {
       const vBcIcms = asNum(icms.vBc, this.ctx.emitter.bases.vBcIcms);
       const vBcPis = asNum(pis.vBc, this.ctx.emitter.bases.vBcPisCofins);
@@ -158,8 +184,9 @@ export class VendaNFeStrategyBuilder extends BaseNFeBuilder {
       const vPis = Math.round(vBcPis * (pPis / 100) * 100) / 100;
       const pCofins = asNum(cofins.aliquota, 7.6);
       const vCofins = Math.round(vBcPis * (pCofins / 100) * 100) / 100;
-      const vNF = Math.round((nfe.valor + vFrete + vIpi) * 100) / 100;
+      const vNF = Math.round((nfe.valor + vFrete + vIpi - vDescPayload) * 100) / 100;
       vNFOut = vNF;
+      vProdTotal = nfe.valor;
       const difalFiscal = (fiscal.difal as Record<string, unknown> | undefined) ?? {};
       const interstate = idDest === 2;
       icmsTot = {
@@ -167,6 +194,7 @@ export class VendaNFeStrategyBuilder extends BaseNFeBuilder {
         vICMS: valorIcms,
         vProd: nfe.valor,
         vFrete,
+        vDesc: vDescPayload,
         vIPI: vIpi,
         vPIS: vPis,
         vCOFINS: vCofins,
@@ -178,53 +206,72 @@ export class VendaNFeStrategyBuilder extends BaseNFeBuilder {
       };
     }
 
-    const vendaIbsCbsBcInput = this.ctx.engine?.itens[0]
-      ? ibsCbsBcInputFromEngineItem(this.ctx.engine.itens[0])
-      : ibsCbsBcInputFromSnapshot(vProdOut, fiscal, asNum(icms.valorIcms, nfe.valorICMS));
+    const ibsCbsVBcValues: number[] = [];
+    const items: VendaItemContext[] = [];
+
+    for (let i = 0; i < itemCount; i++) {
+      const dtoItem: NFeItemXmlInput | undefined = nfe.itens?.[i];
+      const prod = this.resolveProductAt(i);
+      const engineItem = this.ctx.engine?.itens[i];
+      const qCom =
+        dtoItem?.quantidade ??
+        engineItem?.quantidade ??
+        (itemCount === 1 ? nfe.quantidade : 1);
+      const vUnComOut =
+        engineItem?.valorUnitario ??
+        (dtoItem?.valor != null && qCom ? dtoItem.valor / qCom : productUnitPriceForNfe(prod, nfe));
+      const vProdOut = engineItem?.vProd ?? dtoItem?.valor ?? (itemCount === 1 ? nfe.valor : 0);
+      const vFreteOut = engineItem?.vFrete ?? (i === 0 ? vFrete : 0);
+      const vDescOut = engineItem?.vDesc ?? (itemCount === 1 ? vDescPayload : 0);
+      const vBcIcmsItem = asNum(engineItem?.icms.vBC, asNum(icms.vBc, this.ctx.emitter.bases.vBcIcms));
+      const valorIcmsItem = asNum(engineItem?.icms.vICMS, asNum(icms.valorIcms, nfe.valorICMS));
+      const ibsCbsBcInput = engineItem
+        ? ibsCbsBcInputFromEngineItem(engineItem)
+        : ibsCbsBcInputFromSnapshot(vProdOut, fiscal, valorIcmsItem);
+      const itemVBcIbsCbs = resolveIbsCbsItemVBc(ibsCbs, ibsCbsBcInput, VENDA_IBS_CBS_DEFAULTS);
+      if (itemVBcIbsCbs != null) ibsCbsVBcValues.push(itemVBcIbsCbs);
+
+      items.push({
+        index: i,
+        qCom,
+        cProd: prod?.sku ?? dtoItem?.product?.sku ?? `SKU-${nfe.numero}-${i + 1}`,
+        cEAN: formatEanForXml(prod?.ean ?? dtoItem?.product?.ean),
+        xProd: prod?.nome ?? dtoItem?.product?.nome ?? nfe.natOp,
+        ncm: prod?.ncm ?? dtoItem?.ncm ?? dtoItem?.product?.ncm ?? nfe.ncm,
+        uCom: prod?.unidade ?? dtoItem?.product?.unidade ?? "UN",
+        vUnCom: vUnComOut,
+        vProd: vProdOut,
+        vFrete: vFreteOut,
+        vDesc: vDescOut,
+        orig: prod?.origem ?? dtoItem?.product?.origem ?? 0,
+        cest: prod?.cest ?? dtoItem?.product?.cest,
+        exTipi: prod?.exTipi ?? dtoItem?.product?.exTipi,
+        nfci: i === 0 ? nfciRaw : undefined,
+        xPed: i === 0 ? xPed : undefined,
+        infAdProd: i === 0 ? infAdProd : undefined,
+        vBcIcms: vBcIcmsItem,
+        valorIcms: valorIcmsItem,
+        ibsCbsVBc: itemVBcIbsCbs,
+        product: prod,
+      });
+    }
+
     const hasIbsCbsPayload =
       ibsCbs.st != null || ibsCbs.cst != null || ibsCbs.cClassTrib != null;
-    const vendaVBcIbsCbs = hasIbsCbsPayload
-      ? resolveIbsCbsItemVBc(ibsCbs, vendaIbsCbsBcInput, VENDA_IBS_CBS_DEFAULTS)
-      : null;
-
-    const nfciRaw =
-      optionalText(typeof fiscal.nfci === "string" ? fiscal.nfci : undefined) ||
-      optionalText(product?.nfci);
-    const xPed =
-      optionalText(typeof fiscal.xPed === "string" ? fiscal.xPed : undefined) ||
-      optionalText(nfe.pedidoML);
 
     return {
       stockUf,
       cfop,
       idDest,
       vTotTrib,
-      vFrete,
-      item: {
-        qCom: qComOut,
-        cProd: product?.sku ?? `SKU-${nfe.numero}`,
-        cEAN: formatEanForXml(product?.ean),
-        xProd: product?.nome ?? nfe.natOp,
-        ncm: product?.ncm ?? nfe.ncm,
-        uCom: product?.unidade ?? "UN",
-        orig,
-        vUnCom: vUnComOut,
-        vProd: vProdOut,
-        vFrete: vFreteOut,
-        vDesc: vDescOut,
-        cest: product?.cest,
-        exTipi: product?.exTipi,
-        nfci: nfciRaw,
-        xPed,
-        infAdProd: optionalText(
-          typeof fiscal.infAdProd === "string" ? fiscal.infAdProd : undefined,
-        ),
-      },
+      items,
+      totalQty,
       taxes: {
         icmsTot,
         vNF: vNFOut,
-        includeReforma: hasIbsCbsPayload && vendaVBcIbsCbs != null,
-        vBCIBSCBS: vendaVBcIbsCbs,
+        vProdTotal,
+        includeReforma: hasIbsCbsPayload && ibsCbsVBcValues.length > 0,
+        vBCIBSCBS: sumIbsCbsVBc(ibsCbsVBcValues),
         vTotTrib,
       },
       infCplVenda: optionalText(
@@ -254,66 +301,68 @@ export class VendaNFeStrategyBuilder extends BaseNFeBuilder {
   }
 
   protected buildDet(): DetBuildResult {
-    const { item, taxes } = this.vendaCtx;
     const fiscal = this.ctx.fiscal;
     const icms = (fiscal.icms as Record<string, unknown> | undefined) ?? {};
-    const engineItem = this.ctx.engine?.itens[0];
-    const ibsCbs = (fiscal.ibsCbs as Record<string, unknown> | undefined) ?? {};
 
-    const impostoNode = buildItemImpostoNode({
-      engineItem,
-      fiscal,
-      emitter: this.ctx.emitter,
-      icmsSnapshotFallback: {
-        orig: item.orig,
-        icms,
-        vBcIcms: asNum(icms.vBc, this.ctx.emitter.bases.vBcIcms),
-        valorIcms: asNum(icms.valorIcms, this.ctx.nfe.valorICMS),
-      },
-      ibsCbsMode: "venda",
-      ibsCbsVBc: taxes.vBCIBSCBS,
-      vTotTrib: taxes.vTotTrib > 0 ? taxes.vTotTrib : undefined,
+    return this.vendaCtx.items.map((item) => {
+      const engineItem = this.ctx.engine?.itens[item.index];
+      const impostoNode = buildItemImpostoNode({
+        engineItem,
+        fiscal,
+        emitter: this.ctx.emitter,
+        icmsSnapshotFallback: {
+          orig: item.orig,
+          icms,
+          vBcIcms: item.vBcIcms,
+          valorIcms: item.valorIcms,
+        },
+        ibsCbsMode: "venda",
+        ibsCbsVBc: item.ibsCbsVBc,
+        vTotTrib: item.index === 0 && this.vendaCtx.taxes.vTotTrib > 0
+          ? this.vendaCtx.taxes.vTotTrib
+          : undefined,
+      });
+
+      const prod: XmlObject = {
+        cProd: item.cProd,
+        cEAN: item.cEAN,
+        xProd: item.xProd,
+        NCM: item.ncm,
+        CFOP: this.vendaCtx.cfop,
+        uCom: item.uCom,
+        qCom: item.qCom.toFixed(4),
+        vUnCom: item.vUnCom.toFixed(8),
+        vProd: item.vProd.toFixed(2),
+        cEANTrib: item.cEAN,
+        uTrib: item.uCom,
+        qTrib: item.qCom.toFixed(4),
+        vUnTrib: item.vUnCom.toFixed(8),
+        indTot: 1,
+      };
+      if (item.cest) prod.CEST = item.cest;
+      if (item.exTipi) prod.EXTIPI = item.exTipi;
+      if (item.vFrete > 0) prod.vFrete = item.vFrete.toFixed(2);
+      if (item.vDesc > 0) prod.vDesc = item.vDesc.toFixed(2);
+      if (item.xPed) prod.xPed = item.xPed;
+      if (item.nfci) prod.nFCI = item.nfci;
+
+      const detNode: XmlObject = {
+        "@nItem": String(item.index + 1),
+        prod,
+        imposto: impostoNode.imposto,
+        vItem: item.vProd.toFixed(2),
+      };
+      if (item.infAdProd) detNode.infAdProd = item.infAdProd;
+
+      return { det: detNode };
     });
-
-    const prod: XmlObject = {
-      cProd: item.cProd,
-      cEAN: item.cEAN,
-      xProd: item.xProd,
-      NCM: item.ncm,
-      CFOP: this.vendaCtx.cfop,
-      uCom: item.uCom,
-      qCom: item.qCom.toFixed(4),
-      vUnCom: item.vUnCom.toFixed(8),
-      vProd: item.vProd.toFixed(2),
-      cEANTrib: item.cEAN,
-      uTrib: item.uCom,
-      qTrib: item.qCom.toFixed(4),
-      vUnTrib: item.vUnCom.toFixed(8),
-      indTot: 1,
-    };
-    if (item.cest) prod.CEST = item.cest;
-    if (item.exTipi) prod.EXTIPI = item.exTipi;
-    if (item.vFrete > 0) prod.vFrete = item.vFrete.toFixed(2);
-    if (item.vDesc > 0) prod.vDesc = item.vDesc.toFixed(2);
-    if (item.xPed) prod.xPed = item.xPed;
-    if (item.nfci) prod.nFCI = item.nfci;
-
-    const detNode: XmlObject = {
-      "@nItem": "1",
-      prod,
-      imposto: impostoNode.imposto,
-      vItem: item.vProd.toFixed(2),
-    };
-    if (item.infAdProd) detNode.infAdProd = item.infAdProd;
-
-    return { det: detNode };
   }
 
   protected buildTransp(): XmlObject {
     return buildTranspFromEmitter(
       this.ctx.emitter,
       this.ctx.fiscal,
-      this.vendaCtx.item.qCom,
+      this.vendaCtx.totalQty,
     );
   }
 
@@ -321,8 +370,7 @@ export class VendaNFeStrategyBuilder extends BaseNFeBuilder {
     const ibsCbs = (this.ctx.fiscal.ibsCbs as Record<string, unknown> | undefined) ?? {};
     return buildTotalNode({
       icmsTot: this.vendaCtx.taxes.icmsTot,
-      // vNFTot ML usa vProd do item, não vNF com frete (espelha totalBlock legado).
-      vNF: this.vendaCtx.item.vProd,
+      vNF: this.vendaCtx.taxes.vProdTotal,
       includeReformaTributaria: this.vendaCtx.taxes.includeReforma,
       vBCIBSCBS: this.vendaCtx.taxes.vBCIBSCBS,
       ibsCbs,

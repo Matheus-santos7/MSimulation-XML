@@ -533,4 +533,101 @@ describe("buildNFeXmlFromBuilder — VENDA", () => {
     assert.match(xml, /<indIEDest>1<\/indIEDest>\s*<IE>225184297<\/IE>/);
     assert.doesNotMatch(xml, /<indIEDest>9<\/indIEDest>\s*<IE>/);
   });
+
+  it("emite um <det> por item da engine em venda multi-produto", () => {
+    const productA: ProductXmlInput = {
+      sku: "4133250058",
+      nome: "Mop A Vapor",
+      ncm: "85167990",
+      unidade: "PC",
+      origem: 2,
+      preco: 1089,
+    };
+    const productB: ProductXmlInput = {
+      sku: "4133250061",
+      nome: "Aspirador Vertical",
+      ncm: "85081100",
+      unidade: "PC",
+      origem: 2,
+      preco: 3299,
+    };
+    const nfe: NFeXmlInput = {
+      chave: "35260701490698006689550580000001611534107437",
+      numero: 161,
+      serie: 58,
+      natOp: VENDA_ML_NAT_OP,
+      cfop: "6106",
+      ncm: "85167990",
+      destinatario: {
+        nome: "Consumidor Final RJ",
+        doc: "10199999856",
+        uf: "RJ",
+        indIEDest: 9,
+        docTipo: "CPF",
+        endereco: {
+          logradouro: "Avenida Rio Branco",
+          numero: "118",
+          bairro: "Centro",
+          codigoMunicipio: "3304557",
+          municipio: "Rio de Janeiro",
+          uf: "RJ",
+          cep: "20040002",
+          codigoPais: 1058,
+          nomePais: "Brasil",
+        },
+      },
+      valor: 7382,
+      valorICMS: 295.28,
+      aliqICMS: 4,
+      status: "AUTORIZADA",
+      emitidaEm: "2026-07-08T19:34:45-03:00",
+      pedidoML: "2178355008593118",
+      quantidade: 2,
+      tipo: "VENDA",
+      fiscalPayload: {
+        engine: {
+          itens: [
+            {
+              vProd: 1089,
+              vFrete: 25,
+              vDesc: 130,
+              quantidade: 1,
+              valorUnitario: 1089,
+              icms: { cst: "00", orig: 2, vBC: 984, pICMS: 4, vICMS: 39.36 },
+              pis: { cst: "01", vBC: 944.64, pPIS: 1.65, vPIS: 15.59 },
+              cofins: { cst: "01", vBC: 944.64, pCOFINS: 7.6, vCOFINS: 71.79 },
+            },
+            {
+              vProd: 6598,
+              vDesc: 200,
+              quantidade: 2,
+              valorUnitario: 3299,
+              icms: { cst: "00", orig: 2, vBC: 6398, pICMS: 4, vICMS: 255.92 },
+              pis: { cst: "01", vBC: 6142.08, pPIS: 1.65, vPIS: 101.34 },
+              cofins: { cst: "01", vBC: 6142.08, pCOFINS: 7.6, vCOFINS: 466.8 },
+            },
+          ],
+          totais: {
+            vBC: 7382,
+            vICMS: 295.28,
+            vProd: 7687,
+            vFrete: 25,
+            vDesc: 330,
+            vIPI: 0,
+            vPIS: 116.93,
+            vCOFINS: 538.59,
+            vNF: 7382,
+          },
+        },
+        ibsCbs: { cst: "000", cClassTrib: "000001" },
+      },
+    };
+
+    const xml = buildNFeXML(nfe, emit, productA, null, [productA, productB]);
+    const detCount = (xml.match(/<det nItem="/g) ?? []).length;
+    assert.equal(detCount, 2);
+    assert.match(xml, /<cProd>4133250058<\/cProd>/);
+    assert.match(xml, /<cProd>4133250061<\/cProd>/);
+    assert.match(xml, /<ICMSTot>[\s\S]*?<vProd>7687\.00<\/vProd>/);
+  });
 });

@@ -1,16 +1,17 @@
 import type { PedidoStatus, Product } from "../../../../generated/prisma/client.js";
-import { num } from "../../../fiscal-documents/presentation/mappers/fiscal-mappers.js";
 import type { Buyer } from "../../domain/entities/buyer.entity.js";
 import type { Order, OrderItemSummary } from "../../domain/entities/order.entity.js";
 import type { OrderForEmit } from "../../domain/entities/order-for-emit.entity.js";
+import { mapOrderItemFromRow } from "./order-item-prisma.mapper.js";
+import { normalizeOrderFreight } from "../../domain/services/order-freight.validation.js";
+import { num } from "../../../fiscal-documents/presentation/mappers/fiscal-mappers.js";
 
-type PedidoItemRow = {
+export type PedidoItemRow = {
   id: string;
   productId: string;
   numeroItem: number;
   quantidade: number;
   desconto: { toString(): string };
-  frete: { toString(): string };
   product: Product;
 };
 
@@ -35,6 +36,8 @@ type OrderRow = {
   destTelefone: string | null;
   destIndIeDest: number;
   destIe: string | null;
+  freteConsumidor: { toString(): string };
+  freteSeller: { toString(): string };
   createdAt: Date;
   updatedAt: Date;
   itens: PedidoItemRow[];
@@ -46,34 +49,17 @@ type OrderRow = {
   } | null;
 };
 
-function mapOrderItemFromRow(row: PedidoItemRow): OrderItemSummary {
-  const unitPrice = num(row.product.preco);
-  const desconto = num(row.desconto);
-  const frete = num(row.frete);
-  const valorTotalLinha = Math.round((unitPrice * row.quantidade + frete - desconto) * 100) / 100;
-
-  return {
-    id: row.id,
-    productId: row.productId,
-    quantidade: row.quantidade,
-    desconto,
-    frete,
-    product: {
-      id: row.product.id,
-      sku: row.product.sku,
-      nome: row.product.nome,
-      preco: unitPrice,
-    },
-    valorTotalLinha,
-  };
-}
-
 export function mapOrderFromPrisma(row: OrderRow): Order {
   const items = row.itens
     .slice()
     .sort((a, b) => a.numeroItem - b.numeroItem)
     .map(mapOrderItemFromRow);
-  const valorTotal = Math.round(items.reduce((acc, item) => acc + item.valorTotalLinha, 0) * 100) / 100;
+  const { freteConsumidor, freteSeller } = normalizeOrderFreight({
+    freteConsumidor: num(row.freteConsumidor),
+    freteSeller: num(row.freteSeller),
+  });
+  const itemsSubtotal = Math.round(items.reduce((acc, item) => acc + item.valorTotalLinha, 0) * 100) / 100;
+  const valorTotal = Math.round((itemsSubtotal + freteConsumidor) * 100) / 100;
 
   return {
     id: row.id,
@@ -81,6 +67,8 @@ export function mapOrderFromPrisma(row: OrderRow): Order {
     status: row.status,
     pedidoMl: row.pedidoMl ?? undefined,
     items,
+    freteConsumidor,
+    freteSeller,
     comprador: {
       cpf: row.destCpf,
       nome: row.destNome,
@@ -119,17 +107,19 @@ export function mapOrderForEmitFromPrisma(
     tenant: OrderForEmit["tenant"];
   },
 ): OrderForEmit {
+  const { freteConsumidor, freteSeller } = normalizeOrderFreight({
+    freteConsumidor: num(pedido.freteConsumidor),
+    freteSeller: num(pedido.freteSeller),
+  });
   const items = pedido.itens
     .slice()
     .sort((a, b) => a.numeroItem - b.numeroItem)
     .map((item) => {
       const desconto = num(item.desconto);
-      const frete = num(item.frete);
       return {
         productId: item.productId,
         quantidade: item.quantidade,
         product: item.product,
-        ...(frete > 0 ? { valorFrete: frete } : {}),
         ...(desconto > 0 ? { valorDesconto: desconto } : {}),
       };
     });
@@ -137,6 +127,8 @@ export function mapOrderForEmitFromPrisma(
   return {
     tenantId: pedido.tenantId,
     items,
+    ...(freteConsumidor > 0 ? { valorFreteConsumidor: freteConsumidor } : {}),
+    ...(freteSeller > 0 ? { valorFreteSeller: freteSeller } : {}),
     destCpf: pedido.destCpf,
     destNome: pedido.destNome,
     destLogradouro: pedido.destLogradouro,
@@ -158,16 +150,20 @@ export function mapOrderForEmitFromPrisma(
 }
 
 /**
- * Normaliza desconto/frete vindos do payload de checkout em valores comerciais
- * (≥ 0 e arredondados em 2 casas) para colunas `Decimal` do Prisma.
+ * Normaliza desconto de linha para coluna monetária `Decimal` do Prisma.
  */
-export function discountAndFreightColumns(input: { desconto?: number; frete?: number }) {
+export function itemDiscountColumn(input: { desconto?: number }) {
   const desconto = Number(input.desconto ?? 0);
-  const frete = Number(input.frete ?? 0);
   return {
     desconto: Number.isFinite(desconto) && desconto > 0 ? Number(desconto.toFixed(2)) : 0,
-    frete: Number.isFinite(frete) && frete > 0 ? Number(frete.toFixed(2)) : 0,
   };
+}
+
+/**
+ * Normaliza fretes do pedido para colunas monetárias `Decimal` do Prisma.
+ */
+export function orderFreightColumns(input: { freteConsumidor?: number; freteSeller?: number }) {
+  return normalizeOrderFreight(input);
 }
 
 export function buyerToDestColumns(comprador: Buyer) {

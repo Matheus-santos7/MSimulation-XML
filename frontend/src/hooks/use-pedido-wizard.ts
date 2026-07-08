@@ -14,7 +14,9 @@ import {
   type PedidoItemFormValues,
 } from "@/lib/pedido-form";
 
-export const PEDIDO_WIZARD_STEPS = ["Produtos", "Comprador", "Endereço", "Revisão"] as const;
+export const PEDIDO_WIZARD_STEPS = ["Produtos", "Frete", "Comprador", "Endereço", "Revisão"] as const;
+
+export const PEDIDO_WIZARD_LAST_STEP = PEDIDO_WIZARD_STEPS.length - 1;
 
 type UsePedidoWizardOptions = {
   open: boolean;
@@ -47,16 +49,17 @@ export function usePedidoWizard({ open, onOpenChange, products, pedido }: UsePed
     const product = products.find((p) => p.id === item.productId);
     const qty = Math.max(1, Number(item.quantidade) || 1);
     const desconto = parseMoney(item.desconto);
-    const frete = parseMoney(item.frete);
     const subtotal = product ? product.preco * qty : 0;
-    const total = Math.max(0, Math.round((subtotal + frete - desconto) * 100) / 100);
-    return { product, qty, desconto, frete, subtotal, total };
+    const total = Math.max(0, Math.round((subtotal - desconto) * 100) / 100);
+    return { product, qty, desconto, subtotal, total };
   });
 
   const subtotal = lineTotals.reduce((acc, line) => acc + line.subtotal, 0);
   const desconto = lineTotals.reduce((acc, line) => acc + line.desconto, 0);
-  const frete = lineTotals.reduce((acc, line) => acc + line.frete, 0);
-  const total = Math.round(lineTotals.reduce((acc, line) => acc + line.total, 0) * 100) / 100;
+  const freteConsumidor = parseMoney(form.freteConsumidor);
+  const freteSeller = parseMoney(form.freteSeller);
+  const freteCte = Math.round((freteConsumidor + freteSeller) * 100) / 100;
+  const total = Math.round((subtotal - desconto + freteConsumidor) * 100) / 100;
 
   useEffect(() => {
     if (!open) return;
@@ -114,14 +117,20 @@ export function usePedidoWizard({ open, onOpenChange, products, pedido }: UsePed
 
   function submit(saveOnly: boolean) {
     setError(null);
+    if (freteConsumidor <= 0 && freteSeller <= 0) {
+      setError("Informe frete consumidor e/ou frete seller — ao menos um deve ser maior que zero");
+      return;
+    }
+
     const fd = new FormData();
     fd.set("itemCount", String(form.items.length));
     form.items.forEach((item, index) => {
       fd.set(`items[${index}].productId`, item.productId);
       fd.set(`items[${index}].quantidade`, item.quantidade);
       fd.set(`items[${index}].desconto`, item.desconto);
-      fd.set(`items[${index}].frete`, item.frete);
     });
+    fd.set("freteConsumidor", form.freteConsumidor);
+    fd.set("freteSeller", form.freteSeller);
     fd.set("cpf", form.cpf);
     fd.set("nome", form.nome);
     fd.set("logradouro", form.logradouro);
@@ -191,7 +200,9 @@ export function usePedidoWizard({ open, onOpenChange, products, pedido }: UsePed
     lineTotals,
     subtotal,
     desconto,
-    frete,
+    freteConsumidor,
+    freteSeller,
+    freteCte,
     total,
     applyExample,
     submit,

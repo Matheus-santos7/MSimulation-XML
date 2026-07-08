@@ -2,11 +2,12 @@ export type PedidoItemFormValues = {
   productId: string;
   quantidade: string;
   desconto: string;
-  frete: string;
 };
 
 export type PedidoFormValues = {
   items: PedidoItemFormValues[];
+  freteConsumidor: string;
+  freteSeller: string;
   cpf: string;
   nome: string;
   logradouro: string;
@@ -26,11 +27,12 @@ export const PEDIDO_ITEM_EMPTY: PedidoItemFormValues = {
   productId: "",
   quantidade: "1",
   desconto: "0",
-  frete: "0",
 };
 
 export const PEDIDO_FORM_EMPTY: PedidoFormValues = {
   items: [{ ...PEDIDO_ITEM_EMPTY }],
+  freteConsumidor: "0",
+  freteSeller: "0",
   cpf: "",
   nome: "",
   logradouro: "",

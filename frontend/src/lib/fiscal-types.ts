@@ -187,12 +187,13 @@ export type PedidoItemCheckoutInput = {
   productId: string;
   quantidade: number;
   desconto?: number;
-  frete?: number;
 };
 
 export type PedidoCheckoutInput = {
   items: PedidoItemCheckoutInput[];
   comprador: CompradorCheckoutInput;
+  freteConsumidor?: number;
+  freteSeller?: number;
 };
 
 export type PedidoItemDto = {
@@ -200,7 +201,6 @@ export type PedidoItemDto = {
   productId: string;
   quantidade: number;
   desconto: number;
-  frete: number;
   valorTotalLinha: number;
   product: { id: string; sku: string; nome: string; preco: number };
 };
@@ -211,6 +211,8 @@ export type PedidoDto = {
   status: "RASCUNHO" | "FATURADO";
   pedidoMl?: string;
   items: PedidoItemDto[];
+  freteConsumidor: number;
+  freteSeller: number;
   comprador: CompradorCheckoutInput;
   valorTotal: number;
   nfe?: { chave: string; numero: number; serie: number; status: string };

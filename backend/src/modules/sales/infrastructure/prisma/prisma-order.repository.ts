@@ -5,11 +5,13 @@ import type { OrderCheckoutInput } from "../../domain/entities/order-checkout-in
 import type { OrderRepository } from "../../domain/ports/order.repository.js";
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import { runInTransaction } from "../../../../lib/db/prisma-tx.js";
+import { assertOrderFreightFilled } from "../../domain/services/order-freight.validation.js";
 import {
   buyerToDestColumns,
-  discountAndFreightColumns,
+  itemDiscountColumn,
   mapOrderForEmitFromPrisma,
   mapOrderFromPrisma,
+  orderFreightColumns,
 } from "./order-prisma.mapper.js";
 
 const pedidoItemInclude = {
@@ -78,6 +80,7 @@ export class PrismaOrderRepository implements OrderRepository {
     if (input.items.length === 0) {
       throw new CheckoutError("Pedido deve conter ao menos um item");
     }
+    assertOrderFreightFilled(input);
 
     const products = await this.assertProductsBelongToTenant(
       tenantId,
@@ -90,12 +93,13 @@ export class PrismaOrderRepository implements OrderRepository {
         tenantId,
         status: "RASCUNHO",
         ...buyerToDestColumns(input.comprador),
+        ...orderFreightColumns(input),
         itens: {
           create: input.items.map((item, index) => ({
             productId: productById.get(item.productId)!.id,
             numeroItem: index + 1,
             quantidade: item.quantidade,
-            ...discountAndFreightColumns(item),
+            ...itemDiscountColumn(item),
           })),
         },
       },
@@ -118,6 +122,7 @@ export class PrismaOrderRepository implements OrderRepository {
     if (input.items.length === 0) {
       throw new CheckoutError("Pedido deve conter ao menos um item");
     }
+    assertOrderFreightFilled(input);
 
     const products = await this.assertProductsBelongToTenant(
       tenantId,
@@ -131,12 +136,13 @@ export class PrismaOrderRepository implements OrderRepository {
         where: { id },
         data: {
           ...buyerToDestColumns(input.comprador),
+          ...orderFreightColumns(input),
           itens: {
             create: input.items.map((item, index) => ({
               productId: productById.get(item.productId)!.id,
               numeroItem: index + 1,
               quantidade: item.quantidade,
-              ...discountAndFreightColumns(item),
+              ...itemDiscountColumn(item),
             })),
           },
         },

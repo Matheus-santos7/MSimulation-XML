@@ -367,6 +367,101 @@ describe("buildNFeXML — REMESSA", () => {
     assert.equal(verifySimulationXmlSignature(xml), true);
   });
 
+  it("RETORNO_SIMBOLICO emite um <det> por item da engine em pedido multi-produto", () => {
+    const productA = {
+      sku: "4133250058",
+      nome: "Mop A Vapor",
+      ncm: "85167990",
+      unidade: "PC",
+      origem: 2,
+      preco: 1089,
+      precoCusto: 800,
+    };
+    const productB = {
+      sku: "4133250061",
+      nome: "Aspirador Vertical",
+      ncm: "85081100",
+      unidade: "PC",
+      origem: 2,
+      preco: 3299,
+      precoCusto: 2400,
+    };
+    const nfe = {
+      ...baseNfe(),
+      numero: 159,
+      tipo: "RETORNO_SIMBOLICO" as const,
+      natOp: "Outras Entradas - Retorno Simbolico de Deposito Temporario",
+      cfop: "2949",
+      nfeReferenciaChave: baseNfe().chave,
+      valor: 5600,
+      valorICMS: 0,
+      aliqICMS: 0,
+      quantidade: 3,
+      pedidoML: "2178355008593118",
+      destinatario: {
+        nome: "EBAZAR.COM.BR LTDA",
+        doc: "03007331012077",
+        uf: "SC",
+        indIEDest: 1,
+        endereco: {
+          logradouro: "Av. Papenborg",
+          numero: "S/N",
+          bairro: "Guaporanga",
+          codigoMunicipio: "4206009",
+          municipio: "Governador Celso Ramos",
+          uf: "SC",
+          cep: "88195900",
+          codigoPais: 1058,
+          nomePais: "Brasil",
+        },
+      },
+      fiscalPayload: {
+        engine: {
+          itens: [
+            {
+              vProd: 800,
+              quantidade: 1,
+              valorUnitario: 800,
+              icms: { cst: "90", orig: 2, vBC: 0, pICMS: 0, vICMS: 0 },
+              pis: { cst: "98", vBC: 0, vPIS: 0 },
+              cofins: { cst: "98", vBC: 0, vCOFINS: 0 },
+            },
+            {
+              vProd: 4800,
+              quantidade: 2,
+              valorUnitario: 2400,
+              icms: { cst: "90", orig: 2, vBC: 0, pICMS: 0, vICMS: 0 },
+              pis: { cst: "98", vBC: 0, vPIS: 0 },
+              cofins: { cst: "98", vBC: 0, vCOFINS: 0 },
+            },
+          ],
+          totais: {
+            vBC: 0,
+            vICMS: 0,
+            vProd: 5600,
+            vIPI: 0,
+            vPIS: 0,
+            vCOFINS: 0,
+            vNF: 5600,
+          },
+        },
+        destIe: "261755994",
+      },
+    };
+    const xml = buildNFeXML(
+      nfe,
+      { ...emit, uf: "PR", endereco: { ...emit.endereco, uf: "PR" } },
+      productA,
+      null,
+      [productA, productB],
+    );
+    const detCount = (xml.match(/<det nItem="/g) ?? []).length;
+    assert.equal(detCount, 2);
+    assert.match(xml, /<cProd>4133250058<\/cProd>/);
+    assert.match(xml, /<cProd>4133250061<\/cProd>/);
+    assert.match(xml, /<ICMSTot>[\s\S]*?<vProd>5600\.00<\/vProd>/);
+  });
+
   it("REMESSA_SIMBOLICA pós-devolução emite infCpl CAT 31 e xTexto SALE_RETURN", () => {
     const pedidoMl = "47238016772";
     const nfe = {

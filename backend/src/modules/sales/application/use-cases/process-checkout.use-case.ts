@@ -3,6 +3,7 @@ import type { OrderCheckoutInput } from "../../domain/entities/order-checkout-in
 import type { OrderForEmit } from "../../domain/entities/order-for-emit.entity.js";
 import type { OrderRepository } from "../../domain/ports/order.repository.js";
 import type { SalesChainPort } from "../../domain/ports/sales-chain.port.js";
+import { assertOrderFreightFilled, normalizeOrderFreight } from "../../domain/services/order-freight.validation.js";
 
 /**
  * Checkout direto: emite a Sales Chain sem criar rascunho de pedido.
@@ -29,20 +30,23 @@ export class ProcessCheckoutUseCase {
     const productById = new Map(products.map((product) => [product.id, product]));
     const c = input.comprador;
 
+    assertOrderFreightFilled(input);
+    const { freteConsumidor, freteSeller } = normalizeOrderFreight(input);
+
     const orderForEmit: OrderForEmit = {
       tenantId,
       items: input.items.map((item) => {
         const product = productById.get(item.productId)!;
         const desconto = Number(item.desconto ?? 0);
-        const frete = Number(item.frete ?? 0);
         return {
           productId: product.id,
           quantidade: item.quantidade,
           product,
-          ...(frete > 0 ? { valorFrete: frete } : {}),
           ...(desconto > 0 ? { valorDesconto: desconto } : {}),
         };
       }),
+      ...(freteConsumidor > 0 ? { valorFreteConsumidor: freteConsumidor } : {}),
+      ...(freteSeller > 0 ? { valorFreteSeller: freteSeller } : {}),
       destCpf: c.cpf,
       destNome: c.nome,
       destLogradouro: c.logradouro,

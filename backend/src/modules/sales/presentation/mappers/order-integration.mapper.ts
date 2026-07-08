@@ -42,7 +42,7 @@ function mapProducts(order: Order): ExternalOrderProduct[] {
     precoUnitario: item.product.preco,
     precoCusto: 0,
     valorDesconto: item.desconto,
-    valorFrete: item.frete,
+    valorFrete: 0,
     valorComissao: 0,
     valorOutros: 0,
     marca: "",
@@ -63,7 +63,7 @@ export function mapOrderToIntegrationPayload(
 ): ExternalOrderIntegrationPayload {
   const channelId = order.pedidoMl ?? order.id;
   const totalDesconto = order.items.reduce((acc, item) => acc + item.desconto, 0);
-  const totalFrete = order.items.reduce((acc, item) => acc + item.frete, 0);
+  const totalFrete = order.freteConsumidor;
   const address = mapAddress(order);
   const doc = order.comprador.cpf;
 

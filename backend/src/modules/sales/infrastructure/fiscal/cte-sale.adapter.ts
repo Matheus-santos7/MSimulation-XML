@@ -10,10 +10,19 @@ import { buildCteXmlAutorizado } from "../../../fiscal-documents/infrastructure/
  *
  * @param saleNfe - NF-e de venda persistida na etapa anterior da cadeia
  */
-export async function emitSaleCte(prisma: PrismaTx, tenant: Tenant, saleNfe: NFe) {
+export async function emitSaleCte(
+  prisma: PrismaTx,
+  tenant: Tenant,
+  saleNfe: NFe,
+  valorFrete?: number,
+) {
   const serie = tenant.serieCte;
   const numero = await proximoNumeroCte(prisma, tenant.id, serie);
-  const data = await montarDadosCteFromNfe(prisma, tenant, saleNfe, "venda", { serie, numero });
+  const data = await montarDadosCteFromNfe(prisma, tenant, saleNfe, "venda", {
+    serie,
+    numero,
+    valorFrete,
+  });
   const authorizedXml = buildCteXmlAutorizado(data, tenant);
 
   const row = await prisma.cTe.create({

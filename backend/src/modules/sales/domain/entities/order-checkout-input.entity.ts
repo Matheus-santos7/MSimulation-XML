@@ -11,18 +11,18 @@ export type OrderItemCheckoutInput = {
   quantidade: number;
   /** Line discount in BRL (default 0). */
   desconto?: number;
-  /** Line freight in BRL (default 0, typically rateado). */
-  frete?: number;
 };
 
 /**
  * Checkout / draft creation or edition input.
  *
  * Validated in the presentation layer via `orderCheckoutBody` (Zod).
- * The API accepts an array of items to support multi-product orders,
- * even if the current Prisma model persists only the first item.
  */
 export type OrderCheckoutInput = {
   items: OrderItemCheckoutInput[];
   comprador: Buyer;
+  /** Order consumer freight in BRL — goes to NF-e `<vFrete>`. */
+  freteConsumidor?: number;
+  /** Order seller freight in BRL — complements CT-e value (not on NF-e). */
+  freteSeller?: number;
 };

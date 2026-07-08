@@ -6,13 +6,12 @@ import {
   resolveSaleCfop,
   VENDA_ML_NAT_OP,
 } from "@msimulation-xml/fiscal-core";
-import { FiscalStatus, NFeTipo, Prisma } from "../../../../generated/prisma/client.js";
+import { FiscalStatus, NFeTipo, Prisma, type Product, type Tenant } from "../../../../generated/prisma/client.js";
 import { buildChaveNFe } from "../../../fiscal-documents/domain/services/nfe-chave.js";
 import { enrichTaxSnapshot } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
 import { proximoNumeroNfe } from "../../../fiscal-documents/domain/services/nfe-sequencia.js";
 import { taxSnapshotFromRule } from "../../../tax/domain/services/tax-snapshot.js";
 import { calcularNotaFiscal } from "../../../tax/domain/services/tax-engine.js";
-import type { Tenant } from "../../../../generated/prisma/client.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { buildFiscalItem, resolveTaxRule } from "../../../tax/index.js";
 import { persistNfeXmlFromEmission } from "../../../fiscal-documents/infrastructure/xml/nfe-xml-service.js";
@@ -68,8 +67,9 @@ export async function emitSaleNote(
 
   const saleFiscalItems = [];
   let headerCfop = rules.saleTaxRule.cfop;
+  const orderFreteConsumidor = order.valorFreteConsumidor ?? 0;
 
-  for (const item of order.items) {
+  for (const [index, item] of order.items.entries()) {
     const ruleBaseId = item.product.taxRuleBaseId?.trim() ?? ctx.ruleBaseId;
     const saleTaxRule = requireTaxRule(
       await resolveTaxRule(tx, tenant.id, {
@@ -89,7 +89,7 @@ export async function emitSaleNote(
     );
     headerCfop = saleTaxRule.cfop;
     const cfop = resolveSaleCfop(tenant.uf, order.destUf, customerType, saleTaxRule.cfop);
-    const valorFrete = item.valorFrete ?? 0;
+    const valorFrete = index === 0 ? orderFreteConsumidor : 0;
     const valorDesconto = item.valorDesconto ?? 0;
 
     saleFiscalItems.push(
@@ -208,6 +208,7 @@ export async function emitSaleNote(
     nfeId: saleRow.id,
     tenant: tenant as Tenant,
     productId: primaryItem.product.id,
+    products: order.items.map((item) => item.product as Product),
     settings: emitterSettings,
     nfeReferenciaChave: returnNote.chave,
   });

@@ -17,7 +17,6 @@ export default async function CTePage() {
         <PageHeader
           className="mb-0"
           title="CT-e Transportes"
-          subtitle="Conhecimento de transporte eletrônico — dados via API"
         />
       </div>
 

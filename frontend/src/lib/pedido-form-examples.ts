@@ -1,5 +1,5 @@
 import type { PedidoFormValues } from "./pedido-form-types";
-import { PEDIDO_ITEM_EMPTY } from "./pedido-form-types";
+import { PEDIDO_FORM_EMPTY, PEDIDO_ITEM_EMPTY } from "./pedido-form-types";
 
 export type PedidoFormExampleKind = "cpf_consumidor" | "cnpj_contribuinte" | "cnpj_nao_contribuinte";
 
@@ -89,9 +89,10 @@ function formatCnpj(digits: string): string {
 }
 
 function buildBaseForm(
-  partial: Omit<PedidoFormValues, "items">,
+  partial: Partial<Omit<PedidoFormValues, "items">>,
 ): PedidoFormValues {
   return {
+    ...PEDIDO_FORM_EMPTY,
     items: [{ ...PEDIDO_ITEM_EMPTY }],
     ...partial,
   };

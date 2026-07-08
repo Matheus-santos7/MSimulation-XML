@@ -86,13 +86,16 @@ export async function montarDadosCteFromNfe(
   tenant: Tenant,
   nfe: NFe,
   vinculo: CteVinculo,
-  params: { serie: number; numero: number; emitidoEm?: Date },
+  params: { serie: number; numero: number; emitidoEm?: Date; valorFrete?: number },
 ): Promise<DadosCteEmissao> {
   const taxRule = await resolveTaxRuleForCte(prisma, tenant, nfe, vinculo);
   const { cfop, natOp } = resolveCteDocumento(vinculo, nfe.destIndIeDest);
   const fiscalPayload = buildCteFiscalPayload(nfe, tenantAsRemetente(tenant), { taxRule });
   const valorCarga = Number(nfe.valor);
-  const valorFrete = calcularValorFreteRemessa(valorCarga);
+  const valorFrete =
+    typeof params.valorFrete === "number" && params.valorFrete > 0
+      ? params.valorFrete
+      : calcularValorFreteRemessa(valorCarga);
   const pesoCarga = calcularPesoCarga(nfe.quantidade);
   const emitidoEm = params.emitidoEm ?? new Date();
 

@@ -118,6 +118,8 @@ export async function persistNfeXmlFromEmission(
     nfeId: string;
     tenant: Tenant;
     productId: string;
+    /** Todos os produtos das linhas — necessário para XML multi-item de venda. */
+    products?: Product[];
     settings: FiscalEmitterSettingsData;
     nfeReferenciaChave?: string;
   },
@@ -136,13 +138,21 @@ export async function persistNfeXmlFromEmission(
     }),
   ]);
 
+  const lineProducts = args.products?.length
+    ? args.products
+    : itemRows.length
+      ? itemRows.map((row) => row.product)
+      : product
+        ? [product]
+        : undefined;
+
   await persistNfeXmlAutorizado(tx, {
     nfeId: args.nfeId,
     tenant: args.tenant,
     nfeRow,
     nfeReferenciaChave: args.nfeReferenciaChave,
     product,
-    products: itemRows.map((i) => i.product),
+    products: lineProducts,
     itemRows,
     settings: args.settings,
   });

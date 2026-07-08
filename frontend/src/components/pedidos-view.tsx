@@ -7,7 +7,7 @@ import { useState, useTransition } from "react";
 import { faturarPedidoAction } from "@/app/(app)/pedidos/actions";
 import { PageHeader } from "@/components/fiscal-ui";
 import { DeleteConfirmButton } from "@/components/delete-confirm-button";
-import { PedidoWizardDialog } from "@/components/pedido-wizard-dialog";
+import { PedidoWizardDialog } from "@/components/pedido-wizard";
 import { Button } from "@/components/ui/button";
 import type { PedidoDto, ProductDto } from "@/lib/fiscal-types";
 import { brl } from "@/lib/format";

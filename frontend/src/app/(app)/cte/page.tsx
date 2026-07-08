@@ -26,7 +26,6 @@ export default async function CTePage() {
                 <th className="px-4 py-3 font-medium">Número</th>
                 <th className="px-4 py-3 font-medium">NF-e ref.</th>
                 <th className="px-4 py-3 font-medium">Chave</th>
-                <th className="px-4 py-3 font-medium">Modal</th>
                 <th className="px-4 py-3 font-medium">Origem → Destino</th>
                 <th className="px-4 py-3 font-medium">Valor Frete</th>
                 <th className="px-4 py-3 font-medium">Status</th>
@@ -43,16 +42,15 @@ export default async function CTePage() {
                     </Link>
                   </td>
                   <td className="px-4 py-3 font-mono text-[12px]">
-                    {c.nfeChaveRef ? (
+                    {c.nfeChaveRef && c.nfeNumeroRef != null && c.nfeSerieRef != null ? (
                       <Link href={`/nfe/${c.nfeChaveRef}`} className="text-accent hover:underline">
-                        {c.nfeChaveRef.slice(-8)}
+                        {c.nfeNumeroRef}/{c.nfeSerieRef}
                       </Link>
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3 font-mono text-[13px] text-muted-foreground">{formatChave(c.chave)}</td>
-                  <td className="px-4 py-3">{c.modal}</td>
                   <td className="px-4 py-3 text-[14px]">
                     {c.origem} → {c.destino}
                   </td>

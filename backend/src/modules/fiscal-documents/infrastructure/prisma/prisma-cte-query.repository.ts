@@ -13,8 +13,8 @@ export class PrismaCteQueryRepository implements CteQueryPort {
     const rows = await this.db.cTe.findMany({
       where: { tenantId, ...fiscalNotDeleted },
       include: {
-        nfeRemessa: { select: { chave: true } },
-        nfeVenda: { select: { chave: true } },
+        nfeRemessa: { select: { chave: true, numero: true, serie: true } },
+        nfeVenda: { select: { chave: true, numero: true, serie: true } },
       },
       orderBy: { emitidoEm: "desc" },
     });
@@ -25,8 +25,8 @@ export class PrismaCteQueryRepository implements CteQueryPort {
     const row = await this.db.cTe.findFirst({
       where: { chave: accessKey, tenantId, ...fiscalNotDeleted },
       include: {
-        nfeRemessa: { select: { chave: true } },
-        nfeVenda: { select: { chave: true } },
+        nfeRemessa: { select: { chave: true, numero: true, serie: true } },
+        nfeVenda: { select: { chave: true, numero: true, serie: true } },
       },
     });
     if (!row) return null;

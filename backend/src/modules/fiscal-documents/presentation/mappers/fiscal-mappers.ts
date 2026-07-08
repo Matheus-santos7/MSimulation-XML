@@ -248,8 +248,8 @@ type CteRow = {
   fiscalPayload?: unknown;
   nfeRemessaId?: string | null;
   nfeVendaId?: string | null;
-  nfeRemessa?: { chave: string } | null;
-  nfeVenda?: { chave: string } | null;
+  nfeRemessa?: { chave: string; numero: number; serie: number } | null;
+  nfeVenda?: { chave: string; numero: number; serie: number } | null;
 };
 
 function resolveCteNfeChaveRef(row: CteRow): string | undefined {
@@ -260,8 +260,41 @@ function resolveCteNfeChaveRef(row: CteRow): string | undefined {
   return row.nfeRemessa?.chave ?? row.nfeVenda?.chave ?? undefined;
 }
 
+/** Extrai número e série da chave de acesso NF-e/CT-e (posições 23–34 do layout SEFAZ). */
+function parseNumeroSerieFromAccessKey(chave: string): { numero: number; serie: number } | undefined {
+  const digits = chave.replace(/\D/g, "");
+  if (digits.length !== 44) return undefined;
+  return {
+    serie: parseInt(digits.slice(22, 25), 10),
+    numero: parseInt(digits.slice(25, 34), 10),
+  };
+}
+
+function resolveCteNfeRef(row: CteRow): {
+  chave?: string;
+  numero?: number;
+  serie?: number;
+} {
+  const linked = row.nfeVendaId
+    ? row.nfeVenda
+    : row.nfeRemessaId
+      ? row.nfeRemessa
+      : (row.nfeVenda ?? row.nfeRemessa);
+
+  if (linked) {
+    return { chave: linked.chave, numero: linked.numero, serie: linked.serie };
+  }
+
+  const chave = resolveCteNfeChaveRef(row);
+  if (!chave) return {};
+
+  const parsed = parseNumeroSerieFromAccessKey(chave);
+  return parsed ? { chave, ...parsed } : { chave };
+}
+
 export function mapCte(row: CteRow) {
-  const nfeChaveRef = resolveCteNfeChaveRef(row);
+  const nfeRef = resolveCteNfeRef(row);
+  const nfeChaveRef = nfeRef.chave;
   const fp = row.fiscalPayload as Record<string, unknown> | null | undefined;
   const icms = fp?.icms as { pICMS?: number; vICMS?: number } | undefined;
 
@@ -282,6 +315,8 @@ export function mapCte(row: CteRow) {
     status: row.status,
     emitidoEm: formatNfeDateTime(row.emitidoEm),
     nfeChaveRef,
+    nfeNumeroRef: nfeRef.numero,
+    nfeSerieRef: nfeRef.serie,
     fiscalPayload: fp ?? undefined,
     aliqIcms: typeof icms?.pICMS === "number" ? icms.pICMS : undefined,
     valorIcms: typeof icms?.vICMS === "number" ? icms.vICMS : undefined,

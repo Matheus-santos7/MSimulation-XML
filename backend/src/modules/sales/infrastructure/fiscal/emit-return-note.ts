@@ -32,6 +32,7 @@ import { persistNfeXmlFromEmission } from "../../../fiscal-documents/infrastruct
 import type { EmissionContext } from "../../domain/entities/emission-context.entity.js";
 import type { OrderForEmit } from "../../domain/entities/order-for-emit.entity.js";
 import type { ReturnNoteCreated, SalesChainRules } from "../../application/dto/sales-chain.dto.js";
+import { requirePrimaryOrderItem } from "../../domain/services/order-for-emit.helpers.js";
 
 function autXmlCpfsFromSettings(
   settings: SalesChainRules["emitterSettings"],
@@ -78,6 +79,7 @@ export async function emitReturnNote(
   fifoPreview: PreviewRemessaFifoVenda,
 ): Promise<ReturnNoteCreated> {
   const { tenant } = order;
+  const item = requirePrimaryOrderItem(order);
   const { inboundTaxRule, emitterSettings } = rules;
 
   const remessa = await loadRemessaForReturnDestination(tx, fifoPreview.remessaNfeId);
@@ -95,9 +97,9 @@ export async function emitReturnNote(
   const fallbackRate = resolveIcmsFallbackRate(tenant.uf, destUf, "inbound", emitterSettings);
   const cfop = resolveRetornoSimbolicoCfop(tenant.uf, destUf);
   const calc = calculateInboundInvoice(
-    orderLineFromProduct(order.product, {
+    orderLineFromProduct(item.product, {
       cfop,
-      quantidade: order.quantidade,
+      quantidade: item.quantidade,
       valorUnitario: ctx.valorUnitCusto,
     }),
     inboundTaxRule,
@@ -114,13 +116,13 @@ export async function emitReturnNote(
   const row = await tx.nFe.create({
     data: {
       tenantId: tenant.id,
-      productId: order.product.id,
+      productId: item.product.id,
       chave,
       numero,
       serie: ctx.serie,
       natOp: RETORNO_SIMBOLICO_NAT_OP,
       cfop,
-      ncm: order.product.ncm,
+      ncm: item.product.ncm,
       ...destino,
       valor,
       valorIcms,
@@ -128,7 +130,7 @@ export async function emitReturnNote(
       status: FiscalStatus.AUTORIZADA,
       emitidaEm: ctx.emitidaEm,
       pedidoMl: ctx.pedidoMl,
-      quantidade: order.quantidade,
+      quantidade: item.quantidade,
       tipo: NFeTipo.RETORNO_SIMBOLICO,
       saldoDisponivel: null,
       nfeReferenciaId: remessa.id,
@@ -146,7 +148,7 @@ export async function emitReturnNote(
             }),
             engine: calc.nota,
             ...(destIe ? { destIe } : {}),
-            ...(order.product.exTipi ? { exTipi: order.product.exTipi } : {}),
+            ...(item.product.exTipi ? { exTipi: item.product.exTipi } : {}),
           } as Record<string, unknown>,
           {
             tipo: NFeTipo.RETORNO_SIMBOLICO,
@@ -156,7 +158,7 @@ export async function emitReturnNote(
           },
         ),
         {
-          quantidadeTotal: order.quantidade,
+          quantidadeTotal: item.quantidade,
           withLogistics: false,
           destIe,
           idCadIntTran,
@@ -188,20 +190,21 @@ export async function consumeShipmentAndLinkReturn(
   returnNote: ReturnNoteCreated,
   emitterSettings: SalesChainRules["emitterSettings"],
 ) {
+  const item = requirePrimaryOrderItem(order);
   const allocations = await consumeRemessaFifoBalanceForSale(
     tx,
     order.tenant.id,
-    order.product.id,
-    order.quantidade,
+    item.product.id,
+    item.quantidade,
     returnNote.id,
     order.destUf,
-    order.product.sku,
+    item.product.sku,
   );
 
   await persistNfeXmlFromEmission(tx, {
     nfeId: returnNote.id,
     tenant: order.tenant as Tenant,
-    productId: order.product.id,
+    productId: item.product.id,
     settings: emitterSettings,
     nfeReferenciaChave: returnNote.remessaChave,
   });

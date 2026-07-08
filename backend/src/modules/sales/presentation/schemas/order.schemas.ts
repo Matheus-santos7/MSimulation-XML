@@ -76,11 +76,15 @@ const monetaryValueField = z.preprocess(
     .multipleOf(0.01, "Valor com no máximo 2 casas decimais"),
 );
 
-export const orderCheckoutBody = z.object({
+const orderItemBody = z.object({
   productId: z.string().uuid(),
   quantidade: z.coerce.number().positive().max(9999).default(1),
   desconto: monetaryValueField.default(0),
   frete: monetaryValueField.default(0),
+});
+
+export const orderCheckoutBody = z.object({
+  items: z.array(orderItemBody).min(1, "Pedido deve ter ao menos um item"),
   comprador: buyerCheckoutBody,
 });
 

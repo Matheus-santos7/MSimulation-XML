@@ -4,6 +4,7 @@ import { OrderLockedError } from "../../domain/errors/order-locked.error.js";
 import type { OrderCheckoutInput } from "../../domain/entities/order-checkout-input.entity.js";
 import type { OrderRepository } from "../../domain/ports/order.repository.js";
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
+import { runInTransaction } from "../../../../lib/db/prisma-tx.js";
 import {
   buyerToDestColumns,
   discountAndFreightColumns,
@@ -11,23 +12,30 @@ import {
   mapOrderFromPrisma,
 } from "./order-prisma.mapper.js";
 
-const orderInclude = {
+const pedidoItemInclude = {
   product: true,
+} as const;
+
+const orderInclude = {
+  itens: {
+    include: pedidoItemInclude,
+    orderBy: { numeroItem: "asc" as const },
+  },
   nfe: { select: { chave: true, numero: true, serie: true, status: true } },
 } as const;
 
 /**
  * Implementação Prisma do port {@link OrderRepository}.
  *
- * Persiste pedidos na tabela `pedido`, valida ownership de produto por tenant
- * e mapeia linhas Prisma para entidades de domínio via `order-prisma.mapper`.
+ * Persiste pedidos na tabela `pedido` com linhas em `pedido_itens`, valida
+ * ownership de produto por tenant e mapeia linhas Prisma para entidades de domínio.
  */
 export class PrismaOrderRepository implements OrderRepository {
   private get db() {
     return getDbClient();
   }
 
-  /** Lista pedidos do tenant com produto e NF-e vinculada (quando faturado). */
+  /** Lista pedidos do tenant com itens e NF-e vinculada (quando faturado). */
   async listByTenant(tenantId: string) {
     const rows = await this.db.pedido.findMany({
       where: { tenantId },
@@ -47,31 +55,49 @@ export class PrismaOrderRepository implements OrderRepository {
   }
 
   /**
-   * Carrega snapshot completo para emissão da Sales Chain (produto + tenant + destinatário).
+   * Carrega snapshot completo para emissão da Sales Chain (itens + tenant + destinatário).
    * Usado por {@link InvoiceOrderUseCase}.
    */
   async findForEmit(tenantId: string, id: string) {
     const row = await this.db.pedido.findFirst({
       where: { id, tenantId },
-      include: { product: true, tenant: true },
+      include: {
+        itens: { include: pedidoItemInclude, orderBy: { numeroItem: "asc" } },
+        tenant: true,
+      },
     });
     return row ? mapOrderForEmitFromPrisma(row) : null;
   }
 
   /**
-   * Cria pedido em `RASCUNHO` após validar que o produto pertence ao tenant.
-   * @throws {CheckoutError} Produto inexistente ou de outro tenant
+   * Cria pedido em `RASCUNHO` com todos os itens informados.
+   *
+   * @throws {CheckoutError} Produto inexistente ou de outro tenant, input sem itens
    */
   async createDraft(tenantId: string, input: OrderCheckoutInput) {
-    const product = await this.assertProductBelongsToTenant(tenantId, input.productId);
+    if (input.items.length === 0) {
+      throw new CheckoutError("Pedido deve conter ao menos um item");
+    }
+
+    const products = await this.assertProductsBelongToTenant(
+      tenantId,
+      input.items.map((item) => item.productId),
+    );
+    const productById = new Map(products.map((product) => [product.id, product]));
+
     const row = await this.db.pedido.create({
       data: {
         tenantId,
-        productId: product.id,
-        quantidade: input.quantidade,
-        ...discountAndFreightColumns(input),
         status: "RASCUNHO",
         ...buyerToDestColumns(input.comprador),
+        itens: {
+          create: input.items.map((item, index) => ({
+            productId: productById.get(item.productId)!.id,
+            numeroItem: index + 1,
+            quantidade: item.quantidade,
+            ...discountAndFreightColumns(item),
+          })),
+        },
       },
       include: orderInclude,
     });
@@ -80,25 +106,44 @@ export class PrismaOrderRepository implements OrderRepository {
 
   /**
    * Atualiza rascunho; rejeita pedidos já `FATURADO`.
+   *
    * @throws {OrderLockedError} Pedido bloqueado para edição
-   * @throws {CheckoutError} Produto inválido
+   * @throws {CheckoutError} Produto inválido ou ausência de itens
    */
   async updateDraft(id: string, tenantId: string, input: OrderCheckoutInput) {
     const existing = await this.db.pedido.findFirst({ where: { id, tenantId } });
     if (!existing) return null;
     if (existing.status === "FATURADO") throw new OrderLockedError();
 
-    const product = await this.assertProductBelongsToTenant(tenantId, input.productId);
-    const row = await this.db.pedido.update({
-      where: { id },
-      data: {
-        productId: product.id,
-        quantidade: input.quantidade,
-        ...discountAndFreightColumns(input),
-        ...buyerToDestColumns(input.comprador),
-      },
-      include: orderInclude,
+    if (input.items.length === 0) {
+      throw new CheckoutError("Pedido deve conter ao menos um item");
+    }
+
+    const products = await this.assertProductsBelongToTenant(
+      tenantId,
+      input.items.map((item) => item.productId),
+    );
+    const productById = new Map(products.map((product) => [product.id, product]));
+
+    const row = await runInTransaction(this.db, async (tx) => {
+      await tx.pedidoItem.deleteMany({ where: { pedidoId: id } });
+      return tx.pedido.update({
+        where: { id },
+        data: {
+          ...buyerToDestColumns(input.comprador),
+          itens: {
+            create: input.items.map((item, index) => ({
+              productId: productById.get(item.productId)!.id,
+              numeroItem: index + 1,
+              quantidade: item.quantidade,
+              ...discountAndFreightColumns(item),
+            })),
+          },
+        },
+        include: orderInclude,
+      });
     });
+
     return mapOrderFromPrisma(row);
   }
 
@@ -121,28 +166,40 @@ export class PrismaOrderRepository implements OrderRepository {
   }
 
   /**
-   * Garante que o produto existe e pertence ao tenant antes de criar/atualizar pedido.
+   * Garante que todos os produtos existem e pertencem ao tenant.
+   *
    * @throws {CheckoutError} Produto não encontrado nesta empresa
    */
-  async assertProductBelongsToTenant(tenantId: string, productId: string) {
-    const product = await this.db.product.findFirst({
-      where: { id: productId, tenantId },
+  async assertProductsBelongToTenant(tenantId: string, productIds: string[]) {
+    const uniqueIds = [...new Set(productIds)];
+    const products = await this.db.product.findMany({
+      where: { tenantId, id: { in: uniqueIds } },
     });
-    if (!product) throw new CheckoutError("Produto não encontrado nesta empresa");
-    return { id: product.id };
+    if (products.length !== uniqueIds.length) {
+      throw new CheckoutError("Produto não encontrado nesta empresa");
+    }
+    return products.map((product) => ({ id: product.id }));
   }
 
   /**
-   * Carrega produto e tenant para checkout direto (sem rascunho).
-   * Usado por {@link ProcessCheckoutUseCase}.
+   * Carrega produtos e tenant para checkout direto (sem rascunho).
+   *
    * @throws {CheckoutError} Produto não encontrado nesta empresa
    */
-  async loadCheckoutContext(tenantId: string, productId: string) {
-    const product = await this.db.product.findFirst({
-      where: { id: productId, tenantId },
+  async loadCheckoutContext(tenantId: string, productIds: string[]) {
+    const uniqueIds = [...new Set(productIds)];
+    const products = await this.db.product.findMany({
+      where: { tenantId, id: { in: uniqueIds } },
     });
-    if (!product) throw new CheckoutError("Produto não encontrado nesta empresa");
+    if (products.length !== uniqueIds.length) {
+      throw new CheckoutError("Produto não encontrado nesta empresa");
+    }
+
     const tenant = await this.db.tenant.findUniqueOrThrow({ where: { id: tenantId } });
-    return { product, tenant };
+    const productById = new Map(products.map((product) => [product.id, product]));
+    return {
+      products: uniqueIds.map((id) => productById.get(id)!),
+      tenant,
+    };
   }
 }

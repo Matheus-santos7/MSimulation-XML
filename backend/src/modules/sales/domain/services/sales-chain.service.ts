@@ -1,4 +1,3 @@
-import { lineTotal } from "@msimulation-xml/fiscal-core";
 import { gerarPedidoMl } from "../../../fiscal-documents/domain/services/nfe-chave.js";
 import type { ResolvedTaxRule } from "../../../tax/domain/entities/resolved-tax-rule.entity.js";
 import type { CustomerType } from "../../../tax/domain/entities/tax-types.entity.js";
@@ -7,54 +6,75 @@ import type { FiscalEmitterSettingsData } from "@msimulation-xml/fiscal-core";
 import type { EmissionContext } from "../entities/emission-context.entity.js";
 import type { OrderForEmit } from "../entities/order-for-emit.entity.js";
 import { SalesChainError } from "../errors/sales-chain.error.js";
+import {
+  requirePrimaryOrderItem,
+  sumOrderEmitTotals,
+} from "./order-for-emit.helpers.js";
 
 /**
- * Valida que o produto possui `taxRuleBaseId` antes de iniciar a cadeia fiscal.
+ * Valida que todos os produtos possuem `taxRuleBaseId` antes de iniciar a cadeia fiscal.
  *
- * @param order - Snapshot de emissão com produto
- * @returns ID da regra base (trimmed)
+ * @param order - Snapshot de emissão com itens
+ * @returns ID da regra base do primeiro item (legado para resolução inbound)
  * @throws {SalesChainError} Produto sem regra fiscal associada
  */
 export function assertProductWithTaxRule(order: OrderForEmit): string {
-  const ruleBaseId = order.product.taxRuleBaseId?.trim();
-  if (!ruleBaseId) {
-    const label = order.product.sku
-      ? `${order.product.nome ?? "Produto"} (SKU ${order.product.sku})`
-      : (order.product.nome ?? "Produto");
-    throw new SalesChainError(
-      `${label} sem regra fiscal associada. Edite o cadastro do produto e selecione a regra da planilha (necessário se as regras foram excluídas e reimportadas).`,
-    );
+  let firstRuleBaseId: string | undefined;
+
+  for (const item of order.items) {
+    const ruleBaseId = item.product.taxRuleBaseId?.trim();
+    if (!ruleBaseId) {
+      const label = item.product.sku
+        ? `${item.product.nome ?? "Produto"} (SKU ${item.product.sku})`
+        : (item.product.nome ?? "Produto");
+      throw new SalesChainError(
+        `${label} sem regra fiscal associada. Edite o cadastro do produto e selecione a regra da planilha (necessário se as regras foram excluídas e reimportadas).`,
+      );
+    }
+    firstRuleBaseId ??= ruleBaseId;
   }
-  return ruleBaseId;
+
+  if (!firstRuleBaseId) {
+    throw new SalesChainError("Pedido deve conter ao menos um item");
+  }
+
+  return firstRuleBaseId;
 }
 
 /**
  * Monta o contexto numérico e identificadores da emissão (uma vez por operação).
  *
- * Calcula totais de venda e custo, gera `pedidoMl` e fixa série de remessa do tenant.
+ * Calcula totais de venda e custo somando todas as linhas, gera `pedidoMl`
+ * no padrão numérico Mercado Livre e fixa série de remessa do tenant.
  *
  * @param order - Pedido/checkout a emitir
- * @param ruleBaseId - Regra fiscal validada
+ * @param ruleBaseId - Regra fiscal validada (primeiro item)
  * @returns {@link EmissionContext}
- * @throws {SalesChainError} `precoCusto` ausente ou zero
+ * @throws {SalesChainError} `precoCusto` ausente ou zero em qualquer linha
  */
 export function buildEmissionContext(order: OrderForEmit, ruleBaseId: string): EmissionContext {
-  const unitSalePrice = Number(order.product.preco);
-  const unitCostPrice = Number(order.product.precoCusto);
-  if (unitCostPrice <= 0) {
-    throw new SalesChainError(
-      "Preço de custo não informado ou zero. Informe o custo no cadastro do produto para emitir retorno simbólico.",
-    );
+  const primary = requirePrimaryOrderItem(order);
+  const unitSalePrice = Number(primary.product.preco);
+  const unitCostPrice = Number(primary.product.precoCusto);
+
+  for (const item of order.items) {
+    if (Number(item.product.precoCusto) <= 0) {
+      throw new SalesChainError(
+        "Preço de custo não informado ou zero. Informe o custo no cadastro do produto para emitir retorno simbólico.",
+      );
+    }
   }
-  const quantity = order.quantidade;
+
+  const totals = sumOrderEmitTotals(order);
+
   return {
     serie: order.tenant.serieRemessa,
-    pedidoMl: gerarPedidoMl(),
+    pedidoMl: order.mlPackId?.trim() || gerarPedidoMl(),
     emitidaEm: new Date(),
     valorUnitVenda: unitSalePrice,
-    valorTotalVenda: lineTotal(unitSalePrice, quantity),
+    valorTotalVenda: totals.valorTotalVenda,
     valorUnitCusto: unitCostPrice,
-    valorTotalCusto: lineTotal(unitCostPrice, quantity),
+    valorTotalCusto: totals.valorTotalCusto,
     ruleBaseId,
   };
 }
@@ -147,4 +167,11 @@ export function inferIcmsRateForSale(
   settings?: FiscalEmitterSettingsData | null,
 ): number {
   return resolveIcmsFallbackRate(emitUf, destUf, "sale", settings);
+}
+
+/**
+ * Soma quantidades de todos os itens do pedido.
+ */
+export function sumOrderQuantidade(order: OrderForEmit): number {
+  return order.items.reduce((acc, item) => acc + item.quantidade, 0);
 }

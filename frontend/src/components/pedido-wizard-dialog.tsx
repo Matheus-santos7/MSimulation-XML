@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Loader2, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Plus, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,6 +33,9 @@ export function PedidoWizardDialog({ open, onOpenChange, products, pedido }: Pro
     setStep,
     form,
     set,
+    setItem,
+    addItem,
+    removeItem,
     error,
     cepLoading,
     exampleId,
@@ -40,8 +43,7 @@ export function PedidoWizardDialog({ open, onOpenChange, products, pedido }: Pro
     pending,
     selectedExample,
     isEdit,
-    selected,
-    qty,
+    lineTotals,
     subtotal,
     desconto,
     frete,
@@ -89,59 +91,96 @@ export function PedidoWizardDialog({ open, onOpenChange, products, pedido }: Pro
 
           {step === 0 && (
             <div className="space-y-3">
-              <div className="space-y-2">
-                <Label>Produto</Label>
-                <select
-                  value={form.productId}
-                  onChange={(e) => set("productId", e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                  required
-                >
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.sku} — {p.nome}
-                    </option>
-                  ))}
-                </select>
+              <div className="flex items-center justify-between">
+                <Label>Produtos do pedido</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addItem}>
+                  <Plus className="size-3.5 mr-1" />
+                  Adicionar
+                </Button>
               </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-2">
-                  <Label>Quantidade</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={form.quantidade}
-                    onChange={(e) => set("quantidade", e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="pedidoDesconto">Desconto (R$)</Label>
-                  <Input
-                    id="pedidoDesconto"
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    inputMode="decimal"
-                    value={form.desconto}
-                    onChange={(e) => set("desconto", e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="pedidoFrete">Frete (R$)</Label>
-                  <Input
-                    id="pedidoFrete"
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    inputMode="decimal"
-                    value={form.frete}
-                    onChange={(e) => set("frete", e.target.value)}
-                  />
-                </div>
-              </div>
+
+              {form.items.map((item, index) => {
+                const line = lineTotals[index];
+                return (
+                  <div key={index} className="rounded-md border border-border/60 p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[12px] font-bold uppercase tracking-wider text-muted-foreground">
+                        Item {index + 1}
+                      </span>
+                      {form.items.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-7 text-destructive"
+                          onClick={() => removeItem(index)}
+                          title="Remover item"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Produto</Label>
+                      <select
+                        value={item.productId}
+                        onChange={(e) => setItem(index, "productId", e.target.value)}
+                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                        required
+                      >
+                        {products.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.sku} — {p.nome}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="space-y-2">
+                        <Label>Quantidade</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={item.quantidade}
+                          onChange={(e) => setItem(index, "quantidade", e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Desconto (R$)</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          step={0.01}
+                          inputMode="decimal"
+                          value={item.desconto}
+                          onChange={(e) => setItem(index, "desconto", e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Frete (R$)</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          step={0.01}
+                          inputMode="decimal"
+                          value={item.frete}
+                          onChange={(e) => setItem(index, "frete", e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="text-[12px] text-muted-foreground flex justify-between">
+                      <span>
+                        {line?.qty ?? 1} × {brl(line?.product?.preco ?? 0)}
+                      </span>
+                      <span className="font-mono">{brl(line?.total ?? 0)}</span>
+                    </div>
+                  </div>
+                );
+              })}
+
               <div className="rounded-md border border-border/60 bg-background/40 px-3 py-2 text-[13px] space-y-0.5">
                 <div className="flex justify-between text-muted-foreground">
-                  <span>Subtotal ({qty} × {brl(selected?.preco ?? 0)})</span>
+                  <span>Subtotal ({form.items.length} item(ns))</span>
                   <span className="font-mono">{brl(subtotal)}</span>
                 </div>
                 {frete > 0 && (
@@ -157,10 +196,11 @@ export function PedidoWizardDialog({ open, onOpenChange, products, pedido }: Pro
                   </div>
                 )}
                 <div className="flex justify-between border-t border-border/60 pt-1 text-[14px] font-bold">
-                  <span>Total da linha</span>
+                  <span>Total do pedido</span>
                   <span className="font-mono text-accent">{brl(total)}</span>
                 </div>
               </div>
+
               {!isEdit ? (
                 <div className="space-y-2 border-t border-border/60 pt-3">
                   <Label htmlFor="pedidoExample">Exemplo de comprador (simulação fiscal)</Label>
@@ -195,12 +235,7 @@ export function PedidoWizardDialog({ open, onOpenChange, products, pedido }: Pro
 
           {step === 1 && (
             <div className="grid grid-cols-1 gap-3">
-              <Field
-                label="CPF / CNPJ"
-                value={form.cpf}
-                onChange={(v) => set("cpf", v)}
-                mono
-              />
+              <Field label="CPF / CNPJ" value={form.cpf} onChange={(v) => set("cpf", v)} mono />
               <Field label="Nome (xNome)" value={form.nome} onChange={(v) => set("nome", v)} />
               <Field label="Telefone" value={form.telefone} onChange={(v) => set("telefone", v)} mono />
               <div className="space-y-2">
@@ -221,12 +256,7 @@ export function PedidoWizardDialog({ open, onOpenChange, products, pedido }: Pro
                 </p>
               </div>
               {form.indIEDest === "1" && (
-                <Field
-                  label="Inscrição Estadual (IE)"
-                  value={form.ie}
-                  onChange={(v) => set("ie", v)}
-                  mono
-                />
+                <Field label="Inscrição Estadual (IE)" value={form.ie} onChange={(v) => set("ie", v)} mono />
               )}
             </div>
           )}
@@ -271,25 +301,23 @@ export function PedidoWizardDialog({ open, onOpenChange, products, pedido }: Pro
 
           {step === 3 && (
             <div className="space-y-3 text-[14px]">
-              <ReviewRow label="Produto" value={selected ? `${selected.sku} — ${selected.nome}` : "—"} />
-              <ReviewRow
-                label="Qtd × preço"
-                value={`${qty} × ${brl(selected?.preco ?? 0)} = ${brl(subtotal)}`}
-              />
-              {(frete > 0 || desconto > 0) && (
-                <ReviewRow
-                  label="Frete / Desconto"
-                  value={`+ ${brl(frete)} frete / − ${brl(desconto)} desconto`}
-                />
-              )}
-              <ReviewRow label="Total da linha" value={brl(total)} />
+              {form.items.map((item, index) => {
+                const line = lineTotals[index];
+                return (
+                  <ReviewRow
+                    key={index}
+                    label={`Item ${index + 1}`}
+                    value={`${line?.product?.sku ?? "—"} — ${line?.qty ?? 1} × ${brl(line?.product?.preco ?? 0)} = ${brl(line?.total ?? 0)}`}
+                  />
+                );
+              })}
+              <ReviewRow label="Total do pedido" value={brl(total)} />
               <ReviewRow label="Comprador" value={`${form.nome} (${form.cpf})`} />
               <ReviewRow label="Perfil fiscal" value={formatIndIEDest(form.indIEDest, form.cpf, form.ie)} />
               <ReviewRow
                 label="Entrega"
                 value={`${form.logradouro}, ${form.numero}${form.complemento ? ` — ${form.complemento}` : ""} — ${form.bairro}, ${form.municipio}/${form.uf} — CEP ${form.cep}`}
               />
-
             </div>
           )}
         </div>

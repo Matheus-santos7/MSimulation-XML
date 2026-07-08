@@ -19,6 +19,7 @@ export async function resolveSalesChainRules(
   order: OrderForEmit,
   ctx: EmissionContext,
   returnDestUf: string,
+  ruleBaseId = ctx.ruleBaseId,
 ): Promise<SalesChainRules> {
   const { tenant } = order;
   const emitterSettings = await loadEmitterSettings(tx, tenant.id);
@@ -30,11 +31,11 @@ export async function resolveSalesChainRules(
       destinationUf: order.destUf,
       transactionType: "sale",
       customerType,
-      ruleBaseId: ctx.ruleBaseId,
+      ruleBaseId,
     }),
     {
       label: "venda",
-      ruleBaseId: ctx.ruleBaseId,
+      ruleBaseId,
       originUf: tenant.uf,
       destinationUf: order.destUf,
       customerType,
@@ -47,11 +48,11 @@ export async function resolveSalesChainRules(
       destinationUf: returnDestUf,
       transactionType: "inbound",
       customerType: "taxpayer",
-      ruleBaseId: ctx.ruleBaseId,
+      ruleBaseId,
     }),
     {
       label: "retorno simbólico",
-      ruleBaseId: ctx.ruleBaseId,
+      ruleBaseId,
       originUf: tenant.uf,
       destinationUf: returnDestUf,
     },

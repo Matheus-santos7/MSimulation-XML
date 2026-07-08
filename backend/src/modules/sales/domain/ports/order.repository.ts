@@ -10,9 +10,12 @@ export interface OrderRepository {
   updateDraft(id: string, tenantId: string, input: OrderCheckoutInput): Promise<Order | null>;
   markInvoiced(id: string, pedidoMl: string, nfeId: string): Promise<Order>;
   delete(id: string, tenantId: string): Promise<boolean>;
-  assertProductBelongsToTenant(tenantId: string, productId: string): Promise<{ id: string }>;
-  loadCheckoutContext(tenantId: string, productId: string): Promise<{
-    product: OrderForEmit["product"];
+  assertProductsBelongToTenant(tenantId: string, productIds: string[]): Promise<{ id: string }[]>;
+  loadCheckoutContext(
+    tenantId: string,
+    productIds: string[],
+  ): Promise<{
+    products: OrderForEmit["items"][number]["product"][];
     tenant: OrderForEmit["tenant"];
   }>;
 }

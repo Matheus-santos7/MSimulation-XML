@@ -96,18 +96,28 @@ export class PrismaProductRepository implements ProductRepository {
   }
 
   async countInvoicedOrders(productId: string): Promise<number> {
-    const orders = await this.db.pedido.groupBy({
-      by: ["status"],
-      where: { productId },
+    const items = await this.db.pedidoItem.groupBy({
+      by: ["pedidoId"],
+      where: {
+        productId,
+        pedido: { status: "FATURADO" },
+      },
       _count: { _all: true },
     });
-    return orders.find((order) => order.status === "FATURADO")?._count._all ?? 0;
+    return items.length;
   }
 
   async deleteProductAndDraftOrders(productId: string): Promise<void> {
     try {
       await runInTransaction(this.db, async (tx) => {
-        await tx.pedido.deleteMany({ where: { productId, status: "RASCUNHO" } });
+        const draftItems = await tx.pedidoItem.findMany({
+          where: { productId, pedido: { status: "RASCUNHO" } },
+          select: { pedidoId: true },
+        });
+        const draftPedidoIds = [...new Set(draftItems.map((item) => item.pedidoId))];
+        if (draftPedidoIds.length > 0) {
+          await tx.pedido.deleteMany({ where: { id: { in: draftPedidoIds } } });
+        }
         await tx.product.delete({ where: { id: productId } });
       });
     } catch (error) {

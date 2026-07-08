@@ -183,12 +183,26 @@ export type CompradorCheckoutInput = {
   ie?: string;
 };
 
-export type PedidoCheckoutInput = {
+export type PedidoItemCheckoutInput = {
   productId: string;
   quantidade: number;
   desconto?: number;
   frete?: number;
+};
+
+export type PedidoCheckoutInput = {
+  items: PedidoItemCheckoutInput[];
   comprador: CompradorCheckoutInput;
+};
+
+export type PedidoItemDto = {
+  id: string;
+  productId: string;
+  quantidade: number;
+  desconto: number;
+  frete: number;
+  valorTotalLinha: number;
+  product: { id: string; sku: string; nome: string; preco: number };
 };
 
 export type PedidoDto = {
@@ -196,11 +210,7 @@ export type PedidoDto = {
   tenantId: string;
   status: "RASCUNHO" | "FATURADO";
   pedidoMl?: string;
-  productId: string;
-  quantidade: number;
-  desconto: number;
-  frete: number;
-  product: { id: string; sku: string; nome: string; preco: number };
+  items: PedidoItemDto[];
   comprador: CompradorCheckoutInput;
   valorTotal: number;
   nfe?: { chave: string; numero: number; serie: number; status: string };

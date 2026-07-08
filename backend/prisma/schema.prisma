@@ -342,7 +342,7 @@ model Product {
   updatedAt DateTime @updatedAt @map("updated_at")
   nfes                  NFe[]
   nfeItens              NfeItem[]
-  pedidos               Pedido[]
+  pedidoItens           PedidoItem[]
   movimentacoesProduto  MovimentacaoProduto[]
 
   @@unique([tenantId, sku], map: "uq_product_tenant_sku")
@@ -356,11 +356,6 @@ model Pedido {
   id                 String       @id @default(uuid())
   tenantId           String       @map("tenant_id")
   tenant             Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  productId          String       @map("product_id")
-  product            Product      @relation(fields: [productId], references: [id], onDelete: Restrict)
-  quantidade         Int          @default(1)
-  desconto           Decimal      @default(0) @db.Decimal(15, 2)
-  frete              Decimal      @default(0) @db.Decimal(15, 2)
   status             PedidoStatus @default(RASCUNHO)
   pedidoMl           String?      @map("pedido_ml")
   nfeId              String?      @unique @map("nfe_id")
@@ -382,10 +377,31 @@ model Pedido {
   destIe             String?      @map("dest_ie") @db.VarChar(20)
   createdAt          DateTime     @default(now()) @map("created_at")
   updatedAt          DateTime     @updatedAt @map("updated_at")
+  itens              PedidoItem[]
 
   @@index([tenantId], map: "idx_pedido_tenant_id")
   @@index([tenantId, status], map: "idx_pedido_tenant_status")
   @@map("pedidos")
+}
+
+/// Linha de produto em um pedido ML (multi-item).
+model PedidoItem {
+  id         String   @id @default(uuid())
+  pedidoId   String   @map("pedido_id")
+  pedido     Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  productId  String   @map("product_id")
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  numeroItem Int      @map("numero_item")
+  quantidade Int      @default(1)
+  desconto   Decimal  @default(0) @db.Decimal(15, 2)
+  frete      Decimal  @default(0) @db.Decimal(15, 2)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@unique([pedidoId, numeroItem], map: "uq_pedido_item_numero")
+  @@index([pedidoId], map: "idx_pedido_item_pedido_id")
+  @@index([productId], map: "idx_pedido_item_product_id")
+  @@map("pedido_itens")
 }
 
 model NFe {

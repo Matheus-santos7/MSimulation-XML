@@ -7,12 +7,14 @@ import { lookupCep } from "@/lib/lookup-actions";
 import type { PedidoDto, ProductDto } from "@/lib/fiscal-types";
 import {
   PEDIDO_FORM_EMPTY,
+  PEDIDO_ITEM_EMPTY,
   findPedidoFormExample,
   pedidoToFormValues,
   type PedidoFormValues,
+  type PedidoItemFormValues,
 } from "@/lib/pedido-form";
 
-export const PEDIDO_WIZARD_STEPS = ["Produto", "Comprador", "Endereço", "Revisão"] as const;
+export const PEDIDO_WIZARD_STEPS = ["Produtos", "Comprador", "Endereço", "Revisão"] as const;
 
 type UsePedidoWizardOptions = {
   open: boolean;
@@ -35,17 +37,26 @@ export function usePedidoWizard({ open, onOpenChange, products, pedido }: UsePed
 
   const selectedExample = exampleId ? findPedidoFormExample(exampleId) : undefined;
   const isEdit = Boolean(pedido);
-  const selected = products.find((p) => p.id === form.productId);
-  const qty = Math.max(1, Number(form.quantidade) || 1);
-  /** Lê input monetário aceitando vírgula como separador decimal. */
+
   const parseMoney = (raw: string): number => {
     const n = Number(String(raw).replace(",", "."));
     return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0;
   };
-  const desconto = parseMoney(form.desconto);
-  const frete = parseMoney(form.frete);
-  const subtotal = selected ? selected.preco * qty : 0;
-  const total = Math.max(0, Math.round((subtotal + frete - desconto) * 100) / 100);
+
+  const lineTotals = form.items.map((item) => {
+    const product = products.find((p) => p.id === item.productId);
+    const qty = Math.max(1, Number(item.quantidade) || 1);
+    const desconto = parseMoney(item.desconto);
+    const frete = parseMoney(item.frete);
+    const subtotal = product ? product.preco * qty : 0;
+    const total = Math.max(0, Math.round((subtotal + frete - desconto) * 100) / 100);
+    return { product, qty, desconto, frete, subtotal, total };
+  });
+
+  const subtotal = lineTotals.reduce((acc, line) => acc + line.subtotal, 0);
+  const desconto = lineTotals.reduce((acc, line) => acc + line.desconto, 0);
+  const frete = lineTotals.reduce((acc, line) => acc + line.frete, 0);
+  const total = Math.round(lineTotals.reduce((acc, line) => acc + line.total, 0) * 100) / 100;
 
   useEffect(() => {
     if (!open) return;
@@ -57,12 +68,37 @@ export function usePedidoWizard({ open, onOpenChange, products, pedido }: UsePed
     } else {
       setForm({
         ...PEDIDO_FORM_EMPTY,
-        productId: products[0]?.id ?? "",
+        items: [{ ...PEDIDO_ITEM_EMPTY, productId: products[0]?.id ?? "" }],
       });
     }
   }, [open, pedido, products]);
 
-  const set = (key: keyof PedidoFormValues, value: string) => setForm((f) => ({ ...f, [key]: value }));
+  const set = (key: keyof Omit<PedidoFormValues, "items">, value: string) =>
+    setForm((f) => ({ ...f, [key]: value }));
+
+  function setItem(index: number, key: keyof PedidoItemFormValues, value: string) {
+    setForm((current) => ({
+      ...current,
+      items: current.items.map((item, i) => (i === index ? { ...item, [key]: value } : item)),
+    }));
+  }
+
+  function addItem() {
+    setForm((current) => ({
+      ...current,
+      items: [
+        ...current.items,
+        { ...PEDIDO_ITEM_EMPTY, productId: products[0]?.id ?? "" },
+      ],
+    }));
+  }
+
+  function removeItem(index: number) {
+    setForm((current) => {
+      if (current.items.length <= 1) return current;
+      return { ...current, items: current.items.filter((_, i) => i !== index) };
+    });
+  }
 
   function applyExample(id: string) {
     const example = findPedidoFormExample(id);
@@ -70,15 +106,35 @@ export function usePedidoWizard({ open, onOpenChange, products, pedido }: UsePed
     setExampleId(id);
     setForm((current) => ({
       ...example.values,
-      productId: current.productId || products[0]?.id || "",
-      quantidade: current.quantidade || "1",
+      items: current.items.length > 0
+        ? current.items
+        : [{ ...PEDIDO_ITEM_EMPTY, productId: products[0]?.id ?? "" }],
     }));
   }
 
   function submit(saveOnly: boolean) {
     setError(null);
     const fd = new FormData();
-    for (const [k, v] of Object.entries(form)) fd.set(k, v);
+    fd.set("itemCount", String(form.items.length));
+    form.items.forEach((item, index) => {
+      fd.set(`items[${index}].productId`, item.productId);
+      fd.set(`items[${index}].quantidade`, item.quantidade);
+      fd.set(`items[${index}].desconto`, item.desconto);
+      fd.set(`items[${index}].frete`, item.frete);
+    });
+    fd.set("cpf", form.cpf);
+    fd.set("nome", form.nome);
+    fd.set("logradouro", form.logradouro);
+    fd.set("numero", form.numero);
+    fd.set("complemento", form.complemento);
+    fd.set("bairro", form.bairro);
+    fd.set("codigoMunicipio", form.codigoMunicipio);
+    fd.set("municipio", form.municipio);
+    fd.set("uf", form.uf);
+    fd.set("cep", form.cep);
+    fd.set("telefone", form.telefone);
+    fd.set("indIEDest", form.indIEDest);
+    fd.set("ie", form.ie);
     if (pedido?.id) fd.set("pedidoId", pedido.id);
 
     startTransition(async () => {
@@ -122,6 +178,9 @@ export function usePedidoWizard({ open, onOpenChange, products, pedido }: UsePed
     setStep,
     form,
     set,
+    setItem,
+    addItem,
+    removeItem,
     error,
     cepLoading,
     exampleId,
@@ -129,8 +188,7 @@ export function usePedidoWizard({ open, onOpenChange, products, pedido }: UsePed
     pending,
     selectedExample,
     isEdit,
-    selected,
-    qty,
+    lineTotals,
     subtotal,
     desconto,
     frete,

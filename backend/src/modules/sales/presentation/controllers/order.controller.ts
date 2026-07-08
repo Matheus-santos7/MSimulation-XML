@@ -8,6 +8,7 @@ import { OrderLockedError } from "../../domain/errors/order-locked.error.js";
 import { SalesChainError } from "../../domain/errors/sales-chain.error.js";
 import { createSalesModule } from "../../infrastructure/factory/sales-module.factory.js";
 import { orderCheckoutBody, orderIdParam } from "../schemas/order.schemas.js";
+import { mapOrderToIntegrationPayload } from "../mappers/order-integration.mapper.js";
 
 /** Mapeamento de erros de domínio da venda para códigos HTTP na API. */
 const ORDER_ERROR_MAPPINGS = [
@@ -58,6 +59,14 @@ export const orderController: FastifyPluginAsync = async (app) => {
     const order = await sales.getOrderById.execute(tenantId, id);
     if (!order) return reply.status(404).send({ error: "Pedido não encontrado" });
     return order;
+  });
+
+  app.get("/pedidos/:id/integracao", async (req, reply) => {
+    const { id } = orderIdParam.parse(req.params);
+    const tenantId = tenantIdFromRequest(req);
+    const order = await sales.getOrderById.execute(tenantId, id);
+    if (!order) return reply.status(404).send({ error: "Pedido não encontrado" });
+    return mapOrderToIntegrationPayload(order);
   });
 
   app.post("/pedidos", async (req, reply) => {

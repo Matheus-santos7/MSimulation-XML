@@ -162,9 +162,14 @@ export function buildChaveNFe(params: BuildChaveNFeParams): string {
 
 /**
  * Identificador externo estilo Mercado Livre (`obsCont` / `xPed` nos XMLs).
+ * Formato numérico de 16 dígitos, compatível com `idPedidoCanal` (ex: 2000013910679287).
  * Compartilhado entre notas da mesma cadeia (retorno + venda) na mesma emissão.
  */
 export function gerarPedidoMl(): string {
-  const sufixo = Date.now().toString().slice(-12);
-  return `ML-${sufixo}`;
+  const epochMs = Date.now();
+  const randomSuffix = Math.floor(Math.random() * 1_000_000)
+    .toString()
+    .padStart(6, "0");
+  const raw = `2${epochMs}${randomSuffix}`;
+  return raw.slice(0, 16);
 }

@@ -24,16 +24,24 @@ export type TenantForSalesEmit = {
   serieCte: number;
 };
 
+/** Linha de produto no snapshot de emissão. */
+export type OrderItemForEmit = {
+  productId: string;
+  quantidade: number;
+  product: OrderProductForEmit;
+  valorFrete?: number;
+  valorDesconto?: number;
+};
+
 /**
  * Snapshot mínimo de um pedido (ou checkout) para emitir a cadeia fiscal completa.
  *
- * Contém destinatário final (comprador), produto, tenant e quantidade.
+ * Contém destinatário final (comprador), itens, tenant e quantidades por linha.
  * Usado por `SalesChainOrchestrator` — não depende de registo prévio em `pedido`.
  */
 export type OrderForEmit = {
   tenantId: string;
-  productId: string;
-  quantidade: number;
+  items: OrderItemForEmit[];
   destCpf: string;
   destNome: string;
   destLogradouro: string;
@@ -49,9 +57,7 @@ export type OrderForEmit = {
   destTelefone: string | null;
   destIndIeDest: number;
   destIe?: string | null;
-  product: OrderProductForEmit;
   tenant: TenantForSalesEmit;
-  valorFrete?: number;
-  valorDesconto?: number;
+  /** Identificador externo estilo Mercado Livre (`idPedidoCanal` / `xPed`). */
   mlPackId?: string;
 };

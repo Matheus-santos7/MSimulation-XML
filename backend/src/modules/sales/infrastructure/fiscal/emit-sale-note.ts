@@ -14,15 +14,18 @@ import { taxSnapshotFromRule } from "../../../tax/domain/services/tax-snapshot.j
 import { calcularNotaFiscal } from "../../../tax/domain/services/tax-engine.js";
 import type { Tenant } from "../../../../generated/prisma/client.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
-import { buildFiscalItem } from "../../../tax/index.js";
+import { buildFiscalItem, resolveTaxRule } from "../../../tax/index.js";
 import { persistNfeXmlFromEmission } from "../../../fiscal-documents/infrastructure/xml/nfe-xml-service.js";
 import type { EmissionContext } from "../../domain/entities/emission-context.entity.js";
 import type { OrderForEmit } from "../../domain/entities/order-for-emit.entity.js";
 import type { ReturnNoteCreated, SalesChainRules } from "../../application/dto/sales-chain.dto.js";
+import { requirePrimaryOrderItem } from "../../domain/services/order-for-emit.helpers.js";
 import {
   inferIcmsRateForSale,
+  requireTaxRule,
   resolveDestIeForFiscalPayload,
   saleDestinationAddress,
+  sumOrderQuantidade,
 } from "../../domain/services/sales-chain.service.js";
 
 function autXmlCpfsFromSettings(
@@ -33,9 +36,9 @@ function autXmlCpfsFromSettings(
 }
 
 /**
- * Emite NF-e **VENDA** ao comprador final, referenciando o retorno simbólico.
+ * Emite NF-e **VENDA** ao comprador final, referenciando o retorno simbólico principal.
  *
- * Usa `valorTotalVenda`, regra sale e endereço do destinatário (`saleDestinationAddress`).
+ * Suporta múltiplos itens (`<det>`) com regra fiscal e frete/desconto por linha.
  */
 export async function emitSaleNote(
   tx: PrismaTx,
@@ -47,8 +50,9 @@ export async function emitSaleNote(
   stockCodigoMunicipio?: string,
 ) {
   const { tenant } = order;
-  const { saleTaxRule, customerType, emitterSettings } = rules;
+  const { customerType, emitterSettings } = rules;
   const fiscalExitUf = resolveFiscalExitUf(tenant.uf, stockUf);
+  const primaryItem = requirePrimaryOrderItem(order);
 
   const numeroInicial = resolveNumeroInicialNfe(emitterSettings, ctx.serie, {
     serieRemessa: tenant.serieRemessa,
@@ -57,94 +61,127 @@ export async function emitSaleNote(
   const numero = await proximoNumeroNfe(tx, tenant.id, ctx.serie, numeroInicial);
   const chave = buildChaveNFe({ uf: tenant.uf, cnpj: tenant.cnpj, serie: ctx.serie, numero });
   const fallbackRate = inferIcmsRateForSale(fiscalExitUf, order.destUf, emitterSettings);
-  const cfop = resolveSaleCfop(tenant.uf, order.destUf, customerType, saleTaxRule.cfop);
   const natOp = VENDA_ML_NAT_OP;
-  const valorFrete = order.valorFrete ?? 0;
-  const valorDesconto = order.valorDesconto ?? 0;
-  const xPed = order.mlPackId?.trim() || undefined;
+  const xPed = order.mlPackId?.trim() || ctx.pedidoMl;
   const autXmlCpfs = autXmlCpfsFromSettings(emitterSettings);
-  const nfci = order.product.nfci?.trim() || undefined;
+  const nfci = primaryItem.product.nfci?.trim() || undefined;
 
-  const saleItem = buildFiscalItem(
-    {
-      codigo: order.product.sku ?? order.product.id,
-      descricao: order.product.nome ?? "Mercadoria",
-      ncm: order.product.ncm,
-      cfop,
-      unidade: order.product.unidade ?? "UN",
-      cest: order.product.cest ?? undefined,
-      ean: order.product.ean ?? undefined,
-      exTipi: order.product.exTipi ?? undefined,
-      origem: order.product.origem ?? 0,
-      quantidade: order.quantidade,
-      valorUnitario: ctx.valorUnitVenda,
-      frete: valorFrete,
-      desconto: valorDesconto,
-    },
-    saleTaxRule,
-    {
-      ufOrigem: tenant.uf,
-      ufSaidaFisica: fiscalExitUf,
-      ufDestino: order.destUf,
-      customerType,
-      emitterSettings,
-      operationTipo: "VENDA",
-    },
-    fallbackRate,
-  );
-  const saleInvoice = calcularNotaFiscal([saleItem]);
+  const saleFiscalItems = [];
+  let headerCfop = rules.saleTaxRule.cfop;
 
-  const icmsRate = saleItem.icms.pICMS || fallbackRate;
+  for (const item of order.items) {
+    const ruleBaseId = item.product.taxRuleBaseId?.trim() ?? ctx.ruleBaseId;
+    const saleTaxRule = requireTaxRule(
+      await resolveTaxRule(tx, tenant.id, {
+        originUf: tenant.uf,
+        destinationUf: order.destUf,
+        transactionType: "sale",
+        customerType,
+        ruleBaseId,
+      }),
+      {
+        label: "venda",
+        ruleBaseId,
+        originUf: tenant.uf,
+        destinationUf: order.destUf,
+        customerType,
+      },
+    );
+    headerCfop = saleTaxRule.cfop;
+    const cfop = resolveSaleCfop(tenant.uf, order.destUf, customerType, saleTaxRule.cfop);
+    const valorFrete = item.valorFrete ?? 0;
+    const valorDesconto = item.valorDesconto ?? 0;
+
+    saleFiscalItems.push(
+      buildFiscalItem(
+        {
+          codigo: item.product.sku ?? item.product.id,
+          descricao: item.product.nome ?? "Mercadoria",
+          ncm: item.product.ncm,
+          cfop,
+          unidade: item.product.unidade ?? "UN",
+          cest: item.product.cest ?? undefined,
+          ean: item.product.ean ?? undefined,
+          exTipi: item.product.exTipi ?? undefined,
+          origem: item.product.origem ?? 0,
+          quantidade: item.quantidade,
+          valorUnitario: Number(item.product.preco),
+          frete: valorFrete,
+          desconto: valorDesconto,
+        },
+        saleTaxRule,
+        {
+          ufOrigem: tenant.uf,
+          ufSaidaFisica: fiscalExitUf,
+          ufDestino: order.destUf,
+          customerType,
+          emitterSettings,
+          operationTipo: "VENDA",
+        },
+        fallbackRate,
+      ),
+    );
+  }
+
+  const saleInvoice = calcularNotaFiscal(saleFiscalItems);
+  const icmsRate = saleFiscalItems[0]?.icms.pICMS || fallbackRate;
   const icmsValue = saleInvoice.totais.vICMS;
+  const valorFreteTotal = saleInvoice.totais.vFrete;
+  const valorDescontoTotal = saleInvoice.totais.vDesc;
+  const quantidadeTotal = sumOrderQuantidade(order);
   const crossUfFulfillment = fiscalExitUf.toUpperCase() !== tenant.uf.toUpperCase();
   const cMunSaidaFisica = stockCodigoMunicipio?.trim() || undefined;
   const destIe = resolveDestIeForFiscalPayload(order.destIndIeDest, order.destIe);
+  const cfop = resolveSaleCfop(tenant.uf, order.destUf, customerType, headerCfop);
 
   const saleRow = await tx.nFe.create({
     data: {
       tenantId: tenant.id,
-      productId: order.product.id,
+      productId: primaryItem.product.id,
       chave,
       numero,
       serie: ctx.serie,
       natOp,
       cfop,
-      ncm: order.product.ncm,
+      ncm: primaryItem.product.ncm,
       ...saleDestinationAddress(order),
-      valor: ctx.valorTotalVenda,
+      valor: saleInvoice.totais.vNF,
       valorIcms: icmsValue,
       aliqIcms: icmsRate,
       status: FiscalStatus.AUTORIZADA,
       emitidaEm: ctx.emitidaEm,
       pedidoMl: ctx.pedidoMl,
-      quantidade: order.quantidade,
+      quantidade: quantidadeTotal,
       tipo: NFeTipo.VENDA,
       nfeReferenciaId: returnNote.id,
       fiscalPayload: enrichFiscalPayloadWithXTexto(
         enrichFiscalPayloadMlVenda(
           {
-            ...enrichTaxSnapshot(taxSnapshotFromRule(saleTaxRule, fallbackRate, emitterSettings), {
-              settings: emitterSettings,
-              tipo: NFeTipo.VENDA,
-              valor: ctx.valorTotalVenda,
-              valorIcms: icmsValue,
-              emitUf: fiscalExitUf,
-              destUf: order.destUf,
-              indFinal: 1,
-            }),
+            ...enrichTaxSnapshot(
+              taxSnapshotFromRule(rules.saleTaxRule, fallbackRate, emitterSettings),
+              {
+                settings: emitterSettings,
+                tipo: NFeTipo.VENDA,
+                valor: saleInvoice.totais.vNF,
+                valorIcms: icmsValue,
+                emitUf: fiscalExitUf,
+                destUf: order.destUf,
+                indFinal: 1,
+              },
+            ),
             engine: saleInvoice,
             ufSaidaFisica: fiscalExitUf,
             ...(crossUfFulfillment && cMunSaidaFisica ? { cMunSaidaFisica } : {}),
             ...(autXmlCpfs ? { autXmlCpfs } : {}),
             ...(nfci ? { nfci } : {}),
             ...(xPed ? { xPed } : {}),
-            ...(valorFrete > 0 ? { valorFrete } : {}),
-            ...(valorDesconto > 0 ? { valorDesconto } : {}),
+            ...(valorFreteTotal > 0 ? { valorFrete: valorFreteTotal } : {}),
+            ...(valorDescontoTotal > 0 ? { valorDesconto: valorDescontoTotal } : {}),
             ...(destIe ? { destIe } : {}),
           } as Record<string, unknown>,
           {
-            quantidade: order.quantidade,
-            valorFrete,
+            quantidade: quantidadeTotal,
+            valorFrete: valorFreteTotal,
             xPed,
             nfci,
             autXmlCpfs,
@@ -170,7 +207,7 @@ export async function emitSaleNote(
   await persistNfeXmlFromEmission(tx, {
     nfeId: saleRow.id,
     tenant: tenant as Tenant,
-    productId: order.product.id,
+    productId: primaryItem.product.id,
     settings: emitterSettings,
     nfeReferenciaChave: returnNote.chave,
   });

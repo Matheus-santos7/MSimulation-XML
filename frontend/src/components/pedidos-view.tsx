@@ -101,6 +101,9 @@ export function PedidosView({ pedidos, products }: Props) {
                       <td className="px-4 py-3">
                         <div className="text-[14px]">{p.comprador.nome}</div>
                         <div className="text-[12px] text-muted-foreground font-mono">{p.comprador.cpf}</div>
+                        <div className="text-[11px] text-muted-foreground mt-0.5">
+                          {p.items.length} produto(s)
+                        </div>
                       </td>
                       <td className="px-4 py-3 font-mono">{brl(p.valorTotal)}</td>
                       <td className="px-4 py-3 font-mono text-[13px]">

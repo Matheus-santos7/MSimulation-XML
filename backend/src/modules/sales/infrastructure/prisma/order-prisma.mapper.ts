@@ -1,16 +1,22 @@
 import type { PedidoStatus, Product } from "../../../../generated/prisma/client.js";
 import { num } from "../../../fiscal-documents/presentation/mappers/fiscal-mappers.js";
 import type { Buyer } from "../../domain/entities/buyer.entity.js";
-import type { Order } from "../../domain/entities/order.entity.js";
+import type { Order, OrderItemSummary } from "../../domain/entities/order.entity.js";
 import type { OrderForEmit } from "../../domain/entities/order-for-emit.entity.js";
+
+type PedidoItemRow = {
+  id: string;
+  productId: string;
+  numeroItem: number;
+  quantidade: number;
+  desconto: { toString(): string };
+  frete: { toString(): string };
+  product: Product;
+};
 
 type OrderRow = {
   id: string;
   tenantId: string;
-  productId: string;
-  quantidade: number;
-  desconto: { toString(): string };
-  frete: { toString(): string };
   status: PedidoStatus;
   pedidoMl: string | null;
   nfeId: string | null;
@@ -31,7 +37,7 @@ type OrderRow = {
   destIe: string | null;
   createdAt: Date;
   updatedAt: Date;
-  product: Product;
+  itens: PedidoItemRow[];
   nfe?: {
     chave: string;
     numero: number;
@@ -40,15 +46,14 @@ type OrderRow = {
   } | null;
 };
 
-export function mapOrderFromPrisma(row: OrderRow): Order {
+function mapOrderItemFromRow(row: PedidoItemRow): OrderItemSummary {
   const unitPrice = num(row.product.preco);
   const desconto = num(row.desconto);
   const frete = num(row.frete);
+  const valorTotalLinha = Math.round((unitPrice * row.quantidade + frete - desconto) * 100) / 100;
+
   return {
     id: row.id,
-    tenantId: row.tenantId,
-    status: row.status,
-    pedidoMl: row.pedidoMl ?? undefined,
     productId: row.productId,
     quantidade: row.quantidade,
     desconto,
@@ -59,6 +64,23 @@ export function mapOrderFromPrisma(row: OrderRow): Order {
       nome: row.product.nome,
       preco: unitPrice,
     },
+    valorTotalLinha,
+  };
+}
+
+export function mapOrderFromPrisma(row: OrderRow): Order {
+  const items = row.itens
+    .slice()
+    .sort((a, b) => a.numeroItem - b.numeroItem)
+    .map(mapOrderItemFromRow);
+  const valorTotal = Math.round(items.reduce((acc, item) => acc + item.valorTotalLinha, 0) * 100) / 100;
+
+  return {
+    id: row.id,
+    tenantId: row.tenantId,
+    status: row.status,
+    pedidoMl: row.pedidoMl ?? undefined,
+    items,
     comprador: {
       cpf: row.destCpf,
       nome: row.destNome,
@@ -76,7 +98,7 @@ export function mapOrderFromPrisma(row: OrderRow): Order {
       indIEDest: row.destIndIeDest,
       ie: row.destIe ?? undefined,
     },
-    valorTotal: unitPrice * row.quantidade + frete - desconto,
+    valorTotal,
     nfe: row.nfe
       ? {
           chave: row.nfe.chave,
@@ -97,12 +119,24 @@ export function mapOrderForEmitFromPrisma(
     tenant: OrderForEmit["tenant"];
   },
 ): OrderForEmit {
-  const desconto = num(pedido.desconto);
-  const frete = num(pedido.frete);
+  const items = pedido.itens
+    .slice()
+    .sort((a, b) => a.numeroItem - b.numeroItem)
+    .map((item) => {
+      const desconto = num(item.desconto);
+      const frete = num(item.frete);
+      return {
+        productId: item.productId,
+        quantidade: item.quantidade,
+        product: item.product,
+        ...(frete > 0 ? { valorFrete: frete } : {}),
+        ...(desconto > 0 ? { valorDesconto: desconto } : {}),
+      };
+    });
+
   return {
     tenantId: pedido.tenantId,
-    productId: pedido.productId,
-    quantidade: pedido.quantidade,
+    items,
     destCpf: pedido.destCpf,
     destNome: pedido.destNome,
     destLogradouro: pedido.destLogradouro,
@@ -118,10 +152,8 @@ export function mapOrderForEmitFromPrisma(
     destTelefone: pedido.destTelefone,
     destIndIeDest: pedido.destIndIeDest,
     destIe: pedido.destIe,
-    product: pedido.product,
     tenant: pedido.tenant,
-    valorFrete: frete > 0 ? frete : undefined,
-    valorDesconto: desconto > 0 ? desconto : undefined,
+    ...(pedido.pedidoMl ? { mlPackId: pedido.pedidoMl } : {}),
   };
 }
 

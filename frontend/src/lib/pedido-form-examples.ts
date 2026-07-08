@@ -1,4 +1,5 @@
-import type { PedidoFormValues } from "./pedido-form";
+import type { PedidoFormValues } from "./pedido-form-types";
+import { PEDIDO_ITEM_EMPTY } from "./pedido-form-types";
 
 export type PedidoFormExampleKind = "cpf_consumidor" | "cnpj_contribuinte" | "cnpj_nao_contribuinte";
 
@@ -88,13 +89,10 @@ function formatCnpj(digits: string): string {
 }
 
 function buildBaseForm(
-  partial: Omit<PedidoFormValues, "productId" | "quantidade" | "desconto" | "frete">,
+  partial: Omit<PedidoFormValues, "items">,
 ): PedidoFormValues {
   return {
-    productId: "",
-    quantidade: "1",
-    desconto: "0",
-    frete: "0",
+    items: [{ ...PEDIDO_ITEM_EMPTY }],
     ...partial,
   };
 }

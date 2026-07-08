@@ -51,6 +51,10 @@ export async function deleteOrder(id: string): Promise<void> {
   await mutateJson(buildApiUrl(`/api/pedidos/${id}`), "DELETE");
 }
 
+export async function getOrderIntegrationPayload(id: string): Promise<Record<string, unknown>> {
+  return getJson<Record<string, unknown>>(buildApiUrl(`/api/pedidos/${id}/integracao`));
+}
+
 export async function createProduct(input: ProductInput): Promise<ProductDto> {
   return mutateJson<ProductDto>(buildApiUrl("/api/products"), "POST", input) as Promise<ProductDto>;
 }

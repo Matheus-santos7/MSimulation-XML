@@ -1,4 +1,7 @@
 import type { CompradorCheckoutInput, PedidoCheckoutInput, PedidoDto } from "@/lib/fiscal-types";
+import type { PedidoFormValues } from "./pedido-form-types";
+export type { PedidoFormValues, PedidoItemFormValues } from "./pedido-form-types";
+export { PEDIDO_FORM_EMPTY, PEDIDO_ITEM_EMPTY } from "./pedido-form-types";
 export {
   findPedidoFormExample,
   PEDIDO_FORM_EXAMPLE_GROUPS,
@@ -14,55 +17,10 @@ export type PedidoFormState = {
   fieldErrors?: Record<string, string[]>;
 };
 
-export type PedidoFormValues = {
-  productId: string;
-  quantidade: string;
-  /** Desconto comercial da linha em R$ (string para input controlado). */
-  desconto: string;
-  /** Frete rateado para a linha em R$ (string para input controlado). */
-  frete: string;
-  cpf: string;
-  nome: string;
-  logradouro: string;
-  numero: string;
-  complemento: string;
-  bairro: string;
-  codigoMunicipio: string;
-  municipio: string;
-  uf: string;
-  cep: string;
-  telefone: string;
-  /** indIEDest SEFAZ: 1=contribuinte, 2=isento, 9=não contribuinte (consumidor final). */
-  indIEDest: string;
-  /** IE do destinatário — obrigatória quando indIEDest=1. */
-  ie: string;
-};
-
-export const PEDIDO_FORM_EMPTY: PedidoFormValues = {
-  productId: "",
-  quantidade: "1",
-  desconto: "0",
-  frete: "0",
-  cpf: "",
-  nome: "",
-  logradouro: "",
-  numero: "SN",
-  complemento: "",
-  bairro: "",
-  codigoMunicipio: "",
-  municipio: "",
-  uf: "SP",
-  cep: "",
-  telefone: "",
-  indIEDest: "9",
-  ie: "",
-};
-
 /** @deprecated Preferir `PEDIDO_FORM_EXAMPLES` ou `findPedidoFormExample`. */
 export const PEDIDO_FORM_EXAMPLE: PedidoFormValues =
   PEDIDO_FORM_EXAMPLES.find((e) => e.id === "cpf-pr")?.values ?? PEDIDO_FORM_EXAMPLES[0]!.values;
 
-/** Formata um número monetário como string com no máximo 2 casas (sem zero-padding). */
 function brValueToInput(value: number | null | undefined): string {
   const n = Number(value ?? 0);
   if (!Number.isFinite(n) || n <= 0) return "0";
@@ -72,10 +30,12 @@ function brValueToInput(value: number | null | undefined): string {
 export function pedidoToFormValues(p: PedidoDto): PedidoFormValues {
   const c = p.comprador;
   return {
-    productId: p.productId,
-    quantidade: String(p.quantidade),
-    desconto: brValueToInput(p.desconto),
-    frete: brValueToInput(p.frete),
+    items: p.items.map((item) => ({
+      productId: item.productId,
+      quantidade: String(item.quantidade),
+      desconto: brValueToInput(item.desconto),
+      frete: brValueToInput(item.frete),
+    })),
     cpf: c.cpf,
     nome: c.nome,
     logradouro: c.logradouro,
@@ -92,11 +52,6 @@ export function pedidoToFormValues(p: PedidoDto): PedidoFormValues {
   };
 }
 
-/**
- * Converte input controlado (string) em número monetário >= 0.
- *
- * Aceita vírgula como decimal e descarta valores inválidos / negativos.
- */
 function parseMonetaryInput(raw: FormDataEntryValue | null): number {
   if (raw == null) return 0;
   const normalized = String(raw).replace(",", ".").trim();
@@ -106,6 +61,11 @@ function parseMonetaryInput(raw: FormDataEntryValue | null): number {
   return Math.round(n * 100) / 100;
 }
 
+/**
+ * Parses wizard FormData into API checkout input.
+ *
+ * Items are encoded as `items[0].productId`, `items[0].quantidade`, etc.
+ */
 export function parsePedidoForm(formData: FormData): PedidoCheckoutInput {
   const opt = (key: string) => {
     const v = String(formData.get(key) ?? "").trim();
@@ -130,17 +90,38 @@ export function parsePedidoForm(formData: FormData): PedidoCheckoutInput {
     ie: opt("ie"),
   };
 
-  return {
-    productId: String(formData.get("productId") ?? ""),
-    quantidade: Number(formData.get("quantidade") ?? 1),
-    desconto: parseMonetaryInput(formData.get("desconto")),
-    frete: parseMonetaryInput(formData.get("frete")),
-    comprador,
-  };
+  const itemCount = Number(formData.get("itemCount") ?? 0);
+  const items = Array.from({ length: itemCount }, (_, index) => ({
+    productId: String(formData.get(`items[${index}].productId`) ?? ""),
+    quantidade: Number(formData.get(`items[${index}].quantidade`) ?? 1),
+    desconto: parseMonetaryInput(formData.get(`items[${index}].desconto`)),
+    frete: parseMonetaryInput(formData.get(`items[${index}].frete`)),
+  })).filter((item) => item.productId);
+
+  return { items, comprador };
 }
 
 export function formValuesToFormData(v: PedidoFormValues): FormData {
   const fd = new FormData();
-  for (const [k, val] of Object.entries(v)) fd.set(k, val);
+  fd.set("itemCount", String(v.items.length));
+  v.items.forEach((item, index) => {
+    fd.set(`items[${index}].productId`, item.productId);
+    fd.set(`items[${index}].quantidade`, item.quantidade);
+    fd.set(`items[${index}].desconto`, item.desconto);
+    fd.set(`items[${index}].frete`, item.frete);
+  });
+  fd.set("cpf", v.cpf);
+  fd.set("nome", v.nome);
+  fd.set("logradouro", v.logradouro);
+  fd.set("numero", v.numero);
+  fd.set("complemento", v.complemento);
+  fd.set("bairro", v.bairro);
+  fd.set("codigoMunicipio", v.codigoMunicipio);
+  fd.set("municipio", v.municipio);
+  fd.set("uf", v.uf);
+  fd.set("cep", v.cep);
+  fd.set("telefone", v.telefone);
+  fd.set("indIEDest", v.indIEDest);
+  fd.set("ie", v.ie);
   return fd;
 }

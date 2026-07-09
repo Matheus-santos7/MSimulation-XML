@@ -6,7 +6,9 @@ import {
   calcularIcmsFreteCte,
   calcularValorFreteRemessa,
   CTE_REMESSA_CFOP,
+  CTE_REMESSA_CFOP_INTRA,
   CTE_VENDA_CFOP,
+  CTE_VENDA_CFOP_INTRA,
   resolveAliqIcmsFrete,
   resolveCteDocumento,
 } from "./cte-template.js";
@@ -116,10 +118,13 @@ describe("cte-template", () => {
     assert.equal(fp.rota.destino, "Governador Celso Ramos/SC");
   });
 
-  it("resolveCteDocumento distingue remessa e venda consumidor", () => {
-    assert.equal(resolveCteDocumento("remessa", 1).cfop, CTE_REMESSA_CFOP);
-    assert.equal(resolveCteDocumento("venda", 9).cfop, CTE_VENDA_CFOP);
-    assert.equal(resolveCteDocumento("venda", 1).cfop, CTE_REMESSA_CFOP);
+  it("resolveCteDocumento distingue remessa/venda e CFOP intra vs inter", () => {
+    assert.equal(resolveCteDocumento("remessa", 1, "SP", "SC").cfop, CTE_REMESSA_CFOP);
+    assert.equal(resolveCteDocumento("remessa", 1, "SP", "SP").cfop, CTE_REMESSA_CFOP_INTRA);
+    assert.equal(resolveCteDocumento("venda", 9, "SP", "RJ").cfop, CTE_VENDA_CFOP);
+    assert.equal(resolveCteDocumento("venda", 9, "RJ", "RJ").cfop, CTE_VENDA_CFOP_INTRA);
+    assert.equal(resolveCteDocumento("venda", 1, "SP", "SC").cfop, CTE_REMESSA_CFOP);
+    assert.equal(resolveCteDocumento("venda", 1, "SP", "sp").cfop, CTE_REMESSA_CFOP_INTRA);
   });
 
   it("resolveAliqIcmsFrete prioriza planilha tributária", () => {

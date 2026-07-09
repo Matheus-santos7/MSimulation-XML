@@ -94,7 +94,13 @@ export async function backfillCteLegado(
 
   if (fiscalPayloadExistente?.nfeChaveRef && fiscalPayloadExistente.destinatario) {
     if (fiscalPayloadExistente.ibsCbs && fiscalPayloadExistente.emitente) {
-      const { cfop, natOp } = resolveCteDocumento(vinculo, nfe.destIndIeDest);
+      const rota = fiscalPayloadExistente.rota;
+      const { cfop, natOp } = resolveCteDocumento(
+        vinculo,
+        nfe.destIndIeDest,
+        rota?.ufIni ?? fiscalPayloadExistente.emitente.uf,
+        rota?.ufFim ?? nfe.destUf,
+      );
       const emitente = fiscalPayloadExistente.emitente;
       const chave = chaveCteMatchesEmitente(row.chave, emitente)
         ? row.chave

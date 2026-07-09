@@ -132,8 +132,10 @@ export {
 export {
   CTE_ML_EMIT,
   CTE_REMESSA_CFOP,
+  CTE_REMESSA_CFOP_INTRA,
   CTE_REMESSA_NAT_OP,
   CTE_VENDA_CFOP,
+  CTE_VENDA_CFOP_INTRA,
   CTE_VENDA_NAT_OP,
   CTE_RNTRC,
   aliquotaIcmsFreteInterestadual,
@@ -147,6 +149,7 @@ export {
   CTE_FRETE_COFINS_ALIQ,
   CTE_FRETE_PIS_ALIQ,
   CTE_IBS_CBS_DEFAULT,
+  isCteIntraestadual,
   participanteDestinoFromNfe,
   participanteRemetenteFromTenant,
   resolveAliqIcmsFrete,

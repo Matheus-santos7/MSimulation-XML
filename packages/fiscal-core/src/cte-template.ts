@@ -16,10 +16,15 @@ export const CTE_ML_EMIT = {
   cep: "21010410",
 } as const;
 
+/** Prestação de transporte interestadual (remessa / contribuinte). */
 export const CTE_REMESSA_CFOP = "6353";
+/** Prestação de transporte intraestadual (remessa / contribuinte). */
+export const CTE_REMESSA_CFOP_INTRA = "5353";
 export const CTE_REMESSA_NAT_OP = "PRESTAÇÕES DE SERVIÇOS DE TRANSPORTE";
-/** Venda full → consumidor (não contribuinte). */
+/** Venda full → consumidor não contribuinte, interestadual. */
 export const CTE_VENDA_CFOP = "6357";
+/** Venda full → consumidor não contribuinte, intraestadual. */
+export const CTE_VENDA_CFOP_INTRA = "5357";
 export const CTE_VENDA_NAT_OP = "PRESTAÇÃO DE SERVIÇO DE TRANSPORTE A NÃO CONTRIBUINTE";
 export const CTE_RNTRC = "47923462";
 
@@ -33,15 +38,35 @@ export type CteTaxRuleIcms = {
 
 export type CteVinculo = "remessa" | "venda";
 
-/** CFOP e natureza conforme vínculo (remessa → CD / venda → consumidor). */
+/**
+ * Indica se o serviço de transporte é intraestadual (mesma UF início/fim).
+ */
+export function isCteIntraestadual(ufIni: string, ufFim: string): boolean {
+  return ufIni.trim().toUpperCase() === ufFim.trim().toUpperCase();
+}
+
+/**
+ * CFOP e natureza conforme vínculo e territorialidade do serviço.
+ * Remessa / contribuinte: 5353 (intra) ou 6353 (inter).
+ * Venda a não contribuinte (`indIEDest=9`): 5357 (intra) ou 6357 (inter).
+ */
 export function resolveCteDocumento(
   vinculo: CteVinculo,
   destIndIeDest: number,
+  ufIni: string,
+  ufFim: string,
 ): { cfop: string; natOp: string } {
+  const intra = isCteIntraestadual(ufIni, ufFim);
   if (vinculo === "venda" && destIndIeDest === 9) {
-    return { cfop: CTE_VENDA_CFOP, natOp: CTE_VENDA_NAT_OP };
+    return {
+      cfop: intra ? CTE_VENDA_CFOP_INTRA : CTE_VENDA_CFOP,
+      natOp: CTE_VENDA_NAT_OP,
+    };
   }
-  return { cfop: CTE_REMESSA_CFOP, natOp: CTE_REMESSA_NAT_OP };
+  return {
+    cfop: intra ? CTE_REMESSA_CFOP_INTRA : CTE_REMESSA_CFOP,
+    natOp: CTE_REMESSA_NAT_OP,
+  };
 }
 
 import type { CteEmitente } from "./cte-emitente.js";

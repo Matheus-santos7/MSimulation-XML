@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { CTE_VENDA_CFOP } from "@msimulation-xml/fiscal-core";
+import { CTE_VENDA_CFOP_INTRA } from "@msimulation-xml/fiscal-core";
 import { montarDadosCteFromNfe } from "./cte-emissao.js";
 
 const tenant = {
@@ -72,12 +72,55 @@ describe("montarDadosCteFromNfe", () => {
     });
 
     assert.equal(dados.nfeVendaId, "nfe-venda");
-    assert.equal(dados.cfop, CTE_VENDA_CFOP);
+    // Fallback emitente RJ + dest RJ → CFOP intraestadual 5357
+    assert.equal(dados.cfop, CTE_VENDA_CFOP_INTRA);
     assert.equal(dados.fiscalPayload.nfeChaveRef, nfeVenda.chave);
     assert.equal(dados.fiscalPayload.destinatario.doc, "12345678901");
     assert.equal(dados.fiscalPayload.destinatario.endereco.uf, "RJ");
     assert.equal(dados.fiscalPayload.rota.ufFim, "RJ");
     assert.equal(dados.chave.length, 44);
     assert.ok(dados.valor >= 12.9);
+  });
+
+  it("remessa interestadual usa CFOP 6353", async () => {
+    const nfeRemessa = {
+      ...nfeVenda,
+      id: "nfe-remessa",
+      destIndIeDest: 1,
+      destUf: "SC",
+      destCodigoMunicipio: "4206009",
+      destMunicipio: "Governador Celso Ramos",
+      tipo: "REMESSA",
+    } as Parameters<typeof montarDadosCteFromNfe>[2];
+
+    const dados = await montarDadosCteFromNfe(prismaStub, tenant as never, nfeRemessa, "remessa", {
+      serie: 1,
+      numero: 10,
+    });
+
+    assert.equal(dados.cfop, "6353");
+    assert.equal(dados.fiscalPayload.rota.ufIni, "SP");
+    assert.equal(dados.fiscalPayload.rota.ufFim, "SC");
+  });
+
+  it("remessa intraestadual usa CFOP 5353", async () => {
+    const nfeRemessa = {
+      ...nfeVenda,
+      id: "nfe-remessa-intra",
+      destIndIeDest: 1,
+      destUf: "SP",
+      destCodigoMunicipio: "3550308",
+      destMunicipio: "São Paulo",
+      tipo: "REMESSA",
+    } as Parameters<typeof montarDadosCteFromNfe>[2];
+
+    const dados = await montarDadosCteFromNfe(prismaStub, tenant as never, nfeRemessa, "remessa", {
+      serie: 1,
+      numero: 11,
+    });
+
+    assert.equal(dados.cfop, "5353");
+    assert.equal(dados.fiscalPayload.rota.ufIni, "SP");
+    assert.equal(dados.fiscalPayload.rota.ufFim, "SP");
   });
 });

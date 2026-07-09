@@ -15,6 +15,10 @@ import {
   montarDadosCteFromNfe,
   type DadosCteEmissao,
 } from "../../domain/services/cte-emissao.js";
+import {
+  alignCteChaveWithEmitente,
+  chaveCteMatchesEmitente,
+} from "../../domain/services/cte-chave.js";
 
 export type CteXmlPersistTx = PrismaTx;
 
@@ -89,10 +93,14 @@ export async function backfillCteLegado(
   const fiscalPayloadExistente = row.fiscalPayload as CteFiscalPayload | null;
 
   if (fiscalPayloadExistente?.nfeChaveRef && fiscalPayloadExistente.destinatario) {
-    if (fiscalPayloadExistente.ibsCbs) {
+    if (fiscalPayloadExistente.ibsCbs && fiscalPayloadExistente.emitente) {
       const { cfop, natOp } = resolveCteDocumento(vinculo, nfe.destIndIeDest);
+      const emitente = fiscalPayloadExistente.emitente;
+      const chave = chaveCteMatchesEmitente(row.chave, emitente)
+        ? row.chave
+        : alignCteChaveWithEmitente(row.chave, emitente, row.serie, row.numero);
       return {
-        chave: row.chave,
+        chave,
         numero: row.numero,
         serie: row.serie,
         cfop: row.cfop || cfop,
@@ -122,6 +130,7 @@ export async function backfillCteLegado(
   await prisma.cTe.update({
     where: { id: row.id },
     data: {
+      chave: dados.chave,
       fiscalPayload: dados.fiscalPayload as Prisma.InputJsonValue,
       cfop: dados.cfop,
       natOp: dados.natOp,
@@ -133,7 +142,7 @@ export async function backfillCteLegado(
     },
   });
 
-  return { ...dados, chave: row.chave };
+  return dados;
 }
 
 function dadosFromPersistedRow(row: CteWithNfe, fiscalPayload: CteFiscalPayload): DadosCteEmissao {

@@ -44,6 +44,12 @@ const prismaStub = {
   product: {
     findFirst: async () => null,
   },
+  meliUnidadeLogistica: {
+    findFirst: async () => null,
+  },
+  tenantUnidadeLogistica: {
+    findFirst: async () => null,
+  },
 } as Parameters<typeof montarDadosCteFromNfe>[0];
 
 describe("montarDadosCteFromNfe", () => {

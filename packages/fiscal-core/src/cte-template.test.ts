@@ -10,6 +10,7 @@ import {
   resolveAliqIcmsFrete,
   resolveCteDocumento,
 } from "./cte-template.js";
+import { mapLogisticsUnitToCteEmitente } from "./cte-emitente.js";
 
 const tenant = {
   cnpj: "12345678000199",
@@ -73,6 +74,35 @@ describe("cte-template", () => {
     assert.equal(fp.icms.vICMS, 0.93);
     assert.equal(fp.ibsCbs.vBC, 6.19);
     assert.equal(fp.ibsCbs.vCBS, 0.06);
+  });
+
+  it("buildCteFiscalPayload venda usa município do emitente na rota", () => {
+    const emitente = mapLogisticsUnitToCteEmitente({
+      cnpj: "03007331007405",
+      ie: "241174886113",
+      destNomeFiscal: "EBAZAR.COM.BR LTDA",
+      nome: "Cajamar",
+      logradouro: "Av Antonio Candido Machado",
+      numero: "3100",
+      bairro: "Centro",
+      codigoMunicipio: "3509205",
+      municipio: "Cajamar",
+      uf: "SP",
+      cep: "07776037",
+    });
+    const fp = buildCteFiscalPayload(
+      {
+        ...nfeRemessa,
+        destUf: "SP",
+        destCodigoMunicipio: "3550308",
+        destMunicipio: "Sao Paulo",
+      },
+      tenant,
+      { vFrete: 7.75, emitente, vinculo: "venda" },
+    );
+    assert.equal(fp.rota.cMunIni, "3509205");
+    assert.equal(fp.rota.ufIni, "SP");
+    assert.equal(fp.rota.origem, "Cajamar/SP");
   });
 
   it("buildCteFiscalPayload usa destinatário da NF-e e referência pela chave", () => {

@@ -44,6 +44,8 @@ export function resolveCteDocumento(
   return { cfop: CTE_REMESSA_CFOP, natOp: CTE_REMESSA_NAT_OP };
 }
 
+import type { CteEmitente } from "./cte-emitente.js";
+
 export type CteEndereco = {
   logradouro: string;
   numero: string;
@@ -112,6 +114,8 @@ export type CteRota = {
 export type CteFiscalPayload = {
   nfeChaveRef: string;
   nfeTipo: string;
+  /** Filial Ebazar no CD; preenchido na emissão. */
+  emitente?: CteEmitente;
   remetente: CteParticipante;
   destinatario: CteParticipante;
   icms: CteIcmsFrete;
@@ -304,22 +308,76 @@ export function participanteRemetenteFromTenant(tenant: TenantRemetenteInput): C
   };
 }
 
+/** Monta rota do CT-e conforme vínculo e local do emitente (CD ML). */
+export function buildCteRota(
+  nfe: NfeDestinoInput,
+  tenant: TenantRemetenteInput,
+  opts?: { emitente?: CteEmitente; vinculo?: CteVinculo },
+): CteRota {
+  const ufFim = nfe.destUf.trim().toUpperCase();
+  const cMunFim = nfe.destCodigoMunicipio;
+  const xMunFim = nfe.destMunicipio;
+
+  if (opts?.vinculo === "venda" && opts.emitente) {
+    const emitente = opts.emitente;
+    return {
+      cMunIni: emitente.codigoMunicipio,
+      xMunIni: emitente.municipio,
+      ufIni: emitente.uf,
+      cMunFim,
+      xMunFim,
+      ufFim,
+      origem: `${emitente.municipio}/${emitente.uf}`,
+      destino: `${xMunFim}/${ufFim}`,
+    };
+  }
+
+  const ufIni = tenant.uf.trim().toUpperCase();
+  return {
+    cMunIni: tenant.codigoMunicipio,
+    xMunIni: tenant.municipio,
+    ufIni,
+    cMunFim,
+    xMunFim,
+    ufFim,
+    origem: `${tenant.municipio}/${ufIni}`,
+    destino: `${xMunFim}/${ufFim}`,
+  };
+}
+
+/** UF de origem do serviço de transporte para cálculo de ICMS do frete. */
+export function resolveCteIcmsUfIni(
+  tenant: TenantRemetenteInput,
+  opts?: { emitente?: CteEmitente; vinculo?: CteVinculo },
+): string {
+  if (opts?.vinculo === "venda" && opts.emitente) {
+    return opts.emitente.uf;
+  }
+  return tenant.uf;
+}
+
 /** Monta rota e tributos do CT-e a partir da NF-e vinculada (remessa ou venda). */
 export function buildCteFiscalPayload(
   nfe: NfeDestinoInput,
   tenant: TenantRemetenteInput,
-  opts?: { taxRule?: CteTaxRuleIcms | null; vFrete?: number },
+  opts?: {
+    taxRule?: CteTaxRuleIcms | null;
+    vFrete?: number;
+    emitente?: CteEmitente;
+    vinculo?: CteVinculo;
+  },
 ): CteFiscalPayload {
   const remetente = participanteRemetenteFromTenant(tenant);
   const destinatario = participanteDestinoFromNfe(nfe);
-  const ufIni = tenant.uf;
+  const rota = buildCteRota(nfe, tenant, opts);
   const ufFim = nfe.destUf;
   const valorCarga = num(nfe.valor);
   const vFrete =
     typeof opts?.vFrete === "number" && opts.vFrete > 0
       ? round2(opts.vFrete)
       : calcularValorFreteRemessa(valorCarga);
-  const icms = calcularIcmsFreteCte(vFrete, ufIni, ufFim, num(nfe.aliqIcms), opts?.taxRule);
+  const ufIcmsIni = resolveCteIcmsUfIni(tenant, opts);
+  const icms = calcularIcmsFreteCte(vFrete, ufIcmsIni, ufFim, num(nfe.aliqIcms), opts?.taxRule);
   const ibsCbs = calcularIbsCbsFreteCte(vFrete, icms);
 
   return {
@@ -329,15 +387,6 @@ export function buildCteFiscalPayload(
     destinatario,
     icms,
     ibsCbs,
-    rota: {
-      cMunIni: tenant.codigoMunicipio,
-      xMunIni: tenant.municipio,
-      ufIni,
-      cMunFim: nfe.destCodigoMunicipio,
-      xMunFim: nfe.destMunicipio,
-      ufFim,
-      origem: `${tenant.municipio}/${ufIni}`,
-      destino: `${nfe.destMunicipio}/${ufFim}`,
-    },
+    rota,
   };
 }

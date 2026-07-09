@@ -6,11 +6,11 @@
 
 import { formatNfeDateTime } from "../nfe-datetime.js";
 import {
-  CTE_ML_EMIT,
   type CteFiscalPayload,
   type CteIcmsFrete,
   type CteParticipante,
 } from "../cte-template.js";
+import { defaultCteEmitente } from "../cte-emitente.js";
 import type { XmlDocument, XmlObject } from "../xml-serializer.js";
 import { serializeXmlDocument } from "../xml-serializer.js";
 import { buildCteEmitNode } from "./cte-emit.node.js";
@@ -61,6 +61,7 @@ export function buildCteXmlDocument(input: BuildCteXmlDocumentInput): XmlDocumen
   const dhEmi = formatNfeDateTime(input.emitidoEm);
   const icms = fp?.icms ?? resolveDefaultIcms(input.valor);
   const rota = fp?.rota;
+  const emitente = fp?.emitente ?? defaultCteEmitente();
 
   const remetente = fp?.remetente ?? input.remetenteFallback;
   const destinatario = fp?.destinatario;
@@ -74,14 +75,14 @@ export function buildCteXmlDocument(input: BuildCteXmlDocumentInput): XmlDocumen
       serie: input.serie,
       numero: input.numero,
       dhEmi,
-      cMunIni: rota?.cMunIni ?? CTE_ML_EMIT.codigoMunicipio,
-      xMunIni: rota?.xMunIni ?? CTE_ML_EMIT.municipio,
-      ufIni: rota?.ufIni ?? "RJ",
-      cMunFim: rota?.cMunFim ?? CTE_ML_EMIT.codigoMunicipio,
-      xMunFim: rota?.xMunFim ?? CTE_ML_EMIT.municipio,
-      ufFim: rota?.ufFim ?? "RJ",
-    }),
-    buildCteEmitNode(),
+      cMunIni: rota?.cMunIni ?? emitente.codigoMunicipio,
+      xMunIni: rota?.xMunIni ?? emitente.municipio,
+      ufIni: rota?.ufIni ?? emitente.uf,
+      cMunFim: rota?.cMunFim ?? destinatario?.endereco.codigoMunicipio ?? emitente.codigoMunicipio,
+      xMunFim: rota?.xMunFim ?? destinatario?.endereco.municipio ?? emitente.municipio,
+      ufFim: rota?.ufFim ?? destinatario?.endereco.uf ?? emitente.uf,
+    }, emitente),
+    buildCteEmitNode(emitente),
   ];
 
   if (remetente) {

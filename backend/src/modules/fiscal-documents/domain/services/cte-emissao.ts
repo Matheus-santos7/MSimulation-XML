@@ -1,6 +1,6 @@
 /**
  * Montagem unificada do CT-e vinculado a NF-e (remessa ou venda).
- * Emitente XML: Ebazar (transportador). Destinatário: destino da mercadoria na NF-e.
+ * Emitente XML: filial Ebazar do CD ML (mesma UF). Destinatário: destino da mercadoria na NF-e.
  */
 import {
   CteModal,
@@ -13,7 +13,6 @@ import {
   buildCteFiscalPayload,
   calcularPesoCarga,
   calcularValorFreteRemessa,
-  CTE_ML_EMIT,
   resolveCteDocumento,
   type CteFiscalPayload,
   type CteVinculo,
@@ -21,6 +20,7 @@ import {
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { buildChaveCTe } from "./cte-chave.js";
 import { resolveTaxRule } from "../../../tax/index.js";
+import { resolveCteEmitente } from "./resolve-cte-emitente.js";
 
 export type { CteVinculo };
 
@@ -90,21 +90,27 @@ export async function montarDadosCteFromNfe(
 ): Promise<DadosCteEmissao> {
   const taxRule = await resolveTaxRuleForCte(prisma, tenant, nfe, vinculo);
   const { cfop, natOp } = resolveCteDocumento(vinculo, nfe.destIndIeDest);
+  const emitente = await resolveCteEmitente(prisma, tenant.id, tenant, nfe, vinculo);
   const valorCarga = Number(nfe.valor);
   const valorFrete =
     typeof params.valorFrete === "number" && params.valorFrete > 0
       ? params.valorFrete
       : calcularValorFreteRemessa(valorCarga);
-  const fiscalPayload = buildCteFiscalPayload(nfe, tenantAsRemetente(tenant), {
-    taxRule,
-    vFrete: valorFrete,
-  });
+  const fiscalPayload: CteFiscalPayload = {
+    ...buildCteFiscalPayload(nfe, tenantAsRemetente(tenant), {
+      taxRule,
+      vFrete: valorFrete,
+      emitente,
+      vinculo,
+    }),
+    emitente,
+  };
   const pesoCarga = calcularPesoCarga(nfe.quantidade);
   const emitidoEm = params.emitidoEm ?? new Date();
 
   const chave = buildChaveCTe({
-    uf: CTE_ML_EMIT.uf,
-    cnpj: CTE_ML_EMIT.cnpj,
+    uf: emitente.uf,
+    cnpj: emitente.cnpj,
     serie: params.serie,
     numero: params.numero,
   });

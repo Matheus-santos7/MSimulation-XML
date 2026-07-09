@@ -7,14 +7,30 @@ import {
   calcularIcmsFreteCte,
   type CteFiscalPayload,
 } from "./cte-template.js";
+import { mapLogisticsUnitToCteEmitente } from "./cte-emitente.js";
 
 const vFrete = 41.78;
 const icms = calcularIcmsFreteCte(vFrete, "SP", "SC", 0);
 const ibsCbs = calcularIbsCbsFreteCte(vFrete, icms);
 
+const emitenteSp = mapLogisticsUnitToCteEmitente({
+  cnpj: "03007331007405",
+  ie: "241174886113",
+  destNomeFiscal: "EBAZAR.COM.BR LTDA",
+  nome: "Cajamar",
+  logradouro: "Av Antonio Candido Machado",
+  numero: "3100",
+  bairro: "Centro",
+  codigoMunicipio: "3509205",
+  municipio: "Cajamar",
+  uf: "SP",
+  cep: "07776037",
+});
+
 const fiscalPayload: CteFiscalPayload = {
   nfeChaveRef: "35260612345678000199550010000000011000000012",
   nfeTipo: "REMESSA",
+  emitente: emitenteSp,
   remetente: {
     doc: "12345678000199",
     nome: "Seller LTDA",
@@ -61,7 +77,7 @@ const fiscalPayload: CteFiscalPayload = {
 describe("buildCTeXML", () => {
   it("usa emitente Ebazar, destinatário da NF-e e infNFe com chave", () => {
     const xml = buildCTeXML({
-      chave: "33260603007331010295570010000000421000000426",
+      chave: "35260603007331007405570011000000421000000426",
       numero: 42,
       serie: 1,
       cfop: "6353",
@@ -74,7 +90,10 @@ describe("buildCTeXML", () => {
       fiscalPayload,
     });
 
-    assert.match(xml, /<CNPJ>03007331010295<\/CNPJ>/);
+    assert.match(xml, /<cUF>35<\/cUF>/);
+    assert.match(xml, /<cMunEnv>3509205<\/cMunEnv>/);
+    assert.match(xml, /<UFEnv>SP<\/UFEnv>/);
+    assert.match(xml, /<CNPJ>03007331007405<\/CNPJ>/);
     assert.match(xml, /<xNome>EBAZARCOMBR LTDA<\/xNome>/);
     assert.match(xml, /<dest>[\s\S]*<CNPJ>03007331012077<\/CNPJ>/);
     assert.match(xml, /<cMunFim>4206009<\/cMunFim>/);

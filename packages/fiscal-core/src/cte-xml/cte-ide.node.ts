@@ -4,7 +4,7 @@
  * @module cte-xml/cte-ide.node
  */
 
-import { CTE_ML_EMIT } from "../cte-template.js";
+import type { CteEmitente } from "../cte-emitente.js";
 import type { XmlObject } from "../xml-serializer.js";
 import { ufToCodigo } from "./cte-xml.util.js";
 
@@ -24,10 +24,10 @@ export type CteIdeNodeInput = {
 };
 
 /** Monta grupo `<ide>` com identificação do CT-e simulado. */
-export function buildCteIdeNode(input: CteIdeNodeInput): XmlObject {
+export function buildCteIdeNode(input: CteIdeNodeInput, emitente: CteEmitente): XmlObject {
   return {
     ide: {
-      cUF: ufToCodigo(CTE_ML_EMIT.uf),
+      cUF: String(ufToCodigo(emitente.uf)).padStart(2, "0"),
       cCT: input.chave.slice(35, 43),
       CFOP: input.cfop,
       natOp: input.natOp,
@@ -42,9 +42,9 @@ export function buildCteIdeNode(input: CteIdeNodeInput): XmlObject {
       tpCTe: 0,
       procEmi: 0,
       verProc: "cte-simulation-4.00",
-      cMunEnv: CTE_ML_EMIT.codigoMunicipio,
-      xMunEnv: CTE_ML_EMIT.municipio,
-      UFEnv: CTE_ML_EMIT.uf,
+      cMunEnv: emitente.codigoMunicipio,
+      xMunEnv: emitente.municipio,
+      UFEnv: emitente.uf,
       modal: "01",
       tpServ: 0,
       cMunIni: input.cMunIni,

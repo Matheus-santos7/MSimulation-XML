@@ -138,6 +138,7 @@ export {
   CTE_RNTRC,
   aliquotaIcmsFreteInterestadual,
   buildCteFiscalPayload,
+  buildCteRota,
   calcularIcmsFreteCte,
   calcularIbsCbsFreteCte,
   calcularPisCofinsFreteCte,
@@ -150,6 +151,7 @@ export {
   participanteRemetenteFromTenant,
   resolveAliqIcmsFrete,
   resolveCteDocumento,
+  resolveCteIcmsUfIni,
   type CteEndereco,
   type CteFiscalPayload,
   type CteIbsCbsFrete,
@@ -162,6 +164,13 @@ export {
   type TenantRemetenteInput,
 } from "./cte-template.js";
 export { buildCTeXML, type CTeXmlInput } from "./cte-xml.js";
+export {
+  defaultCteEmitente,
+  mapLogisticsUnitToCteEmitente,
+  remessaUsesCdAsCteEmitente,
+  type CteEmitente,
+  type CteEmitenteUnitInput,
+} from "./cte-emitente.js";
 export {
   XmlSerializer,
   escapeXml,

@@ -3,7 +3,6 @@ import { describe, it } from "node:test";
 import {
   defaultCteEmitente,
   mapLogisticsUnitToCteEmitente,
-  remessaUsesCdAsCteEmitente,
 } from "./cte-emitente.js";
 
 describe("cte-emitente", () => {
@@ -26,11 +25,6 @@ describe("cte-emitente", () => {
     assert.equal(emitente.nome, "EBAZARCOMBR LTDA");
     assert.equal(emitente.uf, "SP");
     assert.equal(emitente.codigoMunicipio, "3509205");
-  });
-
-  it("remessa só usa CD como emitente na mesma UF do seller", () => {
-    assert.equal(remessaUsesCdAsCteEmitente("SP", "SP"), true);
-    assert.equal(remessaUsesCdAsCteEmitente("RJ", "SP"), false);
   });
 
   it("defaultCteEmitente mantém fallback RJ", () => {

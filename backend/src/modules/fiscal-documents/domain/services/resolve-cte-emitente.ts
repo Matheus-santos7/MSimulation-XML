@@ -1,11 +1,9 @@
 import {
   defaultCteEmitente,
   mapLogisticsUnitToCteEmitente,
-  remessaUsesCdAsCteEmitente,
   type CteEmitente,
   type CteVinculo,
 } from "@msimulation-xml/fiscal-core";
-import type { Tenant } from "../../../../generated/prisma/client.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 
 const CD_EMITENTE_SELECT = {
@@ -78,22 +76,18 @@ async function findLinkedCdByUf(
 /**
  * Resolve emitente do CT-e a partir dos CDs Mercado Livre cadastrados.
  *
- * - **Remessa:** CD destino da NF-e quando seller e CD estão na mesma UF.
- * - **Venda:** CD na UF do consumidor (`destUf` da NF-e de venda).
+ * Remessa e venda usam a mesma regra: CD vinculado ao tenant na UF de destino
+ * da NF-e (`destUf` — CD na remessa, consumidor na venda).
  */
 export async function resolveCteEmitente(
   prisma: PrismaTx,
   tenantId: string,
-  tenant: Tenant,
+  _tenant: unknown,
   nfe: NfeCteEmitenteContext,
-  vinculo: CteVinculo,
+  _vinculo: CteVinculo,
 ): Promise<CteEmitente> {
   const cdUf = nfe.destUf.trim().toUpperCase();
   if (!cdUf) return defaultCteEmitente();
-
-  if (vinculo === "remessa" && !remessaUsesCdAsCteEmitente(tenant.uf, cdUf)) {
-    return defaultCteEmitente();
-  }
 
   const unit = await findLinkedCdByUf(prisma, tenantId, cdUf, nfe.unidadeDestinoId);
 

@@ -167,7 +167,6 @@ export { buildCTeXML, type CTeXmlInput } from "./cte-xml.js";
 export {
   defaultCteEmitente,
   mapLogisticsUnitToCteEmitente,
-  remessaUsesCdAsCteEmitente,
   type CteEmitente,
   type CteEmitenteUnitInput,
 } from "./cte-emitente.js";

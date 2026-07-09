@@ -1,6 +1,6 @@
 /**
  * Montagem unificada do CT-e vinculado a NF-e (remessa ou venda).
- * Emitente XML: filial Ebazar do CD ML (mesma UF). Destinatário: destino da mercadoria na NF-e.
+ * Emitente XML: filial Ebazar do CD ML na UF de destino da NF-e. Destinatário: destino da mercadoria na NF-e.
  */
 import {
   CteModal,

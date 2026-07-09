@@ -74,13 +74,26 @@ describe("resolveCteEmitente", () => {
     assert.equal(emitente.uf, "SP");
   });
 
-  it("remessa cross-UF mantém fallback RJ", async () => {
+  it("remessa cross-UF usa CD na UF de destino", async () => {
     const prisma = prismaStub([cdSp], [{ unidadeId: "cd-sp", padrao: true }]);
     const emitente = await resolveCteEmitente(
       prisma,
       "t1",
       { ...tenant, uf: "RJ" } as never,
       { id: "nfe-rem", destUf: "SP", unidadeDestinoId: "cd-sp" },
+      "remessa",
+    );
+    assert.equal(emitente.cnpj, "03007331007405");
+    assert.equal(emitente.uf, "SP");
+  });
+
+  it("remessa sem CD na UF de destino mantém fallback RJ", async () => {
+    const prisma = prismaStub([cdSp], [{ unidadeId: "cd-sp", padrao: true }]);
+    const emitente = await resolveCteEmitente(
+      prisma,
+      "t1",
+      tenant as never,
+      { id: "nfe-rem", destUf: "BA", unidadeDestinoId: null },
       "remessa",
     );
     assert.equal(emitente.uf, defaultCteEmitente().uf);

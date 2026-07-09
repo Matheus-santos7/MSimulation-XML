@@ -62,15 +62,7 @@ export function mapLogisticsUnitToCteEmitente(unit: CteEmitenteUnitInput): CteEm
   };
 }
 
-/** Fallback histórico (filial RJ) quando não há CD elegível. */
+/** Fallback histórico (filial RJ) quando não há CD elegível na UF de destino. */
 export function defaultCteEmitente(): CteEmitente {
   return { ...CTE_ML_EMIT };
-}
-
-/**
- * Indica se a remessa seller→CD permite emitir CT-e com o CD como transportador.
- * Regra: saída do seller e CD na mesma UF.
- */
-export function remessaUsesCdAsCteEmitente(sellerUf: string, cdUf: string): boolean {
-  return sellerUf.trim().toUpperCase() === cdUf.trim().toUpperCase();
 }

@@ -5,6 +5,7 @@ import { useEffect, useState, useTransition } from "react";
 import { faturarPedidoAction, salvarPedidoRascunhoAction } from "@/app/(app)/pedidos/actions";
 import { lookupCep } from "@/lib/lookup-actions";
 import type { PedidoDto, ProductDto } from "@/lib/fiscal-types";
+import { mergePedidoBuyerExample } from "@/lib/merge-pedido-buyer-example";
 import {
   PEDIDO_FORM_EMPTY,
   PEDIDO_ITEM_EMPTY,
@@ -107,12 +108,7 @@ export function usePedidoWizard({ open, onOpenChange, products, pedido }: UsePed
     const example = findPedidoFormExample(id);
     if (!example) return;
     setExampleId(id);
-    setForm((current) => ({
-      ...example.values,
-      items: current.items.length > 0
-        ? current.items
-        : [{ ...PEDIDO_ITEM_EMPTY, productId: products[0]?.id ?? "" }],
-    }));
+    setForm((current) => mergePedidoBuyerExample(current, example.values));
   }
 
   function submit(saveOnly: boolean) {

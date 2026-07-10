@@ -65,7 +65,7 @@ export function buildNfeObsContXTexto(input: XTextoInput): string | null {
       cfop === "5101" ||
       cfop === "6107";
     if (consumidorFinal) {
-      return pedido;
+      return `SALE-sale-${pedido}-${serieSeg}-OLSS-${warehouseId}`;
     }
     return `SALE-sale-${pedido}-${serieSeg}-OLSS-${warehouseId}`;
   }

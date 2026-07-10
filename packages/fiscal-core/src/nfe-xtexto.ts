@@ -9,22 +9,17 @@ export type XTextoInput = {
   natOp: string;
   pedidoMl: string;
   indFinal?: number;
-  /** Série da NF-e emitida (segmento antes de OLSS no padrão ML). */
   serie?: number;
-  /** idCadIntTran do CD — sufixo OLSS no external_id. */
   warehouseId?: string;
-  /** Remessa simbólica de reposição após devolução de venda. */
   posDevolucao?: boolean;
 };
 
 /**
  * Gera o conteúdo de `<obsCont><xTexto>` cruzando CFOP × natOp × tipo,
- * padrão extraído dos XMLs reais em XMLs/ (campo xCampo="external_id").
  */
 export function buildNfeObsContXTexto(input: XTextoInput): string | null {
   const pedido = input.pedidoMl.trim();
   if (!pedido) return null;
-
   const nat = input.natOp;
   const cfop = input.cfop.trim();
   const tipo = String(input.tipo);

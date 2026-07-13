@@ -1,10 +1,12 @@
-"use client";
-
 import { BrandLogo } from "@/components/brand-logo";
 import { LoginPanel } from "@/components/auth/login-panel";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { BRAND } from "@/lib/brand";
 
+/**
+ * Página de entrada (login/registro). O shell é Server Component;
+ * o painel interativo permanece em `LoginPanel` (client).
+ */
 export default function LoginPage() {
   return (
     <div className="relative flex min-h-dvh items-center justify-center overflow-y-auto bg-background text-foreground p-6">

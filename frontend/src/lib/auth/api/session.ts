@@ -25,10 +25,6 @@ export async function logoutApi(refreshToken?: string, accessToken?: string): Pr
   }
 }
 
-/**
- * Carrega o perfil autenticado. Retorna `null` quando a sessão é inválida ou a API
- * está indisponível — evita derrubar Server Components com erro genérico em produção.
- */
 export async function fetchAuthMe(accessToken: string): Promise<AuthMeDto | null> {
   let res: Response;
   try {

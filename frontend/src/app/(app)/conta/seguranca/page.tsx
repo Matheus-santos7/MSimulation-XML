@@ -1,4 +1,4 @@
-import { TwoFactorSettings } from "@/components/auth/two-factor-settings";
+import { TwoFactorSettings } from "@/components/account/two-factor-settings";
 import { fetch2faStatus } from "@/lib/auth/api";
 import { getAuthMe, resolveAccessToken } from "@/lib/auth/session";
 import { redirect } from "next/navigation";

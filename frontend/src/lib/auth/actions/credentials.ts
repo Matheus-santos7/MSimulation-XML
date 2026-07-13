@@ -31,6 +31,33 @@ import type {
   Verify2faState,
 } from "./types";
 
+export async function registerAction(
+  _prev: RegisterState | undefined,
+  formData: FormData,
+): Promise<RegisterState> {
+  const email = String(formData.get("email") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+
+  if (!email || !password) {
+    return { error: "Informe e-mail e senha" };
+  }
+
+  try {
+    const session = await registerApi({
+      email,
+      password,
+      name: name.length > 0 ? name : undefined,
+      captchaToken: String(formData.get("captchaToken") ?? "").trim() || undefined,
+    });
+    await setAuthSession(session);
+    redirectAfterAuth(session);
+    return {};
+  } catch (e) {
+    return formatAuthError(e);
+  }
+}
+
 export async function loginAction(
   _prev: LoginState | undefined,
   formData: FormData,
@@ -60,58 +87,12 @@ export async function loginAction(
   }
 }
 
-export async function verify2faAction(
-  _prev: Verify2faState | undefined,
-  formData: FormData,
-): Promise<Verify2faState> {
-  const code = String(formData.get("code") ?? "").trim();
-  const captchaToken = String(formData.get("captchaToken") ?? "").trim() || undefined;
-  const twoFactorToken =
-    (await getTwoFactorPending()) ?? String(formData.get("twoFactorToken") ?? "").trim();
-
-  if (!twoFactorToken) {
-    return { error: "Sessão expirada. Faça login novamente." };
-  }
-  if (!code) {
-    return { error: "Informe o código de 6 dígitos" };
-  }
-
-  try {
-    const session = await verify2faApi(twoFactorToken, code, captchaToken);
-    await clearTwoFactorPending();
-    await setAuthSession(session);
-    redirectAfterAuth(session);
-    return {};
-  } catch (e) {
-    return formatAuthError(e);
-  }
-}
-
-export async function registerAction(
-  _prev: RegisterState | undefined,
-  formData: FormData,
-): Promise<RegisterState> {
-  const email = String(formData.get("email") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
-  const name = String(formData.get("name") ?? "").trim();
-
-  if (!email || !password) {
-    return { error: "Informe e-mail e senha" };
-  }
-
-  try {
-    const session = await registerApi({
-      email,
-      password,
-      name: name.length > 0 ? name : undefined,
-      captchaToken: String(formData.get("captchaToken") ?? "").trim() || undefined,
-    });
-    await setAuthSession(session);
-    redirectAfterAuth(session);
-    return {};
-  } catch (e) {
-    return formatAuthError(e);
-  }
+export async function logoutAction(): Promise<void> {
+  const [refreshToken, accessToken] = await Promise.all([getRefreshToken(), getAccessToken()]);
+  await logoutApi(refreshToken, accessToken);
+  await clearAuthSession();
+  const { redirect } = await import("next/navigation");
+  redirect("/login?session=expired");
 }
 
 export async function forgotPasswordAction(
@@ -159,6 +140,33 @@ export async function resetPasswordAction(
   }
 }
 
+export async function verify2faAction(
+  _prev: Verify2faState | undefined,
+  formData: FormData,
+): Promise<Verify2faState> {
+  const code = String(formData.get("code") ?? "").trim();
+  const captchaToken = String(formData.get("captchaToken") ?? "").trim() || undefined;
+  const twoFactorToken =
+    (await getTwoFactorPending()) ?? String(formData.get("twoFactorToken") ?? "").trim();
+
+  if (!twoFactorToken) {
+    return { error: "Sessão expirada. Faça login novamente." };
+  }
+  if (!code) {
+    return { error: "Informe o código de 6 dígitos" };
+  }
+
+  try {
+    const session = await verify2faApi(twoFactorToken, code, captchaToken);
+    await clearTwoFactorPending();
+    await setAuthSession(session);
+    redirectAfterAuth(session);
+    return {};
+  } catch (e) {
+    return formatAuthError(e);
+  }
+}
+
 export async function verifyEmailAction(
   token: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -172,14 +180,6 @@ export async function verifyEmailAction(
     const { error } = formatAuthError(e);
     return { ok: false, error };
   }
-}
-
-export async function logoutAction(): Promise<void> {
-  const [refreshToken, accessToken] = await Promise.all([getRefreshToken(), getAccessToken()]);
-  await logoutApi(refreshToken, accessToken);
-  await clearAuthSession();
-  const { redirect } = await import("next/navigation");
-  redirect("/login?session=expired");
 }
 
 function formatAuthError(e: unknown): { error: string; fieldErrors?: Record<string, string[]> } {

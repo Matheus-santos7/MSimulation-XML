@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AccountProfileForm } from "@/components/auth/account-profile-form";
+import { AccountProfileForm } from "@/components/account/account-profile-form";
 import { getAuthMe } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 

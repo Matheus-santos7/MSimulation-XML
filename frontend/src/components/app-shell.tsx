@@ -17,7 +17,7 @@ import {
   Settings2,
   Users,
 } from "lucide-react";
-import { AccountMenu } from "@/components/auth/account-menu";
+import { AccountMenu } from "@/components/account/account-menu";
 import { BrandLogo } from "@/components/brand-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { BRAND } from "@/lib/brand";

@@ -474,4 +474,82 @@ describe("buildFiscalItem — composição base PIS/COFINS por canal (fiscal-set
     assert.equal(nota.itens[0]!.pis.vBC, 1030);
     assert.equal(nota.itens[0]!.cofins.vBC, 1030);
   });
+
+  /**
+   * Devolução usa o canal `venda` das settings do cliente — mesma composição
+   * (ex.: exclusão de ICMS / Tese do Século) aplicada na NF-e de venda.
+   */
+  it("DEVOLUCAO: aplica composição da coluna 'Sobre a venda' (mesma da VENDA)", () => {
+    const nationalProduct = { ...product, origem: 0 };
+    const line = orderLineFromProduct(nationalProduct, {
+      cfop: "1202",
+      quantidade: 1,
+      valorUnitario: 1000,
+    });
+
+    const item = buildFiscalItem(
+      line,
+      saleRule,
+      {
+        ufOrigem: "SP",
+        ufDestino: "SP",
+        customerType: "non_taxpayer",
+        operationTipo: "DEVOLUCAO",
+        emitterSettings: DEFAULT_FISCAL_EMITTER_SETTINGS,
+        cstVendaReferencia: { icms: "00", pis: "01", cofins: "01" },
+      },
+      18,
+    );
+
+    assert.equal(item.pis.baseConfig?.icms, "DEDUCT");
+    assert.equal(item.pis.baseConfig?.difal, "DEDUCT");
+    assert.equal(item.pis.baseConfig?.frete, "INCLUDE");
+
+    // CST 00 permanece tributado (mode DEFAULT não remapeia) → exclusão ICMS na base.
+    const nota = calcularNotaFiscal([item]);
+    const r = nota.itens[0]!;
+    assert.equal(r.icms.vICMS, 180);
+    assert.equal(r.pis.vBC, round2(1000 - 180));
+    assert.equal(r.cofins.vBC, round2(1000 - 180));
+  });
+
+  /**
+   * Remessa simbólica (pós-devolução) e inbound: canal `remessa` via
+   * `calculateInboundInvoice` com `emitterSettings` do tenant.
+   */
+  it("REMESSA_SIMBOLICA (inbound): aplica composição da coluna 'Sobre a remessa'", () => {
+    const inboundTributado: ResolvedTaxRule = {
+      ruleId: "sku-SP-taxpayer-inbound",
+      aliquotaIcmsInterna: 18,
+      payload: {
+        taxes: {
+          pis: { st: "01 - Operação Tributável com Alíquota Básica", aliquota: 1.65 },
+          cofins: { st: "01 - Operação Tributável com Alíquota Básica", aliquota: 7.6 },
+          ipi: { st: "53 - Saída Não-Tributada", aliquota: 0, codEnq: "999" },
+        },
+        icmsByUf: {
+          ICMS_SP_CST: "00",
+          ICMS_SP_PICMS_INTERNAL: 18,
+        },
+      },
+      icms: { cst: "00", pIcmsInternal: 18 },
+    };
+
+    const line = orderLineFromProduct({ ...product, origem: 0 }, {
+      cfop: "5949",
+      quantidade: 1,
+      valorUnitario: 500,
+    });
+
+    const result = calculateInboundInvoice(line, inboundTributado, "SP", "SP", 18, {
+      operationTipo: "REMESSA_SIMBOLICA",
+      emitterSettings: DEFAULT_FISCAL_EMITTER_SETTINGS,
+    });
+
+    const r = result.nota.itens[0]!;
+    assert.equal(r.icms.vICMS, 90);
+    // Default remessa: ICMS SUBTRAIR_DA_BASE → base PIS = 500 − 90.
+    assert.equal(r.pis.vBC, 410);
+    assert.equal(r.cofins.vBC, 410);
+  });
 });

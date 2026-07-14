@@ -27,7 +27,10 @@ import { SymbolicShipmentFiscalError } from "./symbolic-shipment.errors.js";
 
 /**
  * Prepara os dados fiscais para emissão de uma NF-e de remessa simbólica.
- * 
+ *
+ * Aplica a composição da base PIS/COFINS do canal `remessa`
+ * (`fiscal-settings.composicaoBaseCalculo.pisCofins` do tenant).
+ *
  * @param prisma - Transaction context
  * @param input - Symbolic shipment input parameters
  * @returns Prepared fiscal data including tax calculation and fiscal payload
@@ -92,6 +95,11 @@ export async function prepareSymbolicShipmentFiscal(
     input.emitUf,
     input.destUf,
     aliqFallback,
+    {
+      /** Canal `remessa` em `composicaoBaseCalculo.pisCofins` (settings do cliente). */
+      operationTipo: nfeTipo,
+      emitterSettings,
+    },
   );
 
   const fiscalPayload = enrichFiscalPayloadMlFulfillment(

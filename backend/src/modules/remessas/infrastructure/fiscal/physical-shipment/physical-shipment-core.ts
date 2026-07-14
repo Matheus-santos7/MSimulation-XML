@@ -128,6 +128,7 @@ export async function emitShipmentNfeWithItems(
   );
 
   // --- Phase 4: tax engine (ICMS, PIS, COFINS, totals) ---
+  // `emitterSettings` projeta `composicaoBaseCalculo.pisCofins` (canal remessa).
   const nota = calculateInvoiceTaxes(
     linhasComRegras,
     {
@@ -135,6 +136,7 @@ export async function emitShipmentNfeWithItems(
       ufDestino: destino.uf,
       customerType: "taxpayer",
       operationTipo: "REMESSA",
+      emitterSettings,
     },
     aliqFallback,
   );

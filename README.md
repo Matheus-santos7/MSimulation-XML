@@ -4,29 +4,37 @@ Simulador fiscal educacional para operações de **fulfillment Mercado Livre Ful
 
 Monorepo · pnpm workspaces · `@msimulation-xml/backend` · `@msimulation-xml/frontend` · `@msimulation-xml/fiscal-core` · `@msimulation-xml/nfe-xml`
 
+> **Aviso importante:** este é um **simulador educacional**. Os XMLs usam ambiente de homologação (`tpAmb=2`), assinaturas fictícias e **não têm validade jurídica** perante a SEFAZ. Nunca use estes documentos em produção real.
+
 ---
 
 ## Índice
 
-1. [O que é este projeto?](#o-que-é-este-projeto)
-2. [Para quem é este README?](#para-quem-é-este-readme)
-3. [Conceitos básicos (leia antes de codar)](#conceitos-básicos-leia-antes-de-codar)
-4. [Visão geral do monorepo](#visão-geral-do-monorepo)
-5. [Stack tecnológica](#stack-tecnológica)
-6. [Como rodar localmente](#como-rodar-localmente)
-7. [Backend (API)](#backend-api)
-8. [Frontend (interface)](#frontend-interface)
-9. [Packages compartilhados](#packages-compartilhados)
-10. [Fluxos de negócio (diagramas)](#fluxos-de-negócio-diagramas)
-11. [Fluxo de uma requisição HTTP](#fluxo-de-uma-requisição-http)
-12. [Mapa de arquivos importantes](#mapa-de-arquivos-importantes)
-13. [Multi-tenant, auth e segurança](#multi-tenant-auth-e-segurança)
-14. [Testes e qualidade](#testes-e-qualidade)
-15. [Guia do estagiário: por onde começar](#guia-do-estagiário-por-onde-começar)
-16. [Scripts úteis](#scripts-úteis)
-17. [Validador MCP Fiscal Brasil](#validador-mcp-fiscal-brasil)
-18. [Documentação complementar](#documentação-complementar)
-19. [Problemas comuns](#problemas-comuns)
+1. [O que é este projeto?](#o-que-e-este-projeto)
+2. [Quick start](#quick-start)
+3. [Visão geral do monorepo](#visao-geral-do-monorepo)
+4. [1. Começar](#1-comecar)
+   - [Variáveis de ambiente](#variaveis-de-ambiente)
+   - [Scripts úteis](#scripts-uteis)
+   - [Guia do estagiário](#guia-do-estagiario-por-onde-comecar)
+   - [Problemas comuns](#problemas-comuns)
+5. [2. Arquitetura](#2-arquitetura)
+   - [Para quem é este README?](#para-quem-e-este-readme)
+   - [Conceitos básicos](#conceitos-basicos-leia-antes-de-codar)
+   - [Stack tecnológica](#stack-tecnologica)
+   - [Backend](#backend-api)
+   - [Frontend](#frontend-interface)
+   - [Packages](#packages-compartilhados)
+   - [Mapa de arquivos](#mapa-de-arquivos-importantes)
+   - [Multi-tenant, auth e segurança](#multi-tenant-auth-e-seguranca)
+6. [3. Fluxos](#3-fluxos)
+   - [Fluxos de negócio](#fluxos-de-negocio-diagramas)
+   - [Fluxo HTTP](#fluxo-de-uma-requisicao-http)
+7. [4. Referência](#4-referencia)
+   - [Testes e qualidade](#testes-e-qualidade)
+   - [Documentação complementar](#documentacao-complementar)
+8. [5. Operação — Validador MCP](#5-operacao-validador-mcp)
+
 
 ---
 
@@ -44,42 +52,49 @@ Monorepo · pnpm workspaces · `@msimulation-xml/backend` · `@msimulation-xml/f
 | Consulta          | Listagem de NF-e/CT-e, download de XML, cancelamento, devolução           |
 
 
-> **Aviso importante:** este é um **simulador educacional**. Os XMLs usam ambiente de homologação (`tpAmb=2`), assinaturas fictícias e **não têm validade jurídica** perante a SEFAZ. Nunca use estes documentos em produção real.
+Detalhes de setup em [1. Começar](#1-comecar). Arquitetura em [2. Arquitetura](#2-arquitetura).
 
 ---
 
-## Para quem é este README?
+## Quick start
 
-Este guia foi escrito para quem  já conhece, em nível básico:
+### Pré-requisitos
 
-- **JavaScript/TypeScript** — variáveis, async/await, imports
-- **React** — componentes, props, hooks básicos
-- **Next.js** — ideia de rotas e páginas (App Router)
-- **Node.js** — servidor HTTP, variáveis de ambiente
-- **SQL/ORM** — tabelas, relações, migrations (conceito de Prisma)
-- **REST API** — GET/POST, JSON, status HTTP, JWT
+- **Node.js** 20+ (recomendado LTS)
+- **pnpm** 9 (`corepack enable && corepack prepare pnpm@9.15.9 --activate`)
+- **Docker** (para PostgreSQL local)
 
-Se algum termo acima for novo, anote e pesquise antes de mergulhar no código fiscal — a curva de aprendizado aqui mistura **programação web** com **regras tributárias brasileiras**.
+### Passo a passo
 
----
+```bash
+# 1. Clonar e instalar dependências
+git clone <url-do-repo>
+cd msedit-xml
+pnpm install
 
-## Conceitos básicos (leia antes de codar)
+# 2. Configurar variáveis de ambiente
+cp .env.example .env                    # Docker (POSTGRES_*)
+cp backend/.env.example backend/.env    # API (JWT, DATABASE_URL, etc.)
+cp frontend/.env.example frontend/.env.local   # opcional (API_URL)
+
+# 3. Subir banco e aplicar migrations
+pnpm db:setup
+
+# 4. Subir frontend + backend
+pnpm dev
+```
 
 
-| Termo                 | Significado no projeto                                                                                   |
-| --------------------- | -------------------------------------------------------------------------------------------------------- |
-| **Tenant**            | Empresa emitente cadastrada no sistema (multi-empresa). Cada tenant tem seus produtos, notas e usuários. |
-| **NF-e**              | Nota Fiscal Eletrônica de produto. Tipos: `REMESSA`, `VENDA`, `RETORNO_SIMBOLICO`, etc.                  |
-| **CT-e**              | Conhecimento de Transporte Eletrônico (frete vinculado à remessa ou venda).                              |
-| **Remessa física**    | Envio de estoque do seller para um CD do Mercado Livre.                                                  |
-| **Remessa simbólica** | Operação fiscal sem movimentação física (ex.: retorno simbólico antes da venda).                         |
-| **FIFO**              | Controle de saldo por item de NF-e (`nfe_itens`) — consumo na ordem de entrada.                          |
-| **Regra tributária**  | Configuração de ICMS, PIS, COFINS, IPI por origem × destino × produto.                                   |
-| **Unidade logística** | CD Meli Full cadastrado (código, UF, `idCadIntTran`).                                                    |
-| **BFF**               | Backend-for-Frontend — rota Next.js que repassa chamadas autenticadas para a API.                        |
-| **Use Case**          | Uma ação de negócio isolada (ex.: `EmitirRemessaInicialUseCase`).                                        |
-| **Bounded Context**   | Módulo de domínio com responsabilidade clara (ex.: `remessas`, `sales`, `tax`).                          |
+| Serviço       | URL                                                                                |
+| ------------- | ---------------------------------------------------------------------------------- |
+| Frontend      | [http://localhost:3000](http://localhost:3000)                                     |
+| Backend (API) | [http://localhost:3001](http://localhost:3001)                                     |
+| Health check  | [http://localhost:3001/api/health](http://localhost:3001/api/health)               |
+| Validador MCP | [http://localhost:8080/health](http://localhost:8080/health) (se `pnpm docker:up`) |
+| Prisma Studio | `pnpm --filter @msimulation-xml/backend exec prisma studio`                        |
 
+
+Tabela de variáveis obrigatórias do backend: [Variáveis de ambiente](#variaveis-de-ambiente).
 
 ---
 
@@ -138,65 +153,15 @@ graph TB
   PRISMA --> DB
 ```
 
-
-
----
-
-## Stack tecnológica
-
-
-| Camada          | Tecnologias                                                                | Para que serve                               |
-| --------------- | -------------------------------------------------------------------------- | -------------------------------------------- |
-| **Monorepo**    | pnpm 9, concurrently                                                       | Instalar deps e subir front + back juntos    |
-| **Backend**     | Fastify 5, TypeScript, Zod, Prisma 7, PostgreSQL                           | API REST, regras de negócio, persistência    |
-| **Frontend**    | Next.js 15, React 19, Tailwind v4, shadcn/ui, React Hook Form + Zod        | Interface do cockpit fiscal                  |
-| **Auth**        | JWT (access + refresh), 2FA TOTP, Brevo (e-mail)                           | Login, sessão, reset de senha                |
-| **Packages**    | TypeScript puro                                                            | Lógica fiscal reutilizável e testável        |
-| **Infra local** | Docker Compose (Postgres 16 + validador MCP opcional)                      | Banco e auditoria fiscal de XML              |
-| **Validador**   | `mcp-fiscal-brasil` 0.4.0 + proxy FastAPI (`infra/fiscal-validator-proxy`) | Auditoria estrutural e regras CAT 31 de NF-e |
-
+Stack, backend, frontend e packages: [2. Arquitetura](#2-arquitetura).
 
 ---
 
-## Como rodar localmente
+## 1. Começar
 
-### Pré-requisitos
+Ambiente, scripts, onboarding e troubleshooting.
 
-- **Node.js** 20+ (recomendado LTS)
-- **pnpm** 9 (`corepack enable && corepack prepare pnpm@9.15.9 --activate`)
-- **Docker** (para PostgreSQL local)
-
-### Passo a passo
-
-```bash
-# 1. Clonar e instalar dependências
-git clone <url-do-repo>
-cd msedit-xml
-pnpm install
-
-# 2. Configurar variáveis de ambiente
-cp .env.example .env                    # Docker (POSTGRES_*)
-cp backend/.env.example backend/.env    # API (JWT, DATABASE_URL, etc.)
-cp frontend/.env.example frontend/.env.local   # opcional (API_URL)
-
-# 3. Subir banco e aplicar migrations
-pnpm db:setup
-
-# 4. Subir frontend + backend
-pnpm dev
-```
-
-
-| Serviço       | URL                                                                                |
-| ------------- | ---------------------------------------------------------------------------------- |
-| Frontend      | [http://localhost:3000](http://localhost:3000)                                     |
-| Backend (API) | [http://localhost:3001](http://localhost:3001)                                     |
-| Health check  | [http://localhost:3001/api/health](http://localhost:3001/api/health)               |
-| Validador MCP | [http://localhost:8080/health](http://localhost:8080/health) (se `pnpm docker:up`) |
-| Prisma Studio | `pnpm --filter @msimulation-xml/backend exec prisma studio`                        |
-
-
-### Variáveis obrigatórias (backend)
+### Variáveis de ambiente
 
 Consulte `[backend/.env.example](backend/.env.example)`. Mínimo para dev local:
 
@@ -214,7 +179,122 @@ Sem `BREVO_API_KEY`, links de reset de senha aparecem no **console da API** (com
 
 ---
 
-## Backend (API)
+### Scripts úteis
+
+
+| Comando             | Descrição                               |
+| ------------------- | --------------------------------------- |
+| `pnpm dev`          | Sobe backend (:3001) + frontend (:3000) |
+| `pnpm dev:backend`  | Só API                                  |
+| `pnpm dev:frontend` | Só Next.js                              |
+| `pnpm build`        | Build packages + frontend + backend     |
+| `pnpm db:setup`     | Docker up + migrations                  |
+| `pnpm docker:up`    | Sobe Postgres                           |
+| `pnpm docker:down`  | Para Postgres + validador MCP           |
+| `pnpm docker:reset` | Apaga volume do banco (cuidado!)        |
+| `pnpm test:backend` | Testes fiscais + backend                |
+
+
+---
+
+### Guia do estagiário: por onde começar
+Sugestão de ordem de leitura/exploração (1–2 semanas):
+
+
+| Semana | Foco                   | Ações                                                                                                                          |
+| ------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **1**  | Ambiente + arquitetura | Rodar `pnpm dev`, criar conta, explorar UI. Ler este README e `backend/README.md`. Abrir Prisma Studio e ver tabelas.          |
+| **1**  | Frontend básico        | Seguir fluxo: `produtos/page.tsx` → `actions.ts` → `fiscal-api.ts` → controller no backend.                                    |
+| **2**  | Backend básico         | Escolher um CRUD simples (`catalog` ou `org`). Mapear controller → use case → repository.                                      |
+| **2**  | Fiscal introdutório    | Ler `backend/docs/fiscal/regras-fulfillment-cat31.md`. Emitir uma remessa pela UI e rastrear no código (`remessa-service.ts`). |
+| **3+** | Domínio escolhido      | Aprofundar em `tax`, `remessas` ou `sales` conforme tarefa do time.                                                            |
+
+
+### Checklist antes do primeiro PR
+
+- [ ] Projeto sobe local sem erros (`pnpm db:setup && pnpm dev`)
+- [ ] Entendo a diferença entre `domain`, `application`, `infrastructure`, `presentation`
+- [ ] Sei onde ficam validações de UI vs validações de domínio
+- [ ] Li o aviso: simulador, não produção SEFAZ
+- [ ] Não coloquei lógica fiscal no frontend
+
+---
+
+### Problemas comuns
+
+
+| Sintoma                    | Causa provável                        | Solução                                                                                                  |
+| -------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `ECONNREFUSED :5432`       | Postgres não está rodando             | `pnpm docker:up`                                                                                         |
+| API retorna 401 em tudo    | JWT expirado ou `JWT_SECRET` mudou    | Logout, login de novo; confira `backend/.env`                                                            |
+| Frontend não alcança API   | `API_URL` errada                      | Confira `frontend/.env.local` → `http://127.0.0.1:3001`                                                  |
+| Migration falha            | Banco desatualizado                   | `pnpm --filter @msimulation-xml/backend exec prisma migrate deploy`                                      |
+| Build falha em packages    | `dist/` desatualizado                 | `pnpm --filter @msimulation-xml/fiscal-core build && pnpm --filter @msimulation-xml/nfe-xml build`       |
+| CORS error no browser      | Origem não listada                    | Adicione `http://localhost:3000` em `CORS_ORIGINS`                                                       |
+| NF-es sempre `PENDING`     | Validador MCP offline ou desabilitado | `pnpm docker:up`; confira `FISCAL_VALIDATOR_URL` e `/health`; ou `FISCAL_VALIDATOR_ENABLED=false` em dev |
+| Badge rejeitado na UI      | XML reprovado pelo MCP (esperado)     | Abra detalhe da NF-e → painel de auditoria; corrija regra/XML no backend                                 |
+| Backfill não processa nada | Validador ainda indisponível          | Suba `fiscal-validator-api`; admin → página IA → botão de revalidação                                    |
+
+---
+
+## 2. Arquitetura
+
+Estrutura do monorepo, papéis dos pacotes e conceitos do domínio.
+
+### Para quem é este README?
+
+Este guia foi escrito para quem  já conhece, em nível básico:
+
+- **JavaScript/TypeScript** — variáveis, async/await, imports
+- **React** — componentes, props, hooks básicos
+- **Next.js** — ideia de rotas e páginas (App Router)
+- **Node.js** — servidor HTTP, variáveis de ambiente
+- **SQL/ORM** — tabelas, relações, migrations (conceito de Prisma)
+- **REST API** — GET/POST, JSON, status HTTP, JWT
+
+Se algum termo acima for novo, anote e pesquise antes de mergulhar no código fiscal — a curva de aprendizado aqui mistura **programação web** com **regras tributárias brasileiras**.
+
+### Conceitos básicos (leia antes de codar)
+
+
+| Termo                 | Significado no projeto                                                                                   |
+| --------------------- | -------------------------------------------------------------------------------------------------------- |
+| **Tenant**            | Empresa emitente cadastrada no sistema (multi-empresa). Cada tenant tem seus produtos, notas e usuários. |
+| **NF-e**              | Nota Fiscal Eletrônica de produto. Tipos: `REMESSA`, `VENDA`, `RETORNO_SIMBOLICO`, etc.                  |
+| **CT-e**              | Conhecimento de Transporte Eletrônico (frete vinculado à remessa ou venda).                              |
+| **Remessa física**    | Envio de estoque do seller para um CD do Mercado Livre.                                                  |
+| **Remessa simbólica** | Operação fiscal sem movimentação física (ex.: retorno simbólico antes da venda).                         |
+| **FIFO**              | Controle de saldo por item de NF-e (`nfe_itens`) — consumo na ordem de entrada.                          |
+| **Regra tributária**  | Configuração de ICMS, PIS, COFINS, IPI por origem × destino × produto.                                   |
+| **Unidade logística** | CD Meli Full cadastrado (código, UF, `idCadIntTran`).                                                    |
+| **BFF**               | Backend-for-Frontend — rota Next.js que repassa chamadas autenticadas para a API.                        |
+| **Use Case**          | Uma ação de negócio isolada (ex.: `EmitirRemessaInicialUseCase`).                                        |
+| **Bounded Context**   | Módulo de domínio com responsabilidade clara (ex.: `remessas`, `sales`, `tax`).                          |
+
+
+---
+### Visão do monorepo (neste capítulo)
+
+A tree de pastas e o diagrama Mermaid dos pacotes estão no portal, em [Visão geral do monorepo](#visao-geral-do-monorepo). Abaixo: stack e detalhe por pacote.
+
+---
+
+### Stack tecnológica
+
+
+| Camada          | Tecnologias                                                                | Para que serve                               |
+| --------------- | -------------------------------------------------------------------------- | -------------------------------------------- |
+| **Monorepo**    | pnpm 9, concurrently                                                       | Instalar deps e subir front + back juntos    |
+| **Backend**     | Fastify 5, TypeScript, Zod, Prisma 7, PostgreSQL                           | API REST, regras de negócio, persistência    |
+| **Frontend**    | Next.js 15, React 19, Tailwind v4, shadcn/ui, React Hook Form + Zod        | Interface do cockpit fiscal                  |
+| **Auth**        | JWT (access + refresh), 2FA TOTP, Brevo (e-mail)                           | Login, sessão, reset de senha                |
+| **Packages**    | TypeScript puro                                                            | Lógica fiscal reutilizável e testável        |
+| **Infra local** | Docker Compose (Postgres 16 + validador MCP opcional)                      | Banco e auditoria fiscal de XML              |
+| **Validador**   | `mcp-fiscal-brasil` 0.4.0 + proxy FastAPI (`infra/fiscal-validator-proxy`) | Auditoria estrutural e regras CAT 31 de NF-e |
+
+
+---
+### Backend (API)
 
 Documentação detalhada: `[backend/README.md](backend/README.md)`
 
@@ -286,8 +366,7 @@ Ordem de registro das rotas:
 
 
 ---
-
-## Frontend (interface)
+### Frontend (interface)
 
 Documentação resumida: `[frontend/README.md](frontend/README.md)`
 
@@ -390,8 +469,7 @@ sequenceDiagram
 
 
 ---
-
-## Packages compartilhados
+### Packages compartilhados
 
 Pacotes TypeScript puros, **sem banco de dados**, usados pelo backend (e testáveis isoladamente).
 
@@ -472,8 +550,94 @@ flowchart LR
 
 
 ---
+### Mapa de arquivos importantes
 
-## Fluxos de negócio (diagramas)
+### Raiz
+
+
+| Arquivo               | Função                                     |
+| --------------------- | ------------------------------------------ |
+| `package.json`        | Scripts `dev`, `build`, `test`, `db:setup` |
+| `pnpm-workspace.yaml` | Lista `backend`, `frontend`, `packages/*`  |
+| `docker-compose.yml`  | Postgres local                             |
+| `.env.example`        | Credenciais do container Postgres          |
+
+
+### Backend — arquivos que você vai abrir com frequência
+
+
+| Arquivo                                                                 | Função                                     |
+| ----------------------------------------------------------------------- | ------------------------------------------ |
+| `backend/src/index.ts`                                                  | Entrada do servidor, registro de plugins   |
+| `backend/src/plugins/protected-api.ts`                                  | Rotas autenticadas + RLS                   |
+| `backend/prisma/schema.prisma`                                          | Modelo de dados (tenants, products, nfes…) |
+| `backend/src/modules/tax/domain/services/tax-engine.ts`                 | Motor de cálculo de impostos               |
+| `backend/src/modules/remessas/infrastructure/fiscal/remessa-service.ts` | Orquestração da NF-e de remessa            |
+| `backend/src/modules/sales/infrastructure/fiscal/`                      | Cadeia de venda                            |
+| `backend/src/lib/http/error-handler.ts`                                 | Mapeamento de erros de domínio → HTTP      |
+
+
+### Frontend — arquivos que você vai abrir com frequência
+
+
+| Arquivo                                       | Função                           |
+| --------------------------------------------- | -------------------------------- |
+| `frontend/src/app/(app)/layout.tsx`           | Guard de auth + onboarding       |
+| `frontend/src/lib/fiscal-api.ts`              | Todas as chamadas GET/POST à API |
+| `frontend/src/lib/auth/session.ts`            | Token, cookies, `getAuthMe()`    |
+| `frontend/src/components/app-shell.tsx`       | Layout sidebar + navegação       |
+| `frontend/src/app/api/bff/[...path]/route.ts` | Proxy para download de XML       |
+| `frontend/src/lib/user-facing-error.ts`       | Mensagens de erro amigáveis      |
+
+
+### Packages
+
+
+| Arquivo                                          | Função                          |
+| ------------------------------------------------ | ------------------------------- |
+| `packages/fiscal-core/src/index.ts`              | Exports públicos do fiscal-core |
+| `packages/fiscal-core/src/remessa-ml-payload.ts` | Payload ML para remessa         |
+| `packages/fiscal-core/src/cte-template.ts`       | Montagem do CT-e                |
+| `packages/nfe-xml/src/nfe-xml-generator.ts`      | Gerador do XML NF-e             |
+| `packages/nfe-xml/src/fiscal-engine-xml.ts`      | Tags ICMS/IPI/PIS do engine     |
+
+
+---
+### Multi-tenant, auth e segurança
+
+### Multi-tenant
+
+- Cada **tenant** (empresa) tem dados isolados por `tenant_id`.
+- O JWT carrega `tenantId` após o onboarding.
+- **Row Level Security (RLS)** no PostgreSQL reforça isolamento nas rotas protegidas.
+
+### Autenticação
+
+
+| Token   | Duração padrão | Uso                            |
+| ------- | -------------- | ------------------------------ |
+| Access  | 30 min         | Header `Authorization: Bearer` |
+| Refresh | 7 dias         | Renova access token            |
+
+
+Fluxo de login: credenciais → (2FA se ativo) → cookies httpOnly no frontend → Server Components leem sessão server-side.
+
+### O que o frontend **não** deve fazer
+
+- Chamar APIs externas (ViaCEP, SEFAZ, Mercado Livre) direto do browser
+- Importar `xlsx` para processar planilhas fiscais
+- Montar ou assinar XML de NF-e/CT-e
+- Implementar regras de deduplicação de SKU ou cálculo de DIFAL
+
+Tudo isso pertence ao **backend**.
+
+---
+
+## 3. Fluxos
+
+Ciclo fiscal operacional e ciclo de uma requisição HTTP.
+
+### Fluxos de negócio (diagramas)
 
 ### 1. Onboarding e primeiro acesso
 
@@ -578,7 +742,7 @@ graph TD
 
 ---
 
-## Fluxo de uma requisição HTTP
+### Fluxo de uma requisição HTTP
 
 Visão unificada front → back → DB:
 
@@ -608,91 +772,11 @@ sequenceDiagram
 
 ---
 
-## Mapa de arquivos importantes
+## 4. Referência
 
-### Raiz
+Qualidade e ponteiros para documentação satélite.
 
-
-| Arquivo               | Função                                     |
-| --------------------- | ------------------------------------------ |
-| `package.json`        | Scripts `dev`, `build`, `test`, `db:setup` |
-| `pnpm-workspace.yaml` | Lista `backend`, `frontend`, `packages/*`  |
-| `docker-compose.yml`  | Postgres local                             |
-| `.env.example`        | Credenciais do container Postgres          |
-
-
-### Backend — arquivos que você vai abrir com frequência
-
-
-| Arquivo                                                                 | Função                                     |
-| ----------------------------------------------------------------------- | ------------------------------------------ |
-| `backend/src/index.ts`                                                  | Entrada do servidor, registro de plugins   |
-| `backend/src/plugins/protected-api.ts`                                  | Rotas autenticadas + RLS                   |
-| `backend/prisma/schema.prisma`                                          | Modelo de dados (tenants, products, nfes…) |
-| `backend/src/modules/tax/domain/services/tax-engine.ts`                 | Motor de cálculo de impostos               |
-| `backend/src/modules/remessas/infrastructure/fiscal/remessa-service.ts` | Orquestração da NF-e de remessa            |
-| `backend/src/modules/sales/infrastructure/fiscal/`                      | Cadeia de venda                            |
-| `backend/src/lib/http/error-handler.ts`                                 | Mapeamento de erros de domínio → HTTP      |
-
-
-### Frontend — arquivos que você vai abrir com frequência
-
-
-| Arquivo                                       | Função                           |
-| --------------------------------------------- | -------------------------------- |
-| `frontend/src/app/(app)/layout.tsx`           | Guard de auth + onboarding       |
-| `frontend/src/lib/fiscal-api.ts`              | Todas as chamadas GET/POST à API |
-| `frontend/src/lib/auth/session.ts`            | Token, cookies, `getAuthMe()`    |
-| `frontend/src/components/app-shell.tsx`       | Layout sidebar + navegação       |
-| `frontend/src/app/api/bff/[...path]/route.ts` | Proxy para download de XML       |
-| `frontend/src/lib/user-facing-error.ts`       | Mensagens de erro amigáveis      |
-
-
-### Packages
-
-
-| Arquivo                                          | Função                          |
-| ------------------------------------------------ | ------------------------------- |
-| `packages/fiscal-core/src/index.ts`              | Exports públicos do fiscal-core |
-| `packages/fiscal-core/src/remessa-ml-payload.ts` | Payload ML para remessa         |
-| `packages/fiscal-core/src/cte-template.ts`       | Montagem do CT-e                |
-| `packages/nfe-xml/src/nfe-xml-generator.ts`      | Gerador do XML NF-e             |
-| `packages/nfe-xml/src/fiscal-engine-xml.ts`      | Tags ICMS/IPI/PIS do engine     |
-
-
----
-
-## Multi-tenant, auth e segurança
-
-### Multi-tenant
-
-- Cada **tenant** (empresa) tem dados isolados por `tenant_id`.
-- O JWT carrega `tenantId` após o onboarding.
-- **Row Level Security (RLS)** no PostgreSQL reforça isolamento nas rotas protegidas.
-
-### Autenticação
-
-
-| Token   | Duração padrão | Uso                            |
-| ------- | -------------- | ------------------------------ |
-| Access  | 30 min         | Header `Authorization: Bearer` |
-| Refresh | 7 dias         | Renova access token            |
-
-
-Fluxo de login: credenciais → (2FA se ativo) → cookies httpOnly no frontend → Server Components leem sessão server-side.
-
-### O que o frontend **não** deve fazer
-
-- Chamar APIs externas (ViaCEP, SEFAZ, Mercado Livre) direto do browser
-- Importar `xlsx` para processar planilhas fiscais
-- Montar ou assinar XML de NF-e/CT-e
-- Implementar regras de deduplicação de SKU ou cálculo de DIFAL
-
-Tudo isso pertence ao **backend**.
-
----
-
-## Testes e qualidade
+### Testes e qualidade
 
 ```bash
 # Todos os testes do backend + packages fiscais
@@ -721,49 +805,26 @@ Os testes fiscais mais críticos ficam em:
 
 ---
 
-## Guia  por onde começar
-
-Sugestão de ordem de leitura/exploração (1–2 semanas):
+### Documentação complementar
 
 
-| Semana | Foco                   | Ações                                                                                                                          |
-| ------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| **1**  | Ambiente + arquitetura | Rodar `pnpm dev`, criar conta, explorar UI. Ler este README e `backend/README.md`. Abrir Prisma Studio e ver tabelas.          |
-| **1**  | Frontend básico        | Seguir fluxo: `produtos/page.tsx` → `actions.ts` → `fiscal-api.ts` → controller no backend.                                    |
-| **2**  | Backend básico         | Escolher um CRUD simples (`catalog` ou `org`). Mapear controller → use case → repository.                                      |
-| **2**  | Fiscal introdutório    | Ler `backend/docs/fiscal/regras-fulfillment-cat31.md`. Emitir uma remessa pela UI e rastrear no código (`remessa-service.ts`). |
-| **3+** | Domínio escolhido      | Aprofundar em `tax`, `remessas` ou `sales` conforme tarefa do time.                                                            |
-
-
-### Checklist antes do primeiro PR
-
-- [ ] Projeto sobe local sem erros (`pnpm db:setup && pnpm dev`)
-- [ ] Entendo a diferença entre `domain`, `application`, `infrastructure`, `presentation`
-- [ ] Sei onde ficam validações de UI vs validações de domínio
-- [ ] Li o aviso: simulador, não produção SEFAZ
-- [ ] Não coloquei lógica fiscal no frontend
-
----
-
-## Scripts úteis
-
-
-| Comando             | Descrição                               |
-| ------------------- | --------------------------------------- |
-| `pnpm dev`          | Sobe backend (:3001) + frontend (:3000) |
-| `pnpm dev:backend`  | Só API                                  |
-| `pnpm dev:frontend` | Só Next.js                              |
-| `pnpm build`        | Build packages + frontend + backend     |
-| `pnpm db:setup`     | Docker up + migrations                  |
-| `pnpm docker:up`    | Sobe Postgres                           |
-| `pnpm docker:down`  | Para Postgres + validador MCP           |
-| `pnpm docker:reset` | Apaga volume do banco (cuidado!)        |
-| `pnpm test:backend` | Testes fiscais + backend                |
+| Documento                                                                                                                                        | Conteúdo                                              |
+| ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- |
+| `[backend/README.md](backend/README.md)`                                                                                                         | Arquitetura detalhada do backend, módulos, convenções |
+| `[frontend/README.md](frontend/README.md)`                                                                                                       | Rotas, marca, execução do frontend                    |
+| `[backend/docs/fiscal/regras-fulfillment-cat31.md](backend/docs/fiscal/regras-fulfillment-cat31.md)`                                             | Regras ML Full / Portaria CAT 31                      |
+| `[backend/docs/fiscal/manual-nfe-moc.md](backend/docs/fiscal/manual-nfe-moc.md)`                                                                 | Referência estrutural NF-e (MOC)                      |
+| `[backend/.env.example](backend/.env.example)`                                                                                                   | Variáveis da API (incl. `FISCAL_VALIDATOR_`*)         |
+| `[frontend/.env.example](frontend/.env.example)`                                                                                                 | Variáveis do Next.js                                  |
+| `[docs/superpowers/specs/2026-06-20-mcp-fiscal-xml-validation-design.md](docs/superpowers/specs/2026-06-20-mcp-fiscal-xml-validation-design.md)` | Design do validador MCP Fiscal Brasil                 |
 
 
 ---
 
-## Validador MCP Fiscal Brasil
+## 5. Operação — Validador MCP
+
+<details>
+<summary>Validador MCP — auditoria NF-e pós-geração, não bloqueante</summary>
 
 O simulador integra o pacote **[mcp-fiscal-brasil](https://github.com/dehor-labs/mcp-fiscal-brasil)** para auditar o XML de NF-e **depois** de gerado e **antes** de persistir na transação de emissão. O objetivo é **rastreabilidade e diagnóstico** — a emissão **não é bloqueada** quando o XML é rejeitado ou quando o validador está offline.
 
@@ -1041,38 +1102,7 @@ O backfill regenera o XML se necessário (`resolveNfeXmlStringFromLoadedRow`), r
 
 
 ---
-
-## Documentação complementar
-
-
-| Documento                                                                                                                                        | Conteúdo                                              |
-| ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- |
-| `[backend/README.md](backend/README.md)`                                                                                                         | Arquitetura detalhada do backend, módulos, convenções |
-| `[frontend/README.md](frontend/README.md)`                                                                                                       | Rotas, marca, execução do frontend                    |
-| `[backend/docs/fiscal/regras-fulfillment-cat31.md](backend/docs/fiscal/regras-fulfillment-cat31.md)`                                             | Regras ML Full / Portaria CAT 31                      |
-| `[backend/docs/fiscal/manual-nfe-moc.md](backend/docs/fiscal/manual-nfe-moc.md)`                                                                 | Referência estrutural NF-e (MOC)                      |
-| `[backend/.env.example](backend/.env.example)`                                                                                                   | Variáveis da API (incl. `FISCAL_VALIDATOR_`*)         |
-| `[frontend/.env.example](frontend/.env.example)`                                                                                                 | Variáveis do Next.js                                  |
-| `[docs/superpowers/specs/2026-06-20-mcp-fiscal-xml-validation-design.md](docs/superpowers/specs/2026-06-20-mcp-fiscal-xml-validation-design.md)` | Design do validador MCP Fiscal Brasil                 |
-
-
----
-
-## Problemas comuns
-
-
-| Sintoma                    | Causa provável                        | Solução                                                                                                  |
-| -------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `ECONNREFUSED :5432`       | Postgres não está rodando             | `pnpm docker:up`                                                                                         |
-| API retorna 401 em tudo    | JWT expirado ou `JWT_SECRET` mudou    | Logout, login de novo; confira `backend/.env`                                                            |
-| Frontend não alcança API   | `API_URL` errada                      | Confira `frontend/.env.local` → `http://127.0.0.1:3001`                                                  |
-| Migration falha            | Banco desatualizado                   | `pnpm --filter @msimulation-xml/backend exec prisma migrate deploy`                                      |
-| Build falha em packages    | `dist/` desatualizado                 | `pnpm --filter @msimulation-xml/fiscal-core build && pnpm --filter @msimulation-xml/nfe-xml build`       |
-| CORS error no browser      | Origem não listada                    | Adicione `http://localhost:3000` em `CORS_ORIGINS`                                                       |
-| NF-es sempre `PENDING`     | Validador MCP offline ou desabilitado | `pnpm docker:up`; confira `FISCAL_VALIDATOR_URL` e `/health`; ou `FISCAL_VALIDATOR_ENABLED=false` em dev |
-| Badge rejeitado na UI      | XML reprovado pelo MCP (esperado)     | Abra detalhe da NF-e → painel de auditoria; corrija regra/XML no backend                                 |
-| Backfill não processa nada | Validador ainda indisponível          | Suba `fiscal-validator-api`; admin → página IA → botão de revalidação                                    |
-
+</details>
 
 ---
 

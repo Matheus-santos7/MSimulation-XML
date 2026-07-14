@@ -128,3 +128,6 @@ Desktop.ini
 **/.skill-lock.json
 **/.skill-lock.json.backup
 .vercel
+
+# Git worktrees (isolamento local de features)
+.worktrees/

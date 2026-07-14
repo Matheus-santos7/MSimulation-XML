@@ -46,7 +46,7 @@ describe("fiscal-core / nfe-xtexto", () => {
     );
   });
 
-  it("venda consumidor final — só pedido ML", () => {
+  it("venda consumidor final — padrão SALE-sale ML", () => {
     const pedidoMl = "987654321";
     assert.equal(
       buildNfeObsContXTexto({
@@ -56,7 +56,7 @@ describe("fiscal-core / nfe-xtexto", () => {
         pedidoMl,
         indFinal: 1,
       }),
-      pedidoMl,
+      `SALE-sale-${pedidoMl}-1-OLSS-279642028`,
     );
   });
 
@@ -69,7 +69,7 @@ describe("fiscal-core / nfe-xtexto", () => {
         pedidoML: "555",
         destinatario: { indIEDest: 9 },
       }),
-      "555",
+      "SALE-sale-555-1-OLSS-279642028",
     );
   });
 });

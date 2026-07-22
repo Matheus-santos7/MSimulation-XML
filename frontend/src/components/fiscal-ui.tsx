@@ -1,17 +1,18 @@
 import type { FiscalStatus } from "@/lib/fiscal-types";
+import { panelHeaderClass } from "@/lib/ui/shell-styles";
 import { cn } from "@/lib/utils";
 
 export function StatusBadge({ status }: { status: FiscalStatus }) {
   const styles: Record<FiscalStatus, string> = {
-    AUTORIZADA: "bg-success/10 text-success ring-success/25",
-    PENDENTE: "bg-accent/10 text-accent ring-accent/25",
-    REJEITADA: "bg-destructive/10 text-destructive ring-destructive/25",
-    CANCELADA: "bg-red-500/15 text-red-400 ring-red-500/35",
-    DENEGADA: "bg-destructive/10 text-destructive ring-destructive/25",
+    AUTORIZADA: "bg-success/15 text-success ring-success/25",
+    PENDENTE: "bg-accent/15 text-accent ring-accent/25",
+    REJEITADA: "bg-destructive/15 text-destructive ring-destructive/25",
+    CANCELADA: "bg-muted text-muted-foreground ring-border",
+    DENEGADA: "bg-destructive/15 text-destructive ring-destructive/25",
   };
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ring-1 ring-inset ${styles[status]}`}
+      className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-medium uppercase tracking-wide ring-1 ring-inset ${styles[status]}`}
     >
       {status}
     </span>
@@ -20,7 +21,7 @@ export function StatusBadge({ status }: { status: FiscalStatus }) {
 
 export function InutilizadaStatusBadge() {
   return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ring-1 ring-inset bg-blue-500/15 text-blue-400 ring-blue-500/35">
+    <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-medium uppercase tracking-wide ring-1 ring-inset bg-muted text-muted-foreground ring-border">
       INUTILIZADA
     </span>
   );
@@ -64,10 +65,8 @@ export function SectionHeader({
   right?: React.ReactNode;
 }) {
   return (
-    <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-      <h3 className="font-bold text-[13px] uppercase tracking-wider text-foreground">
-        {title}
-      </h3>
+    <div className={panelHeaderClass()}>
+      <h2 className="text-sm font-semibold tracking-tight text-foreground">{title}</h2>
       {right}
     </div>
   );

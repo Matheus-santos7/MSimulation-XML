@@ -120,40 +120,50 @@
 .dark {
   color-scheme: dark;
 
-  --background: oklch(0.145 0.005 285);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.185 0.005 285);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.185 0.005 285);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.145 0.005 285);
-  --secondary: oklch(0.235 0.005 285);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.235 0.005 285);
-  --muted-foreground: oklch(0.55 0.012 285);
-  --accent: oklch(0.78 0.17 68);
-  --accent-foreground: oklch(0.145 0.005 285);
-  --destructive: oklch(0.625 0.215 27);
-  --destructive-foreground: oklch(0.985 0 0);
-  --success: oklch(0.7 0.17 158);
-  --success-foreground: oklch(0.145 0.005 285);
-  --warning: oklch(0.78 0.17 68);
-  --warning-foreground: oklch(0.145 0.005 285);
-  --border: oklch(0.255 0.005 285);
-  --input: oklch(0.255 0.005 285);
-  --ring: oklch(0.78 0.17 68);
-  --sidebar: oklch(0.145 0.005 285);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.78 0.17 68);
-  --sidebar-primary-foreground: oklch(0.145 0.005 285);
-  --sidebar-accent: oklch(0.235 0.005 285);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.255 0.005 285);
-  --sidebar-ring: oklch(0.78 0.17 68);
+  /* Fundo mais profundo; cards elevados — hierarquia clara */
+  --background: oklch(0.155 0.012 270);
+  --foreground: oklch(0.96 0.005 270);
+  --card: oklch(0.205 0.012 270);
+  --card-foreground: oklch(0.96 0.005 270);
+  --popover: oklch(0.22 0.012 270);
+  --popover-foreground: oklch(0.96 0.005 270);
 
-  --brand-glow: oklch(0.78 0.17 68);
-  --brand-xml: oklch(0.76 0.17 162);
+  --primary: oklch(0.96 0.005 270);
+  --primary-foreground: oklch(0.18 0.012 270);
+
+  --secondary: oklch(0.255 0.012 270);
+  --secondary-foreground: oklch(0.96 0.005 270);
+
+  --muted: oklch(0.245 0.012 270);
+  --muted-foreground: oklch(0.68 0.015 270);
+
+  --accent: oklch(0.80 0.14 68);
+  --accent-foreground: oklch(0.18 0.02 68);
+
+  --destructive: oklch(0.70 0.16 25);
+  --destructive-foreground: oklch(0.98 0.01 25);
+
+  --success: oklch(0.74 0.13 158);
+  --success-foreground: oklch(0.18 0.02 158);
+
+  --warning: oklch(0.80 0.14 68);
+  --warning-foreground: oklch(0.18 0.02 68);
+
+  --border: oklch(0.32 0.014 270);
+  --input: oklch(0.28 0.014 270);
+  --ring: oklch(0.80 0.14 68);
+
+  --sidebar: oklch(0.135 0.012 270);
+  --sidebar-foreground: oklch(0.96 0.005 270);
+  --sidebar-primary: oklch(0.80 0.14 68);
+  --sidebar-primary-foreground: oklch(0.18 0.02 68);
+  --sidebar-accent: oklch(0.22 0.014 270);
+  --sidebar-accent-foreground: oklch(0.96 0.005 270);
+  --sidebar-border: oklch(0.28 0.014 270);
+  --sidebar-ring: oklch(0.80 0.14 68);
+
+  --brand-glow: oklch(0.80 0.14 68);
+  --brand-xml: oklch(0.78 0.14 162);
 }
 
 @layer base {
@@ -194,8 +204,8 @@
 
   .dark .brand-grid-bg {
     background-image:
-      linear-gradient(oklch(0.255 0.005 285 / 0.35) 1px, transparent 1px),
-      linear-gradient(90deg, oklch(0.255 0.005 285 / 0.35) 1px, transparent 1px);
+      linear-gradient(oklch(0.40 0.02 270 / 0.28) 1px, transparent 1px),
+      linear-gradient(90deg, oklch(0.40 0.02 270 / 0.28) 1px, transparent 1px);
   }
 
   .brand-glow-orb {
@@ -210,8 +220,8 @@
   .dark .brand-glow-orb {
     background: radial-gradient(
       circle at center,
-      oklch(0.78 0.17 68 / 0.18) 0%,
-      oklch(0.72 0.15 162 / 0.06) 45%,
+      oklch(0.80 0.14 68 / 0.14) 0%,
+      oklch(0.72 0.12 162 / 0.06) 45%,
       transparent 70%
     );
   }

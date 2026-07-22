@@ -32,7 +32,7 @@ export function TimelineExportButton() {
         size="sm"
         onClick={handleExport}
         disabled={pending}
-        className="gap-2 h-8 text-[11px] font-bold uppercase tracking-wider"
+        className="gap-2 h-8 text-xs font-medium"
       >
         <Download className="size-3.5" />
         {pending ? "Exportando..." : "Exportar XLSX"}

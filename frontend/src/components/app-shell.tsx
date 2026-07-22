@@ -65,12 +65,12 @@ function AppShellInner({
 
   return (
     <div className="flex h-dvh w-full overflow-hidden bg-background text-foreground text-[15px]">
-      <aside className="w-64 shrink-0 border-r border-border/80 flex flex-col bg-sidebar">
-        <div className="px-4 py-5 border-b border-border/80">
+      <aside className="w-56 shrink-0 border-r border-sidebar-border flex flex-col bg-sidebar">
+        <div className="px-3.5 py-3.5 border-b border-sidebar-border">
           <BrandLogo variant="full" href="/" />
         </div>
 
-        <nav className="flex-1 px-3 py-3 space-y-1 overflow-hidden">
+        <nav className="flex-1 px-2.5 py-2.5 space-y-0.5 overflow-hidden">
           <Link href="/" className={shellNavLinkClass(path === "/")}>
             <span className="size-1.5 rounded-full bg-success shrink-0" />
             <span className="font-medium">Dashboard</span>
@@ -83,7 +83,7 @@ function AppShellInner({
             return (
               <Link key={item.href} href={item.href} className={shellNavLinkClass(active)}>
                 <Icon className="size-4 shrink-0 opacity-80" />
-                <span>{item.label}</span>
+                <span className="truncate">{item.label}</span>
               </Link>
             );
           })}
@@ -95,7 +95,7 @@ function AppShellInner({
             return (
               <Link key={item.href} href={item.href} className={shellNavLinkClass(active)}>
                 <Icon className="size-4 shrink-0 opacity-80" />
-                <span>{item.label}</span>
+                <span className="truncate">{item.label}</span>
               </Link>
             );
           })}
@@ -103,7 +103,7 @@ function AppShellInner({
       </aside>
 
       <main className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <header className="h-16 shrink-0 border-b border-border/80 flex items-center justify-between px-6 lg:px-8 bg-background/90 backdrop-blur-md">
+        <header className="h-14 shrink-0 border-b border-border flex items-center justify-between px-5 lg:px-6 bg-card/40 backdrop-blur-md">
           <div className="flex items-center gap-4 min-w-0">
             <span className="font-medium truncate max-w-[min(100%,360px)]">
               {tenant?.razaoSocial ?? "Empresa"}
@@ -124,7 +124,7 @@ function AppShellInner({
           {children}
         </div>
 
-        <footer className="h-11 shrink-0 border-t border-border/80 bg-muted/30 flex items-center justify-center px-4">
+        <footer className="h-9 shrink-0 border-t border-border bg-card/30 flex items-center justify-center px-4">
           <span className="text-[11px] font-mono text-muted-foreground">
             Simulação — sem validade SEFAZ
           </span>

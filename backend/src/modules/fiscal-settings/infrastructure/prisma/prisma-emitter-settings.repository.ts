@@ -11,7 +11,7 @@ import {
   DEFAULT_FISCAL_EMITTER_SETTINGS,
   mergeEmitterSettingsPatch,
 } from "../../application/services/merge-emitter-settings-patch.service.js";
-import { ultimoNumeroNfe } from "../../../fiscal-documents/domain/services/nfe-sequencia.js";
+import { ultimoNumeroNfe, listInutilizacoesSerie } from "../../../fiscal-documents/domain/services/nfe-sequencia.js";
 
 /**
  * Implementação Prisma do port {@link EmitterSettingsRepository}.
@@ -124,12 +124,15 @@ export class PrismaEmitterSettingsRepository implements EmitterSettingsRepositor
     settings: EmitterSettingsView["settings"],
   ): Promise<EmitterSettingsView["numeracaoNfe"]> {
     const build = async (serie: number, kind: "remessa" | "transferencia"): Promise<NfeNumeracaoView> => {
-      const ultimoEmitido = await ultimoNumeroNfe(this.db, tenantId, serie);
+      const [ultimoEmitido, inutilizacoes] = await Promise.all([
+        ultimoNumeroNfe(this.db, tenantId, serie),
+        listInutilizacoesSerie(this.db, tenantId, serie),
+      ]);
       const numeroInicial = settings.nfe.numeracao?.[kind]?.numeroInicial ?? 1;
       return {
         numeroInicial,
         ultimoEmitido,
-        proximoNumero: computeProximoNumeroNfe(ultimoEmitido, numeroInicial),
+        proximoNumero: computeProximoNumeroNfe(ultimoEmitido, numeroInicial, inutilizacoes),
       };
     };
 
@@ -152,11 +155,14 @@ export class PrismaEmitterSettingsRepository implements EmitterSettingsRepositor
     if (!tenant) return null;
 
     const floor = Math.max(1, Math.trunc(numeroInicial) || 1);
-    const ultimoEmitido = await ultimoNumeroNfe(this.db, tenantId, serie);
+    const [ultimoEmitido, inutilizacoes] = await Promise.all([
+      ultimoNumeroNfe(this.db, tenantId, serie),
+      listInutilizacoesSerie(this.db, tenantId, serie),
+    ]);
     return {
       numeroInicial: floor,
       ultimoEmitido,
-      proximoNumero: computeProximoNumeroNfe(ultimoEmitido, floor),
+      proximoNumero: computeProximoNumeroNfe(ultimoEmitido, floor, inutilizacoes),
     };
   }
 }

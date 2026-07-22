@@ -4,12 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { fetchJsonFromBff } from "@/lib/http/authenticated-fetch";
 import type { NfeNumeracaoView } from "@/lib/fiscal-emitter-settings-types";
 
-function computeProximoNumeroLocal(ultimoEmitido: number | null, numeroInicial: number): number {
-  const floor = Math.max(1, Math.trunc(numeroInicial) || 1);
-  if (ultimoEmitido == null || ultimoEmitido <= 0) return floor;
-  return Math.max(ultimoEmitido + 1, floor);
-}
-
 function parseSerie(value: string): number | null {
   const n = Number(value);
   if (!Number.isFinite(n) || n < 1 || n > 999) return null;
@@ -23,8 +17,8 @@ function parseNumeroInicial(value: string): number | null {
 }
 
 /**
- * Busca preview de numeração no backend quando a série muda; recalcula próximo número localmente
- * quando apenas a numeração inicial é alterada.
+ * Preview de numeração via backend (respeita inutilizações).
+ * Debounce ao mudar série ou número inicial.
  */
 export function useNfeNumeracaoPreview(
   serie: string,
@@ -34,15 +28,13 @@ export function useNfeNumeracaoPreview(
   const [numeracao, setNumeracao] = useState(initial);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const ultimoEmitidoRef = useRef<number | null>(initial.ultimoEmitido);
-  const skipSerieFetchRef = useRef(true);
+  const skipFetchRef = useRef(true);
 
   const initialSignature = `${initial.numeroInicial}|${initial.ultimoEmitido}|${initial.proximoNumero}`;
 
   useEffect(() => {
     setNumeracao(initial);
-    ultimoEmitidoRef.current = initial.ultimoEmitido;
-    skipSerieFetchRef.current = true;
+    skipFetchRef.current = true;
   }, [initial, initialSignature]);
 
   useEffect(() => {
@@ -50,12 +42,11 @@ export function useNfeNumeracaoPreview(
     const parsedInicial = parseNumeroInicial(numeroInicial);
     if (parsedSerie == null || parsedInicial == null) return;
 
-    if (skipSerieFetchRef.current) {
-      skipSerieFetchRef.current = false;
+    if (skipFetchRef.current) {
+      skipFetchRef.current = false;
       setNumeracao((prev) => ({
         ...prev,
         numeroInicial: parsedInicial,
-        proximoNumero: computeProximoNumeroLocal(ultimoEmitidoRef.current, parsedInicial),
       }));
       return;
     }
@@ -73,7 +64,6 @@ export function useNfeNumeracaoPreview(
           `/api/fiscal-settings/nfe-numeracao?${params.toString()}`,
         );
         if (cancelled) return;
-        ultimoEmitidoRef.current = preview.ultimoEmitido;
         setNumeracao(preview);
       } catch (e) {
         if (!cancelled) {
@@ -88,18 +78,7 @@ export function useNfeNumeracaoPreview(
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [serie]);
-
-  useEffect(() => {
-    const parsedInicial = parseNumeroInicial(numeroInicial);
-    if (parsedInicial == null) return;
-
-    setNumeracao((prev) => ({
-      ...prev,
-      numeroInicial: parsedInicial,
-      proximoNumero: computeProximoNumeroLocal(ultimoEmitidoRef.current, parsedInicial),
-    }));
-  }, [numeroInicial]);
+  }, [serie, numeroInicial]);
 
   return { numeracao, loading, error };
 }

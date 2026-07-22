@@ -16,11 +16,24 @@ export async function ultimoNumeroNfe(
   return last?.numero ?? null;
 }
 
+/** Faixas inutilizadas (procInutNFe) da série — números que não podem ser reemitidos. */
+export async function listInutilizacoesSerie(
+  prisma: PrismaTx,
+  tenantId: string,
+  serie: number,
+): Promise<Array<{ numeroIni: number; numeroFim: number }>> {
+  return prisma.nfeInutilizacao.findMany({
+    where: { tenantId, serie },
+    select: { numeroIni: true, numeroFim: true },
+    orderBy: { numeroIni: "asc" },
+  });
+}
+
 /**
  * Próximo número da NF-e para a série informada (por tenant).
  *
- * Respeita `numeroInicial` configurado: sequência normal após emissões,
- * ou salto quando o piso configurado supera o último emitido.
+ * Respeita `numeroInicial` configurado e **pula faixas inutilizadas**
+ * (`nfe_inutilizacoes`), para venda, remessa, retorno, devolução, etc.
  */
 export async function proximoNumeroNfe(
   prisma: PrismaTx,
@@ -28,6 +41,9 @@ export async function proximoNumeroNfe(
   serie: number,
   numeroInicial = 1,
 ): Promise<number> {
-  const ultimo = await ultimoNumeroNfe(prisma, tenantId, serie);
-  return computeProximoNumeroNfe(ultimo, numeroInicial);
+  const [ultimo, inutilizacoes] = await Promise.all([
+    ultimoNumeroNfe(prisma, tenantId, serie),
+    listInutilizacoesSerie(prisma, tenantId, serie),
+  ]);
+  return computeProximoNumeroNfe(ultimo, numeroInicial, inutilizacoes);
 }

@@ -66,6 +66,7 @@ export type {
   SettingsMode,
 } from "./fiscal-emitter-settings-types.js";
 export {
+  advancePastInutilizedRanges,
   computeProximoNumeroNfe,
   DEFAULT_NFE_NUMERACAO,
   resolveNumeroInicialNfe,

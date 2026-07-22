@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  advancePastInutilizedRanges,
   computeProximoNumeroNfe,
   DEFAULT_NFE_NUMERACAO,
   resolveNumeroInicialNfe,
@@ -45,6 +46,38 @@ describe("computeProximoNumeroNfe", () => {
 
   it("não retrocede numeração abaixo do último emitido", () => {
     assert.equal(computeProximoNumeroNfe(149, 140), 150);
+  });
+
+  it("pula faixas inutilizadas após o candidato", () => {
+    // Bug: após emitir 100 e inutilizar 101–105, o próximo deve ser 106 — não 101.
+    assert.equal(
+      computeProximoNumeroNfe(100, 1, [{ numeroIni: 101, numeroFim: 105 }]),
+      106,
+    );
+  });
+
+  it("pula várias faixas inutilizadas consecutivas ou intercaladas", () => {
+    assert.equal(
+      computeProximoNumeroNfe(10, 1, [
+        { numeroIni: 11, numeroFim: 12 },
+        { numeroIni: 13, numeroFim: 15 },
+      ]),
+      16,
+    );
+  });
+
+  it("respeita piso mesmo quando a faixa inutilizada começa abaixo do piso", () => {
+    // Último 50, piso 100, inutilizado 100–102 → próximo 103
+    assert.equal(
+      computeProximoNumeroNfe(50, 100, [{ numeroIni: 100, numeroFim: 102 }]),
+      103,
+    );
+  });
+});
+
+describe("advancePastInutilizedRanges", () => {
+  it("não altera candidato fora de faixas", () => {
+    assert.equal(advancePastInutilizedRanges(50, [{ numeroIni: 10, numeroFim: 20 }]), 50);
   });
 });
 

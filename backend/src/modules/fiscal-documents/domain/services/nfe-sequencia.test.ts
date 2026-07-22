@@ -13,6 +13,9 @@ describe("proximoNumeroNfe", () => {
           return null;
         },
       },
+      nfeInutilizacao: {
+        findMany: async () => [],
+      },
     };
 
     const numero = await proximoNumeroNfe(prisma as never, "tenant-1", 5, 100);
@@ -25,10 +28,26 @@ describe("proximoNumeroNfe", () => {
       nFe: {
         findFirst: async () => ({ numero: 149 }),
       },
+      nfeInutilizacao: {
+        findMany: async () => [],
+      },
     };
 
     assert.equal(await proximoNumeroNfe(prisma as never, "tenant-1", 5, 100), 150);
     assert.equal(await proximoNumeroNfe(prisma as never, "tenant-1", 5, 200), 200);
+  });
+
+  it("pula números cobertos por inutilização antes de emitir", async () => {
+    const prisma = {
+      nFe: {
+        findFirst: async () => ({ numero: 100 }),
+      },
+      nfeInutilizacao: {
+        findMany: async () => [{ numeroIni: 101, numeroFim: 105 }],
+      },
+    };
+
+    assert.equal(await proximoNumeroNfe(prisma as never, "tenant-1", 58, 1), 106);
   });
 });
 

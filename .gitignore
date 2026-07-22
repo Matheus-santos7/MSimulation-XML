@@ -117,16 +117,10 @@ Desktop.ini
 .cursor/*
 !.cursor/rules/
 !.cursor/rules/**
-!.cursor/skills/
-!.cursor/skills/**
-.agents/
 .claude/
 .gemini/
 .notebook/
 
-# Locks de skills instalados localmente
-**/.skill-lock.json
-**/.skill-lock.json.backup
 .vercel
 
 # Git worktrees (isolamento local de features)

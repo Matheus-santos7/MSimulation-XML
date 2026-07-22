@@ -816,7 +816,6 @@ Os testes fiscais mais críticos ficam em:
 | `[backend/docs/fiscal/manual-nfe-moc.md](backend/docs/fiscal/manual-nfe-moc.md)`                                                                 | Referência estrutural NF-e (MOC)                      |
 | `[backend/.env.example](backend/.env.example)`                                                                                                   | Variáveis da API (incl. `FISCAL_VALIDATOR_`*)         |
 | `[frontend/.env.example](frontend/.env.example)`                                                                                                 | Variáveis do Next.js                                  |
-| `[docs/superpowers/specs/2026-06-20-mcp-fiscal-xml-validation-design.md](docs/superpowers/specs/2026-06-20-mcp-fiscal-xml-validation-design.md)` | Design do validador MCP Fiscal Brasil                 |
 
 
 ---
@@ -1089,17 +1088,6 @@ Cliente API: `frontend/src/lib/fiscal-api/validation-insights.ts`.
 NF-es emitidas enquanto o validador estava offline ficam com `statusValidacao = PENDING`. Admins podem reprocessar em lote (até 200 por chamada) via botão na página **IA Insights** ou `POST /api/fiscal-validation/backfill`.
 
 O backfill regenera o XML se necessário (`resolveNfeXmlStringFromLoadedRow`), reenvia ao MCP e atualiza os quatro campos de auditoria.
-
-### Documentação de design
-
-
-| Documento                                                               | Conteúdo                                  |
-| ----------------------------------------------------------------------- | ----------------------------------------- |
-| `docs/fiscal/mcp-nfe-validation-flow.md`                                | Fluxo envio/devolutiva MCP + mapeamento   |
-| `docs/superpowers/specs/2026-06-22-fiscal-validation-module-design.md` | Módulo DDD `fiscal-validation` (pass-through) |
-| `docs/superpowers/specs/2026-06-20-mcp-fiscal-xml-validation-design.md` | Spec funcional v1 (status: concluída)        |
-| `docs/superpowers/plans/2026-06-20-mcp-fiscal-xml-validation.md`        | Plano de implementação e mapa de arquivos |
-
 
 ---
 </details>

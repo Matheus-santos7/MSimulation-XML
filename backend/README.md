@@ -17,8 +17,13 @@ API REST em **Fastify + TypeScript + Prisma + PostgreSQL** que sustenta o simula
 7. [Estrutura de pastas](#estrutura-de-pastas)
 8. [Comunicação entre módulos](#comunicação-entre-módulos)
 9. [Padrões e convenções](#padrões-e-convenções)
-10. [Testes e scripts](#testes-e-scripts)
-11. [Documentação por módulo](#documentação-por-módulo)
+10. [Packages compartilhados](#packages-compartilhados)
+11. [Fluxos de negócio](#fluxos-de-negócio)
+12. [Fluxo HTTP](#fluxo-http)
+13. [Validador MCP](#validador-mcp)
+14. [Problemas comuns](#problemas-comuns)
+15. [Testes e scripts](#testes-e-scripts)
+16. [Documentação por módulo](#documentação-por-módulo)
 
 ---
 
@@ -339,7 +344,258 @@ modules/<context>/
 | IDs multi-tenant | Sempre filtrar por `tenantId` do JWT; RLS ativo em `protected-api` |
 | Transações | Dentro de infrastructure (repositório), não no controller |
 
-Pacotes internos do monorepo: `@msimulation-xml/fiscal-core`, `@msimulation-xml/nfe-xml`.
+Pacotes internos do monorepo: `@msimulation-xml/fiscal-core`, `@msimulation-xml/nfe-xml` — detalhe na secção [Packages compartilhados](#packages-compartilhados).
+
+---
+
+## Packages compartilhados
+
+Pacotes TypeScript puros (sem DB), consumidos pelo backend e testáveis isoladamente. Pastas na raiz do monorepo: [`../packages/fiscal-core`](../packages/fiscal-core/), [`../packages/nfe-xml`](../packages/nfe-xml/).
+
+### `@msimulation-xml/fiscal-core`
+
+| Responsabilidade | Exemplos |
+| ---------------- | -------- |
+| Assinatura XML simulada | `buildSimulationXmlSignature`, `injectSimulationSignature` |
+| Enrichment payload ML | `enrichFiscalPayloadMlFulfillment`, `enrichFiscalPayloadMlVenda` |
+| CT-e | `buildCteFiscalPayload`, `buildCTeXML` |
+| Runtime do emissor | `buildEmitterSnapshot`, `calcTributoBase`, `resolveDifalMode` |
+| ICMS interestadual | `resolveInterstateIcmsRateForProductOrigin` |
+
+```bash
+pnpm --filter @msimulation-xml/fiscal-core build
+pnpm --filter @msimulation-xml/fiscal-core test
+```
+
+### `@msimulation-xml/nfe-xml`
+
+| Responsabilidade | Exemplos |
+| ---------------- | -------- |
+| Montagem XML NF-e | `buildNFeXML`, `highlightXML` |
+| Tags de imposto a partir do engine | `buildIcmsXmlFromEngineItem`, `icmsTotFromEngine` |
+| Eventos | `buildProcEventoCancelamentoXML` |
+
+Depende de `@msimulation-xml/fiscal-core`.
+
+```bash
+pnpm --filter @msimulation-xml/nfe-xml build
+pnpm --filter @msimulation-xml/nfe-xml test
+```
+
+### Pipeline de geração de XML
+
+```mermaid
+flowchart LR
+  subgraph Backend
+    TE[tax-engine]
+    RS[remessa-service]
+    BUILD[buildNfeXmlAutorizado]
+    VAL[resolveNfeValidationUpdate]
+    PERSIST[persistNfeXmlAutorizado]
+  end
+  subgraph Packages
+    FC[fiscal-core]
+    NX[nfe-xml]
+  end
+  subgraph MCP["Validador MCP (opcional)"]
+    PROXY[fiscal-validator-proxy]
+  end
+  RS --> TE
+  TE --> FC
+  FC --> NX
+  NX --> BUILD
+  BUILD --> VAL
+  VAL --> PROXY
+  PROXY --> VAL
+  VAL --> PERSIST
+  PERSIST --> DB[(nfe + xml + auditoria)]
+```
+
+---
+
+## Fluxos de negócio
+
+### Onboarding
+
+```mermaid
+flowchart TD
+  A[Criar conta / Login] --> B{E-mail verificado?}
+  B -->|Não| C[/login/verificar-email]
+  B -->|Sim| D{Tenant cadastrado?}
+  D -->|Não| E[/onboarding/empresa]
+  E --> F[Consulta CNPJ via lookup]
+  F --> G[Cria tenant + usuário ADMIN]
+  G --> H[Dashboard]
+  D -->|Sim| H
+```
+
+### Setup operacional (antes de emitir)
+
+```mermaid
+flowchart LR
+  S1[Regras tributárias] --> S2[Produtos]
+  S2 --> S3[Unidades logísticas CDs]
+  S3 --> S4[Configurações fiscais]
+  S4 --> S5[Pronto para operar]
+```
+
+### Remessa física (envio ao CD)
+
+```mermaid
+sequenceDiagram
+  participant UI as Frontend /operacoes
+  participant R as remessas
+  participant L as logistics
+  participant T as tax
+  participant F as fiscal-documents
+  participant P as packages
+  UI->>R: POST remessa
+  R->>L: resolve destino fiscal
+  loop Por item
+    R->>T: resolveTaxRule + calculateInvoiceTaxes
+  end
+  R->>P: enrich + buildNFeXML
+  R->>F: persiste NF-e + FIFO + CT-e
+  F-->>UI: NF-e + CT-e (simulado)
+```
+
+### Avanço CD → CD
+
+```mermaid
+flowchart TD
+  A[Produto + CD origem + destino] --> B[Valida saldo FIFO]
+  B --> C[Consome FIFO]
+  C --> D[Nova NF-e REMESSA referenciando anterior]
+  D --> E[Novo saldo no destino]
+  E --> F[CT-e de remessa]
+```
+
+### Cadeia de venda
+
+```mermaid
+flowchart TD
+  P1[Pedido rascunho] --> P2[Checkout FIFO]
+  P2 --> P3[Faturar]
+  P3 --> R1[Retorno simbólico NF-e]
+  R1 --> R2[Venda NF-e]
+  R2 --> R3[CT-e frete]
+  R3 --> DONE[Pedido FATURADO]
+```
+
+### Dependências entre módulos
+
+```mermaid
+graph TD
+  Auth[auth] --> Org[org]
+  Auth --> Lookup[lookup]
+  Logistics[logistics] --> Remessas[remessas]
+  Logistics --> Catalog[catalog]
+  Remessas --> Tax[tax]
+  Remessas --> FiscalDocs[fiscal-documents]
+  Sales[sales] --> Tax
+  Sales --> Remessas
+  Sales --> FiscalDocs
+  Catalog --> Tax
+  FiscalSettings[fiscal-settings] --> Tax
+```
+
+---
+
+## Fluxo HTTP
+
+```mermaid
+sequenceDiagram
+  participant B as Browser
+  participant N as Next.js
+  participant F as Fastify
+  participant M as Use Case
+  participant D as PostgreSQL
+  B->>N: GET /produtos
+  N->>N: layout valida sessão
+  N->>F: GET /api/products
+  F->>F: JWT + tenantId + RLS
+  F->>M: ListProductsUseCase
+  M->>D: SELECT … tenant_id
+  D-->>M: rows
+  M-->>F: DTOs
+  F-->>N: 200 JSON
+  N-->>B: HTML
+```
+
+Mutações usam Server Actions no frontend com POST/PUT/DELETE na API.
+
+---
+
+## Validador MCP
+
+Auditoria de XML NF-e **após** geração e **antes** de persistir — **não bloqueante**. Escopo v1: só NF-e (CT-e fora). Pacote: [mcp-fiscal-brasil](https://github.com/dehor-labs/mcp-fiscal-brasil). Proxy: [`../infra/fiscal-validator-proxy`](../infra/fiscal-validator-proxy/).
+
+### Comportamento
+
+| Cenário | `statusValidacao` | Emissão abortada? |
+| ------- | ----------------- | ----------------- |
+| XML aprovado | `APPROVED` | Não |
+| XML rejeitado | `REJECTED` | **Não** — só rastreio |
+| `FISCAL_VALIDATOR_ENABLED=false` | `PENDING` | Não |
+| MCP offline / timeout | `PENDING` | Não |
+
+Choke point: `src/modules/fiscal-documents/infrastructure/xml/nfe-xml-validation.ts` via `persistNfeXmlAutorizado`.
+
+### Env (placeholders — ver [`.env.example`](./.env.example))
+
+| Variável | Default dev | Descrição |
+| -------- | ----------- | --------- |
+| `FISCAL_VALIDATOR_URL` | `http://localhost:8080` | Base do proxy |
+| `FISCAL_VALIDATOR_ENABLED` | `true` | `false` / `0` pula MCP |
+
+Raiz do monorepo: `FISCAL_VALIDATOR_PORT` em [`../.env.example`](../.env.example).
+
+### Docker local
+
+```bash
+# Na raiz do monorepo
+pnpm docker:up
+curl -sf http://localhost:8080/health
+```
+
+Imagem: [`../Dockerfile.fiscal-validator`](../Dockerfile.fiscal-validator). Deploy: [`../render.yaml`](../render.yaml).
+
+### API de observabilidade
+
+| Método | Rota | Auth |
+| ------ | ---- | ---- |
+| `GET` | `/api/fiscal-validation/status` | JWT + tenant |
+| `GET` | `/api/fiscal-validation/insights` | JWT + tenant |
+| `POST` | `/api/fiscal-validation/backfill` | JWT + tenant + ADMIN |
+
+O browser **nunca** chama o MCP — só o backend.
+
+### Arquitetura (resumo)
+
+```mermaid
+flowchart TB
+  UC[Use cases emissão] --> PERSIST[persistNfeXmlAutorizado]
+  PERSIST --> BUILD[buildNfeXmlAutorizado]
+  BUILD --> RESOLVE[resolveNfeValidationUpdate]
+  RESOLVE --> HTTP[HttpFiscalValidatorAdapter]
+  HTTP -->|POST /api/v1/validate-nfe| PROXY[FastAPI :8080]
+  PROXY --> MCP[mcp-fiscal-brasil]
+  RESOLVE --> DB[(nfes + auditoria)]
+```
+
+---
+
+## Problemas comuns
+
+| Sintoma | Causa provável | Solução |
+| ------- | -------------- | ------- |
+| `ECONNREFUSED :5432` | Postgres parado | `pnpm docker:up` (raiz) |
+| API 401 em tudo | JWT / `JWT_SECRET` mudou | Relogar; confira `.env` |
+| Migration falha | Banco desatualizado | `pnpm --filter @msimulation-xml/backend exec prisma migrate deploy` |
+| Build falha em packages | `dist/` velho | `pnpm --filter @msimulation-xml/fiscal-core build && pnpm --filter @msimulation-xml/nfe-xml build` |
+| CORS no browser | Origem não listada | `CORS_ORIGINS=http://localhost:3000` |
+| NF-es sempre `PENDING` | MCP offline | `pnpm docker:up` ou `FISCAL_VALIDATOR_ENABLED=false` |
+| Badge rejeitado | XML reprovado (esperado) | Detalhe NF-e → painel de auditoria |
 
 ---
 
@@ -361,20 +617,28 @@ pnpm --filter @msimulation-xml/backend exec prisma studio
 
 ## Documentação por módulo
 
-Cada bounded context deve ter o seu `README.md` com overview, diagrama de sequência do caso de uso principal e lista de entidades (regra **02-backend-documentation**). Índice previsto:
+Cada bounded context deve ter o seu `README.md` com overview, diagrama de sequência do caso de uso principal e lista de entidades (regra **02-backend-documentation**). **Índice previsto** (ficheiros ainda não criados na maioria dos módulos):
 
-| Módulo | README |
-|--------|--------|
-| auth | [`src/modules/auth/README.md`](./src/modules/auth/README.md) |
-| org | [`src/modules/org/README.md`](./src/modules/org/README.md) |
-| catalog | [`src/modules/catalog/README.md`](./src/modules/catalog/README.md) |
-| tax | [`src/modules/tax/README.md`](./src/modules/tax/README.md) |
-| logistics | [`src/modules/logistics/README.md`](./src/modules/logistics/README.md) |
-| remessas | [`src/modules/remessas/README.md`](./src/modules/remessas/README.md) |
-| sales | [`src/modules/sales/README.md`](./src/modules/sales/README.md) |
-| fiscal-documents | [`src/modules/fiscal-documents/README.md`](./src/modules/fiscal-documents/README.md) |
-| fiscal-settings | [`src/modules/fiscal-settings/README.md`](./src/modules/fiscal-settings/README.md) |
-| lookup | [`src/modules/lookup/README.md`](./src/modules/lookup/README.md) |
-| health | [`src/modules/health/README.md`](./src/modules/health/README.md) *(a criar)* |
+| Módulo | Pasta alvo |
+|--------|------------|
+| auth | `src/modules/auth/README.md` |
+| org | `src/modules/org/README.md` |
+| catalog | `src/modules/catalog/README.md` |
+| tax | `src/modules/tax/README.md` |
+| logistics | `src/modules/logistics/README.md` |
+| remessas | `src/modules/remessas/README.md` |
+| sales | `src/modules/sales/README.md` |
+| fiscal-documents | `src/modules/fiscal-documents/README.md` (há nota em `infrastructure/observability/`) |
+| fiscal-settings | `src/modules/fiscal-settings/README.md` |
+| lookup | `src/modules/lookup/README.md` |
+| health | `src/modules/health/README.md` |
 
-Documentação de produto complementar: [`docs/`](../docs/) na raiz do monorepo.
+Documentação complementar:
+
+| Documento | Conteúdo |
+| --------- | -------- |
+| [`../README.md`](../README.md) | Portal do monorepo |
+| [`../CONTRIBUTING.md`](../CONTRIBUTING.md) | Como contribuir |
+| [`docs/fiscal/regras-fulfillment-cat31.md`](./docs/fiscal/regras-fulfillment-cat31.md) | Portaria CAT 31 / ML Full |
+| [`docs/fiscal/manual-nfe-moc.md`](./docs/fiscal/manual-nfe-moc.md) | Referência estrutural NF-e (MOC) |
+| [`../frontend/README.md`](../frontend/README.md) | Thin client Next.js |

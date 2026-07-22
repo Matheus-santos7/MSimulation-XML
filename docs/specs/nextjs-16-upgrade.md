@@ -12,11 +12,12 @@ Atualizar o pacote `@msimulation-xml/frontend` de **Next.js 15.5.19** para a **�
 2. **React:** manter `react` / `react-dom` em `^19.2.0` (já compatível com peer do Next 16); só bump de patch se o install exigir.
 3. **Escopo:** só `frontend/` + menções de versão em READMEs/docs. Sem mudanças de backend/packages fiscais.
 4. **`middleware` → `proxy`:** migrar agora (depreciação oficial no 16). Runtime passa a ser **Node.js** (não Edge). O código atual só faz cookies + `fetch` de refresh — compatível com Node.
-5. **Não habilitar** `reactCompiler`, `cacheComponents` / PPR, nem `experimental.turbopackFileSystemCacheForDev`.
-6. **Turbopack:** aceitar default do Next 16 em `dev` e `build` (já usamos `--turbopack` no `dev`; não há `webpack` custom em `next.config.ts`).
+5. **Não habilitar** `cacheComponents` / PPR, nem `experimental.turbopackFileSystemCacheForDev`. **React Compiler** ativado em follow-up (`reactCompiler: true` + `babel-plugin-react-compiler`).
+6. **Turbopack:** aceitar default do Next 16 em `dev` e `build` (já usamos `--turbopack` no `dev`; não há `webpack` custom em `next.config`).
 7. **Scripts de verificação:** se `typecheck` / `test` não existirem no frontend, **adicionar** scripts mínimos como parte do upgrade (não como feature nova).
 8. **Teste órfão:** `bff-path.test.ts` importa `vitest` sem `vitest` no `package.json` → converter para `node:test` (padrão dos outros 2 testes), não instalar Vitest.
 9. **Docs:** atualizar menções “Next.js 15” → “Next.js 16” no README raiz / `frontend/README.md` no final.
+10. **ESLint:** flat config nativo (`eslint-config-next/core-web-vitals` + `/typescript`); `next lint` já removido; regras `react-hooks/*` novas ficam em `warn` até cleanup.
 
 → Corrija agora ou sigo com estas assumptions após aprovação.
 

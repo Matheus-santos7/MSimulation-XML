@@ -1,6 +1,6 @@
 # Frontend — MSimulation XML
 
-`@msimulation-xml/frontend` · **Next.js 16** (App Router) · React 19 · Tailwind v4 · shadcn/ui
+`@msimulation-xml/frontend` · **Next.js 16** (App Router) · React 19.2 · React Compiler · Tailwind v4 · shadcn/ui
 
 Camada de apresentação (*thin client*) do simulador fiscal educacional. A UI **não** calcula impostos, **não** gera XML e **não** parseia planilhas fiscais — isso fica no [backend](../backend/README.md).
 
@@ -35,7 +35,9 @@ pnpm --filter @msimulation-xml/frontend dev
 | App | http://localhost:3000 |
 | API esperada | `API_URL` → `http://127.0.0.1:3001` (ver [`.env.example`](./.env.example)) |
 
-Scripts do package: `dev`, `build`, `start`, `lint` (ver `package.json`).
+Scripts do package: `dev`, `build`, `start`, `lint` (ESLint flat / CLI — sem `next lint`), `typecheck`, `test` (ver `package.json`).
+
+React Compiler está ativo (`reactCompiler: true` em `next.config.mts`) — memoização automática; compiles podem ser um pouco mais lentos.
 
 ---
 

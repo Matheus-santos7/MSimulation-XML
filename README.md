@@ -73,10 +73,7 @@ Variáveis: `[.env.example](./.env.example)`, `[backend/.env.example](./backend/
 | **Thin client**     | Frontend só UI + I/O; regra fiscal no backend            |
 | **Bounded context** | Módulo em `backend/src/modules/<nome>/`                  |
 
-
 ---
-
-
 
 ## Monorepo
 
@@ -119,7 +116,7 @@ Detalhe de arquitetura, fluxos e validador: `[backend/README.md](./backend/READM
 | ----------- | ----------------------------------------------------- |
 | Monorepo    | pnpm 9, concurrently                                  |
 | Backend     | Fastify 5, TypeScript, Zod, Prisma 7, PostgreSQL      |
-| Frontend    | Next.js 16, React 19, Tailwind v4, shadcn/ui          |
+| Frontend    | Next.js 16, React 19.2 + Compiler, Tailwind v4, shadcn/ui |
 | Auth        | JWT, 2FA TOTP, Brevo (e-mail opcional em dev)         |
 | Packages    | TypeScript puro (`fiscal-core`, `nfe-xml`)            |
 | Infra local | Docker Compose (Postgres 16 + validador MCP opcional) |

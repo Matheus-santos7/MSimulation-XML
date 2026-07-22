@@ -55,6 +55,9 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname, ".."),
+  // React Compiler (stable in Next.js 16) — auto-memoization; expect slower compiles.
+  // Source: https://nextjs.org/docs/app/api-reference/config/next-config-js/reactCompiler
+  reactCompiler: true,
   async headers() {
     return [
       {

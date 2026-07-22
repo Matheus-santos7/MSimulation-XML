@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { BrandLogo } from "@/components/brand-logo";
+import { authSurfaceClass } from "@/lib/ui/shell-styles";
 
 type AuthCardShellProps = {
   title: string;
@@ -24,22 +25,23 @@ export function AuthCardShell({
   showBackToLogin = true,
 }: AuthCardShellProps) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-6">
-      <div className="w-full max-w-md space-y-8">
+    <div className="relative min-h-dvh flex items-center justify-center bg-background px-6 py-10">
+      <div className="absolute inset-0 brand-glow-orb opacity-80 pointer-events-none" aria-hidden />
+      <div className="relative w-full max-w-md space-y-10">
         <div className="flex justify-center">
           <BrandLogo variant="compact" href="/login" />
         </div>
-        <div className="border border-border rounded-xl bg-card/50 backdrop-blur-sm p-8 space-y-6 shadow-[0_0_40px_-12px_oklch(0.769_0.166_70.5_/_0.15)]">
+        <div className={authSurfaceClass()}>
           <div>
-            <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
+            <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
             {description ? (
-              <p className="text-sm text-muted-foreground mt-1">{description}</p>
+              <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">{description}</p>
             ) : null}
           </div>
           {children}
           {showBackToLogin ? (
             <p className="text-center text-sm text-muted-foreground">
-              <Link href="/login" className="text-accent hover:underline">
+              <Link href="/login" className="text-accent hover:underline underline-offset-4">
                 Voltar ao login
               </Link>
             </p>

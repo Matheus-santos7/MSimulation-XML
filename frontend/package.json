@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test src/lib/merge-pedido-buyer-example.test.ts src/lib/http/bff-path.test.ts src/lib/fiscal-xml-routes.test.ts"
+    "test": "node --import tsx --test src/lib/merge-pedido-buyer-example.test.ts src/lib/http/bff-path.test.ts src/lib/fiscal-xml-routes.test.ts src/lib/ui/shell-styles.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

@@ -1,11 +1,26 @@
 ---
-description: Use agent-skills workflows from .cursor/skills
+description: Always route chat work through project agent-skills
 alwaysApply: true
 ---
 
-Before non-trivial technical work:
+# Always use agent-skills
 
-1. Route via `.cursor/skills/using-agent-skills/SKILL.md`.
-2. Read and follow the matching skill under `.cursor/skills/<name>/SKILL.md`.
-3. Open `reference.md` in that folder when the skill links to it.
-4. Prefer project skills over guessing; user does not need to say "read skill" each time.
+For **every** user request in this project (feature, bugfix, refactor, docs, migration, review, commit, deploy):
+
+1. **Route first** — Read `.cursor/skills/using-agent-skills/SKILL.md` and pick the skill(s) that match the task phase.
+2. **Load the skill** — Read `.cursor/skills/<skill-name>/SKILL.md` before acting. Follow its steps and verification; do not treat skills as optional tips.
+3. **Deep dive when linked** — Open `reference.md`, `examples.md`, or other files in that skill folder when the skill points to them.
+4. **Stack / framework work** — Also use `source-driven-development` and cite current official docs (Context7 / vendor docs).
+5. **Non-trivial work** — Surface ASSUMPTIONS; prefer `spec-driven-development` before implementation unless the user explicitly wants a fast path.
+6. **Do not skip** — The user does not need to say "use skills" or "read SKILL.md". Project skills beat guesswork.
+
+## Quick map (when unsure)
+
+| User intent | Start with |
+|---|---|
+| Vague ask / unclear goal | `interview-me` |
+| New feature / significant change | `spec-driven-development` |
+| Upgrade / replace library or API | `source-driven-development` → `deprecation-and-migration` |
+| Bug / failing tests / unexpected behavior | `debugging-and-error-recovery` |
+| Docs / README / ADRs | `documentation-and-adrs` |
+| Ready-made prompt examples | `docs/agent-skills-ready-prompts.md` |

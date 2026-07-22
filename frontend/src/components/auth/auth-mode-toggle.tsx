@@ -25,8 +25,8 @@ export function AuthModeToggle({ mode, onModeChange }: AuthModeToggleProps) {
   const copy = MODE_COPY[mode];
 
   return (
-    <div>
-      <div className="flex rounded-lg border border-border p-1 mb-4">
+    <div className="space-y-5">
+      <div className="flex rounded-xl bg-muted/60 p-1">
         <ModeButton active={mode === "login"} onClick={() => onModeChange("login")}>
           Entrar
         </ModeButton>
@@ -34,8 +34,10 @@ export function AuthModeToggle({ mode, onModeChange }: AuthModeToggleProps) {
           Criar conta
         </ModeButton>
       </div>
-      <h1 className="text-lg font-semibold tracking-tight">{copy.title}</h1>
-      <p className="text-sm text-muted-foreground mt-1">{copy.description}</p>
+      <div>
+        <h1 className="text-xl font-semibold tracking-tight">{copy.title}</h1>
+        <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">{copy.description}</p>
+      </div>
     </div>
   );
 }
@@ -54,8 +56,10 @@ function ModeButton({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex-1 rounded-md py-2 text-sm font-medium transition-colors",
-        active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground",
+        "flex-1 rounded-lg py-2.5 text-sm font-medium transition-colors",
+        active
+          ? "bg-card text-foreground shadow-sm"
+          : "text-muted-foreground hover:text-foreground",
       )}
     >
       {children}

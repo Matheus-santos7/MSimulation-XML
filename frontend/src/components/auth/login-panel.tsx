@@ -10,6 +10,7 @@ import { AuthPasswordField } from "@/components/auth/auth-password-field";
 import { AuthSubmitButton } from "@/components/auth/auth-submit-button";
 import { useAuthPanel } from "@/hooks/use-auth-panel";
 import type { LoginState, RegisterState } from "@/lib/auth/actions";
+import { authSurfaceClass } from "@/lib/ui/shell-styles";
 
 export function LoginPanel() {
   const {
@@ -25,7 +26,7 @@ export function LoginPanel() {
   } = useAuthPanel();
 
   return (
-    <div className="border border-border rounded-xl bg-card/50 backdrop-blur-sm p-8 space-y-6">
+    <div className={authSurfaceClass()}>
       <Suspense fallback={null}>
         <SessionExpiredBanner />
       </Suspense>

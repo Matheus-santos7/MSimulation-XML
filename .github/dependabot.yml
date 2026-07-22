@@ -9,3 +9,11 @@ updates:
         dependency-type: production
       development-dependencies:
         dependency-type: development
+    # Next.js 16 resolves typescript via `typescript/lib/typescript.js`.
+    # TypeScript 7+ changed the package layout, so Next reports it as "not installed".
+    # ESLint 10 is not yet required by eslint-config-next 16 (peer: eslint >=9).
+    ignore:
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      - dependency-name: eslint
+        update-types: ["version-update:semver-major"]

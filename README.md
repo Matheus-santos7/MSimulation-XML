@@ -83,7 +83,7 @@ Variáveis: `[.env.example](./.env.example)`, `[backend/.env.example](./backend/
 ```
 msimulation-xml/
 ├── backend/              # API Fastify + Prisma + módulos DDD
-├── frontend/             # Next.js 15 (thin client)
+├── frontend/             # Next.js 16 (thin client)
 ├── packages/
 │   ├── fiscal-core/      # Lógica fiscal pura
 │   └── nfe-xml/          # Geração XML NF-e/CT-e
@@ -119,7 +119,7 @@ Detalhe de arquitetura, fluxos e validador: `[backend/README.md](./backend/READM
 | ----------- | ----------------------------------------------------- |
 | Monorepo    | pnpm 9, concurrently                                  |
 | Backend     | Fastify 5, TypeScript, Zod, Prisma 7, PostgreSQL      |
-| Frontend    | Next.js 15, React 19, Tailwind v4, shadcn/ui          |
+| Frontend    | Next.js 16, React 19, Tailwind v4, shadcn/ui          |
 | Auth        | JWT, 2FA TOTP, Brevo (e-mail opcional em dev)         |
 | Packages    | TypeScript puro (`fiscal-core`, `nfe-xml`)            |
 | Infra local | Docker Compose (Postgres 16 + validador MCP opcional) |

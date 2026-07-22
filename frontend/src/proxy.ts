@@ -30,7 +30,8 @@ function redirectLogin(request: NextRequest, reason?: "expired"): NextResponse {
   return response;
 }
 
-export async function middleware(request: NextRequest) {
+/** Auth gate — Next.js 16 Proxy (Node runtime). Source: https://nextjs.org/docs/app/api-reference/file-conventions/proxy */
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const access = request.cookies.get(ACCESS_TOKEN_COOKIE)?.value;
   const refresh = request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;

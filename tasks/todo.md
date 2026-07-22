@@ -1,10 +1,13 @@
-# Tasks: README portal + GitHub docs
+# Tasks: Next.js 16.2.11 frontend upgrade
 
-Spec: [`docs/specs/readme-github-share.md`](../docs/specs/readme-github-share.md)
+Spec: [`docs/specs/nextjs-16-upgrade.md`](../docs/specs/nextjs-16-upgrade.md)  
+Plan: [`plan.md`](./plan.md)
 
-- [x] **Task 1:** Criar `LICENSE` (MIT, Copyright 2026 Matheus Santos)
-- [x] **Task 2:** Criar `CONTRIBUTING.md` (PT, leve)
-- [x] **Task 3:** Migrar conteúdo backend do root → `backend/README.md`
-- [x] **Task 4:** Expandir `frontend/README.md`
-- [x] **Task 5:** Reescrever `README.md` raiz (portal ~150–200 linhas)
-- [x] **Task 6:** Verificação final (comandos, links, secrets)
+**Status:** implementação concluída.
+
+- [x] **Task 1:** Bump `next` e `eslint-config-next` → `16.2.11`; `pnpm install`
+- [x] **Task 2:** `middleware.ts` → `proxy.ts` (export `proxy`)
+- [x] **Task 3:** Scripts `typecheck`/`test`; `bff-path.test.ts` → `node:test`; `dev` sem `--turbopack`
+- [x] **Task 4:** lint (flat config nativo) + `next.config.mts` + build
+- [x] **Task 5:** READMEs Next.js 15 → 16
+- [x] **Smoke:** `/` → 307 `/login`; `/login` 200 com formulário Entrar

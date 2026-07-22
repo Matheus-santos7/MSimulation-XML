@@ -1,6 +1,6 @@
 # Frontend — MSimulation XML
 
-`@msimulation-xml/frontend` · **Next.js 15** (App Router) · React 19 · Tailwind v4 · shadcn/ui
+`@msimulation-xml/frontend` · **Next.js 16** (App Router) · React 19 · Tailwind v4 · shadcn/ui
 
 Camada de apresentação (*thin client*) do simulador fiscal educacional. A UI **não** calcula impostos, **não** gera XML e **não** parseia planilhas fiscais — isso fica no [backend](../backend/README.md).
 

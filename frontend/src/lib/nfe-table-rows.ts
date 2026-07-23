@@ -24,7 +24,7 @@ export function buildNfeTableRows(nfes: NFeDto[], eventos: FiscalEventDto[]): Nf
 
   return rows.sort((a, b) => {
     if (a.sortSerie !== b.sortSerie) return a.sortSerie - b.sortSerie;
-    return a.sortNumero - b.sortNumero;
+    return b.sortNumero - a.sortNumero;
   });
 }
 

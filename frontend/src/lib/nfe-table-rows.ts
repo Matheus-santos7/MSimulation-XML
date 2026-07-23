@@ -30,7 +30,7 @@ export function buildNfeTableRows(nfes: NFeDto[], eventos: FiscalEventDto[]): Nf
 
 export function formatNumeroSerie(serie: number, numeroIni: number, numeroFim?: number): string {
   if (numeroFim != null && numeroFim !== numeroIni) {
-    return `${numeroIni}–${numeroFim} / ${serie}`;
+    return `${numeroIni}–${numeroFim}/${serie}`;
   }
-  return `${numeroIni} / ${serie}`;
+  return `${numeroIni}/${serie}`;
 }

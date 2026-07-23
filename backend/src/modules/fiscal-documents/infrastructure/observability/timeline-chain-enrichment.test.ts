@@ -115,4 +115,77 @@ describe("enrichScenarioStepsWithEvents", () => {
     assert.equal(steps.length, 3);
     assert.ok(steps.every((s) => s.kind === "nfe"));
   });
+
+  it("não repete inutilização em número já ocupado por NF-e do cenário", () => {
+    // Bug: retorno 163 + venda 164 não devem aparecer também como INUT 163/164.
+    const steps = enrichScenarioStepsWithEvents(
+      [
+        nfeStep({ tipo: NFeTipo.REMESSA, chave: "r160", numero: 160, serie: 58 }),
+        nfeStep({ tipo: NFeTipo.RETORNO_SIMBOLICO, chave: "ret163", numero: 163, serie: 58 }),
+        nfeStep({ tipo: NFeTipo.VENDA, chave: "v164", numero: 164, serie: 58 }),
+      ],
+      [
+        {
+          id: "inut-163",
+          serie: 58,
+          numeroIni: 163,
+          numeroFim: 163,
+          ocorridoEm: new Date("2026-01-02T00:00:00.000Z"),
+        },
+        {
+          id: "inut-164",
+          serie: 58,
+          numeroIni: 164,
+          numeroFim: 164,
+          ocorridoEm: new Date("2026-01-02T00:00:00.000Z"),
+        },
+        {
+          id: "inut-gap",
+          serie: 58,
+          numeroIni: 161,
+          numeroFim: 162,
+          ocorridoEm: new Date("2026-01-02T00:00:00.000Z"),
+        },
+      ],
+      new Map(),
+    );
+
+    assert.deepEqual(
+      steps.map((s) => (s.kind === "nfe" ? `nfe:${s.numero}` : `evt:${s.eventTipo}:${s.numero}`)),
+      ["nfe:160", "evt:INUT:161", "nfe:163", "nfe:164"],
+    );
+  });
+
+  it("recorta faixa inutilizada removendo números já emitidos no cenário", () => {
+    const steps = enrichScenarioStepsWithEvents(
+      [
+        nfeStep({ tipo: NFeTipo.REMESSA, chave: "r1", numero: 10, serie: 1 }),
+        nfeStep({ tipo: NFeTipo.VENDA, chave: "v1", numero: 12, serie: 1 }),
+      ],
+      [
+        {
+          id: "inut-wide",
+          serie: 1,
+          numeroIni: 10,
+          numeroFim: 13,
+          ocorridoEm: new Date("2026-01-02T00:00:00.000Z"),
+        },
+      ],
+      new Map(),
+    );
+
+    // 10 e 12 ocupados → restam 11 e 13 como faixas (podem ser um ou dois eventos)
+    const events = steps.filter((s) => s.kind === "event");
+    assert.ok(events.length >= 1);
+    assert.ok(
+      steps.every((s) => {
+        if (s.kind !== "event") return true;
+        const fim = s.numeroFim ?? s.numero;
+        return !(s.numero <= 10 && fim >= 10) && !(s.numero <= 12 && fim >= 12);
+      }),
+      "nenhum evento INUT deve cobrir número de NF-e do cenário",
+    );
+    assert.ok(steps.some((s) => s.kind === "nfe" && s.numero === 10));
+    assert.ok(steps.some((s) => s.kind === "nfe" && s.numero === 12));
+  });
 });

@@ -94,7 +94,6 @@ export default async function NFeListPage() {
                         <td className="px-4 py-3 text-[13px] text-muted-foreground whitespace-nowrap">
                           {new Date(inut.ocorridoEm).toLocaleString("pt-BR", {
                             dateStyle: "short",
-                            timeStyle: "short",
                           })}
                         </td>
                         <td className="px-4 py-3">
@@ -127,8 +126,7 @@ export default async function NFeListPage() {
                       </td>
                       <td className="px-4 py-3 text-[13px] text-muted-foreground whitespace-nowrap">
                         {new Date(nfe.emitidaEm).toLocaleString("pt-BR", {
-                          dateStyle: "short",
-                          timeStyle: "short",
+                          dateStyle: "short"                        
                         })}
                       </td>
                       <td className="px-4 py-3">

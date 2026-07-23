@@ -3,8 +3,10 @@ import type { TimelineChainDto, TimelineRemessaGroupDto } from "@/lib/fiscal-typ
 /** Linha plana da timeline no layout `rows` do dashboard. */
 export type FlatScenarioRow = {
   key: string;
-  remessaLabel: string;
-  remessaMeta?: string;
+  /** Ex.: `160/58` ou `Vendas avulsas`. */
+  remessaNumeroSerie: string;
+  /** Ex.: `saldo 97` — omitido em vendas avulsas. */
+  saldoLabel?: string;
   cenario: TimelineChainDto | null;
   index: number;
 };
@@ -12,41 +14,39 @@ export type FlatScenarioRow = {
 /**
  * Achata grupos Remessa → cenários em linhas para o card do Dashboard.
  * Grupo sem cenários vira uma linha com `cenario: null`.
+ * `index` é ordinal global (Cenário 1, 2, …) entre todos os cenários listados.
  */
 export function flattenScenarioRows(groups: TimelineRemessaGroupDto[]): FlatScenarioRow[] {
   const rows: FlatScenarioRow[] = [];
+  let scenarioOrdinal = 0;
+
   for (const group of groups) {
     const avulsa = !group.remessaChave;
-    const remessaLabel = avulsa
+    const remessaNumeroSerie = avulsa
       ? "Vendas avulsas"
-      : `Remessa ${group.remessaNumero}/${group.remessaSerie}`;
-    const remessaMeta = avulsa
-      ? undefined
-      : [
-          `${group.quantidadeRemessa} und`,
-          group.saldoDisponivel != null ? `saldo ${group.saldoDisponivel}` : null,
-        ]
-          .filter(Boolean)
-          .join(" · ");
+      : `${group.remessaNumero}/${group.remessaSerie}`;
+    const saldoLabel =
+      !avulsa && group.saldoDisponivel != null ? `saldo ${group.saldoDisponivel}` : undefined;
 
     if (group.cenarios.length === 0) {
       rows.push({
         key: `${group.remessaChave || "avulsa"}-empty`,
-        remessaLabel,
-        remessaMeta,
+        remessaNumeroSerie,
+        saldoLabel,
         cenario: null,
         index: 0,
       });
       continue;
     }
 
-    group.cenarios.forEach((cenario, i) => {
+    group.cenarios.forEach((cenario) => {
+      scenarioOrdinal += 1;
       rows.push({
         key: cenario.id,
-        remessaLabel,
-        remessaMeta,
+        remessaNumeroSerie,
+        saldoLabel,
         cenario,
-        index: i + 1,
+        index: scenarioOrdinal,
       });
     });
   }

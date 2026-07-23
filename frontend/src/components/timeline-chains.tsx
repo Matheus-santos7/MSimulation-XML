@@ -55,22 +55,18 @@ export function TimelineChains({ groups, layout = "vertical" }: TimelineChainsPr
 }
 
 function DashboardScenarioRow({ row }: { row: FlatScenarioRow }) {
-  const { remessaLabel, remessaMeta, cenario, index } = row;
+  const { remessaNumeroSerie, saldoLabel, cenario, index } = row; 
   const steps = cenario?.steps ?? [];
+  const title = index > 0 ? `Cenário ${index}` : remessaNumeroSerie;
+  const subtitle = index > 0;
 
   return (
     <div className="flex items-center gap-4 rounded-xl border border-border bg-background/50 px-3.5 py-2.5 hover:bg-muted/40 transition-colors dark:bg-background/35">
       <div className="shrink-0 w-[148px] min-w-0">
-        <div className="text-xs font-semibold text-foreground truncate leading-snug">
-          {remessaLabel}
-        </div>
-        {remessaMeta ? (
+        <div className="text-xs font-semibold text-foreground truncate leading-snug">{title}</div>
+        {subtitle ? (
           <div className="text-[11px] text-muted-foreground font-mono truncate mt-0.5">
-            {remessaMeta}
-          </div>
-        ) : index > 0 ? (
-          <div className="text-[11px] text-muted-foreground truncate mt-0.5">
-            Cenário {index}
+            {subtitle}
           </div>
         ) : null}
       </div>

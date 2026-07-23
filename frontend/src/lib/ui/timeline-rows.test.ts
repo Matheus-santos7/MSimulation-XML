@@ -33,12 +33,11 @@ describe("flattenScenarioRows", () => {
     assert.equal(rows.length, 1);
     assert.equal(rows[0]?.cenario, null);
     assert.equal(rows[0]?.index, 0);
-    assert.equal(rows[0]?.remessaLabel, "Remessa 155/58");
-    assert.match(rows[0]?.remessaMeta ?? "", /1 und/);
-    assert.match(rows[0]?.remessaMeta ?? "", /saldo 0/);
+    assert.equal(rows[0]?.remessaNumeroSerie, "155/58");
+    assert.equal(rows[0]?.saldoLabel, "saldo 0");
   });
 
-  it("expande N cenários com índice 1..N e label da remessa", () => {
+  it("expande N cenários com número/série e saldo", () => {
     const rows = flattenScenarioRows([
       group({
         remessaChave: "chave-160",
@@ -55,8 +54,8 @@ describe("flattenScenarioRows", () => {
     assert.equal(rows[0]?.cenario?.status, "completa");
     assert.equal(rows[1]?.key, "c2");
     assert.equal(rows[1]?.index, 2);
-    assert.equal(rows[0]?.remessaLabel, "Remessa 160/58");
-    assert.match(rows[0]?.remessaMeta ?? "", /saldo 99/);
+    assert.equal(rows[0]?.remessaNumeroSerie, "160/58");
+    assert.equal(rows[0]?.saldoLabel, "saldo 99");
   });
 
   it("usa Vendas avulsas quando remessaChave está vazia", () => {
@@ -66,7 +65,26 @@ describe("flattenScenarioRows", () => {
         cenarios: [chain({ id: "avulsa-1" })],
       }),
     ]);
-    assert.equal(rows[0]?.remessaLabel, "Vendas avulsas");
-    assert.equal(rows[0]?.remessaMeta, undefined);
+    assert.equal(rows[0]?.remessaNumeroSerie, "Vendas avulsas");
+    assert.equal(rows[0]?.saldoLabel, undefined);
+  });
+
+  it("numera cenários de forma contínua entre remessas (Cenário 1, 2, …)", () => {
+    const rows = flattenScenarioRows([
+      group({
+        remessaChave: "a",
+        remessaNumero: 1,
+        cenarios: [chain({ id: "a1" })],
+      }),
+      group({
+        remessaChave: "b",
+        remessaNumero: 2,
+        cenarios: [chain({ id: "b1" }), chain({ id: "b2" })],
+      }),
+    ]);
+    assert.deepEqual(
+      rows.map((r) => r.index),
+      [1, 2, 3],
+    );
   });
 });

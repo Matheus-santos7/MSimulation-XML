@@ -7,14 +7,18 @@
  * @module builders/remessa.builder
  */
 
-import { productUnitPriceForNfe } from "@msimulation-xml/fiscal-core";
+import {
+  buildFulfillmentInfCplText,
+  buildPosDevolucaoMiddle,
+  buildRemessaIeMiddle,
+  productUnitPriceForNfe,
+  type FulfillmentInfCplOperation,
+} from "@msimulation-xml/fiscal-core";
 import type { XmlObject } from "../core/xml-serializer.js";
 import { icmsTotFromEngine } from "../fiscal-engine-xml.js";
 import type { IcmsTotValues } from "../fiscal/fiscal-xml.util.js";
 import {
   REMESSA_IBS_CBS_DEFAULTS,
-  remessaInfCplText,
-  remessaSimbolicaPosDevolucaoInfCplText,
   resolveIbsCbsItemVBc,
   sumIbsCbsVBc,
 } from "../fiscal/fiscal-xml.util.js";
@@ -311,17 +315,45 @@ export class RemessaNFeStrategyBuilder extends BaseNFeBuilder {
     const posDevolucao = fiscal.remessaSimbolicaPosDevolucao as
       | Record<string, unknown>
       | undefined;
-
-    if (this.ctx.nfe.tipo === "REMESSA_SIMBOLICA" && posDevolucao) {
-      return remessaSimbolicaPosDevolucaoInfCplText({
-        destIe: this.remessaCtx.destIe,
-        devolucaoNumero: Number(posDevolucao.numero),
-        devolucaoSerie: Number(posDevolucao.serie),
-        devolucaoEmitidaEm: String(posDevolucao.emitidaEm ?? this.ctx.nfe.emitidaEm),
+    const nfe = this.ctx.nfe;
+    const operation = this.resolveInfCplOperation();
+    const ieMiddle = buildRemessaIeMiddle(this.remessaCtx.destIe);
+    let posMiddle = "";
+    if (nfe.tipo === "REMESSA_SIMBOLICA" && posDevolucao) {
+      const numero = Number(posDevolucao.numero);
+      const serie = Number(posDevolucao.serie);
+      if (!Number.isFinite(numero) || !Number.isFinite(serie) || numero <= 0 || serie < 0) {
+        throw new Error(
+          "fiscalPayload.remessaSimbolicaPosDevolucao exige numero e serie numéricos válidos.",
+        );
+      }
+      posMiddle = buildPosDevolucaoMiddle({
+        numero,
+        serie,
+        emitidaEm: String(posDevolucao.emitidaEm ?? nfe.emitidaEm),
       });
     }
+    const middle = [ieMiddle, posMiddle].filter(Boolean).join(" ");
 
-    return remessaInfCplText(this.remessaCtx.destIe);
+    return buildFulfillmentInfCplText({
+      operation,
+      ufDestino: nfe.destinatario.endereco.uf || nfe.destinatario.uf,
+      cnpjFilial: nfe.destinatario.doc,
+      middle: middle || null,
+    });
+  }
+
+  private resolveInfCplOperation(): FulfillmentInfCplOperation {
+    switch (this.ctx.nfe.tipo) {
+      case "REMESSA_SIMBOLICA":
+        return "REMESSA_SIMBOLICA";
+      case "TRANSFERENCIA_FILIAL":
+        return "TRANSFERENCIA";
+      case "REMESSA":
+      case "REMESSA_AVANCO":
+      default:
+        return "REMESSA";
+    }
   }
 
   protected buildInfRespTec(): XmlObject | null {

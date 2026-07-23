@@ -13,9 +13,11 @@ const ML_DEFAULT_MOD_FRETE: Record<NFeTipoValue, string> = {
   VENDA: "9",
   REMESSA: "0",
   RETORNO_SIMBOLICO: "9",
+  RETORNO_FISICO: "9",
   REMESSA_SIMBOLICA: "2",
   REMESSA_AVANCO: "2",
   DEVOLUCAO: "9",
+  INSULCESSO_DE_ENTREGA: "9",
   TRANSFERENCIA_FILIAL: "2",
 };
 
@@ -28,7 +30,7 @@ export function resolvePisCofinsCstFromSnapshot(
   snapshotSt: string,
   operationTipo?: NFeTipoValue | string,
 ): string {
-  if (operationTipo === NFeTipo.RETORNO_SIMBOLICO) {
+  if (operationTipo === NFeTipo.RETORNO_SIMBOLICO || operationTipo === NFeTipo.RETORNO_FISICO) {
     return PIS_COFINS_CST_SYMBOLIC_RETURN;
   }
   return pickTaxStCode(snapshotSt);
@@ -39,7 +41,7 @@ export function resolveIpiCstFromSnapshot(
   snapshotSt: string,
   operationTipo?: NFeTipoValue | string,
 ): string {
-  if (operationTipo === NFeTipo.RETORNO_SIMBOLICO) {
+  if (operationTipo === NFeTipo.RETORNO_SIMBOLICO || operationTipo === NFeTipo.RETORNO_FISICO) {
     return IPI_CST_SYMBOLIC_RETURN;
   }
   return pickTaxStCode(snapshotSt);

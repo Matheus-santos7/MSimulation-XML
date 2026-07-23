@@ -256,6 +256,34 @@ export async function debitRemessaBalanceByCd(
   return debitRemessaFifoItems(tx, itens, quantidade, null, productId);
 }
 
+/**
+ * Debita saldo FIFO das linhas (`nfe_itens`) de uma remessa específica,
+ * registrando `nfe_remessa_consumos` ligados ao retorno (físico ou simbólico).
+ */
+export async function debitRemessaBalanceByNfeId(
+  tx: RemessaFifoTx,
+  tenantId: string,
+  remessaNfeId: string,
+  productId: string,
+  quantidade: number,
+  retornoNfeId: string,
+  productSku?: string,
+): Promise<{ remessaNfeId: string; quantidade: number; nfeItemId: string }[]> {
+  const fifoTx = tx as unknown as RemessaFifoPrisma;
+  await prepareRemessaFifoForOperation(fifoTx, tenantId, productId, productSku);
+  const itens = await tx.nfeItem.findMany({
+    where: {
+      tenantId,
+      nfeId: remessaNfeId,
+      productId,
+      saldoDisponivel: { gt: 0 },
+    },
+    select: { id: true, nfeId: true, saldoDisponivel: true },
+    orderBy: { numeroItem: "asc" },
+  });
+  return debitRemessaFifoItems(tx, itens, quantidade, retornoNfeId, productId);
+}
+
 export async function reverseRemessaFifoConsumptions(
   tx: RemessaFifoTx,
   retornoNfeId: string,

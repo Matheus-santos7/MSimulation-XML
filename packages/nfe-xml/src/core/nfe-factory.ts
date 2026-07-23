@@ -22,7 +22,9 @@ export const NFE_BUILDER_SUPPORTED: readonly NFeTipoXml[] = [
   "REMESSA_AVANCO",
   "TRANSFERENCIA_FILIAL",
   "RETORNO_SIMBOLICO",
+  "RETORNO_FISICO",
   "DEVOLUCAO",
+  "INSULCESSO_DE_ENTREGA",
 ];
 
 export function isNfeBuilderSupported(tipo: NFeTipoXml): boolean {
@@ -65,8 +67,10 @@ export function createNFeBuilder(input: NFeFactoryInput): BaseNFeBuilder {
     case "TRANSFERENCIA_FILIAL":
       return new RemessaNFeStrategyBuilder(factoryInput);
     case "RETORNO_SIMBOLICO":
+    case "RETORNO_FISICO":
       return new RetornoSimbolicoNFeStrategyBuilder(factoryInput);
     case "DEVOLUCAO":
+    case "INSULCESSO_DE_ENTREGA":
       return new DevolucaoNFeStrategyBuilder(factoryInput);
     default:
       throw new UnsupportedNfeBuilderTipoError(input.nfe.tipo);

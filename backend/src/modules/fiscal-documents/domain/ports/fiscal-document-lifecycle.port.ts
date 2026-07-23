@@ -13,6 +13,18 @@ export interface CancelDocumentInput {
 export interface ProcessReturnInput {
   tenantId: string;
   saleNfeKey: string;
+  /** Default `DEVOLUCAO`. Use `INSULCESSO_DE_ENTREGA` para insucesso de entrega. */
+  returnTipo?: "DEVOLUCAO" | "INSULCESSO_DE_ENTREGA";
+}
+
+export interface ProcessPhysicalReturnInput {
+  tenantId: string;
+  remessaNfeKey: string;
+}
+
+export interface ProcessPhysicalReturnResult {
+  retornoFisico: Record<string, unknown>;
+  saldoConsumido: { remessaNfeId: string; quantidade: number };
 }
 
 export interface InutilizeNumberInput {
@@ -29,6 +41,7 @@ export interface DocumentCancellationPort {
 
 export interface DocumentReturnPort {
   processSaleReturn(input: ProcessReturnInput): Promise<ProcessReturnResult>;
+  processPhysicalReturn(input: ProcessPhysicalReturnInput): Promise<ProcessPhysicalReturnResult>;
 }
 
 export interface NumberInutilizationPort {

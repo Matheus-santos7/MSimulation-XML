@@ -242,7 +242,7 @@ describe("buildNFeXML — REMESSA", () => {
     assert.match(xml, /<IPINT>\s*<CST>55<\/CST>\s*<\/IPINT>/);
     assert.match(
       xml,
-      /<infCpl>Remessa para Deposito Temporario - Portaria CAT 31\/2019\. Inscricao Estadual do Operador Logistico: 261755994<\/infCpl>/,
+      /<infCpl>Remessa para armazenamento em fulfillment\. Inscricao Estadual do Operador Logistico: 261755994\.<\/infCpl>/,
     );
     assert.match(xml, /<xCpl>Nao consta<\/xCpl>/);
     assert.doesNotMatch(xml, /<vFCPUFDest>/);
@@ -347,9 +347,10 @@ describe("buildNFeXML — REMESSA", () => {
     assert.match(xml, /<tpNF>0<\/tpNF>/);
     assert.match(xml, /<idDest>2<\/idDest>/);
     assert.match(xml, /<modFrete>9<\/modFrete>/);
-    assert.match(xml, /Retorno Simbolico de Deposito Temporario\./);
+    assert.match(xml, /Retorno simbolico de mercadoria armazenada em fulfillment\./);
     assert.doesNotMatch(xml, /Portaria CAT 31\/2019/);
-    assert.doesNotMatch(xml, /Remessa para Deposito Temporario/);
+    assert.doesNotMatch(xml, /Inscricao Estadual do Operador Logistico/);
+    assert.doesNotMatch(xml, /Remessa para armazenamento em fulfillment/);
     assert.match(xml, /<NFref>\s*<refNFe>/);
     assert.match(xml, /<infRespTec>/);
     assert.match(xml, /<EXTIPI>/);
@@ -365,6 +366,44 @@ describe("buildNFeXML — REMESSA", () => {
     const err = doc.getElementsByTagName("parsererror");
     assert.equal(err.length, 0, err[0]?.textContent ?? "XML malformado");
     assert.equal(verifySimulationXmlSignature(xml), true);
+  });
+
+  it("RETORNO_FISICO gera infCpl de retorno fisico com regime EBazar", () => {
+    const nfe = {
+      ...baseNfe(),
+      numero: 3,
+      tipo: "RETORNO_FISICO" as const,
+      natOp: "Outras Entradas - Retorno Fisico de Deposito Temporario",
+      cfop: "2949",
+      nfeReferenciaChave: baseNfe().chave,
+      destinatario: {
+        nome: "EBAZAR.COM.BR LTDA",
+        doc: "03007331012077",
+        uf: "SC",
+        indIEDest: 1,
+        endereco: {
+          logradouro: "Av. Papenborg",
+          numero: "S/N",
+          complemento: "Nao consta",
+          bairro: "Guaporanga",
+          codigoMunicipio: "4206009",
+          municipio: "Governador Celso Ramos",
+          uf: "SC",
+          cep: "88195900",
+          codigoPais: 1058,
+          nomePais: "Brasil",
+        },
+      },
+      fiscalPayload: {
+        destIe: "261755994",
+        ibsCbs: { st: "410", cClassTrib: "410999" },
+      },
+    };
+    const xml = buildNFeXML(nfe, emit);
+    assert.match(
+      xml,
+      /<infCpl>Retorno fisico de mercadoria armazenada em fulfillment\. Regime Especial SC - TTD SC n 225000004034256\.<\/infCpl>/,
+    );
   });
 
   it("RETORNO_SIMBOLICO emite um <det> por item da engine em pedido multi-produto", () => {
@@ -462,7 +501,7 @@ describe("buildNFeXML — REMESSA", () => {
     assert.match(xml, /<ICMSTot>[\s\S]*?<vProd>5600\.00<\/vProd>/);
   });
 
-  it("REMESSA_SIMBOLICA pós-devolução emite infCpl CAT 31 e xTexto SALE_RETURN", () => {
+  it("REMESSA_SIMBOLICA pós-devolução emite infCpl fulfillment e xTexto SALE_RETURN", () => {
     const pedidoMl = "47238016772";
     const nfe = {
       ...baseNfe(),
@@ -502,7 +541,7 @@ describe("buildNFeXML — REMESSA", () => {
     const xml = buildNFeXML(nfe, emit);
     assert.match(
       xml,
-      /<infCpl>Remessa Simbolica para Deposito Temporario - Portaria CAT 31\/2019\. Inscricao Estadual do Operador Logistico: 241174886113\. Nota fiscal de devolucao n 628 emitida em 17\/06\/2026 serie 2\.<\/infCpl>/,
+      /<infCpl>Remessa simbolica para armazenamento em fulfillment\. Inscricao Estadual do Operador Logistico: 241174886113\. Nota fiscal de devolucao n 628 emitida em 17\/06\/2026 serie 2\.<\/infCpl>/,
     );
     assert.match(
       xml,

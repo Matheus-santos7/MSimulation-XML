@@ -97,6 +97,7 @@ export {
   VENDA_ML_INF_RESP_TEC,
   VENDA_ML_TRANSPORTA,
   buildVendaInfAdProdText,
+  buildVendaInfCplMiddle,
   buildVendaInfCplText,
   enrichFiscalPayloadMlVenda,
   estimateVendaVTotTrib,
@@ -104,6 +105,22 @@ export {
   type VendaMlReturnNoteDestinatario,
   type VendaMlReturnNoteRef,
 } from "./venda-ml-payload.js";
+export {
+  EBAZAR_REGIME_ESPECIAL_BY_UF_CNPJ,
+  normalizeCnpjDigits,
+  normalizeUf,
+  resolveRegimeEspecial,
+  type EbazarRegimeEspecialEntry,
+} from "./infcpl/fulfillment-infcpl.regimes.js";
+export {
+  buildFulfillmentInfCplText,
+  buildPosDevolucaoMiddle,
+  buildRemessaIeMiddle,
+  formatInfCplDateBr,
+  type FulfillmentInfCplInput,
+  type FulfillmentInfCplNfeOrigem,
+  type FulfillmentInfCplOperation,
+} from "./infcpl/fulfillment-infcpl.js";
 export { normalizeTaxPercent, parseTaxPercent } from "./tax-percent.js";
 export {
   IMPORTED_ICMS_ORIGINS,

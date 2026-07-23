@@ -5,6 +5,8 @@
 export const TipoNota = {
   REMESSA: "REMESSA",
   RETORNO_SIMBOLICO: "RETORNO_SIMBOLICO",
+  /** Retorno físico de estoque do CD (baixa FIFO da remessa). */
+  RETORNO_FISICO: "RETORNO_FISICO",
   /** Reposição no CD após devolução de venda. */
   REMESSA_SIMBOLICA: "REMESSA_SIMBOLICA",
   /** Avanço de mercadoria entre CDs (retorno → entrada simbólica no destino). */

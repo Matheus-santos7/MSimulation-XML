@@ -6,6 +6,7 @@ import {
   consumeRemessaFifoBalance,
   consumeRemessaFifoBalanceForSale,
   debitRemessaBalanceByCd,
+  debitRemessaBalanceByNfeId,
   reverseRemessaFifoConsumptions,
   listRemessaBalanceByCd,
   resolveFifoOriginUnitId,
@@ -90,22 +91,25 @@ function createFifoMock(
       }: {
         where: {
           tenantId: string;
+          nfeId?: string;
           productId?: string | { in: string[] };
           product?: { sku: string; tenantId?: string };
           OR?: Array<{ productId?: string; product?: { sku: string } }>;
           saldoDisponivel?: { gt: number };
-          nfe: {
+          nfe?: {
             tenantId: string;
             tipo: NFeTipo | { in: NFeTipo[] };
             deletedAt: null;
             unidadeDestinoId?: string;
           };
         };
-        orderBy?: [
-          { nfe: { emitidaEm: "asc" | "desc" } },
-          { nfe: { numero: "asc" | "desc" } },
-          { numeroItem: "asc" | "desc" },
-        ];
+        orderBy?:
+          | [
+              { nfe: { emitidaEm: "asc" | "desc" } },
+              { nfe: { numero: "asc" | "desc" } },
+              { numeroItem: "asc" | "desc" },
+            ]
+          | { numeroItem: "asc" | "desc" };
       }) => {
         const productIds =
           typeof where.productId === "string"
@@ -114,6 +118,7 @@ function createFifoMock(
 
         let rows = [...items.values()].filter((r) => {
           if (r.tenantId !== where.tenantId) return false;
+          if (where.nfeId && r.nfeId !== where.nfeId) return false;
           if (where.OR?.length) {
             const matchOr = where.OR.some((clause) => {
               if (clause.productId) return clause.productId === r.productId;
@@ -123,18 +128,20 @@ function createFifoMock(
             if (!matchOr) return false;
           } else if (productIds && !productIds.includes(r.productId)) return false;
           if (where.product) return false;
-          if (r.nfe.tenantId !== where.nfe.tenantId) return false;
-          if (!matchesNfeTipoFilter(r.nfe.tipo, where.nfe.tipo)) return false;
-          if (r.nfe.deletedAt !== null) return false;
+          if (where.nfe) {
+            if (r.nfe.tenantId !== where.nfe.tenantId) return false;
+            if (!matchesNfeTipoFilter(r.nfe.tipo, where.nfe.tipo)) return false;
+            if (r.nfe.deletedAt !== null) return false;
+            if (
+              where.nfe.unidadeDestinoId !== undefined &&
+              r.nfe.unidadeDestinoId !== where.nfe.unidadeDestinoId
+            ) {
+              return false;
+            }
+          }
           if (
             where.saldoDisponivel?.gt !== undefined &&
             (r.saldoDisponivel ?? 0) <= where.saldoDisponivel.gt
-          ) {
-            return false;
-          }
-          if (
-            where.nfe.unidadeDestinoId !== undefined &&
-            r.nfe.unidadeDestinoId !== where.nfe.unidadeDestinoId
           ) {
             return false;
           }
@@ -142,6 +149,12 @@ function createFifoMock(
         });
 
         if (!orderBy) return rows;
+
+        if (!Array.isArray(orderBy)) {
+          const itemOrder = orderBy.numeroItem === "desc" ? -1 : 1;
+          rows.sort((a, b) => (a.numeroItem - b.numeroItem) * itemOrder);
+          return rows;
+        }
 
         const emitOrder = orderBy[0]?.nfe.emitidaEm === "desc" ? -1 : 1;
         const numOrder = orderBy[1]?.nfe.numero === "desc" ? -1 : 1;
@@ -292,6 +305,36 @@ describe("remessa-fifo", () => {
 
     assert.equal(items.get("ia")!.saldoDisponivel, 5);
     assert.equal(items.get("ib")!.saldoDisponivel, 5);
+  });
+
+  it("debitRemessaBalanceByNfeId debita itens e registra consumo do retorno", async () => {
+    const { tx, items, consumos } = createFifoMock([
+      item("i1", "remessa-1", 10, "2026-01-01", 1),
+      item("i2", "remessa-2", 7, "2026-01-02", 2),
+    ]);
+
+    const alocacoes = await debitRemessaBalanceByNfeId(
+      tx,
+      tenantId,
+      "remessa-1",
+      productId,
+      4,
+      "retorno-fisico-1",
+    );
+
+    assert.deepEqual(alocacoes, [
+      { remessaNfeId: "remessa-1", nfeItemId: "i1", quantidade: 4 },
+    ]);
+    assert.equal(items.get("i1")!.saldoDisponivel, 6);
+    assert.equal(items.get("i2")!.saldoDisponivel, 7);
+    assert.deepEqual(consumos, [
+      {
+        retornoNfeId: "retorno-fisico-1",
+        remessaNfeId: "remessa-1",
+        nfeItemId: "i1",
+        quantidade: 4,
+      },
+    ]);
   });
 
   it("venda full prefere saldo no CD da UF do comprador", async () => {

@@ -7,8 +7,8 @@
  * @module builders/retorno.builder
  */
 
+import { buildFulfillmentInfCplText } from "@msimulation-xml/fiscal-core";
 import type { XmlObject } from "../core/xml-serializer.js";
-import { retornoInfCplText } from "../fiscal/fiscal-xml.util.js";
 import type { IdeBuildOptions, NFeBuilderInput } from "./builder.types.js";
 import { buildInfAdicNode } from "./nodes/auxiliary.node.js";
 import { retornoIdeOptions } from "./nodes/ide.node.js";
@@ -25,10 +25,18 @@ export class RetornoSimbolicoNFeStrategyBuilder extends RemessaNFeStrategyBuilde
   }
 
   protected buildInfAdic(): XmlObject | null {
+    const d = this.ctx.nfe.destinatario;
+    const operation =
+      this.ctx.nfe.tipo === "RETORNO_FISICO" ? "RETORNO_FISICO" : "RETORNO_SIMBOLICO";
     return buildInfAdicNode({
       nfe: this.ctx.nfe,
       emitter: this.ctx.emitter,
-      extraInfCpl: retornoInfCplText(),
+      extraInfCpl: buildFulfillmentInfCplText({
+        operation,
+        ufDestino: d.endereco.uf || d.uf,
+        cnpjFilial: d.doc,
+        middle: null,
+      }),
     });
   }
 }

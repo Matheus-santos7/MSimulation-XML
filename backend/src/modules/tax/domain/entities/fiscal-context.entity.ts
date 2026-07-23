@@ -5,7 +5,9 @@ export type FiscalOperationTipo =
   | "VENDA"
   | "REMESSA"
   | "RETORNO_SIMBOLICO"
+  | "RETORNO_FISICO"
   | "DEVOLUCAO"
+  | "INSULCESSO_DE_ENTREGA"
   | "REMESSA_SIMBOLICA"
   | "REMESSA_AVANCO";
 

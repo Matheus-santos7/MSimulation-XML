@@ -22,6 +22,19 @@ describe("validarReferenciaFiscal", () => {
     );
   });
 
+  it("exige retorno físico referenciando remessa ou remessa avanço", () => {
+    assert.doesNotThrow(() =>
+      validarReferenciaFiscal(TipoNota.RETORNO_FISICO, TipoNota.REMESSA),
+    );
+    assert.doesNotThrow(() =>
+      validarReferenciaFiscal(TipoNota.RETORNO_FISICO, TipoNota.REMESSA_AVANCO),
+    );
+    assert.throws(
+      () => validarReferenciaFiscal(TipoNota.RETORNO_FISICO, null),
+      CadeiaFiscalInvalidaError,
+    );
+  });
+
   it("exige remessa avanço referenciando retorno simbólico", () => {
     assert.doesNotThrow(() =>
       validarReferenciaFiscal(TipoNota.REMESSA_AVANCO, TipoNota.RETORNO_SIMBOLICO),

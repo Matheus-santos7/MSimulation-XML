@@ -3,6 +3,10 @@ import Link from "next/link";
 import { DeleteConfirmButton } from "@/components/delete-confirm-button";
 import { NfeCancelarButton } from "@/components/nfe-cancelar-button";
 import { NfeDevolucaoButton } from "@/components/nfe-devolucao-button";
+import {
+  NfeInsucessoButton,
+  NfeRetornoFisicoButton,
+} from "@/components/nfe-fulfillment-return-buttons";
 import { NfeInutXmlActions, NfeXmlActions } from "@/components/fiscal-xml-actions";
 import { NfeTipoBadge } from "@/components/nfe-tipo-badge";
 import { NfeValidationBadge } from "@/components/nfe-validation-badge";
@@ -29,7 +33,10 @@ export default async function NFeListPage() {
 
   const vendasDevolvidas = new Set(
     nfesRaw
-      .filter((n) => n.tipo === "DEVOLUCAO" && n.nfeReferenciaChave)
+      .filter(
+        (n) =>
+          (n.tipo === "DEVOLUCAO" || n.tipo === "INSULCESSO_DE_ENTREGA") && n.nfeReferenciaChave,
+      )
       .map((n) => n.nfeReferenciaChave as string),
   );
 
@@ -198,8 +205,23 @@ export default async function NFeListPage() {
                                   vendasDevolvidas.has(nfe.chave) || vendasCanceladas.has(nfe.chave)
                                 }
                               />
+                              <NfeInsucessoButton
+                                chave={nfe.chave}
+                                label={`${nfe.numero}/${nfe.serie}`}
+                                disabled={
+                                  vendasDevolvidas.has(nfe.chave) || vendasCanceladas.has(nfe.chave)
+                                }
+                              />
                             </>
                           )}
+                          {(nfe.tipo === "REMESSA" || nfe.tipo === "REMESSA_AVANCO") &&
+                            nfe.status === "AUTORIZADA" &&
+                            (nfe.saldoDisponivel ?? 0) > 0 && (
+                              <NfeRetornoFisicoButton
+                                chave={nfe.chave}
+                                label={`${nfe.numero}/${nfe.serie}`}
+                              />
+                            )}
                           <DeleteConfirmButton
                             variant="nfe"
                             chave={nfe.chave}

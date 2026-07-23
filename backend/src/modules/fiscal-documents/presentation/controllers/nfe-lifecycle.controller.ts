@@ -50,6 +50,38 @@ export const nfeLifecycleController: FastifyPluginAsync = async (app) => {
       const result = await fiscalDocuments.processReturn.execute({
         tenantId,
         saleNfeKey: chave,
+        returnTipo: "DEVOLUCAO",
+      });
+      return reply.status(201).send(result);
+    } catch (error) {
+      if (handleRouteError(reply, error, { statusErrors: [...NFE_LIFECYCLE_ERRORS] })) return;
+      throw error;
+    }
+  });
+
+  app.post("/nfes/:chave/insulcesso", { onRequest: [requireAdminHook] }, async (req, reply) => {
+    try {
+      const tenantId = tenantIdFromRequest(req);
+      const { chave } = nfeAccessKeyParamSchema.parse(req.params);
+      const result = await fiscalDocuments.processReturn.execute({
+        tenantId,
+        saleNfeKey: chave,
+        returnTipo: "INSULCESSO_DE_ENTREGA",
+      });
+      return reply.status(201).send(result);
+    } catch (error) {
+      if (handleRouteError(reply, error, { statusErrors: [...NFE_LIFECYCLE_ERRORS] })) return;
+      throw error;
+    }
+  });
+
+  app.post("/nfes/:chave/retorno-fisico", { onRequest: [requireAdminHook] }, async (req, reply) => {
+    try {
+      const tenantId = tenantIdFromRequest(req);
+      const { chave } = nfeAccessKeyParamSchema.parse(req.params);
+      const result = await fiscalDocuments.processPhysicalReturn.execute({
+        tenantId,
+        remessaNfeKey: chave,
       });
       return reply.status(201).send(result);
     } catch (error) {

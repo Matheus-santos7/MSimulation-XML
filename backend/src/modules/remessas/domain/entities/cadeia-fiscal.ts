@@ -8,6 +8,7 @@ import { TipoNota } from "../value-objects/tipo-nota.js";
  * |----------------------|------------------------|
  * | `REMESSA`            | nenhum (nota raiz)     |
  * | `RETORNO_SIMBOLICO`  | remessa com saldo FIFO |
+ * | `RETORNO_FISICO`     | remessa com saldo FIFO |
  * | `REMESSA_AVANCO`     | `RETORNO_SIMBOLICO`    |
  *
  * `REMESSA_SIMBOLICA` (pós-devolução) é emitida no módulo fiscal-documents
@@ -20,6 +21,7 @@ const RETORNO_PAI_PERMITIDOS = new Set<TipoNota>([TipoNota.REMESSA, TipoNota.REM
 const REFERENCIA_PERMITIDA: Partial<Record<TipoNota, TipoNota | null>> = {
   [TipoNota.REMESSA]: null,
   [TipoNota.RETORNO_SIMBOLICO]: TipoNota.REMESSA,
+  [TipoNota.RETORNO_FISICO]: TipoNota.REMESSA,
   [TipoNota.REMESSA_AVANCO]: TipoNota.RETORNO_SIMBOLICO,
 };
 
@@ -39,7 +41,10 @@ export function validarReferenciaFiscal(
   tipoFilha: TipoNota,
   tipoPai: TipoNota | null,
 ): void {
-  if (tipoFilha === TipoNota.RETORNO_SIMBOLICO) {
+  if (
+    tipoFilha === TipoNota.RETORNO_SIMBOLICO ||
+    tipoFilha === TipoNota.RETORNO_FISICO
+  ) {
     if (!tipoPai || !RETORNO_PAI_PERMITIDOS.has(tipoPai)) {
       throw new CadeiaFiscalInvalidaError(tipoFilha, tipoPai);
     }

@@ -58,7 +58,13 @@ export type InfAdicNodeInput = {
   extraInfCpl?: string;
 };
 
-/** Monta `<infAdic>` com mensagens complementares e obsCont. */
+/**
+ * Monta `<infAdic>` com mensagens complementares e obsCont.
+ *
+ * Segmentos de `infCpl` (mensagemPadrao, composer da operação, linha DIFAL do emitter)
+ * são unidos por **espaço único**, alinhado à fórmula ASCII da spec
+ * `infcpl-fulfillment-ebazar` (sem `|` entre blocos).
+ */
 export function buildInfAdicNode(input: InfAdicNodeInput): XmlObject | null {
   const { nfe, emitter, extraInfCpl } = input;
   const parts = [emitter.mensagemInfCpl, extraInfCpl].filter((s) => s && s.trim());
@@ -69,7 +75,7 @@ export function buildInfAdicNode(input: InfAdicNodeInput): XmlObject | null {
   if (parts.length === 0 && !xTexto) return null;
 
   const infAdic: XmlObject = {};
-  if (parts.length > 0) infAdic.infCpl = parts.join(" | ");
+  if (parts.length > 0) infAdic.infCpl = parts.join(" ");
   if (xTexto) {
     infAdic.obsCont = { "@xCampo": "external_id", xTexto };
   }

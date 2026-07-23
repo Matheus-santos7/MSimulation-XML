@@ -5,6 +5,7 @@ import {
   REMESSA_ML_INTERMED_ID_DEFAULT,
   type RemessaMlTransporta,
 } from "./remessa-ml-payload.js";
+import { buildFulfillmentInfCplText } from "./infcpl/fulfillment-infcpl.js";
 
 /** Transportador nos XMLs ML de venda (modFrete=0, operador logístico). */
 export const VENDA_ML_TRANSPORTA: RemessaMlTransporta = {
@@ -177,15 +178,11 @@ function resolveInfCplDeposito(
 }
 
 /**
- * Monta o texto do `<infCpl>` da NF-e de venda Mercado Livre Full.
- *
- * O bloco "operador logístico" é preenchido com os dados do destinatário da
- * NF-e de retorno simbólico (`returnNote.destinatario`), garantindo a
- * consistência triangular **remessa → retorno → venda**. Quando o destinatário
- * não é fornecido, o CD ML padrão ({@link VENDA_ML_CD_DEPOSITO}) é usado como
- * fallback.
+ * Miolo do `<infCpl>` da venda ML Full (CD + retorno + IBPT + DIFAL).
+ * A abertura da operação e o regime especial são compostos por
+ * {@link buildFulfillmentInfCplText}.
  */
-export function buildVendaInfCplText(
+export function buildVendaInfCplMiddle(
   vTotTrib: number,
   returnNote?: VendaMlReturnNoteRef | null,
   difal?: { vICMSUFDest?: number; vFCPUFDest?: number; vICMSUFRemet?: number },
@@ -201,6 +198,23 @@ export function buildVendaInfCplText(
   return (
     `Enviado diretamente do deposito temporario - operador logistico: ${dep.xNome}, Cnpj: ${dep.cnpj}, Inscricao Estadual: ${dep.ie}, saindo do endereco: ${dep.logradouro}, Numero: ${dep.numero}, Complemento: ${dep.complemento}, Bairro: ${dep.bairro}, Cidade: ${dep.municipio}, Cep: ${dep.cep}, Estado: ${dep.uf}, Pais: ${dep.pais}.${retornoPart} Valor aproximado dos tributos (IBPT) R$${ibpt}. Valores totais do ICMS Interestadual: DIFAL da UF destino R$${vDifalDest} + FCP R$${vFcpDest}; DIFAL da UF Origem R$${vDifalOrig}. N/A ${ibpt.replace(",", ".")} 0,00`
   );
+}
+
+/**
+ * Monta o `<infCpl>` completo da venda fulfillment (head + miolo + regime do CD).
+ */
+export function buildVendaInfCplText(
+  vTotTrib: number,
+  returnNote?: VendaMlReturnNoteRef | null,
+  difal?: { vICMSUFDest?: number; vFCPUFDest?: number; vICMSUFRemet?: number },
+): string {
+  const dep = resolveInfCplDeposito(returnNote?.destinatario);
+  return buildFulfillmentInfCplText({
+    operation: "VENDA_FULFILLMENT",
+    ufDestino: dep.uf,
+    cnpjFilial: dep.cnpj,
+    middle: buildVendaInfCplMiddle(vTotTrib, returnNote, difal),
+  });
 }
 
 function asRecord(v: unknown): Record<string, unknown> | null {

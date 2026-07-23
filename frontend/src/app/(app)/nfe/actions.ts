@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { cancelSale, deleteNfe, emitReturnNote } from "@/lib/fiscal-api";
+import { cancelSale, deleteNfe, emitInsucessoNote, emitRetornoFisicoNote, emitReturnNote } from "@/lib/fiscal-api";
 
 export async function excluirNfeAction(chave: string): Promise<{ error?: string }> {
   try {
@@ -25,6 +25,34 @@ export async function devolverVendaAction(
     return { numero: devolucao.numero, serie: devolucao.serie };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Erro ao emitir devolução" };
+  }
+}
+
+export async function emitirInsucessoAction(
+  chave: string,
+): Promise<{ error?: string; numero?: number; serie?: number }> {
+  try {
+    const { devolucao } = await emitInsucessoNote(chave);
+    revalidatePath("/nfe");
+    revalidatePath("/");
+    revalidatePath("/eventos");
+    return { numero: devolucao.numero, serie: devolucao.serie };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Erro ao emitir insucesso de entrega" };
+  }
+}
+
+export async function emitirRetornoFisicoAction(
+  chave: string,
+): Promise<{ error?: string; numero?: number; serie?: number }> {
+  try {
+    const { retornoFisico } = await emitRetornoFisicoNote(chave);
+    revalidatePath("/nfe");
+    revalidatePath("/");
+    revalidatePath("/eventos");
+    return { numero: retornoFisico.numero, serie: retornoFisico.serie };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Erro ao emitir retorno físico" };
   }
 }
 

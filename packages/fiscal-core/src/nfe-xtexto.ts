@@ -44,9 +44,21 @@ export function buildNfeObsContXTexto(input: XTextoInput): string | null {
   if (
     tipo === NFeTipo.RETORNO_SIMBOLICO ||
     nat.includes("Retorno Simbolico") ||
-    (nat.includes("Retorno") && cfop.startsWith("1") && cfop !== "1201")
+    (nat.includes("Retorno") && cfop.startsWith("1") && cfop !== "1201" && tipo !== NFeTipo.RETORNO_FISICO)
   ) {
     return `SALE-symbolic_inbound_return-${pedido}-${serieSeg}-OLSS-${warehouseId}`;
+  }
+
+  if (tipo === NFeTipo.RETORNO_FISICO || nat.includes("Retorno fisico")) {
+    return `INBOUND-physical_return-${pedido}-${serieSeg}-OLSS-${warehouseId}`;
+  }
+
+  if (
+    tipo === NFeTipo.INSULCESSO_DE_ENTREGA ||
+    nat.includes("Retorno de mercadoria nao entregue") ||
+    nat.includes("Insucesso de entrega")
+  ) {
+    return `SALE_RETURN-sale_return-${pedido}-${serieSeg}-OLSS-${warehouseId}`;
   }
 
   if (tipo === NFeTipo.DEVOLUCAO || nat.includes("Devolucao")) {
@@ -63,10 +75,6 @@ export function buildNfeObsContXTexto(input: XTextoInput): string | null {
       return `SALE-sale-${pedido}-${serieSeg}-OLSS-${warehouseId}`;
     }
     return `SALE-sale-${pedido}-${serieSeg}-OLSS-${warehouseId}`;
-  }
-
-  if (nat.includes("Retorno de mercadoria nao entregue")) {
-    return `SALE_RETURN-sale_return-${pedido}-${serieSeg}-OLSS-${warehouseId}`;
   }
 
   return null;

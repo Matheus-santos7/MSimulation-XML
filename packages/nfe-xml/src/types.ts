@@ -9,7 +9,9 @@ export type NFeTipoXml =
   | "DEVOLUCAO"
   | "REMESSA_SIMBOLICA"
   | "REMESSA_AVANCO"
-  | "TRANSFERENCIA_FILIAL";
+  | "TRANSFERENCIA_FILIAL"
+  | "RETORNO_FISICO"
+  | "INSULCESSO_DE_ENTREGA";
 
 export type DestinatarioXml = {
   nome: string;

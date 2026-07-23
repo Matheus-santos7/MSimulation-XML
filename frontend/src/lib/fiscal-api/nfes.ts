@@ -60,6 +60,25 @@ export async function emitReturnNote(chave: string): Promise<DevolucaoResult> {
   ) as Promise<DevolucaoResult>;
 }
 
+export async function emitInsucessoNote(chave: string): Promise<DevolucaoResult> {
+  return mutateJson<DevolucaoResult>(
+    buildApiUrl(`/api/nfes/${chave}/insulcesso`),
+    "POST",
+  ) as Promise<DevolucaoResult>;
+}
+
+export type RetornoFisicoResult = {
+  retornoFisico: NFeDto;
+  saldoConsumido: { remessaNfeId: string; quantidade: number };
+};
+
+export async function emitRetornoFisicoNote(chave: string): Promise<RetornoFisicoResult> {
+  return mutateJson<RetornoFisicoResult>(
+    buildApiUrl(`/api/nfes/${chave}/retorno-fisico`),
+    "POST",
+  ) as Promise<RetornoFisicoResult>;
+}
+
 export type CancelamentoResult = {
   venda: NFeDto;
   retorno?: NFeDto;

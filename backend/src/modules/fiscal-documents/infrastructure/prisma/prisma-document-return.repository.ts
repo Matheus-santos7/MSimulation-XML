@@ -28,7 +28,13 @@ import { taxSnapshotFromRule } from "../../../tax/domain/services/tax-snapshot.j
 import { calcularNotaFiscal } from "../../../tax/domain/services/tax-engine.js";
 import { buildFiscalItem, resolveTaxRule, resolveIcmsFallbackRate, type CustomerType } from "../../../tax/index.js";
 import { persistNfeXmlFromEmission } from "../xml/nfe-xml-service.js";
-import { reverseRemessaFifoConsumptions } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
+import {
+  debitRemessaBalanceByNfeId,
+  getNetRemessaNfeBalance,
+  prepareRemessaFifoForOperation,
+  reverseRemessaFifoConsumptions,
+  SaldoRemessaInsuficienteError,
+} from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
 import {
   prepareSymbolicShipmentFiscal,
   SymbolicShipmentFiscalError,
@@ -38,6 +44,8 @@ import { DocumentReturnError } from "../../domain/errors/document-return.error.j
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import type {
   DocumentReturnPort,
+  ProcessPhysicalReturnInput,
+  ProcessPhysicalReturnResult,
   ProcessReturnInput,
 } from "../../domain/ports/fiscal-document-lifecycle.port.js";
 
@@ -48,6 +56,11 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
 
   async processSaleReturn(input: ProcessReturnInput): Promise<ProcessReturnResult> {
     const { tenantId, saleNfeKey } = input;
+    const returnTipo = input.returnTipo ?? NFeTipo.DEVOLUCAO;
+    const natOp =
+      returnTipo === NFeTipo.INSULCESSO_DE_ENTREGA
+        ? "Insucesso de entrega de mercadorias"
+        : "Devolucao de mercadorias";
 
     const sale = await this.db.nFe.findFirst({
       where: { chave: saleNfeKey, tenantId },
@@ -65,12 +78,16 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
     }
 
     const existingReturn = await this.db.nFe.findFirst({
-      where: { tipo: NFeTipo.DEVOLUCAO, nfeReferenciaId: sale.id, deletedAt: null },
-      select: { id: true, numero: true, serie: true },
+      where: {
+        tipo: { in: [NFeTipo.DEVOLUCAO, NFeTipo.INSULCESSO_DE_ENTREGA] },
+        nfeReferenciaId: sale.id,
+        deletedAt: null,
+      },
+      select: { id: true, numero: true, serie: true, tipo: true },
     });
     if (existingReturn) {
       throw new DocumentReturnError(
-        `Esta venda já possui devolução (NF-e ${existingReturn.numero}/${existingReturn.serie}).`,
+        `Esta venda já possui ${existingReturn.tipo === NFeTipo.INSULCESSO_DE_ENTREGA ? "insucesso de entrega" : "devolução"} (NF-e ${existingReturn.numero}/${existingReturn.serie}).`,
         409,
       );
     }
@@ -141,7 +158,7 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
         taxSnapshotFromRule(saleTaxRule, icmsFallbackRate, emitterSettings),
         {
         settings: emitterSettings,
-        tipo: NFeTipo.DEVOLUCAO,
+        tipo: returnTipo,
         valor: totalValue,
         valorIcms: returnIcmsValue,
         emitUf: tenant.uf,
@@ -159,7 +176,7 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
           chave: accessKey,
           numero: number,
           serie: series,
-          natOp: "Devolucao de mercadorias",
+          natOp,
           cfop,
           ncm: product.ncm,
           destNome: sale.destNome,
@@ -183,13 +200,27 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
           emitidaEm: new Date(),
           pedidoMl: sale.pedidoMl,
           quantidade: quantity,
-          tipo: NFeTipo.DEVOLUCAO,
+          tipo: returnTipo,
           saldoDisponivel: null,
           nfeReferenciaId: sale.id,
           fiscalPayload: enrichFiscalPayloadWithXTexto(
             {
               ...taxSnapshot,
               engine: invoice,
+              nfeOrigem: {
+                numero: sale.numero,
+                serie: sale.serie,
+                emitidaEm:
+                  sale.emitidaEm instanceof Date
+                    ? sale.emitidaEm.toISOString()
+                    : String(sale.emitidaEm),
+              },
+              ...(sale.nfeReferencia
+                ? {
+                    ufFilialInfCpl: sale.nfeReferencia.destUf,
+                    cnpjFilialInfCpl: sale.nfeReferencia.destDoc,
+                  }
+                : {}),
               ...(typeof saleFiscalPayload?.ufSaidaFisica === "string"
                 ? { ufSaidaFisica: saleFiscalPayload.ufSaidaFisica }
                 : {}),
@@ -198,9 +229,9 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
                 : {}),
             } as Record<string, unknown>,
             {
-              tipo: NFeTipo.DEVOLUCAO,
+              tipo: returnTipo,
               cfop,
-              natOp: "Devolucao de mercadorias",
+              natOp,
               pedidoMl: sale.pedidoMl,
               indFinal: customerType === "non_taxpayer" ? 1 : 0,
             },
@@ -317,6 +348,225 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
       };
     });
   }
+
+  async processPhysicalReturn(
+    input: ProcessPhysicalReturnInput,
+  ): Promise<ProcessPhysicalReturnResult> {
+    const { tenantId, remessaNfeKey } = input;
+
+    const remessa = await this.db.nFe.findFirst({
+      where: { chave: remessaNfeKey, tenantId },
+      include: { tenant: true, product: true },
+    });
+
+    if (!remessa || remessa.deletedAt) {
+      throw new DocumentReturnError("NF-e de remessa não encontrada.", 404);
+    }
+    if (remessa.tipo !== NFeTipo.REMESSA && remessa.tipo !== NFeTipo.REMESSA_AVANCO) {
+      throw new DocumentReturnError(
+        "Retorno físico só pode referenciar remessa ou remessa avanço.",
+        422,
+      );
+    }
+    if (!remessa.product) {
+      throw new DocumentReturnError("Remessa sem produto vinculado.", 422);
+    }
+
+    const existing = await this.db.nFe.findFirst({
+      where: {
+        tipo: NFeTipo.RETORNO_FISICO,
+        nfeReferenciaId: remessa.id,
+        deletedAt: null,
+      },
+      select: { numero: true, serie: true },
+    });
+    if (existing) {
+      throw new DocumentReturnError(
+        `Esta remessa já possui retorno físico (NF-e ${existing.numero}/${existing.serie}).`,
+        409,
+      );
+    }
+
+    const quantityHeader = remessa.saldoDisponivel ?? remessa.quantidade;
+    if (quantityHeader <= 0) {
+      throw new DocumentReturnError("Remessa sem saldo disponível para retorno físico.", 422);
+    }
+
+    const tenant = remessa.tenant;
+    const product = remessa.product;
+    const series = tenant.serieRemessa;
+    const destUf = remessa.destUf;
+    const cfop = resolveRetornoFisicoCfop(tenant.uf, destUf);
+    const natOp = "Outras Entradas - Retorno fisico de Deposito Temporario";
+    const totalValue = num(remessa.valor);
+    const unitValue = remessa.quantidade > 0 ? totalValue / remessa.quantidade : totalValue;
+
+    return runFiscalTransaction(this.db, tenantId, async (tx) => {
+      await prepareRemessaFifoForOperation(
+        tx as unknown as Parameters<typeof prepareRemessaFifoForOperation>[0],
+        tenant.id,
+        product.id,
+        product.sku ?? undefined,
+      );
+      const quantity = await getNetRemessaNfeBalance(tx, remessa.id, remessa.quantidade);
+      if (quantity <= 0) {
+        throw new DocumentReturnError("Remessa sem saldo disponível para retorno físico.", 422);
+      }
+      const lineValue = unitValue * quantity;
+
+      const emitterSettings = await loadEmitterSettings(tx, tenant.id);
+      const inboundTaxRule = await resolveTaxRule(tx, tenant.id, {
+        originUf: tenant.uf,
+        destinationUf: destUf,
+        transactionType: "inbound",
+        customerType: "taxpayer",
+        ruleBaseId: product.taxRuleBaseId?.trim() || undefined,
+      });
+      const icmsFallbackRate =
+        num(remessa.aliqIcms) ||
+        resolveIcmsFallbackRate(tenant.uf, destUf, "inbound", emitterSettings);
+
+      const fiscalItem = buildFiscalItem(
+        {
+          codigo: product.sku ?? product.id,
+          descricao: product.nome,
+          ncm: product.ncm,
+          cfop,
+          unidade: product.unidade ?? "UN",
+          cest: product.cest ?? undefined,
+          ean: product.ean ?? undefined,
+          exTipi: product.exTipi ?? undefined,
+          origem: product.origem ?? 0,
+          quantidade: quantity,
+          valorUnitario: unitValue,
+        },
+        inboundTaxRule,
+        {
+          ufOrigem: tenant.uf,
+          ufDestino: destUf,
+          customerType: "taxpayer",
+          emitterSettings,
+          // Tributação de entrada no CD (mesmo canal "remessa" / fullfilmentEntrada).
+          operationTipo: "RETORNO_FISICO",
+        },
+        icmsFallbackRate,
+      );
+      const invoice = calcularNotaFiscal([fiscalItem]);
+      const valorIcms = invoice.totais.vICMS;
+
+      const numeroInicial = resolveNumeroInicialNfe(emitterSettings, series, {
+        serieRemessa: tenant.serieRemessa,
+        serieTransferencia: tenant.serieTransferencia,
+      });
+      const number = await proximoNumeroNfe(tx, tenant.id, series, numeroInicial);
+      const accessKey = buildChaveNFe({
+        uf: tenant.uf,
+        cnpj: tenant.cnpj,
+        serie: series,
+        numero: number,
+      });
+
+      const destIe = destIeFromRemessaFiscalPayload(remessa.fiscalPayload);
+      const taxSnapshot = enrichTaxSnapshot(
+        taxSnapshotFromRule(inboundTaxRule, icmsFallbackRate, emitterSettings),
+        {
+          settings: emitterSettings,
+          tipo: NFeTipo.RETORNO_FISICO,
+          valor: lineValue,
+          valorIcms,
+          emitUf: tenant.uf,
+          destUf,
+          indFinal: 0,
+        },
+      );
+
+      const row = await tx.nFe.create({
+        data: {
+          tenantId: tenant.id,
+          productId: product.id,
+          chave: accessKey,
+          numero: number,
+          serie: series,
+          natOp,
+          cfop,
+          ncm: product.ncm,
+          destNome: remessa.destNome,
+          destDoc: remessa.destDoc,
+          destUf: remessa.destUf,
+          destLogradouro: remessa.destLogradouro,
+          destNumero: remessa.destNumero,
+          destComplemento: remessa.destComplemento,
+          destBairro: remessa.destBairro,
+          destCodigoMunicipio: remessa.destCodigoMunicipio,
+          destMunicipio: remessa.destMunicipio,
+          destCep: remessa.destCep,
+          destCodigoPais: remessa.destCodigoPais,
+          destNomePais: remessa.destNomePais,
+          destTelefone: remessa.destTelefone,
+          destIndIeDest: remessa.destIndIeDest,
+          valor: lineValue,
+          valorIcms,
+          aliqIcms: fiscalItem.icms.pICMS || icmsFallbackRate,
+          status: FiscalStatus.AUTORIZADA,
+          emitidaEm: new Date(),
+          pedidoMl: remessa.pedidoMl,
+          quantidade: quantity,
+          tipo: NFeTipo.RETORNO_FISICO,
+          saldoDisponivel: null,
+          nfeReferenciaId: remessa.id,
+          fiscalPayload: enrichFiscalPayloadWithXTexto(
+            {
+              ...taxSnapshot,
+              engine: invoice,
+              ...(destIe ? { destIe } : {}),
+            } as Record<string, unknown>,
+            {
+              tipo: NFeTipo.RETORNO_FISICO,
+              cfop,
+              natOp,
+              pedidoMl: remessa.pedidoMl,
+            },
+          ) as Prisma.InputJsonValue,
+        },
+      });
+
+      try {
+        await debitRemessaBalanceByNfeId(
+          tx,
+          tenant.id,
+          remessa.id,
+          product.id,
+          quantity,
+          row.id,
+          product.sku ?? undefined,
+        );
+      } catch (error) {
+        if (error instanceof SaldoRemessaInsuficienteError) {
+          throw new DocumentReturnError(error.message, 422);
+        }
+        throw error;
+      }
+
+      const saldoRestante = await getNetRemessaNfeBalance(tx, remessa.id, remessa.quantidade);
+      await tx.nFe.update({
+        where: { id: remessa.id },
+        data: { saldoDisponivel: saldoRestante },
+      });
+
+      await persistNfeXmlFromEmission(tx, {
+        nfeId: row.id,
+        tenant,
+        productId: product.id,
+        settings: emitterSettings,
+        nfeReferenciaChave: remessa.chave,
+      });
+
+      return {
+        retornoFisico: mapNfe(row, remessa.chave) as Record<string, unknown>,
+        saldoConsumido: { remessaNfeId: remessa.id, quantidade: quantity },
+      };
+    });
+  }
 }
 
 function resolveCustomerType(destIndIeDest: number): CustomerType {
@@ -326,6 +576,11 @@ function resolveCustomerType(destIndIeDest: number): CustomerType {
 /** Return CFOP (inbound): interstate → 2202, intrastate → 1202. */
 function resolveReturnCfop(emitterUf: string, destinationUf: string): string {
   return emitterUf.toUpperCase() !== destinationUf.toUpperCase() ? "2202" : "1202";
+}
+
+/** Retorno físico CFOP 1949/2949 (entrada contra o OL). */
+function resolveRetornoFisicoCfop(emitterUf: string, destinationUf: string): string {
+  return emitterUf.toUpperCase() === destinationUf.toUpperCase() ? "1949" : "2949";
 }
 
 function destIeFromRemessaFiscalPayload(payload: unknown): string | undefined {

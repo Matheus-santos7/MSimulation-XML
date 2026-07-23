@@ -7,8 +7,11 @@ const TIPO_LABELS: Record<NfeTipoDisplay, string> = {
   REMESSA_SIMBOLICA: "Remessa simb.",
   REMESSA_AVANCO: "Remessa avanço",
   RETORNO_SIMBOLICO: "Retorno",
+  RETORNO_FISICO: "Retorno físico",
   VENDA: "Venda",
   DEVOLUCAO: "Devolução",
+  /** Enum API: `INSULCESSO_DE_ENTREGA`; label UI: Insucesso (português correto). */
+  INSULCESSO_DE_ENTREGA: "Insucesso",
   TRANSFERENCIA_FILIAL: "Transf. filial",
   INUTILIZACAO: "Inutilização",
 };

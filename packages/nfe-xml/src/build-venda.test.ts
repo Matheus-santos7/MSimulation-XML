@@ -153,7 +153,8 @@ describe("buildNFeXmlFromBuilder — VENDA", () => {
     assert.match(xml, /<tPag>03<\/tPag>/);
     assert.match(xml, /<vPag>894\.52<\/vPag>/);
     assert.match(xml, /<card>\s*<tpIntegra>1<\/tpIntegra>/);
-    assert.match(xml, /<infCpl>Enviado diretamente do deposito temporario/);
+    assert.match(xml, /<infCpl>Venda de mercadoria armazenada em fulfillment\. Enviado diretamente do deposito temporario/);
+    assert.match(xml, /Regime Especial SC - TTD SC n 225000004034256\./);
     assert.match(xml, /<infRespTec>/);
     assert.match(xml, /<hashCSRT>\+TuKUMc7ueWv9UiYNVaTD\+ym1a4=<\/hashCSRT>/);
     assert.doesNotMatch(xml, /<CFOP><\/CFOP>/);
@@ -629,5 +630,102 @@ describe("buildNFeXmlFromBuilder — VENDA", () => {
     assert.match(xml, /<cProd>4133250058<\/cProd>/);
     assert.match(xml, /<cProd>4133250061<\/cProd>/);
     assert.match(xml, /<ICMSTot>[\s\S]*?<vProd>7687\.00<\/vProd>/);
+  });
+});
+
+describe("buildNFeXmlFromBuilder — DEVOLUCAO / INSULCESSO", () => {
+  const nfeOrigem = {
+    numero: 42,
+    serie: 5,
+    emitidaEm: "2026-06-17T15:00:00.000Z",
+  };
+
+  function baseDevolucao(tipo: "DEVOLUCAO" | "INSULCESSO_DE_ENTREGA"): NFeXmlInput {
+    return {
+      chave: "41260678242849000169550050000000051423282896",
+      numero: 9,
+      serie: 5,
+      natOp: "Devolucao de mercadoria",
+      cfop: "1202",
+      ncm: "73211100",
+      destinatario: {
+        nome: "Comprador CPF",
+        doc: "07629167962",
+        uf: "PR",
+        indIEDest: 9,
+        docTipo: "CPF",
+        endereco: {
+          logradouro: "Rua A",
+          numero: "1",
+          bairro: "Centro",
+          codigoMunicipio: "4107207",
+          municipio: "Dois Vizinhos",
+          uf: "PR",
+          cep: "85660000",
+          codigoPais: 1058,
+          nomePais: "Brasil",
+        },
+      },
+      valor: 100,
+      valorICMS: 0,
+      aliqICMS: 0,
+      status: "AUTORIZADA",
+      emitidaEm: "2026-07-01T12:00:00-03:00",
+      quantidade: 1,
+      tipo,
+      nfeReferenciaChave: "41260678242849000169550050000000041410852632",
+      fiscalPayload: {
+        nfeOrigem,
+        ufFilialInfCpl: "SC",
+        cnpjFilialInfCpl: "03007331012077",
+        engine: {
+          itens: [
+            {
+              vProd: 100,
+              quantidade: 1,
+              valorUnitario: 100,
+              icms: { cst: "00", orig: 5, vBC: 0, pICMS: 0, vICMS: 0 },
+              pis: { cst: "01", vBC: 0, pPIS: 0, vPIS: 0 },
+              cofins: { cst: "01", vBC: 0, pCOFINS: 0, vCOFINS: 0 },
+            },
+          ],
+          totais: {
+            vBC: 0,
+            vICMS: 0,
+            vProd: 100,
+            vIPI: 0,
+            vPIS: 0,
+            vCOFINS: 0,
+            vNF: 100,
+          },
+        },
+      },
+    };
+  }
+
+  it("DEVOLUCAO emite infCpl com n+serie+data e regime da filial", () => {
+    const xml = buildNFeXML(baseDevolucao("DEVOLUCAO"), emit, product);
+    assert.match(
+      xml,
+      /<infCpl>Devolucao de mercadoria referente a NF-e de origem n 42 serie 5 emitida em 17\/06\/2026\. Regime Especial SC - TTD SC n 225000004034256\.<\/infCpl>/,
+    );
+  });
+
+  it("INSULCESSO_DE_ENTREGA emite infCpl de insucesso com n+serie+data", () => {
+    const xml = buildNFeXML(baseDevolucao("INSULCESSO_DE_ENTREGA"), emit, product);
+    assert.match(
+      xml,
+      /<infCpl>Insucesso de entrega de mercadoria referente a NF-e de origem n 42 serie 5 emitida em 17\/06\/2026\. Regime Especial SC - TTD SC n 225000004034256\.<\/infCpl>/,
+    );
+  });
+
+  it("DEVOLUCAO falha sem nfeOrigem", () => {
+    const nfe = baseDevolucao("DEVOLUCAO");
+    const { nfeOrigem: _omit, ...fiscal } = nfe.fiscalPayload as Record<string, unknown>;
+    nfe.fiscalPayload = fiscal;
+    assert.throws(
+      () => buildNFeXML(nfe, emit, product),
+      /nfeOrigem/,
+    );
   });
 });

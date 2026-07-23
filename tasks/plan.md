@@ -1,65 +1,131 @@
-# Implementation Plan: Next.js 15 → 16.2.11 (frontend)
+# Implementation Plan: `<infCpl>` fulfillment EBazar / ML Full
 
 ## Overview
 
-Bump pinado do frontend para Next.js **16.2.11**, migrar `middleware` → `proxy`, alinhar ESLint, scripts de verificação e docs. Sem features novas do 16.
-
-Spec: [`docs/specs/nextjs-16-upgrade.md`](../docs/specs/nextjs-16-upgrade.md)
+Implementar o composer canônico de `NF-e.infAdic.infCpl` conforme [`docs/specs/infcpl-fulfillment-ebazar.md`](../docs/specs/infcpl-fulfillment-ebazar.md): `{head} {middle?} {regime?}` em ASCII, regimes por UF+CNPJ, preservar impostos na venda, IE nas remessas, interpolação n+serie+data em devolução/insucesso, e novos `NFeTipo` `RETORNO_FISICO` + `INSULCESSO_DE_ENTREGA`.
 
 ## Architecture Decisions
 
-- **Pin 16.2.11** em vez de `latest` / codemod `upgrade latest` (evita salto fora de 16.2.x).
-- **Migrar para `proxy`** (runtime Node) — auth só usa cookies + `fetch`; Edge não é requisito.
-- **Não** ativar React Compiler / `cacheComponents`.
-- **Testes:** padronizar em `node:test`; converter o único ficheiro Vitest órfão.
-- **Turbopack:** aceitar default; remover flag `--turbopack` do `dev` se redundante.
+- **Composer em `packages/fiscal-core/src/infcpl/`** — compartilhado backend + nfe-xml; export via `fiscal-core` index.
+- **Builders só montam inputs** (operation, uf, cnpj, middle, nfeOrigem) e passam `extraInfCpl` ao `buildInfAdicNode`.
+- **`buildVendaInfCplText` vira miolo** — extrair abertura; head vem do composer (`VENDA_FULFILLMENT`).
+- **Helpers legados** (`remessaInfCplText`, `retornoInfCplText`, `remessaSimbolicaPosDevolucaoInfCplText`) → thin wrappers `@deprecated` apontando ao composer (remoção total = Ask first / task final opcional).
+- **`REMESSA_AVANCO`** → `operation: "REMESSA"`; **`TRANSFERENCIA_FILIAL`** → `operation: "TRANSFERENCIA"`.
+- **Novos tipos:** migration Prisma + union `NFeTipoXml` + factory. **Emissão completa (UI/use-cases)** de `RETORNO_FISICO` / `INSULCESSO_DE_ENTREGA` fica em Phase 5 (**Ask first** antes de executar).
+- **`mensagemPadrao` / DIFAL em `buildInfAdicNode`:** join por **espaço único** (alinhado ao composer; sem `|`) + linha DIFAL do emitter quando aplicável.
 
 ## Dependency graph
 
 ```
-Bump next + eslint-config-next (lockfile)
+Composer + regimes + unit tests (fiscal-core)
     │
-    ├── Migrar middleware → proxy
+    ├── Refactor miolo venda (buildVendaInfCplText → middle only)
     │
-    ├── Scripts typecheck + test (+ fix bff-path.test)
+    ├── Wire remessa / retorno / transferência builders
     │
-    ├── typecheck → test → build (gates)
+    ├── Wire venda + devolução builders (+ payload origem)
     │
-    └── Docs Next.js 15 → 16
+    ├── Prisma NFeTipo + NFeTipoXml + factory/builders stubs
+    │
+    └── (Ask first) Emissão use-cases / UI novos tipos + docs CAT 31
 ```
 
 ## Task List
 
-### Phase 1: Dependencies
-- [x] Task 1: Bump `next` + `eslint-config-next` para 16.2.11; `pnpm install`
+### Phase 1: Foundation (composer)
 
-### Checkpoint: Install
-- [x] Lockfile resolve; sem peer errors bloqueantes
+#### Task 1: Mapa de regimes + `resolveRegimeEspecial`
+**Acceptance:** 8 pares UF/CNPJ ASCII; match por dígitos; mismatch → `null`.  
+**Verify:** `pnpm --filter @msimulation-xml/fiscal-core test` (novos testes).  
+**Deps:** None. **Scope:** S — `fulfillment-infcpl.regimes.ts` + test.
 
-### Phase 2: Framework migration
-- [x] Task 2: `middleware.ts` → `proxy.ts` (export `proxy`)
-- [x] Task 3: Scripts `typecheck`/`test`; converter `bff-path.test.ts` para `node:test`; limpar script `dev`
+#### Task 2: `buildFulfillmentInfCplText` (head + middle + regime)
+**Acceptance:** Todas as operations da spec; interpolação n+serie+data (`America/Sao_Paulo`); ASCII; `REMESSA` head usado também para avanço no caller.  
+**Verify:** unit tests composer.  
+**Deps:** Task 1. **Scope:** S–M — `fulfillment-infcpl.ts` + test + export `index.ts`.
 
-### Checkpoint: After Tasks 2–3
-- [x] typecheck + test passam
+### Checkpoint: Foundation
+- [ ] Unit tests do composer 100% operations + 8 regimes
+- [ ] `fiscal-core` build OK
+- [ ] Review humano opcional antes de wiring
 
-### Phase 3: Prove + docs
-- [x] Task 4: `lint` + `build` frontend; corrigir só o necessário
-- [x] Task 5: READMEs Next.js 15 → 16
+### Phase 2: Wire builders existentes
 
-### Checkpoint: Complete
-- [x] Critérios da SPEC satisfeitos
-- [x] code-review-and-quality (pós-implementação)
+#### Task 3: Remessa / simbólica / avanço / transferência → composer
+**Acceptance:** XML `<infCpl>` com head nova + IE no miolo (quando houver) + regime; pós-devolução inclui ref n/serie/data; sem abertura CAT 31.  
+**Verify:** `pnpm --filter @msimulation-xml/nfe-xml test` (asserts em `build-remessa.test.ts`).  
+**Deps:** Task 2. **Scope:** M — `remessa.builder.ts`, `fiscal-xml.util.ts` (wrappers), testes.
+
+#### Task 4: Retorno simbólico → composer (sem IE no miolo)
+**Acceptance:** Head retorno + regime; sem IE no `infCpl`.  
+**Verify:** asserts retorno em `build-remessa.test.ts`.  
+**Deps:** Task 2. **Scope:** S — `retorno.builder.ts` + testes.
+
+#### Task 5: Venda — head composer + miolo com impostos
+**Acceptance:** Head `Venda de mercadoria...`; miolo preserva CD + retorno + IBPT + DIFAL; regime no fim se match.  
+**Verify:** `build-venda.test.ts`.  
+**Deps:** Task 2. **Scope:** M — `venda-ml-payload.ts`, `venda.builder.ts`, testes.
+
+#### Task 6: Devolução — interpolação origem + composer
+**Acceptance:** Head com n+serie+data da venda referenciada; regime se match; payload carrega origem.  
+**Verify:** teste XML devolução (novo ou existente) + ajuste `prisma-document-return.repository` se necessário.  
+**Deps:** Task 2, Task 5 (padrão venda builder). **Scope:** M — `devolucao.builder.ts`, return repository/payload, testes.
+
+### Checkpoint: Core wiring
+- [ ] `nfe-xml` + `fiscal-core` testes verdes
+- [ ] Remessa com IE; retorno sem IE; venda com impostos; devolução interpolada
+- [ ] Review humano antes dos novos tipos
+
+### Phase 3: Novos `NFeTipo`
+
+#### Task 7: Prisma migration `RETORNO_FISICO` + `INSULCESSO_DE_ENTREGA`
+**Acceptance:** Enum no schema; client gera; typecheck backend.  
+**Verify:** `prisma migrate` + `tsc --noEmit` backend.  
+**Deps:** Checkpoint Core. **Scope:** S — `schema.prisma` + migration.
+
+#### Task 8: `NFeTipoXml` + factory + builders dos novos tipos
+**Acceptance:** `RETORNO_FISICO` via builder retorno (ou strategy dedicada); `INSULCESSO_DE_ENTREGA` via strategy devolução; factory lista tipos; teste factory.  
+**Verify:** `nfe-factory.test.ts` + build XML mínimo.  
+**Deps:** Task 7, Tasks 4–6. **Scope:** M — `types.ts`, `nfe-factory.ts`, builders, `fiscal-core/nfe-tipo.ts` se espelhar, frontend `fiscal-types` union.
+
+### Checkpoint: Tipos
+- [ ] Enum + factory suportam os 2 tipos
+- [ ] XML mínimo gera `infCpl` correto para ambos
+- [ ] **Stop:** Ask first antes de Phase 5 (emissão/UI)
+
+### Phase 4: Cleanup
+
+#### Task 9: Deprecar helpers legados + alinhar exports
+**Acceptance:** Call sites usam composer; helpers `@deprecated` ou removidos (Ask first se remove).  
+**Verify:** suites verdes; sem imports órfãos críticos.  
+**Deps:** Tasks 3–6. **Scope:** S–M.
+
+#### Task 10 (opcional): Atualizar `regras-fulfillment-cat31.md` § infCpl
+**Acceptance:** Doc reflete head ASCII + IE remessa + regimes (Ask first).  
+**Deps:** Checkpoint Core. **Scope:** S.
+
+### Phase 5: Ask first — emissão completa dos novos tipos
+
+#### Task 11 (bloqueada): Use-cases / UI `RETORNO_FISICO` + `INSULCESSO_DE_ENTREGA`
+**Acceptance:** a definir com o humano (endpoints, telas, cadeia fiscal).  
+**Deps:** Task 8 + aprovação explícita. **Scope:** L → quebrar após escopo.
+
+### Checkpoint: Complete (Phases 1–4)
+- [ ] Success criteria da spec (exceto emissão UI se Phase 5 adiada)
+- [ ] Ready for `code-review-and-quality`
 
 ## Risks and Mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Proxy Node muda comportamento Edge de cookies/fetch | Med | Mesma lógica; validar build + smoke auth se aprovado |
-| Turbopack build falha (plugin/webpack oculto) | Med | Erro explícito; fallback `--webpack` só se necessário (ask first) |
-| FlatCompat / eslint-config-next 16 quebra lint | Low | Ajustar `eslint.config.mjs` mínimo |
-| Confusão nome `proxy.ts` vs `bff-proxy.ts` | Low | Não renomear BFF; comentário curto se útil |
+| Quebra de asserts XML legados CAT 31 | Med | Atualizar testes na mesma task do wire |
+| `buildVendaInfCplText` usado fora do builder | Med | Grep call sites antes do refactor (Task 5) |
+| Migration enum em prod/staging | Med | Migration só add-value; sem rename |
+| Escopo UI novos tipos estoura fatia | High | Phase 5 Ask first |
+| `mensagemPadrao` vs espaço do composer | Low | Resolvido: auxiliary também junta com espaço |
 
-## Open Questions
+## Open Questions — resolvidas (2026-07-23)
 
-Herdadas da SPEC (aprovação humana).
+1. **Phase 5 nesta entrega** (emissão completa).
+2. Helpers legados: **remover** (não só deprecate).
+3. Doc CAT 31: **sim** nesta entrega (Task 10).

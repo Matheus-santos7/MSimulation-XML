@@ -28,5 +28,6 @@ export {
   loadRemessaForReturnDestination,
   consumeRemessaFifoBalanceForSale,
   debitRemessaBalanceByCd,
+  debitRemessaBalanceByNfeId,
   reverseRemessaFifoConsumptions,
 } from "./remessa-fifo-consumption.js";

@@ -6,7 +6,7 @@ import { GetNfeXmlUseCase } from "../../application/use-cases/get-nfe-xml.use-ca
 import { InutilizeNumberUseCase } from "../../application/use-cases/inutilize-number.use-case.js";
 import { ListCtesUseCase } from "../../application/use-cases/list-ctes.use-case.js";
 import { ListNfesUseCase } from "../../application/use-cases/list-nfes.use-case.js";
-import { ProcessReturnUseCase } from "../../application/use-cases/process-return.use-case.js";
+import { ProcessPhysicalReturnUseCase, ProcessReturnUseCase } from "../../application/use-cases/process-return.use-case.js";
 import { SoftDeleteCteUseCase } from "../../application/use-cases/soft-delete-cte.use-case.js";
 import { SoftDeleteNfeUseCase } from "../../application/use-cases/soft-delete-nfe.use-case.js";
 import { PrismaCteQueryRepository } from "../prisma/prisma-cte-query.repository.js";
@@ -28,6 +28,7 @@ export function createFiscalDocumentsModule() {
   return {
     cancelDocument: new CancelDocumentUseCase(cancellationRepository),
     processReturn: new ProcessReturnUseCase(returnRepository),
+    processPhysicalReturn: new ProcessPhysicalReturnUseCase(returnRepository),
     inutilizeNumber: new InutilizeNumberUseCase(inutilizationRepository),
     listNfes: new ListNfesUseCase(nfeQueryRepository),
     getNfeByKey: new GetNfeByKeyUseCase(nfeQueryRepository),

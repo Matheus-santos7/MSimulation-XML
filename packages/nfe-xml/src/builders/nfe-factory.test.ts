@@ -137,11 +137,15 @@ describe("nfe-factory — Strategy builders", () => {
       "REMESSA_AVANCO",
       "TRANSFERENCIA_FILIAL",
       "RETORNO_SIMBOLICO",
+      "RETORNO_FISICO",
       "DEVOLUCAO",
+      "INSULCESSO_DE_ENTREGA",
     ]);
     assert.equal(isNfeBuilderSupported("VENDA"), true);
     assert.equal(isNfeBuilderSupported("RETORNO_SIMBOLICO"), true);
+    assert.equal(isNfeBuilderSupported("RETORNO_FISICO"), true);
     assert.equal(isNfeBuilderSupported("DEVOLUCAO"), true);
+    assert.equal(isNfeBuilderSupported("INSULCESSO_DE_ENTREGA"), true);
   });
 
   it("createNFeBuilder retorna VendaNFeStrategyBuilder para VENDA", () => {

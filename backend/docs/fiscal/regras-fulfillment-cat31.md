@@ -2,6 +2,11 @@
 
 Esta documentação detalha as regras de emissão de Nota Fiscal Eletrônica (NF-e) para operações logísticas de armazenamento e despacho por terceiros (Fulfillment — Mercado Envios Full, Amazon Fulfillment, etc.) no estado de São Paulo, regidas pela **Portaria CAT 31/2019**.
 
+> **`<infCpl>` (texto gerado):** a composição canônica (ASCII, head + miolo + regime EBazar) está em
+> [`docs/specs/infcpl-fulfillment-ebazar.md`](../../../docs/specs/infcpl-fulfillment-ebazar.md)
+> e no composer `buildFulfillmentInfCplText` (`@msimulation-xml/fiscal-core`).
+> Os blocos abaixo descrevem a obrigação fiscal; o texto literal emitido segue a spec.
+
 ---
 
 ## 1. Inbound (Envio de Estoque para o Fulfillment)
@@ -24,7 +29,9 @@ Ocorre quando o **Vendedor (Depositante)** envia seus produtos fisicamente para 
 
 ### Informações Complementares (`<infCpl>`)
 
-> Remessa para Depósito Temporário — Portaria CAT 31/2019. Inscrição Estadual do Operador Logístico: [IE do CD]
+```
+Remessa para armazenamento em fulfillment. Inscricao Estadual do Operador Logistico: {IE}. [Regime Especial {UF} - ...]?
+```
 
 ---
 
@@ -43,7 +50,11 @@ Quando o produto é vendido e despachado diretamente do armazém do Operador Log
 
 **Local de Retirada (`<retirada>`):** preencher o XML com endereço, CNPJ e Inscrição Estadual do Operador Logístico (o produto sai de lá).
 
-**Informações Complementares (`<infCpl>`):** informar que a mercadoria sairá do *Depósito Temporário — Operador Logístico*, indicando nome, CNPJ, IE e endereço. Mencionar a nota de **Retorno Simbólico** (ver § 2.2).
+**Informações Complementares (`<infCpl>`):**
+
+```
+Venda de mercadoria armazenada em fulfillment. {miolo CD + retorno simbolico + IBPT + DIFAL}. [Regime Especial {UF CD} - ...]?
+```
 
 ### 2.2. Nota de Retorno Simbólico (Artigo 7º, Inciso II e Artigo 6º)
 
@@ -60,11 +71,13 @@ Emissão necessária para dar baixa contábil no estoque que estava no armazém.
 
 **Informações Complementares (`<infCpl>`):**
 
-> Retorno Simbólico de Depósito Temporário — Portaria CAT 31/2019
+```
+Retorno simbolico de mercadoria armazenada em fulfillment. [Regime Especial {UF} - ...]?
+```
 
 ---
 
-## 3. Retorno Físico (Remoção de Estoque do Fulfillment)
+## 3. Retorno Físico (Remoção de Estoque do Fulfillment) — `RETORNO_FISICO`
 
 Quando o Vendedor solicita a devolução física do estoque que estava no CD.
 
@@ -76,12 +89,15 @@ Quando o Vendedor solicita a devolução física do estoque que estava no CD.
 | **Emitente** | Vendedor (Depositante), para acobertar o trânsito do CD de volta à sede |
 | **CFOP** | `1949` |
 | **Natureza da Operação** | Outras Entradas — Retorno de Depósito Temporário |
+| **Tipo sistema** | `RETORNO_FISICO` |
 
 **Notas Referenciadas (`<refNFe>`):** chaves de acesso das NF-es originais de remessa para depósito (Inbound).
 
 **Informações Complementares (`<infCpl>`):**
 
-> Retorno de Depósito Temporário — Portaria CAT 31/2019
+```
+Retorno fisico de mercadoria armazenada em fulfillment. [Regime Especial {UF} - ...]?
+```
 
 ---
 
@@ -89,7 +105,7 @@ Quando o Vendedor solicita a devolução física do estoque que estava no CD.
 
 Se o consumidor pessoa física não contribuinte devolver o produto e o mesmo for entregue diretamente no galpão do Operador Logístico (**Artigo 11**), também exige **duas notas fiscais**.
 
-### 4.1. Nota de Entrada (Devolução da Venda)
+### 4.1. Nota de Entrada (Devolução da Venda) — `DEVOLUCAO`
 
 | Campo | Valor |
 |-------|-------|
@@ -100,7 +116,21 @@ Se o consumidor pessoa física não contribuinte devolver o produto e o mesmo fo
 
 **Notas Referenciadas (`<refNFe>`):** chave de acesso da Nota de Venda original.
 
-**Informações Complementares (`<infCpl>`):** informar que a mercadoria foi devolvida fisicamente ao endereço do Operador Logístico (com CNPJ e IE correspondentes).
+**Informações Complementares (`<infCpl>`):**
+
+```
+Devolucao de mercadoria referente a NF-e de origem n {numero} serie {serie} emitida em {dd/mm/aaaa}. [Regime Especial {UF CD} - ...]?
+```
+
+### 4.1-bis. Insucesso de entrega — `INSULCESSO_DE_ENTREGA`
+
+Mesma estrutura de devolução (entrada contra o consumidor / NF-e de origem), quando a mercadoria retorna por **insucesso de entrega**.
+
+> **Nomenclatura:** o enum Prisma / API usa a grafia pedida `INSULCESSO_DE_ENTREGA`; o texto ASCII emitido em `<infCpl>` usa português correto sem acento: **Insucesso de entrega…**.
+
+```
+Insucesso de entrega de mercadoria referente a NF-e de origem n {numero} serie {serie} emitida em {dd/mm/aaaa}. [Regime Especial {UF CD} - ...]?
+```
 
 ### 4.2. Remessa Simbólica de Devolução (Retorno ao Estoque do CD)
 
@@ -117,4 +147,12 @@ Para incluir contabilmente o produto devolvido de volta ao controle de estoque d
 
 **Informações Complementares (`<infCpl>`):**
 
-> Remessa Simbólica para Depósito Temporário — Portaria CAT 31/2019
+```
+Remessa simbolica para armazenamento em fulfillment. Inscricao Estadual do Operador Logistico: {IE}. Nota fiscal de devolucao n {n} emitida em {data} serie {serie}. [Regime Especial {UF} - ...]?
+```
+
+---
+
+## 5. Regimes especiais EBazar (sufixo do `<infCpl>`)
+
+Quando `ufDestino` (UF da filial/CD) + `cnpjFilial` casam o mapa da spec, o composer acrescenta o texto do regime (BA, SC, RJ, MG, DF, RS, PR, PE). Ver tabela completa na spec.

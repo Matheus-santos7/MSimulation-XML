@@ -409,7 +409,17 @@ export type TimelineEventStepDto = {
   chaveRef?: string;
 };
 
-export type TimelineChainStepDto = TimelineNfeStepDto | TimelineEventStepDto;
+export type TimelineCteStepDto = {
+  kind: "cte";
+  label: string;
+  chave: string;
+  numero: number;
+  serie: number;
+  emitidaEm: string;
+  status: FiscalStatus;
+};
+
+export type TimelineChainStepDto = TimelineNfeStepDto | TimelineEventStepDto | TimelineCteStepDto;
 
 export type TimelineChainDto = {
   id: string;

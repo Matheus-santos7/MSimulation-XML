@@ -91,6 +91,27 @@ function mapNfeStepRow(
   };
 }
 
+function mapCteStepRow(
+  context: {
+    cenario: string;
+    ufEmitente: string;
+  },
+  step: Extract<TimelineChainStepDto, { kind: "cte" }>,
+): TimelineSpreadsheetRow {
+  return {
+    CENÁRIO: context.cenario,
+    DATA: formatSpreadsheetDate(step.emitidaEm),
+    TIPO: step.label,
+    "NF-e/SÉRIE": formatNfeSerie(step.numero, step.serie),
+    "CHAVE DE ACESSO": step.chave,
+    "CHAVE REF": "",
+    "UF EMITENTE": context.ufEmitente,
+    "UF DEST": "",
+    CFOP: "",
+    PRODUTO: "",
+  };
+}
+
 function mapEventStepRow(
   context: {
     cenario: string;
@@ -114,7 +135,7 @@ function mapEventStepRow(
 
 /**
  * Converte grupos da timeline em linhas tabulares para exportação em planilha.
- * Cada passo (NF-e ou evento) vira uma linha; o índice `scenarioStripe` incrementa
+ * Cada passo (NF-e, CT-e ou evento) vira uma linha; o índice `scenarioStripe` incrementa
  * a cada cenário para permitir faixas zebradas no XLSX.
  *
  * @param groups - Timeline agrupada por remessa (`listTimelineChains`).
@@ -138,10 +159,14 @@ export function buildTimelineSpreadsheetExportData(
       };
 
       for (const step of cenario.steps) {
-        const row =
-          step.kind === "event"
-            ? mapEventStepRow(context, step)
-            : mapNfeStepRow(context, step, nfeDetails);
+        let row: TimelineSpreadsheetRow;
+        if (step.kind === "event") {
+          row = mapEventStepRow(context, step);
+        } else if (step.kind === "cte") {
+          row = mapCteStepRow(context, step);
+        } else {
+          row = mapNfeStepRow(context, step, nfeDetails);
+        }
         rows.push({ row, scenarioStripe });
       }
 

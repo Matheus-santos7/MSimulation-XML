@@ -32,6 +32,15 @@ describe("buildTimelineSpreadsheetRows", () => {
               status: FiscalStatus.AUTORIZADA,
             },
             {
+              kind: "cte",
+              label: "CT-e",
+              chave: "ch-cte",
+              numero: 1,
+              serie: 1,
+              emitidaEm: "2026-01-01T10:30:00.000Z",
+              status: FiscalStatus.AUTORIZADA,
+            },
+            {
               kind: "event",
               eventTipo: "INUT",
               eventId: "inut-1",
@@ -83,32 +92,37 @@ describe("buildTimelineSpreadsheetRows", () => {
   it("gera uma linha por passo do cenário com colunas fiscais", () => {
     const rows = buildTimelineSpreadsheetRows(groups, "SP", nfeDetails);
 
-    assert.equal(rows.length, 4);
+    assert.equal(rows.length, 5);
     assert.equal(rows[0]?.CENÁRIO, "Cenário 1");
     assert.equal(rows[0]?.TIPO, "Remessa");
     assert.equal(rows[0]?.CFOP, "5904");
     assert.equal(rows[0]?.PRODUTO, "300002137");
 
-    assert.equal(rows[1]?.TIPO, "Inutilização");
-    assert.equal(rows[1]?.["NF-e/SÉRIE"], "11–12/58");
-    assert.equal(rows[1]?.["CHAVE DE ACESSO"], "");
+    assert.equal(rows[1]?.TIPO, "CT-e");
+    assert.equal(rows[1]?.["NF-e/SÉRIE"], "1/1");
+    assert.equal(rows[1]?.["CHAVE DE ACESSO"], "ch-cte");
 
-    assert.equal(rows[2]?.TIPO, "Venda");
-    assert.equal(rows[2]?.["UF DEST"], "RJ");
-    assert.equal(rows[2]?.["CHAVE REF"], "ch-ret");
+    assert.equal(rows[2]?.TIPO, "Inutilização");
+    assert.equal(rows[2]?.["NF-e/SÉRIE"], "11–12/58");
+    assert.equal(rows[2]?.["CHAVE DE ACESSO"], "");
 
-    assert.equal(rows[3]?.TIPO, "Cancelamento");
-    assert.equal(rows[3]?.["CHAVE DE ACESSO"], "ch-venda");
+    assert.equal(rows[3]?.TIPO, "Venda");
+    assert.equal(rows[3]?.["UF DEST"], "RJ");
+    assert.equal(rows[3]?.["CHAVE REF"], "ch-ret");
+
+    assert.equal(rows[4]?.TIPO, "Cancelamento");
+    assert.equal(rows[4]?.["CHAVE DE ACESSO"], "ch-venda");
   });
 
   it("marca todas as linhas do mesmo cenário com o mesmo índice de faixa", () => {
     const exportData = buildTimelineSpreadsheetExportData(groups, "SP", nfeDetails);
 
-    assert.equal(exportData.length, 4);
+    assert.equal(exportData.length, 5);
     assert.equal(exportData[0]?.scenarioStripe, 0);
     assert.equal(exportData[1]?.scenarioStripe, 0);
     assert.equal(exportData[2]?.scenarioStripe, 0);
     assert.equal(exportData[3]?.scenarioStripe, 0);
+    assert.equal(exportData[4]?.scenarioStripe, 0);
   });
 
   it("alterna faixa entre cenários diferentes", () => {
@@ -143,7 +157,7 @@ describe("buildTimelineSpreadsheetRows", () => {
     const exportData = buildTimelineSpreadsheetExportData(groupsWithTwoScenarios, "SP", nfeDetails);
 
     assert.equal(exportData[0]?.scenarioStripe, 0);
-    assert.equal(exportData[3]?.scenarioStripe, 0);
-    assert.equal(exportData[4]?.scenarioStripe, 1);
+    assert.equal(exportData[4]?.scenarioStripe, 0);
+    assert.equal(exportData[5]?.scenarioStripe, 1);
   });
 });

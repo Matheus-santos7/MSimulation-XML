@@ -55,10 +55,13 @@ export function TimelineChains({ groups, layout = "vertical" }: TimelineChainsPr
 }
 
 function DashboardScenarioRow({ row }: { row: FlatScenarioRow }) {
-  const { remessaNumeroSerie, saldoLabel, cenario, index } = row; 
+  const { remessaNumeroSerie, saldoLabel, cenario, index } = row;
   const steps = cenario?.steps ?? [];
   const title = index > 0 ? `Cenário ${index}` : remessaNumeroSerie;
-  const subtitle = index > 0;
+  const subtitle =
+    index > 0
+      ? [remessaNumeroSerie, saldoLabel].filter(Boolean).join(" · ")
+      : saldoLabel;
 
   return (
     <div className="flex items-center gap-4 rounded-xl border border-border bg-background/50 px-3.5 py-2.5 hover:bg-muted/40 transition-colors dark:bg-background/35">
@@ -183,6 +186,32 @@ function TimelineStepChip({ step }: { step: TimelineChainStepDto }) {
     );
   }
 
+  if (step.kind === "cte") {
+    const isCancelled = step.status === "CANCELADA";
+    return (
+      <Link
+        href={`/cte/${step.chave}`}
+        className={cn(
+          "group flex flex-col border transition-colors rounded-lg px-2.5 py-1.5",
+          isCancelled ? CHIP_CANCELLED : CHIP_NEUTRAL,
+          !isCancelled && "hover:border-accent/40",
+        )}
+      >
+        <span
+          className={cn(
+            "text-[10px] font-semibold uppercase leading-tight tracking-wide text-muted-foreground",
+            isCancelled && "line-through",
+          )}
+        >
+          {step.label}
+        </span>
+        <span className="font-mono text-[10px] text-foreground group-hover:text-accent">
+          {step.numero}/{step.serie}
+        </span>
+      </Link>
+    );
+  }
+
   const isCancelled = step.status === "CANCELADA";
 
   return (
@@ -271,5 +300,6 @@ function ScenarioRow({
 
 function stepKey(step: TimelineChainStepDto, index: number): string {
   if (step.kind === "event") return `evt-${step.eventId}-${index}`;
+  if (step.kind === "cte") return `cte-${step.chave}-${index}`;
   return step.chave;
 }

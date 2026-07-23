@@ -26,9 +26,22 @@ export type TimelineEventStepDto = {
   chaveRef?: string;
 };
 
-export type TimelineChainStepDto = TimelineNfeStepDto | TimelineEventStepDto;
+export type TimelineCteStepDto = {
+  kind: "cte";
+  label: string;
+  chave: string;
+  numero: number;
+  serie: number;
+  emitidaEm: string;
+  status: FiscalStatus;
+};
 
-/** Um cenário = uma cadeia derivada de uma remessa: remessa → retorno → venda [→ devolução]. */
+export type TimelineChainStepDto =
+  | TimelineNfeStepDto
+  | TimelineEventStepDto
+  | TimelineCteStepDto;
+
+/** Um cenário = uma cadeia derivada de uma remessa: remessa → [CT-e] → retorno → venda [→ devolução]. */
 export type TimelineChainDto = {
   id: string;
   pedidoMl?: string;

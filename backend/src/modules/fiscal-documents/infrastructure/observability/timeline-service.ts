@@ -7,9 +7,9 @@ import {
   type CancellationRef,
   type InutilizationRef,
 } from "./timeline-chain-enrichment.js";
+import { insertCteStepsIntoChain, type TimelineCteRef } from "./timeline-cte-insertion.js";
 import type {
   TimelineChainDto,
-  TimelineChainStepDto,
   TimelineNfeStepDto,
   TimelineRemessaGroupDto,
 } from "./timeline-step.dto.js";
@@ -17,6 +17,7 @@ import type {
 export type {
   TimelineChainDto,
   TimelineChainStepDto,
+  TimelineCteStepDto,
   TimelineEventStepDto,
   TimelineNfeStepDto,
   TimelineRemessaGroupDto,
@@ -134,6 +135,23 @@ async function loadTimelineEventRefs(
   return { inutilizations, cancellationsByChave };
 }
 
+async function loadTimelineCtes(db: DbClient, tenantId: string): Promise<TimelineCteRef[]> {
+  const rows = await db.cTe.findMany({
+    where: { tenantId, deletedAt: null },
+    select: {
+      id: true,
+      chave: true,
+      numero: true,
+      serie: true,
+      emitidoEm: true,
+      status: true,
+      nfeRemessaId: true,
+      nfeVendaId: true,
+    },
+  });
+  return rows;
+}
+
 /**
  * Cadeias fiscais agrupadas por remessa. Cada grupo traz a remessa de origem
  * (com saldo atual) e os cenários que dela derivam.
@@ -142,7 +160,7 @@ export async function listTimelineChains(
   db: DbClient,
   tenantId: string,
 ): Promise<TimelineRemessaGroupDto[]> {
-  const [nfes, eventRefs] = await Promise.all([
+  const [nfes, eventRefs, ctes] = await Promise.all([
     db.nFe.findMany({
       where: { tenantId, ...fiscalNotDeleted },
       include: {
@@ -152,23 +170,26 @@ export async function listTimelineChains(
       orderBy: { emitidaEm: "asc" },
     }),
     loadTimelineEventRefs(db, tenantId),
+    loadTimelineCtes(db, tenantId),
   ]);
 
   const byId = new Map<string, ChainNode>(nfes.map((n) => [n.id, n as ChainNode]));
   const byChave = new Map<string, ChainNode>(nfes.map((n) => [n.chave, n as ChainNode]));
+  const nfeChaveToId = new Map(nfes.map((n) => [n.chave, n.id]));
 
   const cenarios = nfes
     .filter((n) => n.tipo === NFeTipo.VENDA)
     .map((v) => {
       const cenario = buildChainFromVenda(v as ChainNode, byId);
       const nfeSteps = cenario.steps.filter((step): step is TimelineNfeStepDto => step.kind === "nfe");
+      const withEvents = enrichScenarioStepsWithEvents(
+        nfeSteps,
+        eventRefs.inutilizations,
+        eventRefs.cancellationsByChave,
+      );
       return {
         ...cenario,
-        steps: enrichScenarioStepsWithEvents(
-          nfeSteps,
-          eventRefs.inutilizations,
-          eventRefs.cancellationsByChave,
-        ),
+        steps: insertCteStepsIntoChain(withEvents, ctes, nfeChaveToId),
       };
     });
 

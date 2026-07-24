@@ -4,6 +4,7 @@ import { DeleteConfirmButton } from "@/components/delete-confirm-button";
 import { NfeCancelarButton } from "@/components/nfe-cancelar-button";
 import { NfeDevolucaoButton } from "@/components/nfe-devolucao-button";
 import {
+  NfeConferenciaButton,
   NfeInsucessoButton,
   NfeRetornoFisicoButton,
 } from "@/components/nfe-fulfillment-return-buttons";
@@ -215,12 +216,20 @@ export default async function NFeListPage() {
                             </>
                           )}
                           {(nfe.tipo === "REMESSA" || nfe.tipo === "REMESSA_AVANCO") &&
-                            nfe.status === "AUTORIZADA" &&
-                            (nfe.saldoDisponivel ?? 0) > 0 && (
-                              <NfeRetornoFisicoButton
-                                chave={nfe.chave}
-                                label={`${nfe.numero}/${nfe.serie}`}
-                              />
+                            nfe.status === "AUTORIZADA" && (
+                              <>
+                                <NfeConferenciaButton
+                                  chave={nfe.chave}
+                                  label={`${nfe.numero}/${nfe.serie}`}
+                                  saldoHint={nfe.saldoDisponivel ?? nfe.quantidade}
+                                />
+                                {(nfe.saldoDisponivel ?? 0) > 0 && (
+                                  <NfeRetornoFisicoButton
+                                    chave={nfe.chave}
+                                    label={`${nfe.numero}/${nfe.serie}`}
+                                  />
+                                )}
+                              </>
                             )}
                           <DeleteConfirmButton
                             variant="nfe"

@@ -1,131 +1,119 @@
-# Implementation Plan: `<infCpl>` fulfillment EBazar / ML Full
+# Implementation Plan: Matriz SALE + CFOP árvore / retorno simbólico
+
+> **SALE + ST:** entregues (2026-07-24).  
+> **Próximo:** Conferência INBOUND POSITIVE/NEGATIVE — intent confirmado; spec DRAFT em  
+> [`docs/specs/inbound-conference-differences.md`](../docs/specs/inbound-conference-differences.md).  
+> Plan detalhado de implementação só após **APPROVED** da spec.
 
 ## Overview
 
-Implementar o composer canônico de `NF-e.infAdic.infCpl` conforme [`docs/specs/infcpl-fulfillment-ebazar.md`](../docs/specs/infcpl-fulfillment-ebazar.md): `{head} {middle?} {regime?}` em ASCII, regimes por UF+CNPJ, preservar impostos na venda, IE nas remessas, interpolação n+serie+data em devolução/insucesso, e novos `NFeTipo` `RETORNO_FISICO` + `INSULCESSO_DE_ENTREGA`.
+Fechar a 1ª fatia do simulador Fulfillment ML (**SALE** = venda + retorno simbólico) conforme [`docs/specs/sale-fulfillment-cfop-matrix.md`](../docs/specs/sale-fulfillment-cfop-matrix.md): CFOP de venda pela árvore de decisão + TaxRule só para impostos; em seguida CFOP de retorno automático (hoje hardcode 1949/2949); depois ST engine e demais processos.
+
+**Já entregue (não reabrir sem necessidade):** árvore `resolveCfopByDecisionTree`, settings `perfilVendedor` / `logisticaPadrao` / `stInterestadualMode`, `Product.sujeitoSt`, homogêneo ST, `assertTaxRuleCfopMatchesTree` (só se CFOP manual), UI forma de faturamento.
+
+**Plano anterior (`infCpl` EBazar):** concluído — ver histórico git / `docs/specs/infcpl-fulfillment-ebazar.md`.
 
 ## Architecture Decisions
 
-- **Composer em `packages/fiscal-core/src/infcpl/`** — compartilhado backend + nfe-xml; export via `fiscal-core` index.
-- **Builders só montam inputs** (operation, uf, cnpj, middle, nfeOrigem) e passam `extraInfCpl` ao `buildInfAdicNode`.
-- **`buildVendaInfCplText` vira miolo** — extrair abertura; head vem do composer (`VENDA_FULFILLMENT`).
-- **Helpers legados** (`remessaInfCplText`, `retornoInfCplText`, `remessaSimbolicaPosDevolucaoInfCplText`) → thin wrappers `@deprecated` apontando ao composer (remoção total = Ask first / task final opcional).
-- **`REMESSA_AVANCO`** → `operation: "REMESSA"`; **`TRANSFERENCIA_FILIAL`** → `operation: "TRANSFERENCIA"`.
-- **Novos tipos:** migration Prisma + union `NFeTipoXml` + factory. **Emissão completa (UI/use-cases)** de `RETORNO_FISICO` / `INSULCESSO_DE_ENTREGA` fica em Phase 5 (**Ask first** antes de executar).
-- **`mensagemPadrao` / DIFAL em `buildInfAdicNode`:** join por **espaço único** (alinhado ao composer; sem `|`) + linha DIFAL do emitter quando aplicável.
+- **CFOP venda** = árvore (`fiscal-core`); planilha TaxRule XLSX **não** define CFOP (`cfop=""`).
+- **Impostos** = TaxRule `sale` (`icmsByUf` + payload) + motor.
+- **CFOP retorno** = alvo: TaxRule / resolução por UF+natureza com allowlist ML (`1949`, `2949`, `1904`, `1907`, `2904`, `2907`) — hoje hardcode em `resolveRetornoSimbolicoCfop`.
+- **Um CFOP por NF-e** — pedido não mistura ST / não-ST.
+- **ST Full** não está na árvore; ST só com `estoque_proprio`. Motor `vBCST` ainda ausente → emissão ST bloqueada ou experimental até Phase 3.
 
 ## Dependency graph
 
 ```
-Composer + regimes + unit tests (fiscal-core)
+Smoke homologação (já implementado)
     │
-    ├── Refactor miolo venda (buildVendaInfCplText → middle only)
+    ├── CFOP retorno simbólico (TaxRule / allowlist / remove hardcode)
     │
-    ├── Wire remessa / retorno / transferência builders
+    ├── (opcional) Allowlist SALE + validação CFOP venda fora da árvore
     │
-    ├── Wire venda + devolução builders (+ payload origem)
+    ├── Motor ICMS-ST (vBCST / vICMSST) — necessário p/ 5405/6403/6404
     │
-    ├── Prisma NFeTipo + NFeTipoXml + factory/builders stubs
-    │
-    └── (Ask first) Emissão use-cases / UI novos tipos + docs CAT 31
+    └── Próximo processo ML (INBOUND ou SALE_RETURN) — Ask first
 ```
 
 ## Task List
 
-### Phase 1: Foundation (composer)
+### Phase 0: Smoke homologação (já implementado)
 
-#### Task 1: Mapa de regimes + `resolveRegimeEspecial`
-**Acceptance:** 8 pares UF/CNPJ ASCII; match por dígitos; mismatch → `null`.  
-**Verify:** `pnpm --filter @msimulation-xml/fiscal-core test` (novos testes).  
-**Deps:** None. **Scope:** S — `fulfillment-infcpl.regimes.ts` + test.
+#### Task 0: Checklist manual SALE Full
+**Description:** Validar ponta a ponta o que já está no código antes de mudar retorno.  
+**Acceptance:**
+- [ ] Settings: `comercio` + `armazem_geral`
+- [ ] Remessa com saldo FIFO + pedido NC intra → venda CFOP `5106`; inter → `6106`
+- [ ] Settings `industria` → `5105` / `6105`
+- [ ] Par retorno simbólico emitido; `xTexto` `SALE-sale-…` e `SALE-symbolic_inbound_return-…`
+- [ ] Pedido misto ST/não-ST rejeitado
+- [ ] Migration `sujeito_st` aplicada no ambiente local
 
-#### Task 2: `buildFulfillmentInfCplText` (head + middle + regime)
-**Acceptance:** Todas as operations da spec; interpolação n+serie+data (`America/Sao_Paulo`); ASCII; `REMESSA` head usado também para avanço no caller.  
-**Verify:** unit tests composer.  
-**Deps:** Task 1. **Scope:** S–M — `fulfillment-infcpl.ts` + test + export `index.ts`.
+**Verification:** emissão via UI/API + inspeção XML.  
+**Deps:** None. **Scope:** S (manual).
 
-### Checkpoint: Foundation
-- [ ] Unit tests do composer 100% operations + 8 regimes
-- [ ] `fiscal-core` build OK
-- [ ] Review humano opcional antes de wiring
+### Checkpoint: Smoke
+- [x] Homolog local OK (2026-07-24)
+- [x] Spec marcada APPROVED pelo humano
 
-### Phase 2: Wire builders existentes
+### Phase 1: CFOP retorno simbólico
 
-#### Task 3: Remessa / simbólica / avanço / transferência → composer
-**Acceptance:** XML `<infCpl>` com head nova + IE no miolo (quando houver) + regime; pós-devolução inclui ref n/serie/data; sem abertura CAT 31.  
-**Verify:** `pnpm --filter @msimulation-xml/nfe-xml test` (asserts em `build-remessa.test.ts`).  
-**Deps:** Task 2. **Scope:** M — `remessa.builder.ts`, `fiscal-xml.util.ts` (wrappers), testes.
+#### Task 1: Allowlist + resolução CFOP retorno (sem hardcode como fonte)
+**Description:** Substituir `1949`/`2949` fixos por resolução automática (UF emitente↔CD + natureza), validada na allowlist ML `symbolic_inbound_return`. Preferência: TaxRule `symbolic_inbound_return` quando existir campo/uso; senão árvore/regra UF (intra `1949`, inter `2949`) e caminho explícito para `1904`/`1907`/`2904`/`2907` via settings ou regra.  
+**Acceptance:**
+- [ ] Hardcode deixa de ser única fonte de verdade
+- [ ] Allowlist testada
+- [ ] Sales Chain / `emit-return-note` usa o novo resolver
+- [ ] Unit tests cobertura allowlist + intra/inter
 
-#### Task 4: Retorno simbólico → composer (sem IE no miolo)
-**Acceptance:** Head retorno + regime; sem IE no `infCpl`.  
-**Verify:** asserts retorno em `build-remessa.test.ts`.  
-**Deps:** Task 2. **Scope:** S — `retorno.builder.ts` + testes.
+**Verification:** `pnpm --filter @msimulation-xml/fiscal-core test` + teste backend retorno se houver.  
+**Deps:** Checkpoint Smoke. **Scope:** M — `retorno-simbolico-dest.ts`, `emit-return-note.ts`, `resolve-sales-chain-rules.ts`, `fiscal-core`.
 
-#### Task 5: Venda — head composer + miolo com impostos
-**Acceptance:** Head `Venda de mercadoria...`; miolo preserva CD + retorno + IBPT + DIFAL; regime no fim se match.  
-**Verify:** `build-venda.test.ts`.  
-**Deps:** Task 2. **Scope:** M — `venda-ml-payload.ts`, `venda.builder.ts`, testes.
+#### Task 2: `transactionType` retorno alinhado a ML
+**Description:** `resolveSalesChainRules` busca impostos de retorno com tipo coerente (`symbolic_inbound_return` ou alias documentado de `inbound` para planilhas legadas).  
+**Acceptance:**
+- [ ] Resolução de TaxRule do retorno não depende semanticamente de “inbound remessa” sem alias
+- [ ] Import XLSX continua funcionando (alias se necessário)
+- [ ] Teste de resolução
 
-#### Task 6: Devolução — interpolação origem + composer
-**Acceptance:** Head com n+serie+data da venda referenciada; regime se match; payload carrega origem.  
-**Verify:** teste XML devolução (novo ou existente) + ajuste `prisma-document-return.repository` se necessário.  
-**Deps:** Task 2, Task 5 (padrão venda builder). **Scope:** M — `devolucao.builder.ts`, return repository/payload, testes.
+**Verification:** testes tax-rule-resolution + sales.  
+**Deps:** Task 1. **Scope:** M.
 
-### Checkpoint: Core wiring
-- [ ] `nfe-xml` + `fiscal-core` testes verdes
-- [ ] Remessa com IE; retorno sem IE; venda com impostos; devolução interpolada
-- [ ] Review humano antes dos novos tipos
+### Checkpoint: Retorno
+- [ ] Smoke: venda Full + retorno com CFOP esperado (intra/inter)
+- [ ] Suites `fiscal-core` + backend relevantes verdes
 
-### Phase 3: Novos `NFeTipo`
+### Phase 2: Polish SALE (opcional nesta fatia)
 
-#### Task 7: Prisma migration `RETORNO_FISICO` + `INSULCESSO_DE_ENTREGA`
-**Acceptance:** Enum no schema; client gera; typecheck backend.  
-**Verify:** `prisma migrate` + `tsc --noEmit` backend.  
-**Deps:** Checkpoint Core. **Scope:** S — `schema.prisma` + migration.
+#### Task 3: Allowlist CFOP venda vs árvore
+**Description:** Validar que CFOP emitido ∈ allowlist SALE da planilha ML (ou ∈ saída da árvore).  
+**Acceptance:** CFOP fora → erro de domínio.  
+**Deps:** Checkpoint Retorno. **Scope:** S.
 
-#### Task 8: `NFeTipoXml` + factory + builders dos novos tipos
-**Acceptance:** `RETORNO_FISICO` via builder retorno (ou strategy dedicada); `INSULCESSO_DE_ENTREGA` via strategy devolução; factory lista tipos; teste factory.  
-**Verify:** `nfe-factory.test.ts` + build XML mínimo.  
-**Deps:** Task 7, Tasks 4–6. **Scope:** M — `types.ts`, `nfe-factory.ts`, builders, `fiscal-core/nfe-tipo.ts` se espelhar, frontend `fiscal-types` union.
+### Phase 3: ICMS-ST (Ask first se adiar)
 
-### Checkpoint: Tipos
-- [ ] Enum + factory suportam os 2 tipos
-- [ ] XML mínimo gera `infCpl` correto para ambos
-- [ ] **Stop:** Ask first antes de Phase 5 (emissão/UI)
+#### Task 4: Cálculo ST no tax-engine + XML
+**Description:** `vBCST` / `vICMSST` / tags CST 10/30/60/70 ou CSOSN ST a partir do payload TaxRule.  
+**Acceptance:** emissão `5405`/`6403`/`6404` com totais coerentes; teste engine + XML.  
+**Deps:** Checkpoint Retorno. **Scope:** L. **Ask first** se priorizar outro processo ML antes.
 
-### Phase 4: Cleanup
+### Phase 4: Próximo processo ML (Ask first)
 
-#### Task 9: Deprecar helpers legados + alinhar exports
-**Acceptance:** Call sites usam composer; helpers `@deprecated` ou removidos (Ask first se remove).  
-**Verify:** suites verdes; sem imports órfãos críticos.  
-**Deps:** Tasks 3–6. **Scope:** S–M.
-
-#### Task 10 (opcional): Atualizar `regras-fulfillment-cat31.md` § infCpl
-**Acceptance:** Doc reflete head ASCII + IE remessa + regimes (Ask first).  
-**Deps:** Checkpoint Core. **Scope:** S.
-
-### Phase 5: Ask first — emissão completa dos novos tipos
-
-#### Task 11 (bloqueada): Use-cases / UI `RETORNO_FISICO` + `INSULCESSO_DE_ENTREGA`
-**Acceptance:** a definir com o humano (endpoints, telas, cadeia fiscal).  
-**Deps:** Task 8 + aprovação explícita. **Scope:** L → quebrar após escopo.
-
-### Checkpoint: Complete (Phases 1–4)
-- [ ] Success criteria da spec (exceto emissão UI se Phase 5 adiada)
-- [ ] Ready for `code-review-and-quality`
+#### Task 5: Escolher INBOUND vs SALE_RETURN
+**Description:** Próxima linha da `Tabela_Processos_Fulfillment_ML.xlsx`.  
+**Deps:** Checkpoint Retorno (+ ST se estoque próprio ST for prioridade). **Scope:** L → novo plan.
 
 ## Risks and Mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Quebra de asserts XML legados CAT 31 | Med | Atualizar testes na mesma task do wire |
-| `buildVendaInfCplText` usado fora do builder | Med | Grep call sites antes do refactor (Task 5) |
-| Migration enum em prod/staging | Med | Migration só add-value; sem rename |
-| Escopo UI novos tipos estoura fatia | High | Phase 5 Ask first |
-| `mensagemPadrao` vs espaço do composer | Low | Resolvido: auxiliary também junta com espaço |
+| TaxRule import sem CFOP confundir assert | Low | Assert só se `cfop` manual preenchido |
+| Alias `inbound` vs `symbolic_inbound_return` quebra import | Med | Alias documentado + testes |
+| Emitir ST sem motor | High | Bloquear ST na emissão até Task 4 |
+| Escopo “todos os processos” estoura | High | Um processo por plan |
 
-## Open Questions — resolvidas (2026-07-23)
+## Open Questions (humano)
 
-1. **Phase 5 nesta entrega** (emissão completa).
-2. Helpers legados: **remover** (não só deprecate).
-3. Doc CAT 31: **sim** nesta entrega (Task 10).
+1. Spec `sale-fulfillment-cfop-matrix.md`: **aprovar** após smoke? (status hoje DRAFT)
+2. Retorno: só `1949`/`2949` por UF na 1ª entrega do retorno, ou já exigir seed para `1904`/`1907`/`2904`/`2907`?
+3. ST (Task 4) antes ou depois do próximo processo ML?

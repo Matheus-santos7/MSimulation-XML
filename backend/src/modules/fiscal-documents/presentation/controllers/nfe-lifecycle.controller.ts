@@ -8,6 +8,7 @@ import { NumberInutilizationError } from "../../domain/errors/number-inutilizati
 import { createFiscalDocumentsModule } from "../../infrastructure/factory/fiscal-documents-module.factory.js";
 import {
   cancelDocumentBodySchema,
+  inboundConferenceBodySchema,
   inutilizeNumberBodySchema,
   nfeAccessKeyParamSchema,
 } from "../schemas/fiscal-document.schemas.js";
@@ -84,6 +85,25 @@ export const nfeLifecycleController: FastifyPluginAsync = async (app) => {
         remessaNfeKey: chave,
       });
       return reply.status(201).send(result);
+    } catch (error) {
+      if (handleRouteError(reply, error, { statusErrors: [...NFE_LIFECYCLE_ERRORS] })) return;
+      throw error;
+    }
+  });
+
+  app.post("/nfes/:chave/conferencia", { onRequest: [requireAdminHook] }, async (req, reply) => {
+    try {
+      const tenantId = tenantIdFromRequest(req);
+      const { chave } = nfeAccessKeyParamSchema.parse(req.params);
+      const body = inboundConferenceBodySchema.parse(req.body ?? {});
+      const result = await fiscalDocuments.processInboundConference.execute({
+        tenantId,
+        remessaNfeKey: chave,
+        receivedQty: body.receivedQty,
+        positiveCfopOverride: body.positiveCfopOverride,
+        negativeCfopOverride: body.negativeCfopOverride,
+      });
+      return reply.status(result.noop ? 200 : 201).send(result);
     } catch (error) {
       if (handleRouteError(reply, error, { statusErrors: [...NFE_LIFECYCLE_ERRORS] })) return;
       throw error;

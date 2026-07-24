@@ -79,6 +79,30 @@ export async function emitRetornoFisicoNote(chave: string): Promise<RetornoFisic
   ) as Promise<RetornoFisicoResult>;
 }
 
+export type InboundConferenceResult = {
+  expectedQty: number;
+  receivedQty: number;
+  negative?: NFeDto;
+  positive?: NFeDto;
+  saldoApos: number;
+  noop: boolean;
+};
+
+export async function emitInboundConference(
+  chave: string,
+  body: {
+    receivedQty: number;
+    positiveCfopOverride?: string | null;
+    negativeCfopOverride?: string | null;
+  },
+): Promise<InboundConferenceResult> {
+  return mutateJson<InboundConferenceResult>(
+    buildApiUrl(`/api/nfes/${chave}/conferencia`),
+    "POST",
+    body,
+  ) as Promise<InboundConferenceResult>;
+}
+
 export type CancelamentoResult = {
   venda: NFeDto;
   retorno?: NFeDto;

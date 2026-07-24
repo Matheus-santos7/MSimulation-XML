@@ -87,7 +87,6 @@ export {
   CFOP_VENDA_NAO_CONTRIB_INTRA,
   CFOP_VENDA_NAO_CONTRIB_INTER,
   ML_NFE_VER_PROC,
-
   assertTaxRuleCfopMatchesTree,
   assertCestRequiredForStCfop,
   CFOP_VENDA_ST,
@@ -124,6 +123,35 @@ export {
   type ResolveSymbolicInboundReturnCfopResult,
   type SymbolicReturnNatureza,
 } from "./sale-return-cfop.js";
+export {
+  assertMlInboundNegativeDifferenceCfop,
+  assertMlInboundPositiveDifferenceCfop,
+  INBOUND_NEGATIVE_DIFFERENCE_NAT_OP,
+  INBOUND_POSITIVE_DIFFERENCE_NAT_OP,
+  InboundConferenceCfopError,
+  isMlInboundNegativeDifferenceCfop,
+  isMlInboundPositiveDifferenceCfop,
+  ML_INBOUND_NEGATIVE_DIFFERENCE_CFOPS,
+  ML_INBOUND_POSITIVE_DIFFERENCE_CFOPS,
+  resolveInboundNegativeDifferenceCfop,
+  resolveInboundPositiveDifferenceCfop,
+  type MlInboundNegativeDifferenceCfop,
+  type MlInboundPositiveDifferenceCfop,
+} from "./inbound-conference-cfop.js";
+export {
+  computeConferenceDeltas,
+  InboundConferenceDeltaError,
+  type ConferenceDeltaLine,
+  type ConferenceDeltaPlan,
+  type ConferenceLineInput,
+} from "./inbound-conference-delta.js";
+export {
+  isInboundPositiveDifferenceNfe,
+  mlProcessFromFiscalPayload,
+  ML_PROCESS_INBOUND_NEGATIVE_DIFFERENCE,
+  ML_PROCESS_INBOUND_POSITIVE_DIFFERENCE,
+  type MlInboundConferenceProcess,
+} from "./inbound-conference-payload.js";
 export {
   VENDA_ML_CD_DEPOSITO,
   VENDA_ML_IBS_CBS_DEFAULT,

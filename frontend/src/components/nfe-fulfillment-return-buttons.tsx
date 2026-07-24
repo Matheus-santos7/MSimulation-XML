@@ -1,9 +1,10 @@
 "use client";
 
-import { PackageMinus, Truck } from "lucide-react";
+import { ClipboardCheck, PackageMinus, Truck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
+  emitirConferenciaRemessaAction,
   emitirInsucessoAction,
   emitirRetornoFisicoAction,
 } from "@/app/(app)/nfe/actions";
@@ -18,6 +19,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 type InsucessoProps = {
   chave: string;
@@ -139,6 +142,103 @@ export function NfeRetornoFisicoButton({ chave, label }: RetornoFisicoProps) {
               }}
             >
               {pending ? "Emitindo…" : "Emitir retorno físico"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
+type ConferenciaProps = {
+  chave: string;
+  label: string;
+  /** Saldo FIFO exibido como dica (expected real vem do backend). */
+  saldoHint?: number;
+};
+
+export function NfeConferenciaButton({ chave, label, saldoHint }: ConferenciaProps) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const [receivedQty, setReceivedQty] = useState(
+    saldoHint != null && Number.isFinite(saldoHint) ? String(saldoHint) : "",
+  );
+  const [pending, startTransition] = useTransition();
+
+  return (
+    <>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="size-8 text-indigo-600 bg-indigo-500/10 hover:bg-indigo-500/20 hover:text-indigo-500 ring-1 ring-indigo-500/30"
+        aria-label={`Conferência da remessa ${label}`}
+        title="Conferência INBOUND (diferença POSITIVE/NEGATIVE)"
+        onClick={() => {
+          setError(null);
+          setInfo(null);
+          if (saldoHint != null && Number.isFinite(saldoHint)) {
+            setReceivedQty(String(saldoHint));
+          }
+          setOpen(true);
+        }}
+      >
+        <ClipboardCheck className="size-3.5" />
+      </Button>
+      <AlertDialog open={open} onOpenChange={setOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Conferência da remessa {label}</AlertDialogTitle>
+            <AlertDialogDescription>
+              Informe a quantidade recebida. O esperado é o saldo FIFO atual (pai + sobras). Sem
+              diferença → nada emite. Falta → NF NEGATIVE; sobra → NF POSITIVE.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="grid gap-2 px-1">
+            <Label htmlFor={`conf-qty-${chave}`}>Quantidade recebida</Label>
+            <Input
+              id={`conf-qty-${chave}`}
+              type="number"
+              min={0}
+              step="any"
+              value={receivedQty}
+              onChange={(e) => setReceivedQty(e.target.value)}
+              disabled={pending}
+            />
+          </div>
+          {error && <p className="text-[13px] text-destructive px-1">{error}</p>}
+          {info && <p className="text-[13px] text-muted-foreground px-1">{info}</p>}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={pending || receivedQty.trim() === ""}
+              onClick={(e) => {
+                e.preventDefault();
+                const qty = Number(receivedQty);
+                if (!Number.isFinite(qty) || qty < 0) {
+                  setError("Quantidade inválida.");
+                  return;
+                }
+                startTransition(async () => {
+                  const result = await emitirConferenciaRemessaAction(chave, qty);
+                  if (result.error) {
+                    setError(result.error);
+                    return;
+                  }
+                  if (result.noop) {
+                    setInfo(
+                      `Sem diferença (esperado ${result.expectedQty}). Nenhuma NF emitida.`,
+                    );
+                    return;
+                  }
+                  setOpen(false);
+                  router.refresh();
+                });
+              }}
+            >
+              {pending ? "Conferindo…" : "Confirmar conferência"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -17,6 +17,30 @@ describe("fiscal-core / nfe-xtexto", () => {
     );
   });
 
+  it("conferência POSITIVE / NEGATIVE — xTexto processo ML", () => {
+    const pedidoMl = "CONF-1";
+    assert.equal(
+      buildNfeObsContXTexto({
+        tipo: NFeTipo.REMESSA,
+        cfop: "5949",
+        natOp: "Outras Saidas - Remessa para Deposito Temporario",
+        pedidoMl,
+        mlProcess: "INBOUND_POSITIVE_DIFFERENCE",
+      }),
+      `INBOUND_POSITIVE_DIFFERENCE-inbound-${pedidoMl}-1-OLSS-279642028`,
+    );
+    assert.equal(
+      buildNfeObsContXTexto({
+        tipo: NFeTipo.RETORNO_FISICO,
+        cfop: "1949",
+        natOp: "Outras Entradas - Retorno de Deposito Temporario",
+        pedidoMl,
+        mlProcess: "INBOUND_NEGATIVE_DIFFERENCE",
+      }),
+      `INBOUND_NEGATIVE_DIFFERENCE-inbound_return-${pedidoMl}-1-OLSS-279642028`,
+    );
+  });
+
   it("retorno simbólico — padrão ML", () => {
     const pedidoMl = "123456789";
     assert.equal(

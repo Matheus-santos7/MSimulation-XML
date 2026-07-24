@@ -45,6 +45,7 @@ export class CreateProductUseCase {
       preco: command.preco,
       precoCusto: command.precoCusto,
       estoque: stock,
+      sujeitoSt: command.sujeitoSt === true,
       taxRuleBaseId,
     });
   }

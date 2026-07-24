@@ -454,6 +454,7 @@ export type ProductDto = {
   preco: number;
   precoCusto: number;
   estoque: number;
+  sujeitoSt?: boolean;
   taxRuleBaseId?: string;
 };
 
@@ -477,6 +478,7 @@ export type ProductInput = {
   preco: number;
   precoCusto: number;
   estoque?: number;
+  sujeitoSt?: boolean;
   taxRuleBaseId?: string;
 };
 

@@ -6,7 +6,7 @@ import type { CustomerType, ResolvedTaxRule } from "../../../tax/index.js";
  * Regras fiscais e configurações resolvidas uma vez por emissão da cadeia.
  *
  * - `saleTaxRule` — CFOP/impostos da NF-e VENDA (emitente → consumidor)
- * - `inboundTaxRule` — CFOP/impostos do RETORNO SIMBÓLICO (emitente → CD/remessa)
+ * - `inboundTaxRule` — impostos do RETORNO SIMBÓLICO (`symbolic_inbound_return` → alias `inbound`)
  * - `emitterSettings` — parâmetros do emissor (autXML, etc.)
  */
 export type SalesChainRules = {

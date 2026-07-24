@@ -43,6 +43,23 @@ export type FiscalEmitterSettingsData = {
     formaFaturamento: "EMISSOR_PROPRIO" | "EMISSOR_ML";
     dadosFiscaisAnunciosOk: boolean;
     dadosFiscaisAnunciosNota?: string;
+    /**
+     * Perfil do emitente para a árvore de CFOP (`resolveCfopByDecisionTree`).
+     * Default: comércio.
+     */
+    perfilVendedor?: "industria" | "comercio";
+    /**
+     * Logística padrão da venda no simulador.
+     * Full ML → `armazem_geral`; venda de estoque próprio → `estoque_proprio`.
+     */
+    logisticaPadrao?: "armazem_geral" | "estoque_proprio";
+    /** Interestadual ST: 6403 (protocolo) vs 6404 (imposto retido). Default: imposto_retido. */
+    stInterestadualMode?: "protocolo" | "imposto_retido";
+    /**
+     * Natureza do CFOP de retorno simbólico (allowlist ML).
+     * Omitido: infere da remessa (5905→1907) ou default `outras_entradas` (1949/2949).
+     */
+    retornoSimbolicoNatureza?: "outras_entradas" | "retorno_venda_fora" | "retorno_deposito";
   };
   taxes: {
     cstDevolucao: {

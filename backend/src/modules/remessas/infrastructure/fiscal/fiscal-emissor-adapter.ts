@@ -87,13 +87,13 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
     const inboundTaxRule = await resolveTaxRule(tx, tenant.id, {
       originUf: tenant.uf,
       destinationUf: destUf,
-      transactionType: "inbound",
+      transactionType: "symbolic_inbound_return",
       customerType: "taxpayer",
       ruleBaseId,
     });
     if (!inboundTaxRule) {
       throw new RemessaDomainError(
-        `Regra "${ruleBaseId}" sem linha inbound (envio de estoque) para retorno simbólico (${tenant.uf} → ${destUf}).`,
+        `Regra "${ruleBaseId}" sem linha symbolic_inbound_return/inbound para retorno simbólico (${tenant.uf} → ${destUf}).`,
       );
     }
 
@@ -111,7 +111,10 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
     });
 
     const aliqFallback = resolveIcmsFallbackRate(tenant.uf, destUf, "inbound", emitterSettings);
-    const cfop = resolveRetornoSimbolicoCfop(tenant.uf, destUf);
+    const cfop = resolveRetornoSimbolicoCfop(tenant.uf, destUf, {
+      natureza: emitterSettings.basic.retornoSimbolicoNatureza,
+      remessaCfop: remessaPai.cfop,
+    });
     const calc = calculateInboundInvoice(
       orderLineFromProduct(product, {
         cfop,

@@ -13,6 +13,8 @@ export type OrderProductForEmit = {
   unidade?: string;
   origem?: number;
   nfci?: string | null;
+  /** Produto sujeito a ICMS-ST (CFOP 5405/6403/6404 com estoque próprio). */
+  sujeitoSt?: boolean;
 };
 
 /** Tenant reduzido para emissão (séries e identificação fiscal). */

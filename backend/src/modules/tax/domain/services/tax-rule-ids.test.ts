@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { buildTaxRuleRowId, taxRuleBaseIdFromRuleId, taxRuleOriginUf } from "./tax-rule-ids.js";
+import {
+  buildTaxRuleRowId,
+  taxRuleBaseIdFromRuleId,
+  taxRuleLookupTransactionTypes,
+  taxRuleOriginUf,
+} from "./tax-rule-ids.js";
 
 describe("tax-rule-ids", () => {
   it("inclui origem fiscal no ruleId da linha", () => {
@@ -18,6 +23,30 @@ describe("tax-rule-ids", () => {
   it("mantém compatibilidade com ruleId legado sem origem", () => {
     assert.equal(buildTaxRuleRowId("797515", "taxpayer", "sale"), "797515-taxpayer-sale");
     assert.equal(taxRuleBaseIdFromRuleId("797515-taxpayer-sale"), "797515");
+  });
+
+  it("taxRuleLookupTransactionTypes alias symbolic → inbound", () => {
+    assert.deepEqual(taxRuleLookupTransactionTypes("symbolic_inbound_return"), [
+      "symbolic_inbound_return",
+      "inbound",
+    ]);
+    assert.deepEqual(taxRuleLookupTransactionTypes("inbound_return"), [
+      "inbound_return",
+      "inbound",
+    ]);
+    assert.deepEqual(taxRuleLookupTransactionTypes("inbound"), ["inbound"]);
+    assert.deepEqual(taxRuleLookupTransactionTypes("sale"), ["sale"]);
+  });
+
+  it("parseia ruleId com symbolic_inbound_return", () => {
+    assert.equal(
+      taxRuleBaseIdFromRuleId("797515-SP-taxpayer-symbolic_inbound_return"),
+      "797515",
+    );
+    assert.equal(
+      buildTaxRuleRowId("797515", "taxpayer", "symbolic_inbound_return", "SP"),
+      "797515-SP-taxpayer-symbolic_inbound_return",
+    );
   });
 
   it("taxRuleOriginUf prioriza coluna uf e sufixo do ruleId", () => {

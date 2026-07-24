@@ -17,6 +17,7 @@ export type ProductWriteData = {
   preco: number;
   precoCusto: number;
   estoque: number;
+  sujeitoSt?: boolean;
   taxRuleBaseId?: string;
 };
 

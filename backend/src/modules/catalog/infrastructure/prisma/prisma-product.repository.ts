@@ -60,6 +60,7 @@ export class PrismaProductRepository implements ProductRepository {
           preco: data.preco,
           precoCusto: data.precoCusto,
           estoque: data.estoque,
+          sujeitoSt: data.sujeitoSt === true,
           taxRuleBaseId: data.taxRuleBaseId,
         },
       });

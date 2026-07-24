@@ -331,6 +331,8 @@ model Product {
   nome      String   @map("nome")
   ncm       String   @map("ncm")
   cest      String?  @map("cest")
+  /// Produto sujeito a ICMS-ST (árvore CFOP estoque próprio → 5405/6403/6404).
+  sujeitoSt Boolean  @default(false) @map("sujeito_st")
   exTipi    String?  @map("ex_tipi") @db.VarChar(3)
   /// Ficha de conteúdo de importação (`<nFCI>`) quando aplicável.
   nfci            String?  @map("nfci") @db.VarChar(36)

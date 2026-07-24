@@ -8,5 +8,5 @@ export const metadata: Metadata = { title: "Forma de Faturamento" };
 export default async function FormaFaturamentoPage() {
   const tenantId = await resolveActiveTenantId();
   const cfg = await getFiscalEmitterSettings();
-  return <FormaFaturamentoForm initial={cfg?.settings.basic.formaFaturamento ?? "EMISSOR_PROPRIO"} />;
+  return <FormaFaturamentoForm initial={cfg?.settings.basic ?? { formaFaturamento: "EMISSOR_PROPRIO", dadosFiscaisAnunciosOk: false }} />;
 }

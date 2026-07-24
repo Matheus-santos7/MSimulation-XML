@@ -10,7 +10,9 @@ import type { SalesChainRules } from "../../application/dto/sales-chain.dto.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 
 /**
- * Resolve regras fiscais de venda e inbound + settings do emissor para a cadeia.
+ * Resolve regras fiscais de venda e retorno simbólico + settings do emissor.
+ *
+ * Retorno: `transactionType: "symbolic_inbound_return"` (alias → `inbound` XLSX).
  *
  * @param returnDestUf - UF do destino do retorno (CD da remessa FIFO)
  */
@@ -42,16 +44,18 @@ export async function resolveSalesChainRules(
     },
   );
 
+  // Impostos: `symbolic_inbound_return` com alias → `inbound` (XLSX legado).
+  // CFOP do retorno continua na árvore (`sale-return-cfop`), não nesta TaxRule.
   const inboundTaxRule = requireTaxRule(
     await resolveTaxRule(tx, tenant.id, {
       originUf: tenant.uf,
       destinationUf: returnDestUf,
-      transactionType: "inbound",
+      transactionType: "symbolic_inbound_return",
       customerType: "taxpayer",
       ruleBaseId,
     }),
     {
-      label: "retorno simbólico",
+      label: "retorno simbólico (symbolic_inbound_return)",
       ruleBaseId,
       originUf: tenant.uf,
       destinationUf: returnDestUf,

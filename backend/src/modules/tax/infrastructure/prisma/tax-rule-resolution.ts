@@ -1,6 +1,7 @@
 import { normalizeTaxStCode } from "@msimulation-xml/fiscal-core";
 import {
   buildTaxRuleRowId,
+  taxRuleLookupTransactionTypes,
   type CustomerType,
   type TransactionType,
 } from "../../domain/services/tax-rule-ids.js";
@@ -51,45 +52,51 @@ async function findTaxRuleRow(
     customerType: CustomerType;
   },
 ): Promise<TaxRuleRow | null> {
-  const { ruleBaseId, originUf, transactionType, customerType } = params;
+  const { ruleBaseId, originUf, customerType } = params;
+  const lookupTypes = taxRuleLookupTransactionTypes(params.transactionType);
 
-  if (ruleBaseId) {
-    const candidates = [
-      buildTaxRuleRowId(ruleBaseId, customerType, transactionType, originUf),
-      buildTaxRuleRowId(ruleBaseId, customerType, transactionType),
-    ];
+  for (const transactionType of lookupTypes) {
+    if (ruleBaseId) {
+      const candidates = [
+        buildTaxRuleRowId(ruleBaseId, customerType, transactionType, originUf),
+        buildTaxRuleRowId(ruleBaseId, customerType, transactionType),
+      ];
 
-    for (const candidateId of candidates) {
-      const row = await prisma.taxRule.findUnique({
-        where: { tenantId_ruleId: { tenantId, ruleId: candidateId } },
+      for (const candidateId of candidates) {
+        const row = await prisma.taxRule.findUnique({
+          where: { tenantId_ruleId: { tenantId, ruleId: candidateId } },
+        });
+        if (row && taxRuleMatchesOrigin(row, originUf)) return row;
+      }
+
+      const fallback = await prisma.taxRule.findFirst({
+        where: {
+          tenantId,
+          transactionType,
+          customerType,
+          ruleId: { startsWith: `${ruleBaseId}-` },
+          OR: [{ uf: originUf }, { origin: { startsWith: originUf } }],
+        },
+        orderBy: { updatedAt: "desc" },
       });
-      if (row && taxRuleMatchesOrigin(row, originUf)) return row;
+      if (fallback && taxRuleMatchesOrigin(fallback, originUf)) return fallback;
+      continue;
     }
 
-    const fallback = await prisma.taxRule.findFirst({
+    const xlsxRow = await prisma.taxRule.findFirst({
       where: {
         tenantId,
+        source: "xlsx",
         transactionType,
         customerType,
-        ruleId: { startsWith: `${ruleBaseId}-` },
         OR: [{ uf: originUf }, { origin: { startsWith: originUf } }],
       },
       orderBy: { updatedAt: "desc" },
     });
-    if (fallback && taxRuleMatchesOrigin(fallback, originUf)) return fallback;
-    return null;
+    if (xlsxRow) return xlsxRow;
   }
 
-  return prisma.taxRule.findFirst({
-    where: {
-      tenantId,
-      source: "xlsx",
-      transactionType,
-      customerType,
-      OR: [{ uf: originUf }, { origin: { startsWith: originUf } }],
-    },
-    orderBy: { updatedAt: "desc" },
-  });
+  return null;
 }
 
 /**

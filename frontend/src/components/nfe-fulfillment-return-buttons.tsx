@@ -9,6 +9,7 @@ import {
   emitirInsucessoAction,
   emitirRetornoFisicoAction,
 } from "@/app/(app)/nfe/actions";
+import { NfeActionMenuItem } from "@/components/nfe-action-menu-item";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,37 +23,49 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { nfeTableActionClass } from "@/lib/nfe-table-action-styles";
 
 type InsucessoProps = {
   chave: string;
   label: string;
   disabled?: boolean;
+  asMenuItem?: boolean;
 };
 
-export function NfeInsucessoButton({ chave, label, disabled }: InsucessoProps) {
+export function NfeInsucessoButton({ chave, label, disabled, asMenuItem }: InsucessoProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
+  function openDialog() {
+    setError(null);
+    setOpen(true);
+  }
+
   return (
     <>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className={nfeTableActionClass("amber")}
-        aria-label={`Emitir insucesso de entrega da venda ${label}`}
-        title={disabled ? "Já possui devolução/insucesso" : "Emitir insucesso de entrega"}
-        disabled={disabled}
-        onClick={() => {
-          setError(null);
-          setOpen(true);
-        }}
-      >
-        <PackageMinus className="size-3.5" />
-      </Button>
+      {asMenuItem ? (
+        <NfeActionMenuItem
+          icon={PackageMinus}
+          label="Insucesso de entrega"
+          disabled={disabled}
+          title={disabled ? "Já possui devolução/insucesso" : "Emitir insucesso de entrega"}
+          onSelect={openDialog}
+        />
+      ) : (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-8 text-muted-foreground hover:text-foreground"
+          aria-label={`Emitir insucesso de entrega da venda ${label}`}
+          title={disabled ? "Já possui devolução/insucesso" : "Emitir insucesso de entrega"}
+          disabled={disabled}
+          onClick={openDialog}
+        >
+          <PackageMinus className="size-3.5" />
+        </Button>
+      )}
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -92,30 +105,42 @@ export function NfeInsucessoButton({ chave, label, disabled }: InsucessoProps) {
 type RetornoFisicoProps = {
   chave: string;
   label: string;
+  asMenuItem?: boolean;
 };
 
-export function NfeRetornoFisicoButton({ chave, label }: RetornoFisicoProps) {
+export function NfeRetornoFisicoButton({ chave, label, asMenuItem }: RetornoFisicoProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
+  function openDialog() {
+    setError(null);
+    setOpen(true);
+  }
+
   return (
     <>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className={nfeTableActionClass("teal")}
-        aria-label={`Emitir retorno físico da remessa ${label}`}
-        title="Emitir retorno físico desta remessa"
-        onClick={() => {
-          setError(null);
-          setOpen(true);
-        }}
-      >
-        <Truck className="size-3.5" />
-      </Button>
+      {asMenuItem ? (
+        <NfeActionMenuItem
+          icon={Truck}
+          label="Retorno físico"
+          title="Emitir retorno físico desta remessa"
+          onSelect={openDialog}
+        />
+      ) : (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-8 text-muted-foreground hover:text-foreground"
+          aria-label={`Emitir retorno físico da remessa ${label}`}
+          title="Emitir retorno físico desta remessa"
+          onClick={openDialog}
+        >
+          <Truck className="size-3.5" />
+        </Button>
+      )}
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -155,9 +180,10 @@ export function NfeRetornoFisicoButton({ chave, label }: RetornoFisicoProps) {
 type ConferenciaProps = {
   chave: string;
   label: string;
+  asMenuItem?: boolean;
 };
 
-export function NfeConferenciaButton({ chave, label }: ConferenciaProps) {
+export function NfeConferenciaButton({ chave, label, asMenuItem }: ConferenciaProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -167,37 +193,48 @@ export function NfeConferenciaButton({ chave, label }: ConferenciaProps) {
   const [loadingExpected, setLoadingExpected] = useState(false);
   const [pending, startTransition] = useTransition();
 
+  function openDialog() {
+    setError(null);
+    setInfo(null);
+    setExpectedQty(null);
+    setReceivedQty("");
+    setOpen(true);
+    setLoadingExpected(true);
+    void carregarSaldoConferenciaAction(chave).then((result) => {
+      setLoadingExpected(false);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      if (result.expectedQty != null) {
+        setExpectedQty(result.expectedQty);
+        setReceivedQty(String(result.expectedQty));
+      }
+    });
+  }
+
   return (
     <>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className={nfeTableActionClass("indigo")}
-        aria-label={`Conferência da remessa ${label}`}
-        title="Conferência INBOUND (diferença POSITIVE/NEGATIVE)"
-        onClick={() => {
-          setError(null);
-          setInfo(null);
-          setExpectedQty(null);
-          setReceivedQty("");
-          setOpen(true);
-          setLoadingExpected(true);
-          void carregarSaldoConferenciaAction(chave).then((result) => {
-            setLoadingExpected(false);
-            if (result.error) {
-              setError(result.error);
-              return;
-            }
-            if (result.expectedQty != null) {
-              setExpectedQty(result.expectedQty);
-              setReceivedQty(String(result.expectedQty));
-            }
-          });
-        }}
-      >
-        <ClipboardCheck className="size-3.5" />
-      </Button>
+      {asMenuItem ? (
+        <NfeActionMenuItem
+          icon={ClipboardCheck}
+          label="Conferência"
+          title="Conferência INBOUND (diferença POSITIVE/NEGATIVE)"
+          onSelect={openDialog}
+        />
+      ) : (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-8 text-muted-foreground hover:text-foreground"
+          aria-label={`Conferência da remessa ${label}`}
+          title="Conferência INBOUND (diferença POSITIVE/NEGATIVE)"
+          onClick={openDialog}
+        >
+          <ClipboardCheck className="size-3.5" />
+        </Button>
+      )}
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

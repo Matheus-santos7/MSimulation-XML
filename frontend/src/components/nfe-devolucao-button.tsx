@@ -4,6 +4,7 @@ import { Undo2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { devolverVendaAction } from "@/app/(app)/nfe/actions";
+import { NfeActionMenuItem } from "@/components/nfe-action-menu-item";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,37 +16,49 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { nfeTableActionClass } from "@/lib/nfe-table-action-styles";
 
 type Props = {
   chave: string;
   label: string;
   jaDevolvida?: boolean;
+  asMenuItem?: boolean;
 };
 
-export function NfeDevolucaoButton({ chave, label, jaDevolvida }: Props) {
+export function NfeDevolucaoButton({ chave, label, jaDevolvida, asMenuItem }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
+  function openDialog() {
+    setError(null);
+    setOpen(true);
+  }
+
   return (
     <>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className={nfeTableActionClass("blue")}
-        aria-label={`Emitir devolução da venda ${label}`}
-        title={jaDevolvida ? "Venda já devolvida" : "Emitir devolução desta venda"}
-        disabled={jaDevolvida}
-        onClick={() => {
-          setError(null);
-          setOpen(true);
-        }}
-      >
-        <Undo2 className="size-3.5" />
-      </Button>
+      {asMenuItem ? (
+        <NfeActionMenuItem
+          icon={Undo2}
+          label="Devolver"
+          disabled={jaDevolvida}
+          title={jaDevolvida ? "Venda já devolvida" : "Emitir devolução desta venda"}
+          onSelect={openDialog}
+        />
+      ) : (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-8 text-muted-foreground hover:text-foreground"
+          aria-label={`Emitir devolução da venda ${label}`}
+          title={jaDevolvida ? "Venda já devolvida" : "Emitir devolução desta venda"}
+          disabled={jaDevolvida}
+          onClick={openDialog}
+        >
+          <Undo2 className="size-3.5" />
+        </Button>
+      )}
 
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogContent>
@@ -54,12 +67,12 @@ export function NfeDevolucaoButton({ chave, label, jaDevolvida }: Props) {
             <AlertDialogDescription asChild>
               <div className="space-y-2 text-sm text-muted-foreground">
                 <p>
-                  Será emitida uma <strong className="text-foreground">NF-e de devolução</strong> referenciando
-                  esta venda, espelhando os impostos originais.
+                  Será emitida uma <strong className="text-foreground">NF-e de devolução</strong>{" "}
+                  referenciando esta venda, espelhando os impostos originais.
                 </p>
                 <p>
-                  O saldo consumido retornará às <strong className="text-foreground">remessas</strong> da cadeia
-                  (estorno FIFO): remessa → retorno → venda → devolução.
+                  O saldo consumido retornará às <strong className="text-foreground">remessas</strong>{" "}
+                  da cadeia (estorno FIFO): remessa → retorno → venda → devolução.
                 </p>
               </div>
             </AlertDialogDescription>
@@ -69,7 +82,6 @@ export function NfeDevolucaoButton({ chave, label, jaDevolvida }: Props) {
             <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               disabled={pending}
-              className="bg-blue-600 text-white hover:bg-blue-600/90"
               onClick={(e) => {
                 e.preventDefault();
                 startTransition(async () => {

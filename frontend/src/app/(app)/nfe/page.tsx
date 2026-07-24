@@ -1,14 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { DeleteConfirmButton } from "@/components/delete-confirm-button";
-import { NfeCancelarButton } from "@/components/nfe-cancelar-button";
-import { NfeDevolucaoButton } from "@/components/nfe-devolucao-button";
-import {
-  NfeConferenciaButton,
-  NfeInsucessoButton,
-  NfeRetornoFisicoButton,
-} from "@/components/nfe-fulfillment-return-buttons";
 import { NfeInutXmlActions, NfeXmlActions } from "@/components/fiscal-xml-actions";
+import { NfeRowActionsMenu } from "@/components/nfe-row-actions-menu";
 import { NfeTipoBadge } from "@/components/nfe-tipo-badge";
 import { InutilizadaStatusBadge, PageHeader, StatusBadge } from "@/components/fiscal-ui";
 import { resolveActiveTenantId } from "@/lib/active-tenant";
@@ -70,7 +63,7 @@ export default async function NFeListPage() {
                 <col className="w-[140px]" />
                 <col className="w-[108px]" />
                 <col className="w-[88px]" />
-                <col className="w-[148px]" />
+                <col className="w-[56px]" />
               </colgroup>
               <thead className="sticky top-0 z-10 bg-card">
                 <tr className="text-[12px] text-muted-foreground uppercase tracking-tighter border-b border-border bg-muted/30">
@@ -175,62 +168,30 @@ export default async function NFeListPage() {
                         </div>
                       </td>
                       <td className="px-3 py-3 text-right align-middle">
-                        <div className="inline-flex items-center justify-end gap-1.5">
-                          {nfe.tipo === "VENDA" && (
-                            <>
-                              <NfeCancelarButton
-                                chave={nfe.chave}
-                                label={`${nfe.numero}/${nfe.serie}`}
-                                desabilitado={
-                                  nfe.status === "CANCELADA" ||
-                                  vendasDevolvidas.has(nfe.chave) ||
-                                  nfe.status !== "AUTORIZADA"
-                                }
-                                motivoDesabilitado={
-                                  nfe.status === "CANCELADA"
-                                    ? "Venda já cancelada"
-                                    : vendasDevolvidas.has(nfe.chave)
-                                      ? "Venda com devolução emitida"
-                                      : nfe.status !== "AUTORIZADA"
-                                        ? "Só NF-e autorizadas podem ser canceladas"
-                                        : undefined
-                                }
-                              />
-                              <NfeDevolucaoButton
-                                chave={nfe.chave}
-                                label={`${nfe.numero}/${nfe.serie}`}
-                                jaDevolvida={
-                                  vendasDevolvidas.has(nfe.chave) || vendasCanceladas.has(nfe.chave)
-                                }
-                              />
-                              <NfeInsucessoButton
-                                chave={nfe.chave}
-                                label={`${nfe.numero}/${nfe.serie}`}
-                                disabled={
-                                  vendasDevolvidas.has(nfe.chave) || vendasCanceladas.has(nfe.chave)
-                                }
-                              />
-                            </>
-                          )}
-                          {(nfe.tipo === "REMESSA" || nfe.tipo === "REMESSA_AVANCO") &&
-                            nfe.status === "AUTORIZADA" && (
-                              <>
-                                <NfeConferenciaButton
-                                  chave={nfe.chave}
-                                  label={`${nfe.numero}/${nfe.serie}`}
-                                />
-                                {(nfe.saldoDisponivel ?? 0) > 0 && (
-                                  <NfeRetornoFisicoButton
-                                    chave={nfe.chave}
-                                    label={`${nfe.numero}/${nfe.serie}`}
-                                  />
-                                )}
-                              </>
-                            )}
-                          <DeleteConfirmButton
-                            variant="nfe"
+                        <div className="flex justify-end">
+                          <NfeRowActionsMenu
                             chave={nfe.chave}
                             label={`${nfe.numero}/${nfe.serie}`}
+                            tipo={nfe.tipo}
+                            status={nfe.status}
+                            saldoDisponivel={nfe.saldoDisponivel}
+                            vendaCancelDisabled={
+                              nfe.status === "CANCELADA" ||
+                              vendasDevolvidas.has(nfe.chave) ||
+                              nfe.status !== "AUTORIZADA"
+                            }
+                            vendaCancelReason={
+                              nfe.status === "CANCELADA"
+                                ? "Venda já cancelada"
+                                : vendasDevolvidas.has(nfe.chave)
+                                  ? "Venda com devolução emitida"
+                                  : nfe.status !== "AUTORIZADA"
+                                    ? "Só NF-e autorizadas podem ser canceladas"
+                                    : undefined
+                            }
+                            vendaJaDevolvida={
+                              vendasDevolvidas.has(nfe.chave) || vendasCanceladas.has(nfe.chave)
+                            }
                           />
                         </div>
                       </td>

@@ -17,8 +17,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { NfeActionMenuItem } from "@/components/nfe-action-menu-item";
 import type { PedidoDto } from "@/lib/fiscal-types";
-import { nfeTableActionClass } from "@/lib/nfe-table-action-styles";
 
 type DeleteConfirmConfig = {
   ariaLabel: string;
@@ -34,12 +34,14 @@ type FiscalVariantProps = {
   chave: string;
   label: string;
   className?: string;
+  asMenuItem?: boolean;
 };
 
 type PedidoVariantProps = {
   variant: "pedido";
   pedido: PedidoDto;
   className?: string;
+  asMenuItem?: boolean;
 };
 
 type Props = FiscalVariantProps | PedidoVariantProps;
@@ -119,24 +121,36 @@ export function DeleteConfirmButton(props: Props) {
   const className =
     props.className ??
     (props.variant === "nfe" || props.variant === "cte"
-      ? nfeTableActionClass("destructive")
+      ? "size-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
       : "size-8 text-muted-foreground hover:text-destructive");
+
+  function openDialog() {
+    setError(null);
+    setOpen(true);
+  }
 
   return (
     <>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className={className}
-        aria-label={ariaLabel}
-        onClick={() => {
-          setError(null);
-          setOpen(true);
-        }}
-      >
-        <Trash2 className="size-3.5" />
-      </Button>
+      {props.asMenuItem ? (
+        <NfeActionMenuItem
+          icon={Trash2}
+          label="Remover"
+          destructive
+          title={ariaLabel}
+          onSelect={openDialog}
+        />
+      ) : (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className={className}
+          aria-label={ariaLabel}
+          onClick={openDialog}
+        >
+          <Trash2 className="size-3.5" />
+        </Button>
+      )}
 
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogContent>

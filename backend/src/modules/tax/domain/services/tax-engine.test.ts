@@ -444,4 +444,94 @@ describe("tax-engine", () => {
     assert.equal(item.cofins.vBC, 0);
     assert.equal(item.ipi?.vBC, 0);
   });
+
+  it("CST 10 — calcula vBCST/vICMSST com crédito do ICMS próprio e soma em vNF", () => {
+    const item = calcularItem({
+      numeroItem: 1,
+      codigo: "ST-1",
+      descricao: "Produto ST",
+      ncm: "30049099",
+      cfop: "6403",
+      unidade: "UN",
+      cest: "1300100",
+      quantidade: 1,
+      valorUnitario: 100,
+      icms: {
+        cst: "10",
+        orig: 0,
+        pICMS: 12,
+        pMVAST: 40,
+        pRedBCST: 0,
+        pICMSST: 18,
+      },
+      pis: { cst: "01", aliquota: 0 },
+      cofins: { cst: "01", aliquota: 0 },
+    });
+    // vBCST = 100 × 1.40 = 140; vICMSST = 140×18% − 12 = 25.2 − 12 = 13.2
+    assert.equal(item.icms.vBC, 100);
+    assert.equal(item.icms.vICMS, 12);
+    assert.equal(item.icms.vBCST, 140);
+    assert.equal(item.icms.vICMSST, 13.2);
+    assert.equal(item.icms.stCobraNaOperacao, true);
+
+    const nota = calcularNotaFiscal([
+      {
+        numeroItem: 1,
+        codigo: "ST-1",
+        descricao: "Produto ST",
+        ncm: "30049099",
+        cfop: "6403",
+        unidade: "UN",
+        cest: "1300100",
+        quantidade: 1,
+        valorUnitario: 100,
+        icms: {
+          cst: "10",
+          orig: 0,
+          pICMS: 12,
+          pMVAST: 40,
+          pICMSST: 18,
+        },
+        pis: { cst: "01", aliquota: 0 },
+        cofins: { cst: "01", aliquota: 0 },
+      },
+    ]);
+    assert.equal(nota.totais.vBCST, 140);
+    assert.equal(nota.totais.vST, 13.2);
+    assert.equal(nota.totais.vNF, 113.2);
+  });
+
+  it("CST 60 — preenche ST Ret sem somar vST na vNF (5405/6404)", () => {
+    const nota = calcularNotaFiscal([
+      {
+        numeroItem: 1,
+        codigo: "ST-60",
+        descricao: "Produto ST retido",
+        ncm: "30049099",
+        cfop: "5405",
+        unidade: "UN",
+        cest: "1300100",
+        quantidade: 1,
+        valorUnitario: 200,
+        icms: {
+          cst: "60",
+          orig: 0,
+          pICMS: 0,
+          pMVAST: 40,
+          pICMSST: 18,
+        },
+        pis: { cst: "01", aliquota: 0 },
+        cofins: { cst: "01", aliquota: 0 },
+      },
+    ]);
+    const item = nota.itens[0]!;
+    assert.equal(item.icms.vBC, 0);
+    assert.equal(item.icms.vICMS, 0);
+    assert.equal(item.icms.vBCST, 280);
+    assert.equal(item.icms.vICMSST, 50.4);
+    assert.equal(item.icms.stCobraNaOperacao, false);
+    assert.equal(nota.totais.vBCST, 0);
+    assert.equal(nota.totais.vST, 0);
+    assert.equal(nota.totais.vNF, 200);
+  });
 });

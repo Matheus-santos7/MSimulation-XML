@@ -25,6 +25,9 @@ function detectCustomerType(customerLabel: string): CustomerType {
 }
 
 function destinationLabel(transactionType: TransactionType, customerType: CustomerType): string {
+  if (transactionType === "symbolic_inbound_return") {
+    return "Retorno simbólico (symbolic_inbound_return)";
+  }
   if (transactionType === "inbound") return "Envio de estoque (Transferência ou Remessa)";
   return customerType === "taxpayer" ? "Contribuinte" : "Não contribuinte";
 }

@@ -51,10 +51,20 @@ function pct(value: number | undefined | null): number {
 }
 
 /** CSTs em que o ICMS próprio não gera base/valor (isenção, ST retido, não tributado). */
-const ICMS_CST_SEM_TRIBUTACAO_PROPRIA = new Set(["40", "41", "50", "60"]);
+const ICMS_CST_SEM_TRIBUTACAO_PROPRIA = new Set(["30", "40", "41", "50", "60"]);
+
+/** CST com cobrança de ST na operação (entra em ICMSTot.vST / vNF). */
+const ICMS_CST_ST_OPERACAO = new Set(["10", "30", "70"]);
+
+/** CST com ST já retido (grupo *STRet — não soma vST na vNF). */
+const ICMS_CST_ST_RETIDO = new Set(["60"]);
 
 function isIcmsSemTributacaoPropria(cst: string, pICMS: number, pFCP: number): boolean {
   return ICMS_CST_SEM_TRIBUTACAO_PROPRIA.has(cst.slice(0, 2)) || (pICMS === 0 && pFCP === 0);
+}
+
+function cst2(cst: string): string {
+  return cst.trim().slice(0, 2);
 }
 
 export type IcmsInput = {
@@ -70,6 +80,16 @@ export type IcmsInput = {
   pRedBC?: number;
   /** Alíquota do FCP (Fundo de Combate à Pobreza) — tags próprias. */
   pFCP?: number;
+  /** Modalidade BC ST (modBCST). Padrão 4 = MVA. */
+  modBCST?: number;
+  /** MVA / IVA-ST (%). */
+  pMVAST?: number;
+  /** % redução da base ST (pRedBCST). */
+  pRedBCST?: number;
+  /** Alíquota ICMS-ST (%). */
+  pICMSST?: number;
+  /** Alíquota FCP-ST (%). */
+  pFCPST?: number;
 };
 
 export type IpiInput = {
@@ -174,6 +194,19 @@ export type ItemFiscalResult = {
     vICMS: number;
     pFCP: number;
     vFCP: number;
+    /** Redução BC própria (eco do input — CST 20/70 no XML). */
+    pRedBC?: number;
+    /** ST na operação (CST 10/30/70) ou base informativa Ret (CST 60). */
+    modBCST?: number;
+    pMVAST?: number;
+    pRedBCST?: number;
+    vBCST?: number;
+    pICMSST?: number;
+    vICMSST?: number;
+    pFCPST?: number;
+    vFCPST?: number;
+    /** true = soma em totais.vST / vNF; false = só Ret (CST 60). */
+    stCobraNaOperacao?: boolean;
   };
   ipi?: {
     cst: string;
@@ -234,6 +267,10 @@ export type NotaFiscalResult = {
  *   vBC ICMS                    = baseICMS × (1 − pRedBC/100)
  *   vICMS                       = vBC × pICMS
  *   vFCP                        = vBC × pFCP                  (tag separada)
+ *   ICMS-ST (CST 10/30/70/60)   = vBCST = baseOp×(1+MVA)×(1−pRedBCST);
+ *     CST 10/70: vICMSST = max(0, vBCST×pICMSST − vICMS)
+ *     CST 30:    vICMSST = vBCST×pICMSST (sem próprio)
+ *     CST 60:    mesmos valores em *STRet; não entra em vST/vNF
  *   DIFAL (consumidor final UF) = vBCUFDest × (pInterna − pInter)
  *   PIS/COFINS                  = (basePisCofins) × (1 − pRedBC) × alíquota
  *     onde basePisCofins é montada item-a-item pela `baseConfig` (vinda do
@@ -278,6 +315,28 @@ export function calcularItem(input: ItemFiscalInput): ItemFiscalResult {
   const vBCIcms = semTributacaoIcms ? 0 : vBCIcmsBruta;
   const vICMS = semTributacaoIcms ? 0 : round2(vBCIcms * (pICMS / 100));
   const vFCP = semTributacaoIcms ? 0 : round2(vBCIcms * (pFCP / 100));
+
+  // 4b) ICMS-ST — MVA / redução ST / alíquota ST (TaxRule). CST 60 = Ret.
+  const cstIcms = cst2(input.icms.cst);
+  const pMVAST = pct(input.icms.pMVAST);
+  const pRedBCST = pct(input.icms.pRedBCST);
+  const pICMSST = pct(input.icms.pICMSST);
+  const pFCPST = pct(input.icms.pFCPST);
+  const aplicaSt =
+    ICMS_CST_ST_OPERACAO.has(cstIcms) || ICMS_CST_ST_RETIDO.has(cstIcms);
+  const stCobraNaOperacao = ICMS_CST_ST_OPERACAO.has(cstIcms);
+  let vBCST = 0;
+  let vICMSST = 0;
+  let vFCPST = 0;
+  if (aplicaSt && (pMVAST > 0 || pICMSST > 0 || pRedBCST > 0)) {
+    vBCST = round2(baseAntesReducao * (1 + pMVAST / 100) * (1 - pRedBCST / 100));
+    const vIcmsStCheio = round2(vBCST * (pICMSST / 100));
+    vICMSST =
+      cstIcms === "10" || cstIcms === "70"
+        ? Math.max(0, round2(vIcmsStCheio - vICMS))
+        : vIcmsStCheio;
+    vFCPST = pFCPST > 0 ? round2(vBCST * (pFCPST / 100)) : 0;
+  }
 
   // 5) DIFAL (ICMSUFDest) — partilha para consumidor final em operação interestadual.
   //    Calculado ANTES de PIS/COFINS para que possa ser deduzido da base (Tese
@@ -392,6 +451,20 @@ export function calcularItem(input: ItemFiscalInput): ItemFiscalResult {
       vICMS,
       pFCP,
       vFCP,
+      pRedBC: pRedBcIcms,
+      ...(aplicaSt
+        ? {
+            modBCST: input.icms.modBCST ?? 4,
+            pMVAST,
+            pRedBCST,
+            vBCST,
+            pICMSST,
+            vICMSST,
+            pFCPST,
+            vFCPST,
+            stCobraNaOperacao,
+          }
+        : {}),
     },
     ipi: ipiResult,
     pis: { cst: input.pis.cst, vBC: vBCPis, pPIS: pPIS, vPIS },
@@ -415,6 +488,10 @@ export function calcularTotais(itens: ItemFiscalResult[]): NotaFiscalTotais {
     acc.vBC = round2(acc.vBC + item.icms.vBC);
     acc.vICMS = round2(acc.vICMS + item.icms.vICMS);
     acc.vFCP = round2(acc.vFCP + item.icms.vFCP);
+    if (item.icms.stCobraNaOperacao) {
+      acc.vBCST = round2(acc.vBCST + (item.icms.vBCST ?? 0));
+      acc.vST = round2(acc.vST + (item.icms.vICMSST ?? 0));
+    }
     acc.vProd = round2(acc.vProd + item.vProd);
     acc.vFrete = round2(acc.vFrete + item.vFrete);
     acc.vSeg = round2(acc.vSeg + item.vSeg);

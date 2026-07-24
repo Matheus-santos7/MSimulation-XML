@@ -211,7 +211,7 @@ export function resolveIcmsFromSnapshot(
 
 /**
  * Resolve `<ICMS>` a partir do item da engine fiscal.
- * Replica `buildIcmsXmlFromEngineItem` — inclui FCP opcional e grupos simplificados (40/41/50/60/90).
+ * Replica `buildIcmsXmlFromEngineItem` — inclui FCP, ST (10/30/70) e Ret (60).
  */
 export function resolveIcmsFromEngine(icms: EngineIcms): NfeIcmsImposto {
   const cst = cst2Digits(icms.cst);
@@ -225,11 +225,100 @@ export function resolveIcmsFromEngine(icms: EngineIcms): NfeIcmsImposto {
     return { ICMS: { ICMS40: { orig: icms.orig, CST: cst } } };
   }
 
+  const hasSt =
+    (icms.vBCST ?? 0) > 0 || (icms.vICMSST ?? 0) > 0 || (icms.pMVAST ?? 0) > 0;
+  const stFields = {
+    modBCST: icms.modBCST ?? 4,
+    pMVAST: formatMoney4(icms.pMVAST ?? 0),
+    pRedBCST: formatMoney4(icms.pRedBCST ?? 0),
+    vBCST: formatMoney2(icms.vBCST ?? 0),
+    pICMSST: formatMoney4(icms.pICMSST ?? 0),
+    vICMSST: formatMoney2(icms.vICMSST ?? 0),
+  };
+  const fcpStFields =
+    (icms.pFCPST ?? 0) > 0
+      ? {
+          vBCFCPST: formatMoney2(icms.vBCST ?? 0),
+          pFCPST: formatMoney4(icms.pFCPST!),
+          vFCPST: formatMoney2(icms.vFCPST ?? 0),
+        }
+      : {};
+
   if (cst === "60") {
-    return { ICMS: { ICMS60: { orig: icms.orig, CST: "60" } } };
+    return {
+      ICMS: {
+        ICMS60: {
+          orig: icms.orig,
+          CST: "60",
+          ...(hasSt
+            ? {
+                vBCSTRet: formatMoney2(icms.vBCST ?? 0),
+                pST: formatMoney4(icms.pICMSST ?? 0),
+                vICMSSubstituto: formatMoney2(icms.vICMSST ?? 0),
+                vICMSSTRet: formatMoney2(icms.vICMSST ?? 0),
+                ...((icms.pFCPST ?? 0) > 0
+                  ? {
+                      vBCFCPSTRet: formatMoney2(icms.vBCST ?? 0),
+                      pFCPSTRet: formatMoney4(icms.pFCPST!),
+                      vFCPSTRet: formatMoney2(icms.vFCPST ?? 0),
+                    }
+                  : {}),
+              }
+            : {}),
+        },
+      },
+    };
   }
 
-  if (cst === "90" && icms.vBC === 0 && icms.vICMS === 0) {
+  if (cst === "10" && hasSt) {
+    return {
+      ICMS: {
+        ICMS10: {
+          orig: icms.orig,
+          CST: "10",
+          modBC,
+          vBC: formatMoney2(icms.vBC),
+          pICMS: formatMoney4(icms.pICMS),
+          vICMS: formatMoney2(icms.vICMS),
+          ...fcpFields,
+          ...stFields,
+        },
+      },
+    };
+  }
+
+  if (cst === "30" && hasSt) {
+    return {
+      ICMS: {
+        ICMS30: {
+          orig: icms.orig,
+          CST: "30",
+          ...stFields,
+          ...fcpStFields,
+        },
+      },
+    };
+  }
+
+  if (cst === "70" && hasSt) {
+    return {
+      ICMS: {
+        ICMS70: {
+          orig: icms.orig,
+          CST: "70",
+          modBC,
+          pRedBC: formatMoney4(icms.pRedBC ?? 0),
+          vBC: formatMoney2(icms.vBC),
+          pICMS: formatMoney4(icms.pICMS),
+          vICMS: formatMoney2(icms.vICMS),
+          ...fcpFields,
+          ...stFields,
+        },
+      },
+    };
+  }
+
+  if (cst === "90" && icms.vBC === 0 && icms.vICMS === 0 && !hasSt) {
     return { ICMS: { ICMS90: { orig: icms.orig, CST: "90" } } };
   }
 

@@ -11,6 +11,7 @@
 
 import {
   calcularNotaFiscal,
+  isIcmsCstComSt,
   type ItemFiscalInput,
   type NotaFiscalResult,
 } from "../../domain/services/tax-engine.js";
@@ -318,6 +319,8 @@ export function buildFiscalItem(
     ctx.operationTipo,
   );
 
+  const stOnCst = isIcmsCstComSt(icmsCst);
+
   return {
     numeroItem: line.numeroItem ?? 1,
     codigo: line.codigo,
@@ -341,12 +344,17 @@ export function buildFiscalItem(
       modBC: 3,
       pRedBC: snapshot.icms.pRedBc,
       pFCP: snapshot.icms.pIcmsFcp,
-      modBCST: 4,
-      pMVAST: snapshot.icms.pMva,
-      pRedBCST: snapshot.icms.pRedBcSt,
-      // Planilha: PICMSST_RET; se 0, usa interna do destino (mesmo fallback da venda).
-      pICMSST: snapshot.icms.pIcmsStRet > 0 ? snapshot.icms.pIcmsStRet : internalRate,
-      pFCPST: snapshot.icms.pFcpStRet,
+      ...(stOnCst
+        ? {
+            modBCST: 4,
+            pMVAST: snapshot.icms.pMva,
+            pRedBCST: snapshot.icms.pRedBcSt,
+            // Planilha: PICMSST_RET; se 0, usa interna do destino (só em CST ST).
+            pICMSST:
+              snapshot.icms.pIcmsStRet > 0 ? snapshot.icms.pIcmsStRet : internalRate,
+            pFCPST: snapshot.icms.pFcpStRet,
+          }
+        : {}),
     },
     ipi:
       rule != null || snapshot.ipi.aliquota > 0

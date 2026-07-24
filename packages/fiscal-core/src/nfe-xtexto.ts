@@ -12,6 +12,10 @@ export type XTextoInput = {
   serie?: number;
   warehouseId?: string;
   posDevolucao?: boolean;
+  /** Processo ML de conferência (sobrescreve padrão REMESSA / RETORNO_FISICO). */
+  mlProcess?:
+    | "INBOUND_POSITIVE_DIFFERENCE"
+    | "INBOUND_NEGATIVE_DIFFERENCE";
 };
 
 /**
@@ -25,6 +29,13 @@ export function buildNfeObsContXTexto(input: XTextoInput): string | null {
   const tipo = String(input.tipo);
   const warehouseId = input.warehouseId?.trim() || ML_OLSS_WAREHOUSE_SUFFIX;
   const serieSeg = input.serie ?? 1;
+
+  if (input.mlProcess === "INBOUND_POSITIVE_DIFFERENCE") {
+    return `INBOUND_POSITIVE_DIFFERENCE-inbound-${pedido}-${serieSeg}-OLSS-${warehouseId}`;
+  }
+  if (input.mlProcess === "INBOUND_NEGATIVE_DIFFERENCE") {
+    return `INBOUND_NEGATIVE_DIFFERENCE-inbound_return-${pedido}-${serieSeg}-OLSS-${warehouseId}`;
+  }
 
   if (
     tipo === NFeTipo.REMESSA_SIMBOLICA ||

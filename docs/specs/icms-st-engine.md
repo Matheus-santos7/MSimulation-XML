@@ -16,12 +16,15 @@ Calcular e emitir ICMS-ST no caminho SALE (tax-engine → `fiscalPayload.engine`
    `vICMSST = max(0, round2(vBCST × pICMSST/100) − vICMS)`  
    Soma em `totais.vBCST`, `totais.vST` e `vNF`.
 2. **CST 30** — sem ICMS próprio; `vICMSST = round2(vBCST × pICMSST/100)`.
-3. **CST 60** — imposto já retido (`5405` / `6404` típicos): tags `*STRet`; **não** entra em `vST`/`vNF`.
+3. **CST 60** — imposto já retido (`5405` / `6404` típicos): tags `*STRet`; **não** entra em `vST`/`vNF`.  
+   **Simulador:** MVA/`pICMSST` da TaxRule são usados para preencher bases Ret **inventadas** (não há espelhamento de ST retido real de estoque/entrada). Manter explícito: homologação visual ≠ apuração de crédito ST.
 4. **pICMSST** — `TaxRule` `PICMSST_RET`; se 0, fallback alíquota interna do destino (`PICMS_INTERNAL`).
 5. **baseOp** — mesma base bruta do ICMS antes de `pRedBC` (e com IPI se consumidor final).
 6. **CEST** obrigatório se CFOP ∈ {5405, 6403, 6404}.
 7. **CSOSN** (Simples) fora desta fatia.
 8. Alíquotas/MVA **só** da TaxRule / settings — sem hardcode.
+9. **FCP-ST** — item pode calcular `vFCPST`; `ICMSTot.vFCPST` / `vFCPSTRet` são o reduce dos itens (CST operação vs Ret). **Não** integra `vNF` nesta fatia (ask first se UF exigir).
+10. **`buildFiscalItem`** — campos ST (`pICMSST`, MVA, …) só quando CST ∈ {10, 30, 60, 70}.
 
 ## Acceptance
 
@@ -46,6 +49,6 @@ pnpm --filter @msimulation-xml/backend exec tsc --noEmit
 
 ## Boundaries
 
-**Always:** arredondar item a item; `vNF` com `vST`; CEST em ST.  
+**Always:** arredondar item a item; `vNF` com `vST`; CEST em ST; `ICMSTot.vFCPST` = soma dos itens.  
 **Ask first:** CSOSN ST; FCP-ST na `vNF`; seed TaxRule ST em massa.  
-**Never:** alíquota/MVA literais no código de emissão.
+**Never:** alíquota/MVA literais no código de emissão; tratar CST 60 do simulador como crédito ST real de estoque.

@@ -67,6 +67,12 @@ function cst2(cst: string): string {
   return cst.trim().slice(0, 2);
 }
 
+/** True quando o CST exige campos/cálculo de ICMS-ST (10/30/70/60). */
+export function isIcmsCstComSt(cst: string): boolean {
+  const c = cst2(cst);
+  return ICMS_CST_ST_OPERACAO.has(c) || ICMS_CST_ST_RETIDO.has(c);
+}
+
 export type IcmsInput = {
   /** CST (Regime Normal: 00, 20, 40, 41, 51, 60…). */
   cst: string;
@@ -236,6 +242,10 @@ export type NotaFiscalTotais = {
   vFCP: number;
   vBCST: number;
   vST: number;
+  /** Soma FCP-ST da operação (CST 10/30/70). */
+  vFCPST: number;
+  /** Soma FCP-ST retido (CST 60). */
+  vFCPSTRet: number;
   vProd: number;
   vFrete: number;
   vSeg: number;
@@ -479,7 +489,8 @@ export function calcularItem(input: ItemFiscalInput): ItemFiscalResult {
  */
 export function calcularTotais(itens: ItemFiscalResult[]): NotaFiscalTotais {
   const acc: NotaFiscalTotais = {
-    vBC: 0, vICMS: 0, vFCP: 0, vBCST: 0, vST: 0, vProd: 0, vFrete: 0, vSeg: 0,
+    vBC: 0, vICMS: 0, vFCP: 0, vBCST: 0, vST: 0, vFCPST: 0, vFCPSTRet: 0,
+    vProd: 0, vFrete: 0, vSeg: 0,
     vDesc: 0, vIPI: 0, vPIS: 0, vCOFINS: 0, vOutro: 0, vFCPUFDest: 0,
     vICMSUFDest: 0, vICMSUFRemet: 0, vNF: 0,
   };
@@ -488,9 +499,14 @@ export function calcularTotais(itens: ItemFiscalResult[]): NotaFiscalTotais {
     acc.vBC = round2(acc.vBC + item.icms.vBC);
     acc.vICMS = round2(acc.vICMS + item.icms.vICMS);
     acc.vFCP = round2(acc.vFCP + item.icms.vFCP);
+    const vFcpStItem = item.icms.vFCPST ?? 0;
     if (item.icms.stCobraNaOperacao) {
       acc.vBCST = round2(acc.vBCST + (item.icms.vBCST ?? 0));
       acc.vST = round2(acc.vST + (item.icms.vICMSST ?? 0));
+      acc.vFCPST = round2(acc.vFCPST + vFcpStItem);
+    } else if ((item.icms.vBCST ?? 0) > 0 || vFcpStItem > 0) {
+      // CST 60 Ret — FCP-ST vai para vFCPSTRet (não soma vST/vNF).
+      acc.vFCPSTRet = round2(acc.vFCPSTRet + vFcpStItem);
     }
     acc.vProd = round2(acc.vProd + item.vProd);
     acc.vFrete = round2(acc.vFrete + item.vFrete);
@@ -509,6 +525,7 @@ export function calcularTotais(itens: ItemFiscalResult[]): NotaFiscalTotais {
 
   // vNF (regra oficial da SEFAZ): produtos + ST + frete + seguro + outras + IPI
   //                              − desconto − ICMS desonerado.
+  // FCP-ST NÃO integra vNF aqui (decisão da fatia; ver spec icms-st-engine).
   // Quando IPI = 0, recai na fórmula simplificada: vProd + vFrete − vDesc.
   acc.vNF = round2(
     acc.vProd + acc.vST + acc.vFrete + acc.vSeg + acc.vOutro + acc.vIPI - acc.vDesc,

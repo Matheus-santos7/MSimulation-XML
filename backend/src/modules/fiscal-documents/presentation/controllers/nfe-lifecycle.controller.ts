@@ -91,6 +91,21 @@ export const nfeLifecycleController: FastifyPluginAsync = async (app) => {
     }
   });
 
+  app.get("/nfes/:chave/conferencia", { onRequest: [requireAdminHook] }, async (req, reply) => {
+    try {
+      const tenantId = tenantIdFromRequest(req);
+      const { chave } = nfeAccessKeyParamSchema.parse(req.params);
+      const result = await fiscalDocuments.processInboundConference.getExpected({
+        tenantId,
+        remessaNfeKey: chave,
+      });
+      return reply.status(200).send(result);
+    } catch (error) {
+      if (handleRouteError(reply, error, { statusErrors: [...NFE_LIFECYCLE_ERRORS] })) return;
+      throw error;
+    }
+  });
+
   app.post("/nfes/:chave/conferencia", { onRequest: [requireAdminHook] }, async (req, reply) => {
     try {
       const tenantId = tenantIdFromRequest(req);

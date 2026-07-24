@@ -46,6 +46,8 @@ Recebimento **default = OK** (sem NF extra). A conferência é uma **ação expl
 7. FIFO ajustado na mesma transação da emissão.
 8. Reconferência permitida; baseline = saldo FIFO atual (não a qtd original da remessa).
 9. Saldo lógico `expected` = saldo do pai + saldo das filhas com `fiscalPayload.mlProcess === "INBOUND_POSITIVE_DIFFERENCE"` (não qualquer REMESSA referenciada).
+10. `pedidoMl` obrigatório na conferência (422) — necessário para `obsCont`/`xTexto` ML.
+11. UI pré-preenche com `GET /nfes/:chave/conferencia` (`expectedQty` lógico), não com `saldoDisponivel` do pai.
 
 ---
 

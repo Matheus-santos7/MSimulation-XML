@@ -4,6 +4,7 @@ import { ClipboardCheck, PackageMinus, Truck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
+  carregarSaldoConferenciaAction,
   emitirConferenciaRemessaAction,
   emitirInsucessoAction,
   emitirRetornoFisicoAction,
@@ -153,18 +154,16 @@ export function NfeRetornoFisicoButton({ chave, label }: RetornoFisicoProps) {
 type ConferenciaProps = {
   chave: string;
   label: string;
-  /** Saldo FIFO exibido como dica (expected real vem do backend). */
-  saldoHint?: number;
 };
 
-export function NfeConferenciaButton({ chave, label, saldoHint }: ConferenciaProps) {
+export function NfeConferenciaButton({ chave, label }: ConferenciaProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
-  const [receivedQty, setReceivedQty] = useState(
-    saldoHint != null && Number.isFinite(saldoHint) ? String(saldoHint) : "",
-  );
+  const [expectedQty, setExpectedQty] = useState<number | null>(null);
+  const [receivedQty, setReceivedQty] = useState("");
+  const [loadingExpected, setLoadingExpected] = useState(false);
   const [pending, startTransition] = useTransition();
 
   return (
@@ -179,10 +178,21 @@ export function NfeConferenciaButton({ chave, label, saldoHint }: ConferenciaPro
         onClick={() => {
           setError(null);
           setInfo(null);
-          if (saldoHint != null && Number.isFinite(saldoHint)) {
-            setReceivedQty(String(saldoHint));
-          }
+          setExpectedQty(null);
+          setReceivedQty("");
           setOpen(true);
+          setLoadingExpected(true);
+          void carregarSaldoConferenciaAction(chave).then((result) => {
+            setLoadingExpected(false);
+            if (result.error) {
+              setError(result.error);
+              return;
+            }
+            if (result.expectedQty != null) {
+              setExpectedQty(result.expectedQty);
+              setReceivedQty(String(result.expectedQty));
+            }
+          });
         }}
       >
         <ClipboardCheck className="size-3.5" />
@@ -192,11 +202,18 @@ export function NfeConferenciaButton({ chave, label, saldoHint }: ConferenciaPro
           <AlertDialogHeader>
             <AlertDialogTitle>Conferência da remessa {label}</AlertDialogTitle>
             <AlertDialogDescription>
-              Informe a quantidade recebida. O esperado é o saldo FIFO atual (pai + sobras). Sem
-              diferença → nada emite. Falta → NF NEGATIVE; sobra → NF POSITIVE.
+              Informe a quantidade recebida. O esperado é o saldo lógico atual (pai + sobras
+              POSITIVE). Sem diferença → nada emite. Falta → NF NEGATIVE; sobra → NF POSITIVE.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="grid gap-2 px-1">
+            <p className="text-[13px] text-muted-foreground">
+              {loadingExpected
+                ? "Carregando esperado…"
+                : expectedQty != null
+                  ? `Esperado (saldo lógico): ${expectedQty}`
+                  : "Esperado indisponível"}
+            </p>
             <Label htmlFor={`conf-qty-${chave}`}>Quantidade recebida</Label>
             <Input
               id={`conf-qty-${chave}`}
@@ -205,7 +222,7 @@ export function NfeConferenciaButton({ chave, label, saldoHint }: ConferenciaPro
               step="any"
               value={receivedQty}
               onChange={(e) => setReceivedQty(e.target.value)}
-              disabled={pending}
+              disabled={pending || loadingExpected}
             />
           </div>
           {error && <p className="text-[13px] text-destructive px-1">{error}</p>}
@@ -213,7 +230,7 @@ export function NfeConferenciaButton({ chave, label, saldoHint }: ConferenciaPro
           <AlertDialogFooter>
             <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              disabled={pending || receivedQty.trim() === ""}
+              disabled={pending || loadingExpected || receivedQty.trim() === ""}
               onClick={(e) => {
                 e.preventDefault();
                 const qty = Number(receivedQty);

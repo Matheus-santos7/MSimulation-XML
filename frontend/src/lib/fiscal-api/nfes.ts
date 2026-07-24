@@ -79,6 +79,21 @@ export async function emitRetornoFisicoNote(chave: string): Promise<RetornoFisic
   ) as Promise<RetornoFisicoResult>;
 }
 
+export type InboundConferenceExpected = {
+  expectedQty: number;
+  parentBalance: number;
+  positiveChildrenQty: number;
+  pedidoMl: string | null;
+};
+
+export async function getInboundConferenceExpected(
+  chave: string,
+): Promise<InboundConferenceExpected> {
+  return getJson<InboundConferenceExpected>(
+    buildApiUrl(`/api/nfes/${chave}/conferencia`),
+  );
+}
+
 export type InboundConferenceResult = {
   expectedQty: number;
   receivedQty: number;

@@ -1,4 +1,5 @@
 import type {
+  ConferenceExpectedResult,
   ProcessInboundConferenceInput,
   ProcessInboundConferenceResult,
   PrismaInboundConferenceRepository,
@@ -10,5 +11,12 @@ export class ProcessInboundConferenceUseCase {
 
   execute(input: ProcessInboundConferenceInput): Promise<ProcessInboundConferenceResult> {
     return this.conference.processConference(input);
+  }
+
+  getExpected(input: {
+    tenantId: string;
+    remessaNfeKey: string;
+  }): Promise<ConferenceExpectedResult> {
+    return this.conference.getExpectedQty(input);
   }
 }

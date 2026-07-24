@@ -553,3 +553,56 @@ describe("buildFiscalItem — composição base PIS/COFINS por canal (fiscal-set
     assert.equal(r.cofins.vBC, 410);
   });
 });
+
+describe("buildFiscalItem — campos ST só em CST ST", () => {
+  it("CST 00 não injeta pICMSST / MVA (evita ambiguidade do contrato)", () => {
+    const line = orderLineFromProduct(product, {
+      cfop: "5102",
+      quantidade: 1,
+      valorUnitario: 100,
+    });
+    const item = buildFiscalItem(
+      line,
+      saleRule,
+      {
+        ufOrigem: "SP",
+        ufDestino: "SP",
+        customerType: "taxpayer",
+        operationTipo: "VENDA",
+        emitterSettings: DEFAULT_FISCAL_EMITTER_SETTINGS,
+      },
+      18,
+    );
+    assert.equal(item.icms.cst, "00");
+    assert.equal(item.icms.pICMSST, undefined);
+    assert.equal(item.icms.pMVAST, undefined);
+    assert.equal(item.icms.pRedBCST, undefined);
+  });
+
+  it("CST 10 preenche pICMSST (fallback interna se planilha zerar PICMSST_RET)", () => {
+    const stRule: ResolvedTaxRule = {
+      ...saleRule,
+      icms: { ...saleRule.icms, cst: "10", pMva: 40, pIcmsStRet: 0 },
+    };
+    const line = orderLineFromProduct(product, {
+      cfop: "5405",
+      quantidade: 1,
+      valorUnitario: 100,
+    });
+    const item = buildFiscalItem(
+      line,
+      stRule,
+      {
+        ufOrigem: "SP",
+        ufDestino: "SP",
+        customerType: "taxpayer",
+        operationTipo: "VENDA",
+        emitterSettings: DEFAULT_FISCAL_EMITTER_SETTINGS,
+      },
+      18,
+    );
+    assert.equal(item.icms.cst, "10");
+    assert.equal(item.icms.pICMSST, 18);
+    assert.equal(item.icms.pMVAST, 40);
+  });
+});

@@ -221,7 +221,6 @@ export default async function NFeListPage() {
                                 <NfeConferenciaButton
                                   chave={nfe.chave}
                                   label={`${nfe.numero}/${nfe.serie}`}
-                                  saldoHint={nfe.saldoDisponivel ?? nfe.quantidade}
                                 />
                                 {(nfe.saldoDisponivel ?? 0) > 0 && (
                                   <NfeRetornoFisicoButton

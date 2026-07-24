@@ -67,6 +67,12 @@ function cst2(cst: string): string {
   return cst.trim().slice(0, 2);
 }
 
+/** True quando o CST exige campos/cálculo de ICMS-ST (10/30/70/60). */
+export function isIcmsCstComSt(cst: string): boolean {
+  const c = cst2(cst);
+  return ICMS_CST_ST_OPERACAO.has(c) || ICMS_CST_ST_RETIDO.has(c);
+}
+
 export type IcmsInput = {
   /** CST (Regime Normal: 00, 20, 40, 41, 51, 60…). */
   cst: string;

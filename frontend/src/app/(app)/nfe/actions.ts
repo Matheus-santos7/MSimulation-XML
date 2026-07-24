@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { cancelSale, deleteNfe, emitInboundConference, emitInsucessoNote, emitRetornoFisicoNote, emitReturnNote } from "@/lib/fiscal-api";
+import { cancelSale, deleteNfe, emitInboundConference, emitInsucessoNote, emitRetornoFisicoNote, emitReturnNote, getInboundConferenceExpected } from "@/lib/fiscal-api";
 
 export async function excluirNfeAction(chave: string): Promise<{ error?: string }> {
   try {
@@ -81,6 +81,19 @@ export async function emitirConferenciaRemessaAction(
     };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Erro na conferência da remessa" };
+  }
+}
+
+export async function carregarSaldoConferenciaAction(
+  chave: string,
+): Promise<{ error?: string; expectedQty?: number }> {
+  try {
+    const result = await getInboundConferenceExpected(chave);
+    return { expectedQty: result.expectedQty };
+  } catch (e) {
+    return {
+      error: e instanceof Error ? e.message : "Erro ao carregar saldo de conferência",
+    };
   }
 }
 

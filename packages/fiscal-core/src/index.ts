@@ -153,6 +153,15 @@ export {
   type MlInboundConferenceProcess,
 } from "./inbound-conference-payload.js";
 export {
+  allocateDebitAcrossSources,
+  assertDebitFullyAllocated,
+  assertPedidoMlForConference,
+  ConferenceInsufficientBalanceError,
+  sumLogicalConferenceQty,
+  type ConferenceBalanceSource,
+  type ConferenceDebitAllocation,
+} from "./inbound-conference-balance.js";
+export {
   VENDA_ML_CD_DEPOSITO,
   VENDA_ML_IBS_CBS_DEFAULT,
   VENDA_ML_INF_RESP_TEC,

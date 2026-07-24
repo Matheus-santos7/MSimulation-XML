@@ -17,6 +17,7 @@ export function mapProductFromPrisma(row: PrismaProduct): Product {
     preco: Number(row.preco),
     precoCusto: Number(row.precoCusto),
     estoque: row.estoque,
+    sujeitoSt: row.sujeitoSt,
     taxRuleBaseId: row.taxRuleBaseId ?? undefined,
   };
 }

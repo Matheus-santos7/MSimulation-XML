@@ -87,10 +87,43 @@ export {
   CFOP_VENDA_NAO_CONTRIB_INTRA,
   CFOP_VENDA_NAO_CONTRIB_INTER,
   ML_NFE_VER_PROC,
+
+  assertTaxRuleCfopMatchesTree,
+  assertCestRequiredForStCfop,
+  CFOP_VENDA_ST,
   resolveSaleCfop,
+  resolveUniformProdutoSt,
+  SaleCfopConsistencyError,
+  saleRoutingFromEmitterSettings,
   VENDA_ML_NAT_OP,
+  type ResolveSaleCfopRouting,
   type SaleCustomerType,
 } from "./sale-cfop.js";
+export {
+  CfopRoutingError,
+  customerTypeToPerfilComprador,
+  resolveCfopByDecisionTree,
+  type CfopLogistica,
+  type CfopOperacaoTipo,
+  type CfopPerfilComprador,
+  type CfopPerfilVendedor,
+  type CfopRoutingInput,
+  type CfopRoutingResult,
+  type CfopStInterestadualMode,
+} from "./cfop-routing.js";
+export {
+  assertMlSymbolicInboundReturnCfop,
+  inferSymbolicReturnNaturezaFromRemessaCfop,
+  isMlSymbolicInboundReturnCfop,
+  ML_SYMBOLIC_INBOUND_RETURN_CFOPS,
+  normalizeSymbolicReturnNatureza,
+  resolveSymbolicInboundReturnCfop,
+  SymbolicReturnCfopError,
+  type MlSymbolicInboundReturnCfop,
+  type ResolveSymbolicInboundReturnCfopInput,
+  type ResolveSymbolicInboundReturnCfopResult,
+  type SymbolicReturnNatureza,
+} from "./sale-return-cfop.js";
 export {
   VENDA_ML_CD_DEPOSITO,
   VENDA_ML_IBS_CBS_DEFAULT,

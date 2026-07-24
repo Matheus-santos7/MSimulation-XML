@@ -51,6 +51,7 @@ function toFormState(
     preco: product != null ? String(product.preco) : "",
     precoCusto: product != null ? String(product.precoCusto) : "",
     estoque: product != null ? String(product.estoque) : "1",
+    sujeitoSt: product?.sujeitoSt ? "true" : "false",
     taxRuleBaseId: taxRuleSelectValue(product?.taxRuleBaseId, taxRuleCatalog),
   };
 }
@@ -138,6 +139,18 @@ export function ProductFormFields({
             hint="Opcional. Obrigatório apenas para produtos sujeitos a ST."
           />
         </div>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            id={`${idPrefix}-sujeitoSt`}
+            type="checkbox"
+            name="sujeitoSt"
+            value="true"
+            checked={form.sujeitoSt === "true"}
+            onChange={(e) => setField("sujeitoSt", e.target.checked ? "true" : "false")}
+            className="size-4 rounded border border-input"
+          />
+          <span>Sujeito a ICMS-ST (CFOP 5405/6403/6404 com estoque próprio)</span>
+        </label>
         <Field
           id={`${idPrefix}-exTipi`}
           label="EXTIPI"

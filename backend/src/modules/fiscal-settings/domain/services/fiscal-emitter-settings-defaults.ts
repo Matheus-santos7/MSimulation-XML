@@ -95,6 +95,10 @@ export const DEFAULT_FISCAL_EMITTER_SETTINGS: FiscalEmitterSettingsData = {
     formaFaturamento: "EMISSOR_PROPRIO",
     dadosFiscaisAnunciosOk: false,
     dadosFiscaisAnunciosNota: "",
+    perfilVendedor: "comercio",
+    logisticaPadrao: "armazem_geral",
+    stInterestadualMode: "imposto_retido",
+    // omitido de propósito: inferência pela remessa; default resolver = outras_entradas
   },
   taxes: {
     cstDevolucao: {
@@ -184,7 +188,16 @@ export function mergeFiscalEmitterSettings(partial: unknown): FiscalEmitterSetti
   const p = partial as Partial<FiscalEmitterSettingsData>;
 
   return {
-    basic: { ...base.basic, ...p.basic },
+    basic: (() => {
+      const basic = { ...base.basic, ...p.basic };
+      if (
+        basic.retornoSimbolicoNatureza == null ||
+        (basic.retornoSimbolicoNatureza as string) === ""
+      ) {
+        delete basic.retornoSimbolicoNatureza;
+      }
+      return basic;
+    })(),
     taxes: {
       ...base.taxes,
       ...p.taxes,

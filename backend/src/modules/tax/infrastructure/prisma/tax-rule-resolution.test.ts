@@ -96,4 +96,71 @@ describe("resolveTaxRuleFromDb", () => {
     assert.ok(resolved);
     assert.equal(resolved!.icms?.cst, "10");
   });
+
+  it("symbolic_inbound_return resolve via alias inbound (XLSX legado)", async () => {
+    const prisma = mockPrisma([
+      {
+        ruleId: "4133250001-SP-taxpayer-inbound",
+        origin: "São Paulo",
+        uf: "SP",
+        cfop: "",
+        transactionType: "inbound",
+        customerType: "taxpayer",
+        payload: {
+          icmsByUf: {
+            ICMS_MG_PICMS_INTERNAL: 12,
+            ICMS_MG_CST: "40 - Isenta",
+          },
+        },
+      },
+    ]);
+
+    const resolved = await resolveTaxRuleFromDb(prisma, "tenant-1", {
+      originUf: "SP",
+      destinationUf: "MG",
+      transactionType: "symbolic_inbound_return",
+      customerType: "taxpayer",
+      ruleBaseId: "4133250001",
+    });
+
+    assert.ok(resolved);
+    assert.equal(resolved!.ruleId, "4133250001-SP-taxpayer-inbound");
+    assert.equal(resolved!.icms?.cst, "40");
+    assert.equal(resolved!.icms?.pIcmsInternal, 12);
+  });
+
+  it("symbolic_inbound_return prefere linha explícita antes do alias inbound", async () => {
+    const prisma = mockPrisma([
+      {
+        ruleId: "4133250001-SP-taxpayer-inbound",
+        origin: "SP",
+        uf: "SP",
+        cfop: "",
+        transactionType: "inbound",
+        customerType: "taxpayer",
+        payload: { icmsByUf: { ICMS_MG_CST: "00 - Tributada" } },
+      },
+      {
+        ruleId: "4133250001-SP-taxpayer-symbolic_inbound_return",
+        origin: "SP",
+        uf: "SP",
+        cfop: "",
+        transactionType: "symbolic_inbound_return",
+        customerType: "taxpayer",
+        payload: { icmsByUf: { ICMS_MG_CST: "41 - Não tributada" } },
+      },
+    ]);
+
+    const resolved = await resolveTaxRuleFromDb(prisma, "tenant-1", {
+      originUf: "SP",
+      destinationUf: "MG",
+      transactionType: "symbolic_inbound_return",
+      customerType: "taxpayer",
+      ruleBaseId: "4133250001",
+    });
+
+    assert.ok(resolved);
+    assert.equal(resolved!.ruleId, "4133250001-SP-taxpayer-symbolic_inbound_return");
+    assert.equal(resolved!.icms?.cst, "41");
+  });
 });

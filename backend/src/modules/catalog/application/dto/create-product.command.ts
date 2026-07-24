@@ -18,5 +18,6 @@ export type CreateProductCommand = {
   preco: number;
   precoCusto: number;
   estoque?: number;
+  sujeitoSt?: boolean;
   taxRuleBaseId?: string;
 };

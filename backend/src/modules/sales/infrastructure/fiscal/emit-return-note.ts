@@ -100,7 +100,10 @@ export async function emitConsolidatedReturnNote(
   const destino = destinoRetornoFromRemessa(remessa, remessa.unidadeDestino);
   const destIe = destIeRetornoFromRemessa(remessa, remessa.unidadeDestino);
   const fallbackRate = resolveIcmsFallbackRate(tenant.uf, destUf, "inbound", emitterSettings);
-  const cfop = resolveRetornoSimbolicoCfop(tenant.uf, destUf);
+  const cfop = resolveRetornoSimbolicoCfop(tenant.uf, destUf, {
+    natureza: emitterSettings.basic.retornoSimbolicoNatureza,
+    remessaCfop: remessa.cfop,
+  });
 
   const inboundFiscalItems = lines.map((line) => {
     const { inboundTaxRule } = line.rules;

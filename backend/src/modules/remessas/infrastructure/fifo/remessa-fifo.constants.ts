@@ -14,6 +14,7 @@ export const REMESSA_DEST_SELECT = {
   id: true,
   chave: true,
   tipo: true,
+  cfop: true,
   destNome: true,
   destDoc: true,
   destUf: true,

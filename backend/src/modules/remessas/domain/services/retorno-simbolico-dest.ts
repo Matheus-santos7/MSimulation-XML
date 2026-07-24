@@ -1,4 +1,9 @@
 import type { NFe } from "../../../../generated/prisma/client.js";
+import {
+  normalizeSymbolicReturnNatureza,
+  resolveSymbolicInboundReturnCfop,
+  type SymbolicReturnNatureza,
+} from "@msimulation-xml/fiscal-core";
 
 export const RETORNO_SIMBOLICO_CFOP_INTRA = "1949";
 export const RETORNO_SIMBOLICO_CFOP_INTER = "2949";
@@ -8,10 +13,26 @@ export const RETORNO_SIMBOLICO_NAT_OP =
 /** @deprecated Use `resolveRetornoSimbolicoCfop`. Mantido para imports legados. */
 export const RETORNO_SIMBOLICO_CFOP = RETORNO_SIMBOLICO_CFOP_INTRA;
 
-export function resolveRetornoSimbolicoCfop(emitUf: string, destUf: string): string {
-  return emitUf.trim().toUpperCase() === destUf.trim().toUpperCase()
-    ? RETORNO_SIMBOLICO_CFOP_INTRA
-    : RETORNO_SIMBOLICO_CFOP_INTER;
+export type ResolveRetornoSimbolicoCfopOptions = {
+  natureza?: SymbolicReturnNatureza | null;
+  remessaCfop?: string | null;
+};
+
+/**
+ * CFOP de retorno simbólico (allowlist ML dos 6 códigos).
+ * Default preserva 1949/2949; remessa 5905/6905 → 1907/2907; settings podem forçar natureza.
+ */
+export function resolveRetornoSimbolicoCfop(
+  emitUf: string,
+  destUf: string,
+  options?: ResolveRetornoSimbolicoCfopOptions,
+): string {
+  return resolveSymbolicInboundReturnCfop({
+    emitUf,
+    destUf,
+    natureza: options?.natureza != null ? normalizeSymbolicReturnNatureza(options.natureza) : null,
+    remessaCfop: options?.remessaCfop,
+  }).cfop;
 }
 
 export type CamposDestinoRetorno = {

@@ -49,4 +49,25 @@ describe("resolveRetornoSimbolicoCfop", () => {
     assert.equal(resolveRetornoSimbolicoCfop("PR", "SC"), "2949");
     assert.equal(resolveRetornoSimbolicoCfop("SP", "MG"), "2949");
   });
+
+  it("cobertura dos 6 CFOPs via natureza / remessa", () => {
+    assert.equal(
+      resolveRetornoSimbolicoCfop("SP", "SP", { natureza: "retorno_venda_fora" }),
+      "1904",
+    );
+    assert.equal(
+      resolveRetornoSimbolicoCfop("SP", "MG", { natureza: "retorno_venda_fora" }),
+      "2904",
+    );
+    assert.equal(
+      resolveRetornoSimbolicoCfop("SP", "SP", { natureza: "retorno_deposito" }),
+      "1907",
+    );
+    assert.equal(
+      resolveRetornoSimbolicoCfop("SP", "SC", { natureza: "retorno_deposito" }),
+      "2907",
+    );
+    assert.equal(resolveRetornoSimbolicoCfop("PR", "PR", { remessaCfop: "5905" }), "1907");
+    assert.equal(resolveRetornoSimbolicoCfop("PR", "SC", { remessaCfop: "6905" }), "2907");
+  });
 });

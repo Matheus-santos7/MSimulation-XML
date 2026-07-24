@@ -68,6 +68,18 @@ const nfciField = z.preprocess(
   z.string().trim().max(36, "nFCI deve ter no máximo 36 caracteres").optional(),
 );
 
+const booleanField = z.preprocess((v) => {
+  if (v === undefined || v === null || v === "") return false;
+  if (typeof v === "boolean") return v;
+  if (typeof v === "number") return v === 1;
+  if (typeof v === "string") {
+    const s = v.trim().toLowerCase();
+    if (["true", "1", "on", "yes"].includes(s)) return true;
+    if (["false", "0", "off", "no"].includes(s)) return false;
+  }
+  return false;
+}, z.boolean());
+
 const productBodyFields = {
   sku: z.string().trim().min(1, "SKU obrigatório").max(60),
   ean: eanField,
@@ -81,6 +93,7 @@ const productBodyFields = {
   preco: z.coerce.number().positive("Preço de venda deve ser maior que zero"),
   precoCusto: z.coerce.number().min(0, "Preço de custo não pode ser negativo"),
   estoque: z.coerce.number().int().min(0, "Estoque não pode ser negativo").default(0),
+  sujeitoSt: booleanField.optional().default(false),
   taxRuleBaseId: optionalTrimmed.pipe(
     z.string().max(120, "Regra fiscal deve ter no máximo 120 caracteres").optional(),
   ),

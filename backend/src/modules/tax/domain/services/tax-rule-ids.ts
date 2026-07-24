@@ -1,9 +1,35 @@
 export type CustomerType = "taxpayer" | "non_taxpayer";
-export type TransactionType = "sale" | "inbound";
+export type TransactionType =
+  | "sale"
+  | "inbound"
+  | "symbolic_inbound_return"
+  | "inbound_return";
 
-const TAX_RULE_ROW_SUFFIX = /-(taxpayer|non_taxpayer)-(sale|inbound)$/i;
-const TAX_RULE_ROW_WITH_ORIGIN = /^(.+)-([A-Z]{2})-(taxpayer|non_taxpayer)-(sale|inbound)$/i;
-const TAX_RULE_ROW_LEGACY = /^(.+)-(taxpayer|non_taxpayer)-(sale|inbound)$/i;
+/** Sufixo de operação no ruleId — aliases longos antes de `inbound`. */
+const TX = "symbolic_inbound_return|inbound_return|sale|inbound";
+const TAX_RULE_ROW_SUFFIX = new RegExp(`-(taxpayer|non_taxpayer)-(${TX})$`, "i");
+const TAX_RULE_ROW_WITH_ORIGIN = new RegExp(
+  `^(.+)-([A-Z]{2})-(taxpayer|non_taxpayer)-(${TX})$`,
+  "i",
+);
+const TAX_RULE_ROW_LEGACY = new RegExp(`^(.+)-(taxpayer|non_taxpayer)-(${TX})$`, "i");
+
+/**
+ * Ordem de lookup no banco: tipo pedido primeiro; aliases para planilha XLSX legado (`inbound`).
+ * - `symbolic_inbound_return` → retorno simbólico SALE
+ * - `inbound_return` → retorno físico / NEGATIVE difference
+ */
+export function taxRuleLookupTransactionTypes(
+  transactionType: TransactionType,
+): TransactionType[] {
+  if (transactionType === "symbolic_inbound_return") {
+    return ["symbolic_inbound_return", "inbound"];
+  }
+  if (transactionType === "inbound_return") {
+    return ["inbound_return", "inbound"];
+  }
+  return [transactionType];
+}
 
 /** RULE_ID da planilha (sem sufixo origem/contribuinte/operação). */
 export function taxRuleBaseIdFromRuleId(ruleId: string): string {

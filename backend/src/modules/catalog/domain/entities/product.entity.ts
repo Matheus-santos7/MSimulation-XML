@@ -24,5 +24,7 @@ export type Product = {
   preco: number;
   precoCusto: number;
   estoque: number;
+  /** ICMS-ST — usado na árvore de CFOP com logística estoque_proprio. */
+  sujeitoSt?: boolean;
   taxRuleBaseId?: string;
 };

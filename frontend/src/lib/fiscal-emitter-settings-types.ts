@@ -39,6 +39,10 @@ export type FiscalEmitterSettingsData = {
     formaFaturamento: "EMISSOR_PROPRIO" | "EMISSOR_ML";
     dadosFiscaisAnunciosOk: boolean;
     dadosFiscaisAnunciosNota?: string;
+    perfilVendedor?: "industria" | "comercio";
+    logisticaPadrao?: "armazem_geral" | "estoque_proprio";
+    stInterestadualMode?: "protocolo" | "imposto_retido";
+    retornoSimbolicoNatureza?: "outras_entradas" | "retorno_venda_fora" | "retorno_deposito";
   };
   taxes: {
     cstDevolucao: {

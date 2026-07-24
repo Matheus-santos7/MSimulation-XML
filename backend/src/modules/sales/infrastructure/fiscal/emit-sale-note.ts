@@ -1,9 +1,14 @@
 import {
+  assertCestRequiredForStCfop,
+  assertTaxRuleCfopMatchesTree,
   enrichFiscalPayloadMlVenda,
   enrichFiscalPayloadWithXTexto,
   resolveFiscalExitUf,
   resolveNumeroInicialNfe,
   resolveSaleCfop,
+  resolveUniformProdutoSt,
+  SaleCfopConsistencyError,
+  saleRoutingFromEmitterSettings,
   VENDA_ML_NAT_OP,
 } from "@msimulation-xml/fiscal-core";
 import { FiscalStatus, NFeTipo, Prisma, type Product, type Tenant } from "../../../../generated/prisma/client.js";
@@ -26,6 +31,7 @@ import {
   saleDestinationAddress,
   sumOrderQuantidade,
 } from "../../domain/services/sales-chain.service.js";
+import { SalesChainError } from "../../domain/errors/sales-chain.error.js";
 
 function autXmlCpfsFromSettings(
   settings: SalesChainRules["emitterSettings"],
@@ -66,8 +72,31 @@ export async function emitSaleNote(
   const nfci = primaryItem.product.nfci?.trim() || undefined;
 
   const saleFiscalItems = [];
-  let headerCfop = rules.saleTaxRule.cfop;
   const orderFreteConsumidor = order.valorFreteConsumidor ?? 0;
+
+  let produtoSt: boolean;
+  try {
+    produtoSt = resolveUniformProdutoSt(order.items.map((i) => i.product.sujeitoSt === true));
+  } catch (error) {
+    if (error instanceof SaleCfopConsistencyError) {
+      throw new SalesChainError(error.message);
+    }
+    throw error;
+  }
+
+  const saleRouting = saleRoutingFromEmitterSettings(emitterSettings, { produtoSt });
+  const cfop = resolveSaleCfop(tenant.uf, order.destUf, customerType, null, saleRouting);
+  try {
+    assertCestRequiredForStCfop(
+      cfop,
+      order.items.map((i) => ({ cest: i.product.cest, sku: i.product.sku })),
+    );
+  } catch (error) {
+    if (error instanceof SaleCfopConsistencyError) {
+      throw new SalesChainError(error.message);
+    }
+    throw error;
+  }
 
   for (const [index, item] of order.items.entries()) {
     const ruleBaseId = item.product.taxRuleBaseId?.trim() ?? ctx.ruleBaseId;
@@ -87,8 +116,14 @@ export async function emitSaleNote(
         customerType,
       },
     );
-    headerCfop = saleTaxRule.cfop;
-    const cfop = resolveSaleCfop(tenant.uf, order.destUf, customerType, saleTaxRule.cfop);
+    try {
+      assertTaxRuleCfopMatchesTree(cfop, saleTaxRule.cfop, tenant.uf, order.destUf);
+    } catch (error) {
+      if (error instanceof SaleCfopConsistencyError) {
+        throw new SalesChainError(error.message);
+      }
+      throw error;
+    }
     const valorFrete = index === 0 ? orderFreteConsumidor : 0;
     const valorDesconto = item.valorDesconto ?? 0;
 
@@ -132,7 +167,6 @@ export async function emitSaleNote(
   const crossUfFulfillment = fiscalExitUf.toUpperCase() !== tenant.uf.toUpperCase();
   const cMunSaidaFisica = stockCodigoMunicipio?.trim() || undefined;
   const destIe = resolveDestIeForFiscalPayload(order.destIndIeDest, order.destIe);
-  const cfop = resolveSaleCfop(tenant.uf, order.destUf, customerType, headerCfop);
 
   const saleRow = await tx.nFe.create({
     data: {

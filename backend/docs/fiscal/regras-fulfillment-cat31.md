@@ -45,7 +45,7 @@ Quando o produto é vendido e despachado diretamente do armazém do Operador Log
 |-------|-------|
 | **Tipo de Nota** | Saída (`tpNF = 1`) |
 | **Destinatário** | Comprador / Consumidor Final |
-| **CFOP** | Padrão de venda (ex.: `5102`, `6102`, `5405`, `6404`) |
+| **CFOP** | Padrão de venda conforme árvore (`packages/fiscal-core` `resolveCfopByDecisionTree`): Full/armazém geral → `5105`/`6105` (indústria) ou `5106`/`6106` (comércio); estoque próprio → `5101`/`5102`/`6101`/`6102`/`6107`/`6108`; ST → `5405`/`6403`/`6404`. Ver `docs/specs/sale-fulfillment-cfop-matrix.md`. |
 | **ICMS** | Destacado ou pago no Simples Nacional normalmente |
 
 **Local de Retirada (`<retirada>`):** preencher o XML com endereço, CNPJ e Inscrição Estadual do Operador Logístico (o produto sai de lá).

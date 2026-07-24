@@ -22,10 +22,13 @@ export function FormaFaturamentoForm({ initial }: { initial: BasicSettings }) {
             perfilVendedor: perfil.value as NonNullable<BasicSettings["perfilVendedor"]>,
             logisticaPadrao: logistica.value as NonNullable<BasicSettings["logisticaPadrao"]>,
             stInterestadualMode: stMode.value as NonNullable<BasicSettings["stInterestadualMode"]>,
-            retornoSimbolicoNatureza:
-              retornoNat.value === ""
-                ? null
-                : (retornoNat.value as NonNullable<BasicSettings["retornoSimbolicoNatureza"]>),
+            // Patch usa `undefined` (não `null`) para “automático” — alinhado a FiscalEmitterSettingsPatch.
+            ...(retornoNat.value === ""
+              ? {}
+              : {
+                  retornoSimbolicoNatureza:
+                    retornoNat.value as NonNullable<BasicSettings["retornoSimbolicoNatureza"]>,
+                }),
           },
         };
       }}

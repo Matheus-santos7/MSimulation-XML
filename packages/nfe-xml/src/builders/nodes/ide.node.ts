@@ -49,14 +49,34 @@ export function buildIdeNode(input: IdeNodeInput): XmlObject {
     verProc: options.verProc,
   };
 
-  if (options.includeNfRef && nfe.nfeReferenciaChave) {
-    const k = nfe.nfeReferenciaChave.replace(/\D/g, "");
-    if (k.length === 44) {
-      ide.NFref = { refNFe: k };
+  if (options.includeNfRef) {
+    const refs = normalizeNfeReferenciaChaves(nfe.nfeReferenciaChave);
+    if (refs.length === 1) {
+      ide.NFref = { refNFe: refs[0]! };
+    } else if (refs.length > 1) {
+      ide.NFref = refs.map((refNFe) => ({ refNFe }));
     }
   }
 
   return { ide };
+}
+
+/** Normaliza chave(s) de NF-e referenciada(s) para lista de 44 dígitos, sem duplicar. */
+export function normalizeNfeReferenciaChaves(
+  raw: string | string[] | undefined | null,
+): string[] {
+  if (raw == null) return [];
+  const list = Array.isArray(raw) ? raw : [raw];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const entry of list) {
+    const k = String(entry ?? "").replace(/\D/g, "");
+    if (k.length === 44 && !seen.has(k)) {
+      seen.add(k);
+      out.push(k);
+    }
+  }
+  return out;
 }
 
 /** Defaults de ide para NF-e de venda ML. */

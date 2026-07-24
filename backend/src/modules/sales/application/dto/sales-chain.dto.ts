@@ -26,7 +26,10 @@ export type SalesChainRules = {
 export type ReturnNoteCreated = {
   id: string;
   chave: string;
+  /** FK principal / compat — 1ª remessa FIFO. */
   remessaChave: string;
+  /** Todas as remessas distintas consumidas (CAT 31 multi-`<NFref>`). */
+  remessaChaves: string[];
   numero: number;
   serie: number;
   emitidaEm: Date;

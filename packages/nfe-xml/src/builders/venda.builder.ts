@@ -158,9 +158,12 @@ export class VendaNFeStrategyBuilder extends BaseNFeBuilder {
     const nfciRaw =
       optionalText(typeof fiscal.nfci === "string" ? fiscal.nfci : undefined) ||
       optionalText(product?.nfci);
-    const xPed =
+    const packXPed =
       optionalText(typeof fiscal.xPed === "string" ? fiscal.xPed : undefined) ||
       optionalText(nfe.pedidoML);
+    const xPedsFiscal = Array.isArray(fiscal.xPeds)
+      ? fiscal.xPeds.map((v) => (typeof v === "string" ? optionalText(v) : undefined))
+      : undefined;
     const infAdProd = optionalText(
       typeof fiscal.infAdProd === "string" ? fiscal.infAdProd : undefined,
     );
@@ -247,7 +250,11 @@ export class VendaNFeStrategyBuilder extends BaseNFeBuilder {
         cest: prod?.cest ?? dtoItem?.product?.cest,
         exTipi: prod?.exTipi ?? dtoItem?.product?.exTipi,
         nfci: i === 0 ? nfciRaw : undefined,
-        xPed: i === 0 ? xPed : undefined,
+        xPed:
+          optionalText(dtoItem?.xPed) ||
+          xPedsFiscal?.[i] ||
+          packXPed ||
+          undefined,
         infAdProd: i === 0 ? infAdProd : undefined,
         vBcIcms: vBcIcmsItem,
         valorIcms: valorIcmsItem,

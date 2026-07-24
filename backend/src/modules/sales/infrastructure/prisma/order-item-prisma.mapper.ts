@@ -13,6 +13,7 @@ export function mapOrderItemFromRow(row: PedidoItemRow): OrderItemSummary {
     productId: row.productId,
     quantidade: row.quantidade,
     desconto,
+    ...(row.xPed?.trim() ? { xPed: row.xPed.trim() } : {}),
     product: {
       id: row.product.id,
       sku: row.product.sku,

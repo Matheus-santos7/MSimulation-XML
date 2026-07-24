@@ -400,6 +400,8 @@ model PedidoItem {
   numeroItem Int      @map("numero_item")
   quantidade Int      @default(1)
   desconto   Decimal  @default(0) @db.Decimal(15, 2)
+  /** OrderId ML por produto (`xPed` no XML por `nItem`). PackId fica em `Pedido.pedidoMl`. */
+  xPed       String?  @map("x_ped")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 

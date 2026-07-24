@@ -110,23 +110,35 @@ export function PedidoWizardDialog({ open, onOpenChange, products, pedido }: Pro
           ) : null}
 
           {step === 0 && (
-            <WizardSection
-              title={`Itens do pedido (${form.items.length})`}
-              action={
-                <Button type="button" variant="outline" size="sm" onClick={addItem}>
-                  <Plus className="size-3.5 mr-1" />
-                  Adicionar item
-                </Button>
-              }
-            >
-              <PedidoWizardItemsTable
-                items={form.items}
-                products={products}
-                lineTotals={lineTotals}
-                onItemChange={setItem}
-                onRemoveItem={removeItem}
-              />
-            </WizardSection>
+            <div className="space-y-4">
+              <div className={`${PEDIDO_WIZARD_PANEL_CLASS} p-4 space-y-1.5`}>
+                <Label className="text-[12px] text-muted-foreground">PackId (pedido ML)</Label>
+                <Input
+                  value={form.pedidoMl}
+                  onChange={(e) => set("pedidoMl", e.target.value)}
+                  className="h-9 bg-background font-mono text-[12px]"
+                  placeholder="Gerado automaticamente"
+                  disabled={locked}
+                />
+              </div>
+              <WizardSection
+                title={`Itens do pedido (${form.items.length})`}
+                action={
+                  <Button type="button" variant="outline" size="sm" onClick={addItem} disabled={locked}>
+                    <Plus className="size-3.5 mr-1" />
+                    Adicionar item
+                  </Button>
+                }
+              >
+                <PedidoWizardItemsTable
+                  items={form.items}
+                  products={products}
+                  lineTotals={lineTotals}
+                  onItemChange={setItem}
+                  onRemoveItem={removeItem}
+                />
+              </WizardSection>
+            </div>
           )}
 
           {step === 1 && (

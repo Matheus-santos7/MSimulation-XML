@@ -34,6 +34,7 @@ import type { OrderForEmit, OrderItemForEmit } from "../../domain/entities/order
 import type { ReturnNoteCreated, SalesChainRules } from "../../application/dto/sales-chain.dto.js";
 import { requirePrimaryOrderItem } from "../../domain/services/order-for-emit.helpers.js";
 import { sumOrderQuantidade } from "../../domain/services/sales-chain.service.js";
+import { distinctRemessaChaves } from "../../domain/services/distinct-remessa-chaves.js";
 
 /** Dados resolvidos por linha antes de emitir o retorno consolidado. */
 export type ReturnLinePrep = {
@@ -205,6 +206,7 @@ export async function emitConsolidatedReturnNote(
     id: row.id,
     chave: row.chave,
     remessaChave: primaryLine.preview.remessaChave,
+    remessaChaves: distinctRemessaChaves(lines.map((l) => l.preview)),
     numero: row.numero,
     serie: row.serie,
     emitidaEm: row.emitidaEm,
@@ -234,6 +236,7 @@ export async function consumeShipmentForReturn(
 
 /**
  * Persiste o XML autorizado do retorno consolidado com todos os produtos do pedido.
+ * Preferência: chaves das remessas já debitadas em `NfeRemessaConsumo` (fonte da verdade FIFO).
  */
 export async function persistConsolidatedReturnXml(
   tx: PrismaTx,
@@ -242,12 +245,23 @@ export async function persistConsolidatedReturnXml(
   emitterSettings: SalesChainRules["emitterSettings"],
 ) {
   const primaryItem = requirePrimaryOrderItem(order);
+  const consumos = await tx.nfeRemessaConsumo.findMany({
+    where: { retornoNfeId: returnNote.id },
+    include: { remessaNfe: { select: { chave: true } } },
+    orderBy: { createdAt: "asc" },
+  });
+  const fromConsumos = distinctRemessaChaves(
+    consumos.map((c) => ({ remessaChave: c.remessaNfe.chave })),
+  );
+  const remessaChaves =
+    fromConsumos.length > 0 ? fromConsumos : returnNote.remessaChaves;
+
   await persistNfeXmlFromEmission(tx, {
     nfeId: returnNote.id,
     tenant: order.tenant as Tenant,
     productId: primaryItem.product.id,
     products: order.items.map((line) => line.product as Product),
     settings: emitterSettings,
-    nfeReferenciaChave: returnNote.remessaChave,
+    nfeReferenciaChave: remessaChaves.length === 1 ? remessaChaves[0]! : remessaChaves,
   });
 }

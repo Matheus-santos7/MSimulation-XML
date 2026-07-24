@@ -12,6 +12,7 @@ export type PedidoItemRow = {
   numeroItem: number;
   quantidade: number;
   desconto: { toString(): string };
+  xPed: string | null;
   product: Product;
 };
 
@@ -121,6 +122,7 @@ export function mapOrderForEmitFromPrisma(
         quantidade: item.quantidade,
         product: item.product,
         ...(desconto > 0 ? { valorDesconto: desconto } : {}),
+        ...(item.xPed?.trim() ? { xPed: item.xPed.trim() } : {}),
       };
     });
 

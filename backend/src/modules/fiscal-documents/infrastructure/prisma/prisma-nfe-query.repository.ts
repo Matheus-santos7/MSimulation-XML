@@ -8,6 +8,12 @@ import {
 } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
 import type { NfeDetail, NfeQueryPort } from "../../domain/ports/nfe-query.port.js";
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
+import { resolveNfeReferenciaChaves } from "../../domain/services/nfe-referencia-chaves.js";
+
+const RETURN_TIPOS_WITH_CONSUMO: ReadonlySet<NFeTipo> = new Set([
+  NFeTipo.RETORNO_SIMBOLICO,
+  NFeTipo.RETORNO_FISICO,
+]);
 
 const nfeListInclude = {
   nfeReferencia: { select: { chave: true } },
@@ -64,10 +70,33 @@ export class PrismaNfeQueryRepository implements NfeQueryPort {
     const fifoBalance = isShipmentWithFifoBalance(row.tipo)
       ? await getNetRemessaNfeBalance(this.db, row.id, row.quantidade)
       : undefined;
-    const dto = mapNfe(row, row.nfeReferencia?.chave, row.itens, fifoBalance);
+
+    let referenciaChaves: string | string[] | undefined = row.nfeReferencia?.chave;
+    if (RETURN_TIPOS_WITH_CONSUMO.has(row.tipo)) {
+      const consumos = await this.db.nfeRemessaConsumo.findMany({
+        where: { retornoNfeId: row.id },
+        include: { remessaNfe: { select: { chave: true } } },
+        orderBy: { createdAt: "asc" },
+      });
+      const resolved = resolveNfeReferenciaChaves({
+        primaryChave: row.nfeReferencia?.chave,
+        consumoChaves: consumos.map((c) => c.remessaNfe.chave),
+      });
+      if (resolved.length > 0) {
+        referenciaChaves = resolved.length === 1 ? resolved[0]! : resolved;
+      }
+    }
+
+    const dto = mapNfe(row, referenciaChaves, row.itens, fifoBalance);
+    const chavesLista = Array.isArray(referenciaChaves)
+      ? referenciaChaves
+      : referenciaChaves
+        ? [referenciaChaves]
+        : [];
 
     return {
       ...dto,
+      nfeReferenciaChaves: chavesLista.length > 0 ? chavesLista : undefined,
       cteChaveRef: row.cteRemessa?.chave ?? row.cteVenda?.chave,
       referenciadas: row.nfeReferenciadas.map((nfe) => ({
         chave: nfe.chave,

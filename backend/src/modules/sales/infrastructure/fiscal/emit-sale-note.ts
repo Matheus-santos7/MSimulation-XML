@@ -32,6 +32,7 @@ import {
   sumOrderQuantidade,
 } from "../../domain/services/sales-chain.service.js";
 import { SalesChainError } from "../../domain/errors/sales-chain.error.js";
+import { resolveSaleItemXPeds } from "../../domain/services/sale-item-xpeds.js";
 
 function autXmlCpfsFromSettings(
   settings: SalesChainRules["emitterSettings"],
@@ -67,7 +68,9 @@ export async function emitSaleNote(
   const chave = buildChaveNFe({ uf: tenant.uf, cnpj: tenant.cnpj, serie: ctx.serie, numero });
   const fallbackRate = inferIcmsRateForSale(fiscalExitUf, order.destUf, emitterSettings);
   const natOp = VENDA_ML_NAT_OP;
-  const xPed = order.mlPackId?.trim() || ctx.pedidoMl;
+  const packXPed = order.mlPackId?.trim() || ctx.pedidoMl;
+  const xPeds = resolveSaleItemXPeds(order.items, packXPed);
+  const xPed = xPeds[0] || packXPed;
   const autXmlCpfs = autXmlCpfsFromSettings(emitterSettings);
   const nfci = primaryItem.product.nfci?.trim() || undefined;
 
@@ -209,6 +212,7 @@ export async function emitSaleNote(
             ...(autXmlCpfs ? { autXmlCpfs } : {}),
             ...(nfci ? { nfci } : {}),
             ...(xPed ? { xPed } : {}),
+            ...(xPeds.length > 0 ? { xPeds } : {}),
             ...(valorFreteTotal > 0 ? { valorFrete: valorFreteTotal } : {}),
             ...(valorDescontoTotal > 0 ? { valorDesconto: valorDescontoTotal } : {}),
             ...(destIe ? { destIe } : {}),

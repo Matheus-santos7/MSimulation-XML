@@ -187,11 +187,13 @@ export type PedidoItemCheckoutInput = {
   productId: string;
   quantidade: number;
   desconto?: number;
+  xPed?: string;
 };
 
 export type PedidoCheckoutInput = {
   items: PedidoItemCheckoutInput[];
   comprador: CompradorCheckoutInput;
+  pedidoMl?: string;
   freteConsumidor?: number;
   freteSeller?: number;
 };
@@ -201,6 +203,7 @@ export type PedidoItemDto = {
   productId: string;
   quantidade: number;
   desconto: number;
+  xPed?: string;
   valorTotalLinha: number;
   product: { id: string; sku: string; nome: string; preco: number };
 };
@@ -263,8 +266,10 @@ export type NFeDto = {
   tipo: "VENDA" | "REMESSA" | "RETORNO_SIMBOLICO" | "DEVOLUCAO" | "REMESSA_SIMBOLICA" | "REMESSA_AVANCO" | "TRANSFERENCIA_FILIAL" | "RETORNO_FISICO" | "INSULCESSO_DE_ENTREGA";
   saldoDisponivel?: number;
   itens?: NFeItemDto[];
-  /** Chave da NF-e referenciada por esta nota (pai na cadeia → vai no XML refNFe). */
-  nfeReferenciaChave?: string;
+  /** Chave(s) da NF-e referenciada — uma string ou várias (retorno multi-remessa). */
+  nfeReferenciaChave?: string | string[];
+  /** Todas as chaves referenciadas (retorno multi-remessa). */
+  nfeReferenciaChaves?: string[];
   cteChaveRef?: string;
   validationStatus: "PENDING" | "APPROVED" | "REJECTED";
   validationMessage?: string;

@@ -6,6 +6,7 @@ import { faturarPedidoAction, salvarPedidoRascunhoAction } from "@/app/(app)/ped
 import { lookupCep } from "@/lib/lookup-actions";
 import type { PedidoDto, ProductDto } from "@/lib/fiscal-types";
 import { mergePedidoBuyerExample } from "@/lib/merge-pedido-buyer-example";
+import { gerarPedidoMlClient } from "@/lib/gerar-pedido-ml";
 import {
   PEDIDO_FORM_EMPTY,
   PEDIDO_ITEM_EMPTY,
@@ -72,7 +73,14 @@ export function usePedidoWizard({ open, onOpenChange, products, pedido }: UsePed
     } else {
       setForm({
         ...PEDIDO_FORM_EMPTY,
-        items: [{ ...PEDIDO_ITEM_EMPTY, productId: products[0]?.id ?? "" }],
+        pedidoMl: gerarPedidoMlClient(),
+        items: [
+          {
+            ...PEDIDO_ITEM_EMPTY,
+            productId: products[0]?.id ?? "",
+            xPed: gerarPedidoMlClient(),
+          },
+        ],
       });
     }
   }, [open, pedido, products]);
@@ -92,7 +100,11 @@ export function usePedidoWizard({ open, onOpenChange, products, pedido }: UsePed
       ...current,
       items: [
         ...current.items,
-        { ...PEDIDO_ITEM_EMPTY, productId: products[0]?.id ?? "" },
+        {
+          ...PEDIDO_ITEM_EMPTY,
+          productId: products[0]?.id ?? "",
+          xPed: gerarPedidoMlClient(),
+        },
       ],
     }));
   }
@@ -124,7 +136,9 @@ export function usePedidoWizard({ open, onOpenChange, products, pedido }: UsePed
       fd.set(`items[${index}].productId`, item.productId);
       fd.set(`items[${index}].quantidade`, item.quantidade);
       fd.set(`items[${index}].desconto`, item.desconto);
+      fd.set(`items[${index}].xPed`, item.xPed);
     });
+    fd.set("pedidoMl", form.pedidoMl);
     fd.set("freteConsumidor", form.freteConsumidor);
     fd.set("freteSeller", form.freteSeller);
     fd.set("cpf", form.cpf);

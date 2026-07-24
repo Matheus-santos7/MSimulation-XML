@@ -44,13 +44,13 @@ export interface NotaFiscalRepository {
 
   /**
    * Emite e persiste XML via pipeline fiscal legado (simulador).
-   * @param input.nfeReferenciaChave - Chave da nota pai para referência NFRef
+   * @param input.nfeReferenciaChave - Chave(s) da(s) nota(s) pai para `<NFref>`
    */
   persistirXmlFromEmission(input: {
     nfeId: string;
     tenant: Tenant;
     productId: string;
-    nfeReferenciaChave?: string;
+    nfeReferenciaChave?: string | string[];
   }): Promise<void>;
 }
 

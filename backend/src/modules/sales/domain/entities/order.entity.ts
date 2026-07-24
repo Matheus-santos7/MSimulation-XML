@@ -14,6 +14,8 @@ export type OrderItemSummary = {
   productId: string;
   quantidade: number;
   desconto: number;
+  /** OrderId ML por produto (`xPed`). */
+  xPed?: string;
   product: OrderProductSummary;
   /** Total value of this line (unit price * qty - desconto). */
   valorTotalLinha: number;

@@ -118,6 +118,16 @@ export function PedidoWizardItemsTable({
                 />
               </div>
             </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-[12px] text-muted-foreground">OrderId (xPed)</Label>
+              <Input
+                value={item.xPed}
+                onChange={(e) => onItemChange(index, "xPed", e.target.value)}
+                className="h-9 bg-background font-mono text-[12px]"
+                placeholder="Gerado automaticamente"
+              />
+            </div>
           </article>
         );
       })}

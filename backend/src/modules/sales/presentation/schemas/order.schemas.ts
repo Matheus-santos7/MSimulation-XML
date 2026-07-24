@@ -80,11 +80,14 @@ const orderItemBody = z.object({
   productId: z.string().uuid(),
   quantidade: z.coerce.number().positive().max(9999).default(1),
   desconto: monetaryValueField.default(0),
+  xPed: optionalTrimmed,
 });
 
 export const orderCheckoutBody = z.object({
   items: z.array(orderItemBody).min(1, "Pedido deve ter ao menos um item"),
   comprador: buyerCheckoutBody,
+  /** PackId ML (`Pedido.pedidoMl`). */
+  pedidoMl: optionalTrimmed,
   freteConsumidor: monetaryValueField.default(0),
   freteSeller: monetaryValueField.default(0),
 }).superRefine((data, ctx) => {

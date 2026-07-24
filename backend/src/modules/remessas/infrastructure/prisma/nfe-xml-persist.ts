@@ -12,7 +12,7 @@ export async function persistirXmlFromEmission(
     nfeId: string;
     tenant: Tenant;
     productId: string;
-    nfeReferenciaChave?: string;
+    nfeReferenciaChave?: string | string[];
   },
 ): Promise<void> {
   const settings = await loadEmitterSettings(db, input.tenant.id);

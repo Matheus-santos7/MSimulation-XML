@@ -728,4 +728,83 @@ describe("buildNFeXmlFromBuilder — DEVOLUCAO / INSULCESSO", () => {
       /nfeOrigem/,
     );
   });
+
+  it("VENDA multi-item emite xPed distinto por nItem (fiscal.xPeds)", () => {
+    const xPedA = "200001579233991";
+    const xPedB = "200001579233992";
+    const nfe: NFeXmlInput = {
+      chave: "41260678242849000169550050000000051423282896",
+      numero: 5,
+      serie: 5,
+      natOp: VENDA_ML_NAT_OP,
+      cfop: "5105",
+      ncm: "73211100",
+      destinatario: {
+        nome: "Daiane Aparecida dos santos",
+        doc: "07629167962",
+        uf: "PR",
+        indIEDest: 9,
+        docTipo: "CPF",
+        endereco: {
+          logradouro: "Rua Elizario Castanha",
+          numero: "61",
+          bairro: "Centro",
+          codigoMunicipio: "4107207",
+          municipio: "Dois Vizinhos",
+          uf: "PR",
+          cep: "85660000",
+          codigoPais: 1058,
+          nomePais: "Brasil",
+        },
+      },
+      valor: 200,
+      valorICMS: 0,
+      aliqICMS: 0,
+      status: "AUTORIZADA",
+      emitidaEm: "2026-06-13T15:57:40-03:00",
+      pedidoML: "PACK-001",
+      quantidade: 2,
+      tipo: "VENDA",
+      nfeReferenciaChave: "41260678242849000169550050000000041410852632",
+      fiscalPayload: enrichFiscalPayloadMlVenda(
+        {
+          xPeds: [xPedA, xPedB],
+          engine: {
+            itens: [
+              {
+                vProd: 100,
+                quantidade: 1,
+                valorUnitario: 100,
+                icms: { cst: "00", orig: 5, vBC: 100, pICMS: 18, vICMS: 18 },
+                pis: { cst: "01", vBC: 100, pPIS: 1.65, vPIS: 1.65 },
+                cofins: { cst: "01", vBC: 100, pCOFINS: 7.6, vCOFINS: 7.6 },
+              },
+              {
+                vProd: 100,
+                quantidade: 1,
+                valorUnitario: 100,
+                icms: { cst: "00", orig: 5, vBC: 100, pICMS: 18, vICMS: 18 },
+                pis: { cst: "01", vBC: 100, pPIS: 1.65, vPIS: 1.65 },
+                cofins: { cst: "01", vBC: 100, pCOFINS: 7.6, vCOFINS: 7.6 },
+              },
+            ],
+            totais: {
+              vBC: 200,
+              vICMS: 36,
+              vProd: 200,
+              vPIS: 3.3,
+              vCOFINS: 15.2,
+              vNF: 200,
+            },
+          },
+        },
+        { quantidade: 2 },
+      ),
+    };
+
+    const xml = buildNFeXML(nfe, emit, product);
+    const xPeds = [...xml.matchAll(/<xPed>([^<]+)<\/xPed>/g)].map((m) => m[1]);
+    assert.deepEqual(xPeds, [xPedA, xPedB]);
+    assert.equal((xml.match(/<NFref>/g) ?? []).length, 1);
+  });
 });

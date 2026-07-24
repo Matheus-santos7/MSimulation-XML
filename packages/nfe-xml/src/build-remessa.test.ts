@@ -666,4 +666,47 @@ describe("buildNFeXML — REMESSA", () => {
     const xml = buildNFeXML(nfe, emit, product);
     assert.match(xml, /<nFCI>A7B816FF-59CC-41D9-97C1-B39BCED07B17<\/nFCI>/);
   });
+
+  it("RETORNO_SIMBOLICO emite um NFref por remessa quando nfeReferenciaChave é array", () => {
+    const remessa1 = "35260612345678000199550010000000011000000012";
+    const remessa2 = "35260612345678000199550010000000021000000023";
+    const nfe = {
+      ...baseNfe(),
+      tipo: "RETORNO_SIMBOLICO" as const,
+      natOp: "Outras Entradas - Retorno Simbolico de Deposito Temporario",
+      cfop: "1949",
+      nfeReferenciaChave: [remessa1, remessa2],
+      fiscalPayload: enrichFiscalPayloadMlFulfillment(
+        {
+          engine: {
+            itens: [
+              {
+                vProd: 50,
+                quantidade: 1,
+                valorUnitario: 50,
+                icms: { cst: "90", orig: 0, vBC: 0, pICMS: 0, vICMS: 0 },
+                pis: { cst: "98", vBC: 0, vPIS: 0, aliquota: 0 },
+                cofins: { cst: "98", vBC: 0, vCOFINS: 0, aliquota: 0 },
+              },
+            ],
+            totais: {
+              vBC: 0,
+              vICMS: 0,
+              vProd: 50,
+              vIPI: 0,
+              vPIS: 0,
+              vCOFINS: 0,
+              vNF: 50,
+            },
+          },
+        },
+        { quantidadeTotal: 1 },
+      ),
+    };
+    const xml = buildNFeXML(nfe, emit);
+    const refs = xml.match(/<NFref>\s*<refNFe>(\d{44})<\/refNFe>\s*<\/NFref>/g) ?? [];
+    assert.equal(refs.length, 2);
+    assert.match(xml, new RegExp(`<refNFe>${remessa1}<\\/refNFe>`));
+    assert.match(xml, new RegExp(`<refNFe>${remessa2}<\\/refNFe>`));
+  });
 });

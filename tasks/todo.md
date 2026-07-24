@@ -1,19 +1,23 @@
-# Todo: Conferência INBOUND (POSITIVE / NEGATIVE)
+# Todo: Multi-remessa NFref + xPed por nItem
 
-Spec: [`docs/specs/inbound-conference-differences.md`](../docs/specs/inbound-conference-differences.md) **APPROVED**  
-Plan: [`tasks/plan-inbound-conference.md`](./plan-inbound-conference.md)
+Spec: [`docs/specs/multi-remessa-nfref-xped.md`](../docs/specs/multi-remessa-nfref-xped.md) **APPROVED**  
+Plan: [`tasks/plan-multi-remessa-nfref-xped.md`](./plan-multi-remessa-nfref-xped.md)  
+Intent: [`docs/intent/multi-remessa-nfref-xped.md`](../docs/intent/multi-remessa-nfref-xped.md) **CONFIRMED**
 
-**Status:** 2026-07-24 — smoke conferência OK
+**Status:** 2026-07-24 — Tasks A–F implementadas (TDD). Smoke humano + commit/push pendentes.
 
 ## Tasks
-- [x] Task A: fiscal-core — allowlist + deltas + xTexto
-- [x] Task B: NEGATIVE parcial + FIFO −
-- [x] Task C: POSITIVE + FIFO +
-- [x] Task D: orquestração + API + UI Conferência
-- [x] Task E: smoke checklist (homologação) — OK 2026-07-24
+- [x] Task A: nfe-xml — multi-NFref + xPed por det
+- [x] Task B: Prisma — `PedidoItem.xPed` + migration
+- [x] Task C: API + domain + wizard (pack + orderId ao add item)
+- [x] Task D: RETORNO_SIMBOLICO + RETORNO_FISICO — coletar N chaves
+- [x] Task E: emit-sale-note — xPed por item
+- [x] Task F: API/UI detalhe — `nfeReferenciaChaves[]`
+- [x] Task G: docs/smoke checklist (sem commit)
 
 ## Decisões humanas
 - [x] Spec APPROVED
-- [x] Reconferência permitida
-- [x] Allowlist POSITIVE completa
+- [x] Plan APPROVED → IMPLEMENT
+- [ ] Smoke homologação OK
 - [ ] Commit (quando pedir)
+- [ ] Push (quando pedir)

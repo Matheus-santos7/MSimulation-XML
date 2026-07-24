@@ -42,6 +42,8 @@ export type NFeItemXmlInput = {
   valor: number;
   ncm: string;
   cfop: string;
+  /** OrderId ML por `nItem` → tag `<xPed>`. */
+  xPed?: string;
   product?: ProductXmlInput;
 };
 
@@ -62,7 +64,8 @@ export type NFeXmlInput = {
   pedidoML: string;
   quantidade: number;
   tipo: NFeTipoXml;
-  nfeReferenciaChave?: string;
+  /** Uma chave ou várias (retorno multi-remessa → N blocos `<NFref>`). */
+  nfeReferenciaChave?: string | string[];
   fiscalPayload?: Record<string, unknown>;
   itens?: NFeItemXmlInput[];
 };

@@ -11,6 +11,8 @@ export type OrderItemCheckoutInput = {
   quantidade: number;
   /** Line discount in BRL (default 0). */
   desconto?: number;
+  /** OrderId ML por produto (`xPed` no XML). Gerado se omitido. */
+  xPed?: string;
 };
 
 /**
@@ -21,6 +23,8 @@ export type OrderItemCheckoutInput = {
 export type OrderCheckoutInput = {
   items: OrderItemCheckoutInput[];
   comprador: Buyer;
+  /** PackId ML (`Pedido.pedidoMl`). Gerado se omitido. */
+  pedidoMl?: string;
   /** Order consumer freight in BRL — goes to NF-e `<vFrete>`. */
   freteConsumidor?: number;
   /** Order seller freight in BRL — complements CT-e value (not on NF-e). */

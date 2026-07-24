@@ -74,7 +74,7 @@ export async function persistNfeXmlAutorizado(
     nfeId: string;
     tenant: Tenant;
     nfeRow: NfeRowForMap;
-    nfeReferenciaChave?: string;
+    nfeReferenciaChave?: string | string[];
     product?: Product | null;
     products?: Product[];
     itemRows?: NfeItemRowForMap[];
@@ -121,7 +121,7 @@ export async function persistNfeXmlFromEmission(
     /** Todos os produtos das linhas — necessário para XML multi-item de venda. */
     products?: Product[];
     settings: FiscalEmitterSettingsData;
-    nfeReferenciaChave?: string;
+    nfeReferenciaChave?: string | string[];
   },
 ): Promise<void> {
   const nfeRow = await tx.nFe.findUniqueOrThrow({ where: { id: args.nfeId } });

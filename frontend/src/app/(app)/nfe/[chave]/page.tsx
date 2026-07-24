@@ -96,14 +96,36 @@ export default async function NFeDetailPage({ params }: Props) {
             )}
           </div>
 
-          {nfe.nfeReferenciaChave && (
-            <div className="border border-border rounded-lg bg-card p-4 space-y-2">
-              <h3 className="text-[12px] uppercase tracking-widest font-bold text-muted-foreground">Referencia</h3>
-              <Link href={`/nfe/${nfe.nfeReferenciaChave}`} className="font-mono text-[13px] text-accent hover:underline break-all">
-                {formatChave(nfe.nfeReferenciaChave)}
-              </Link>
-            </div>
-          )}
+          {(() => {
+            const refs =
+              nfe.nfeReferenciaChaves?.length
+                ? nfe.nfeReferenciaChaves
+                : nfe.nfeReferenciaChave
+                  ? Array.isArray(nfe.nfeReferenciaChave)
+                    ? nfe.nfeReferenciaChave
+                    : [nfe.nfeReferenciaChave]
+                  : [];
+            if (refs.length === 0) return null;
+            return (
+              <div className="border border-border rounded-lg bg-card p-4 space-y-2">
+                <h3 className="text-[12px] uppercase tracking-widest font-bold text-muted-foreground">
+                  {refs.length > 1 ? "Referencias" : "Referencia"}
+                </h3>
+                <ul className="space-y-1.5">
+                  {refs.map((chave) => (
+                    <li key={chave}>
+                      <Link
+                        href={`/nfe/${chave}`}
+                        className="font-mono text-[13px] text-accent hover:underline break-all"
+                      >
+                        {formatChave(chave)}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })()}
 
           {/* {nfe.referenciadas && nfe.referenciadas.length > 0 && (
             <div className="border border-border rounded-lg bg-card p-4 space-y-2">

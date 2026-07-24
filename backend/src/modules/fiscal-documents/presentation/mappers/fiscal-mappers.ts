@@ -89,7 +89,7 @@ function saldoRemessaFromItens(
 
 export function mapNfe(
   row: NfeRow,
-  nfeReferenciaChave?: string,
+  nfeReferenciaChave?: string | string[],
   itens?: NfeItemRow[],
   saldoFifoOverride?: number,
 ) {
@@ -142,7 +142,13 @@ export function mapNfe(
         ? saldoRemessaFromItens(itens, row.saldoDisponivel, saldoFifoOverride)
         : undefined,
     itens: mappedItens,
+    /** String ou array — o builder XML (`ide.node`) emite N `<NFref>` quando array. */
     nfeReferenciaChave: nfeReferenciaChave ?? undefined,
+    nfeReferenciaChaves: Array.isArray(nfeReferenciaChave)
+      ? nfeReferenciaChave
+      : nfeReferenciaChave
+        ? [nfeReferenciaChave]
+        : undefined,
     fiscalPayload: (row.fiscalPayload as Record<string, unknown> | undefined) ?? undefined,
     validationStatus: row.statusValidacao ?? "PENDING",
     validationMessage: row.mensagemValidacao ?? undefined,

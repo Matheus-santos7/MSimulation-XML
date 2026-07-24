@@ -32,6 +32,8 @@ export type OrderItemForEmit = {
   quantidade: number;
   product: OrderProductForEmit;
   valorDesconto?: number;
+  /** OrderId ML por produto → `<xPed>` no `nItem`. */
+  xPed?: string;
 };
 
 /**

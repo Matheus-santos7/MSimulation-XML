@@ -34,7 +34,9 @@ export function pedidoToFormValues(p: PedidoDto): PedidoFormValues {
       productId: item.productId,
       quantidade: String(item.quantidade),
       desconto: brValueToInput(item.desconto),
+      xPed: item.xPed ?? "",
     })),
+    pedidoMl: p.pedidoMl ?? "",
     freteConsumidor: brValueToInput(p.freteConsumidor),
     freteSeller: brValueToInput(p.freteSeller),
     cpf: c.cpf,
@@ -92,15 +94,22 @@ export function parsePedidoForm(formData: FormData): PedidoCheckoutInput {
   };
 
   const itemCount = Number(formData.get("itemCount") ?? 0);
-  const items = Array.from({ length: itemCount }, (_, index) => ({
-    productId: String(formData.get(`items[${index}].productId`) ?? ""),
-    quantidade: Number(formData.get(`items[${index}].quantidade`) ?? 1),
-    desconto: parseMonetaryInput(formData.get(`items[${index}].desconto`)),
-  })).filter((item) => item.productId);
+  const items = Array.from({ length: itemCount }, (_, index) => {
+    const xPed = String(formData.get(`items[${index}].xPed`) ?? "").trim();
+    return {
+      productId: String(formData.get(`items[${index}].productId`) ?? ""),
+      quantidade: Number(formData.get(`items[${index}].quantidade`) ?? 1),
+      desconto: parseMonetaryInput(formData.get(`items[${index}].desconto`)),
+      ...(xPed ? { xPed } : {}),
+    };
+  }).filter((item) => item.productId);
+
+  const pedidoMl = String(formData.get("pedidoMl") ?? "").trim();
 
   return {
     items,
     comprador,
+    ...(pedidoMl ? { pedidoMl } : {}),
     freteConsumidor: parseMonetaryInput(formData.get("freteConsumidor")),
     freteSeller: parseMonetaryInput(formData.get("freteSeller")),
   };
@@ -113,7 +122,9 @@ export function formValuesToFormData(v: PedidoFormValues): FormData {
     fd.set(`items[${index}].productId`, item.productId);
     fd.set(`items[${index}].quantidade`, item.quantidade);
     fd.set(`items[${index}].desconto`, item.desconto);
+    fd.set(`items[${index}].xPed`, item.xPed);
   });
+  fd.set("pedidoMl", v.pedidoMl);
   fd.set("freteConsumidor", v.freteConsumidor);
   fd.set("freteSeller", v.freteSeller);
   fd.set("cpf", v.cpf);

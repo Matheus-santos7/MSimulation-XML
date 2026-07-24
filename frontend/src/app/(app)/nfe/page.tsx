@@ -30,7 +30,10 @@ export default async function NFeListPage() {
         (n) =>
           (n.tipo === "DEVOLUCAO" || n.tipo === "INSULCESSO_DE_ENTREGA") && n.nfeReferenciaChave,
       )
-      .map((n) => n.nfeReferenciaChave as string),
+      .flatMap((n) => {
+        const ref = n.nfeReferenciaChave;
+        return Array.isArray(ref) ? ref : ref ? [ref] : [];
+      }),
   );
 
   const vendasCanceladas = new Set(

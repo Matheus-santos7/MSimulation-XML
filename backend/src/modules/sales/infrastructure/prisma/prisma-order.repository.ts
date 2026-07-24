@@ -13,6 +13,10 @@ import {
   mapOrderFromPrisma,
   orderFreightColumns,
 } from "./order-prisma.mapper.js";
+import {
+  withEnsuredItemXPeds,
+  withEnsuredPackId,
+} from "../../domain/services/order-item-xped.js";
 
 const pedidoItemInclude = {
   product: true,
@@ -87,18 +91,22 @@ export class PrismaOrderRepository implements OrderRepository {
       input.items.map((item) => item.productId),
     );
     const productById = new Map(products.map((product) => [product.id, product]));
+    const items = withEnsuredItemXPeds(input.items);
+    const pedidoMl = withEnsuredPackId(input.pedidoMl);
 
     const row = await this.db.pedido.create({
       data: {
         tenantId,
         status: "RASCUNHO",
+        pedidoMl,
         ...buyerToDestColumns(input.comprador),
         ...orderFreightColumns(input),
         itens: {
-          create: input.items.map((item, index) => ({
+          create: items.map((item, index) => ({
             productId: productById.get(item.productId)!.id,
             numeroItem: index + 1,
             quantidade: item.quantidade,
+            xPed: item.xPed,
             ...itemDiscountColumn(item),
           })),
         },
@@ -129,19 +137,23 @@ export class PrismaOrderRepository implements OrderRepository {
       input.items.map((item) => item.productId),
     );
     const productById = new Map(products.map((product) => [product.id, product]));
+    const items = withEnsuredItemXPeds(input.items);
+    const pedidoMl = withEnsuredPackId(input.pedidoMl ?? existing.pedidoMl);
 
     const row = await runInTransaction(this.db, async (tx) => {
       await tx.pedidoItem.deleteMany({ where: { pedidoId: id } });
       return tx.pedido.update({
         where: { id },
         data: {
+          pedidoMl,
           ...buyerToDestColumns(input.comprador),
           ...orderFreightColumns(input),
           itens: {
-            create: input.items.map((item, index) => ({
+            create: items.map((item, index) => ({
               productId: productById.get(item.productId)!.id,
               numeroItem: index + 1,
               quantidade: item.quantidade,
+              xPed: item.xPed,
               ...itemDiscountColumn(item),
             })),
           },

@@ -92,6 +92,29 @@ describe("calculateInboundInvoice — envio de estoque interestadual", () => {
     assert.equal(result.nota.itens[0]!.cofins.vBC, 0);
   });
 
+  it("retorno simbólico: IPI CST 99 saída → 49 entrada (de/para ML)", () => {
+    const ruleIpi99: ResolvedTaxRule = {
+      ...inboundRuleZero,
+      payload: {
+        taxes: {
+          pis: { st: "09", aliquota: 0 },
+          cofins: { st: "09", aliquota: 0 },
+          ipi: { st: "99 - Outras saídas", aliquota: 0, codEnq: 999 },
+        },
+        icmsByUf: { ICMS_SC_PICMS_INTERNAL: 0, ICMS_SC_CST: "90" },
+      },
+    };
+    const line = orderLineFromProduct(product, {
+      cfop: "2949",
+      quantidade: 1,
+      valorUnitario: 100,
+    });
+    const result = calculateInboundInvoice(line, ruleIpi99, "PR", "SC", 12, {
+      operationTipo: "RETORNO_SIMBOLICO",
+    });
+    assert.equal(result.nota.itens[0]!.ipi?.cst, "49");
+  });
+
   it("retorno simbólico mantém CST ICMS da planilha (sem override)", () => {
     const ruleCst00: ResolvedTaxRule = {
       ...inboundRuleZero,

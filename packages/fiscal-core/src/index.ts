@@ -76,6 +76,7 @@ export {
 } from "./nfe-numeracao.js";
 export {
   IPI_CST_SYMBOLIC_RETURN,
+  mapIpiSaidaToEntrada,
   PIS_COFINS_CST_SYMBOLIC_RETURN,
   resolveDefaultModFreteForTipo,
   resolveIpiCstFromSnapshot,

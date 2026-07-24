@@ -79,14 +79,19 @@ function contributorLabel(v?: string): string {
 }
 
 function transactionLabel(v?: string): string {
+  if (v === "symbolic_inbound_return") return "Retorno simbólico";
   if (v === "inbound") return "Envio de estoque (Transferência ou Remessa)";
   return "";
 }
 
 export function baseTaxRuleId(v: string): string {
-  const withOrigin = v.match(/^(.+)-[A-Z]{2}-(taxpayer|non_taxpayer)-(sale|inbound)$/i);
+  const withOrigin = v.match(
+    /^(.+)-[A-Z]{2}-(taxpayer|non_taxpayer)-(symbolic_inbound_return|sale|inbound)$/i,
+  );
   if (withOrigin) return withOrigin[1]!;
-  return v.replace(/[-_](taxpayer|non_taxpayer|sale|inbound)$/i, "").replace(/[-_](taxpayer|non_taxpayer)$/i, "");
+  return v
+    .replace(/[-_](taxpayer|non_taxpayer|symbolic_inbound_return|sale|inbound)$/i, "")
+    .replace(/[-_](taxpayer|non_taxpayer)$/i, "");
 }
 
 export function normalizeTaxRuleName(nome: string): string {
@@ -126,7 +131,7 @@ export function buildTaxRuleGroups(sorted: TaxRuleDto[]): TaxRuleGroup[] {
 
 export function sortTaxRuleRowsForSheetLayout(rows: TaxRuleDto[]): TaxRuleDto[] {
   const weight = (r: TaxRuleDto) => {
-    if (r.transactionType === "inbound") return 2;
+    if (r.transactionType === "inbound" || r.transactionType === "symbolic_inbound_return") return 2;
     if (r.customerType === "taxpayer") return 0;
     if (r.customerType === "non_taxpayer") return 1;
     return 3;
@@ -135,7 +140,9 @@ export function sortTaxRuleRowsForSheetLayout(rows: TaxRuleDto[]): TaxRuleDto[] 
 }
 
 export function showTaxRuleContributorCell(r: TaxRuleDto): string {
-  if (r.transactionType === "inbound") return transactionLabel(r.transactionType);
+  if (r.transactionType === "inbound" || r.transactionType === "symbolic_inbound_return") {
+    return transactionLabel(r.transactionType);
+  }
   if (r.customerType === "taxpayer" || r.customerType === "non_taxpayer") {
     return contributorLabel(r.customerType);
   }

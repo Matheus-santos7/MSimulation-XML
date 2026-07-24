@@ -41,6 +41,47 @@ describe("resolveIcmsFromEngine", () => {
     const actual = compactXml(serializeXmlObject(resolveIcmsFromEngine(icms)));
     assert.equal(actual, expected);
   });
+
+  it("CST 10 emite grupo ICMS10 com vBCST/vICMSST", () => {
+    const node = resolveIcmsFromEngine({
+      cst: "10",
+      orig: 0,
+      modBC: 3,
+      vBC: 100,
+      pICMS: 12,
+      vICMS: 12,
+      modBCST: 4,
+      pMVAST: 40,
+      pRedBCST: 0,
+      vBCST: 140,
+      pICMSST: 18,
+      vICMSST: 13.2,
+      stCobraNaOperacao: true,
+    });
+    const icms10 = node.ICMS.ICMS10 as Record<string, string>;
+    assert.equal(icms10.CST, "10");
+    assert.equal(icms10.vBCST, "140.00");
+    assert.equal(icms10.vICMSST, "13.20");
+    assert.equal(icms10.pMVAST, "40.0000");
+  });
+
+  it("CST 60 emite Ret sem grupo de cobrança própria", () => {
+    const node = resolveIcmsFromEngine({
+      cst: "60",
+      orig: 0,
+      vBC: 0,
+      pICMS: 0,
+      vICMS: 0,
+      vBCST: 280,
+      pICMSST: 18,
+      vICMSST: 50.4,
+      stCobraNaOperacao: false,
+    });
+    const icms60 = node.ICMS.ICMS60 as Record<string, string>;
+    assert.equal(icms60.CST, "60");
+    assert.equal(icms60.vBCSTRet, "280.00");
+    assert.equal(icms60.vICMSSTRet, "50.40");
+  });
 });
 
 describe("resolveIpiInt", () => {

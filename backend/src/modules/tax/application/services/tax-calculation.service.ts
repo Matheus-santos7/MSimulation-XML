@@ -58,7 +58,7 @@ export type BuildFiscalItemContext = FiscalContext & {
   emitterSettings?: FiscalEmitterSettingsData | null;
 };
 
-const ICMS_CST_NAO_TRIBUTADO = new Set(["40", "41", "50", "60"]);
+const ICMS_CST_NAO_TRIBUTADO = new Set(["30", "40", "41", "50", "60"]);
 
 /** CSTs em que a planilha indica ICMS próprio zerado — não aplicar fallback Senado. */
 const ICMS_CST_INTERSTATE_EXPLICIT_ZERO = new Set(["40", "41", "50", "60", "90"]);
@@ -341,6 +341,12 @@ export function buildFiscalItem(
       modBC: 3,
       pRedBC: snapshot.icms.pRedBc,
       pFCP: snapshot.icms.pIcmsFcp,
+      modBCST: 4,
+      pMVAST: snapshot.icms.pMva,
+      pRedBCST: snapshot.icms.pRedBcSt,
+      // Planilha: PICMSST_RET; se 0, usa interna do destino (mesmo fallback da venda).
+      pICMSST: snapshot.icms.pIcmsStRet > 0 ? snapshot.icms.pIcmsStRet : internalRate,
+      pFCPST: snapshot.icms.pFcpStRet,
     },
     ipi:
       rule != null || snapshot.ipi.aliquota > 0

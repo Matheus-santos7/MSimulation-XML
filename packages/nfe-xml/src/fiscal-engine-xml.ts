@@ -13,6 +13,17 @@ export type EngineIcms = {
   vICMS: number;
   pFCP?: number;
   vFCP?: number;
+  pRedBC?: number;
+  modBCST?: number;
+  pMVAST?: number;
+  pRedBCST?: number;
+  vBCST?: number;
+  pICMSST?: number;
+  vICMSST?: number;
+  pFCPST?: number;
+  vFCPST?: number;
+  /** false = CST 60 Ret (não soma vST). Default true se vICMSST > 0. */
+  stCobraNaOperacao?: boolean;
 };
 
 export type EngineIpi = {
@@ -62,6 +73,8 @@ export type EngineTotais = {
   vBC: number;
   vICMS: number;
   vFCP?: number;
+  vBCST?: number;
+  vST?: number;
   vProd: number;
   vFrete?: number;
   /** Somatório dos `vDesc` dos itens (já arredondados). Vai para `<ICMSTot><vDesc>`. */
@@ -84,6 +97,9 @@ export type EngineNota = {
 export type IcmsTotInput = {
   vBC: number;
   vICMS: number;
+  vFCP?: number;
+  vBCST?: number;
+  vST?: number;
   vProd: number;
   vFrete: number;
   vDesc?: number;
@@ -150,6 +166,17 @@ export function parseEngineFromFiscalPayload(
         vICMS: num(icms.vICMS),
         pFCP: num(icms.pFCP),
         vFCP: num(icms.vFCP),
+        pRedBC: icms.pRedBC != null ? num(icms.pRedBC) : undefined,
+        modBCST: icms.modBCST != null ? num(icms.modBCST) : undefined,
+        pMVAST: icms.pMVAST != null ? num(icms.pMVAST) : undefined,
+        pRedBCST: icms.pRedBCST != null ? num(icms.pRedBCST) : undefined,
+        vBCST: icms.vBCST != null ? num(icms.vBCST) : undefined,
+        pICMSST: icms.pICMSST != null ? num(icms.pICMSST) : undefined,
+        vICMSST: icms.vICMSST != null ? num(icms.vICMSST) : undefined,
+        pFCPST: icms.pFCPST != null ? num(icms.pFCPST) : undefined,
+        vFCPST: icms.vFCPST != null ? num(icms.vFCPST) : undefined,
+        stCobraNaOperacao:
+          typeof icms.stCobraNaOperacao === "boolean" ? icms.stCobraNaOperacao : undefined,
       },
       ipi: ipi
         ? {
@@ -195,6 +222,8 @@ export function parseEngineFromFiscalPayload(
     vBC: num(totaisRaw.vBC),
     vICMS: num(totaisRaw.vICMS),
     vFCP: num(totaisRaw.vFCP),
+    vBCST: num(totaisRaw.vBCST),
+    vST: num(totaisRaw.vST),
     vProd: num(totaisRaw.vProd),
     vFrete: num(totaisRaw.vFrete),
     vDesc: num(totaisRaw.vDesc),
@@ -215,6 +244,9 @@ export function icmsTotFromEngine(totais: EngineTotais, vFrete: number): IcmsTot
   return {
     vBC: totais.vBC,
     vICMS: totais.vICMS,
+    vFCP: totais.vFCP,
+    vBCST: totais.vBCST,
+    vST: totais.vST,
     vProd: totais.vProd,
     vFrete,
     vDesc: totais.vDesc,

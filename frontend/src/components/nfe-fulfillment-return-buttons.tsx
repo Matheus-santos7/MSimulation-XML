@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { nfeTableActionClass } from "@/lib/nfe-table-action-styles";
 
 type InsucessoProps = {
   chave: string;
@@ -41,7 +42,7 @@ export function NfeInsucessoButton({ chave, label, disabled }: InsucessoProps) {
         type="button"
         variant="ghost"
         size="icon"
-        className="size-8 text-amber-600 bg-amber-500/10 hover:bg-amber-500/20 hover:text-amber-500 ring-1 ring-amber-500/30 disabled:opacity-30"
+        className={nfeTableActionClass("amber")}
         aria-label={`Emitir insucesso de entrega da venda ${label}`}
         title={disabled ? "Já possui devolução/insucesso" : "Emitir insucesso de entrega"}
         disabled={disabled}
@@ -105,7 +106,7 @@ export function NfeRetornoFisicoButton({ chave, label }: RetornoFisicoProps) {
         type="button"
         variant="ghost"
         size="icon"
-        className="size-8 text-teal-600 bg-teal-500/10 hover:bg-teal-500/20 hover:text-teal-500 ring-1 ring-teal-500/30"
+        className={nfeTableActionClass("teal")}
         aria-label={`Emitir retorno físico da remessa ${label}`}
         title="Emitir retorno físico desta remessa"
         onClick={() => {
@@ -172,7 +173,7 @@ export function NfeConferenciaButton({ chave, label }: ConferenciaProps) {
         type="button"
         variant="ghost"
         size="icon"
-        className="size-8 text-indigo-600 bg-indigo-500/10 hover:bg-indigo-500/20 hover:text-indigo-500 ring-1 ring-indigo-500/30"
+        className={nfeTableActionClass("indigo")}
         aria-label={`Conferência da remessa ${label}`}
         title="Conferência INBOUND (diferença POSITIVE/NEGATIVE)"
         onClick={() => {

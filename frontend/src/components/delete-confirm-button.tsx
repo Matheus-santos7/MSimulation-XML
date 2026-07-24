@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import type { PedidoDto } from "@/lib/fiscal-types";
+import { nfeTableActionClass } from "@/lib/nfe-table-action-styles";
 
 type DeleteConfirmConfig = {
   ariaLabel: string;
@@ -115,7 +116,11 @@ export function DeleteConfirmButton(props: Props) {
   if (!config) return null;
 
   const { ariaLabel, title, description, confirmLabel, pendingLabel, onConfirm } = config;
-  const className = props.className ?? "size-8 text-muted-foreground hover:text-destructive";
+  const className =
+    props.className ??
+    (props.variant === "nfe" || props.variant === "cte"
+      ? nfeTableActionClass("destructive")
+      : "size-8 text-muted-foreground hover:text-destructive");
 
   return (
     <>

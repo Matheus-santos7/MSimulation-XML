@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { nfeTableActionClass } from "@/lib/nfe-table-action-styles";
 
 type Props = {
   chave: string;
@@ -34,7 +35,7 @@ export function NfeDevolucaoButton({ chave, label, jaDevolvida }: Props) {
         type="button"
         variant="ghost"
         size="icon"
-        className="size-8 text-blue-500 bg-blue-500/10 hover:bg-blue-500/20 hover:text-blue-400 ring-1 ring-blue-500/30 disabled:opacity-30 disabled:bg-transparent disabled:ring-0"
+        className={nfeTableActionClass("blue")}
         aria-label={`Emitir devolução da venda ${label}`}
         title={jaDevolvida ? "Venda já devolvida" : "Emitir devolução desta venda"}
         disabled={jaDevolvida}

@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { nfeTableActionClass } from "@/lib/nfe-table-action-styles";
 
 type Props = {
   chave: string;
@@ -37,7 +38,7 @@ export function NfeCancelarButton({ chave, label, desabilitado, motivoDesabilita
         type="button"
         variant="ghost"
         size="icon"
-        className="size-8 text-red-500 bg-red-500/10 hover:bg-red-500/20 hover:text-red-400 ring-1 ring-red-500/30 disabled:opacity-30 disabled:bg-transparent disabled:ring-0"
+        className={nfeTableActionClass("destructive")}
         aria-label={`Cancelar venda ${label}`}
         title={title}
         disabled={desabilitado}

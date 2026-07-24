@@ -41,36 +41,36 @@ export function XmlLinkPair({ label, hrefs, compact }: XmlLinkPairProps) {
 
   if (compact) {
     return (
-      <div className="flex flex-col items-end gap-0.5">
-        <div className="flex items-center justify-end gap-1">
-          <span className="text-[10px] uppercase tracking-wider text-muted-foreground w-8 text-right shrink-0">
-            {label}
-          </span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            disabled={pending}
-            title={`Ver XML ${label}`}
-            onClick={() => run(() => openXmlFromApi(hrefs.viewPath))}
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-            <span className="sr-only">Ver XML {label}</span>
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            disabled={pending}
-            title={`Baixar XML ${label}`}
-            onClick={() => run(() => downloadFromApi(hrefs.downloadPath, `${label}.xml`))}
-          >
-            <Download className="h-3.5 w-3.5" />
-            <span className="sr-only">Baixar XML {label}</span>
-          </Button>
-        </div>
+      <div
+        className="inline-flex items-center rounded-md border border-border bg-background shadow-sm overflow-hidden"
+        role="group"
+        aria-label={`XML ${label}`}
+      >
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-8 rounded-none border-0 shadow-none hover:bg-muted/70"
+          disabled={pending}
+          title={`Ver XML ${label}`}
+          onClick={() => run(() => openXmlFromApi(hrefs.viewPath))}
+        >
+          <ExternalLink className="size-3.5 text-muted-foreground" />
+          <span className="sr-only">Ver XML {label}</span>
+        </Button>
+        <span className="h-5 w-px bg-border shrink-0" aria-hidden />
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-8 rounded-none border-0 shadow-none hover:bg-muted/70"
+          disabled={pending}
+          title={`Baixar XML ${label}`}
+          onClick={() => run(() => downloadFromApi(hrefs.downloadPath, `${label}.xml`))}
+        >
+          <Download className="size-3.5 text-muted-foreground" />
+          <span className="sr-only">Baixar XML {label}</span>
+        </Button>
       </div>
     );
   }
@@ -119,7 +119,7 @@ export function FiscalXmlDocActions({ label, hrefs, variant = "list" }: FiscalXm
     return <div className="flex flex-col gap-2">{content}</div>;
   }
 
-  return <div className="flex flex-col gap-0.5 min-w-[7rem]">{content}</div>;
+  return <div className="flex flex-col items-end gap-1.5">{content}</div>;
 }
 
 type NfeXmlActionsProps = {
@@ -151,9 +151,9 @@ export function NfeXmlActions({
   }
 
   return (
-    <div className="flex flex-col gap-0.5 min-w-[7rem]">
+    <div className="flex flex-col items-end gap-1.5">
       <XmlLinkPair label="NF-e" hrefs={nfe} compact={compact} />
-      {showCancelamento && <XmlLinkPair label="Evt" hrefs={evento} compact={compact} />}
+      {showCancelamento && <XmlLinkPair label="Cancel." hrefs={evento} compact={compact} />}
     </div>
   );
 }

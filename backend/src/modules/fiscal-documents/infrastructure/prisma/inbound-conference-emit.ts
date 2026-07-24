@@ -65,6 +65,14 @@ function wrapCfopError(error: unknown): never {
   throw error;
 }
 
+function resolveCfopOrThrow(resolve: () => string): string {
+  try {
+    return resolve();
+  } catch (error) {
+    wrapCfopError(error);
+  }
+}
+
 export async function emitNegativeDifference(
   shared: ConferenceEmitShared,
   args: {
@@ -77,16 +85,13 @@ export async function emitNegativeDifference(
   const { tx, tenant, product, remessa, destUf, unitValue, emitterSettings, series } =
     shared;
   const quantity = args.quantity;
-  let cfop: string;
-  try {
-    cfop = resolveInboundNegativeDifferenceCfop(
+  const cfop = resolveCfopOrThrow(() =>
+    resolveInboundNegativeDifferenceCfop(
       tenant.uf,
       destUf,
       args.negativeCfopOverride,
-    );
-  } catch (error) {
-    wrapCfopError(error);
-  }
+    ),
+  );
   const natOp = INBOUND_NEGATIVE_DIFFERENCE_NAT_OP;
   const lineValue = unitValue * quantity;
   const inboundTaxRule = await resolveTaxRule(tx, tenant.id, {
@@ -256,16 +261,13 @@ export async function emitPositiveDifference(
   const { tx, tenant, product, remessa, destUf, unitValue, emitterSettings, series } =
     shared;
   const quantity = args.quantity;
-  let cfop: string;
-  try {
-    cfop = resolveInboundPositiveDifferenceCfop(
+  const cfop = resolveCfopOrThrow(() =>
+    resolveInboundPositiveDifferenceCfop(
       tenant.uf,
       destUf,
       args.positiveCfopOverride,
-    );
-  } catch (error) {
-    wrapCfopError(error);
-  }
+    ),
+  );
   const natOp = INBOUND_POSITIVE_DIFFERENCE_NAT_OP;
   const lineValue = unitValue * quantity;
   const inboundTaxRule = await resolveTaxRule(tx, tenant.id, {

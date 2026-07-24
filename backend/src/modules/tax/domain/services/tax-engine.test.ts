@@ -534,4 +534,61 @@ describe("tax-engine", () => {
     assert.equal(nota.totais.vST, 0);
     assert.equal(nota.totais.vNF, 200);
   });
+
+  it("ICMSTot.vFCPST soma FCP-ST dos itens (CST 10); CST 60 vai para vFCPSTRet", () => {
+    const notaOp = calcularNotaFiscal([
+      {
+        numeroItem: 1,
+        codigo: "ST-FCP",
+        descricao: "ST com FCP",
+        ncm: "30049099",
+        cfop: "6403",
+        unidade: "UN",
+        cest: "1300100",
+        quantidade: 1,
+        valorUnitario: 100,
+        icms: {
+          cst: "10",
+          orig: 0,
+          pICMS: 12,
+          pMVAST: 40,
+          pICMSST: 18,
+          pFCPST: 2,
+        },
+        pis: { cst: "01", aliquota: 0 },
+        cofins: { cst: "01", aliquota: 0 },
+      },
+    ]);
+    // vBCST=140; vFCPST=140×2%=2.80
+    assert.equal(notaOp.itens[0]!.icms.vFCPST, 2.8);
+    assert.equal(notaOp.totais.vFCPST, 2.8);
+    assert.equal(notaOp.totais.vFCPSTRet, 0);
+
+    const notaRet = calcularNotaFiscal([
+      {
+        numeroItem: 1,
+        codigo: "ST-60-FCP",
+        descricao: "Ret com FCP",
+        ncm: "30049099",
+        cfop: "5405",
+        unidade: "UN",
+        cest: "1300100",
+        quantidade: 1,
+        valorUnitario: 200,
+        icms: {
+          cst: "60",
+          orig: 0,
+          pICMS: 0,
+          pMVAST: 40,
+          pICMSST: 18,
+          pFCPST: 2,
+        },
+        pis: { cst: "01", aliquota: 0 },
+        cofins: { cst: "01", aliquota: 0 },
+      },
+    ]);
+    assert.equal(notaRet.itens[0]!.icms.vFCPST, 5.6);
+    assert.equal(notaRet.totais.vFCPST, 0);
+    assert.equal(notaRet.totais.vFCPSTRet, 5.6);
+  });
 });

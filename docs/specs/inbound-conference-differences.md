@@ -98,8 +98,33 @@ frontend/...                                         → UI Conferência
 ## Boundaries
 
 **Always:** conferência explícita; só delta; FIFO atômico; TaxRule; CFOP ∈ allowlist.  
-**Ask first:** supplier/filial; mudar retorno físico total legado.  
+**Ask first:** supplier/filial; unificar retorno físico total com NEGATIVE parcial.  
 **Never:** auto-emitir no “recebimento implícito”; hardcode alíquota; misturar sinais no mesmo XML.
+
+---
+
+## Decisões documentadas (Optional review)
+
+### Dois modelos em `RETORNO_FISICO`
+
+| Fluxo | Comportamento | Motivo |
+|-------|---------------|--------|
+| **Retorno físico** (`POST …/retorno-fisico`) | 1× por remessa; 2ª emissão → **409** | Devolução total do saldo restante da remessa (legado). |
+| **Conferência NEGATIVE** (`POST …/conferencia`) | Vários NEGATIVE ao longo do tempo | Deltas parciais de falta; saldo lógico = pai + filhas POSITIVE. |
+
+Mesmo `NFeTipo.RETORNO_FISICO`, processos distintos (`mlProcess` / ausência dele). **Não unificar** nesta fatia — unificar exigiria migrar o retorno físico para o modelo de deltas.
+
+### POSITIVE sem CT-e
+
+`INBOUND_POSITIVE_DIFFERENCE` emite só a NF-e delta (remessa filha). **Não** emite CT-e: é ajuste fiscal de quantidade na conferência, não movimentação física nova para o CD. Remessa INBOUND “cheia” continua podendo ter CT-e no fluxo normal.
+
+### Performance saldo lógico
+
+`getNetRemessaNfeBalance` por filha POSITIVE (N+1). Irrelevante com poucas filhas; **batch** se o volume crescer.
+
+### UI / API
+
+`GET /nfes/:chave/conferencia` devolve `expectedQty` lógico (não usar só `saldoDisponivel` do pai).
 
 ---
 

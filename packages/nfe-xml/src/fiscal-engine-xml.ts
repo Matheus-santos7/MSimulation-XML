@@ -75,6 +75,8 @@ export type EngineTotais = {
   vFCP?: number;
   vBCST?: number;
   vST?: number;
+  vFCPST?: number;
+  vFCPSTRet?: number;
   vProd: number;
   vFrete?: number;
   /** Somatório dos `vDesc` dos itens (já arredondados). Vai para `<ICMSTot><vDesc>`. */
@@ -100,6 +102,8 @@ export type IcmsTotInput = {
   vFCP?: number;
   vBCST?: number;
   vST?: number;
+  vFCPST?: number;
+  vFCPSTRet?: number;
   vProd: number;
   vFrete: number;
   vDesc?: number;
@@ -224,6 +228,8 @@ export function parseEngineFromFiscalPayload(
     vFCP: num(totaisRaw.vFCP),
     vBCST: num(totaisRaw.vBCST),
     vST: num(totaisRaw.vST),
+    vFCPST: num(totaisRaw.vFCPST),
+    vFCPSTRet: num(totaisRaw.vFCPSTRet),
     vProd: num(totaisRaw.vProd),
     vFrete: num(totaisRaw.vFrete),
     vDesc: num(totaisRaw.vDesc),
@@ -247,6 +253,8 @@ export function icmsTotFromEngine(totais: EngineTotais, vFrete: number): IcmsTot
     vFCP: totais.vFCP,
     vBCST: totais.vBCST,
     vST: totais.vST,
+    vFCPST: totais.vFCPST,
+    vFCPSTRet: totais.vFCPSTRet,
     vProd: totais.vProd,
     vFrete,
     vDesc: totais.vDesc,
@@ -261,6 +269,8 @@ export function icmsTotFromEngine(totais: EngineTotais, vFrete: number): IcmsTot
 }
 
 export function buildIcmsXmlFromEngineItem(icms: EngineIcms): string {
+  // LEGACY string path — stub sem ST completo. O caminho AST (`resolveIcmsFromEngine`
+  // / icms.resolver) é o usado na emissão. Não regenerar este helper para ST.
   const cst = icms.cst.slice(0, 2);
   const modBC = icms.modBC ?? 3;
   const pFcpXml =

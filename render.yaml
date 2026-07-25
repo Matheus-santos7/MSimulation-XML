@@ -54,10 +54,10 @@ services:
         value: 0.0.0.0
       - key: TRUST_PROXY
         value: "true"
+      # Postgres em Neon (free). NÃO usar fromDatabase — o DB Render pago fica
+      # intacto até autorização humana para apagar. Definir DATABASE_URL no dashboard.
       - key: DATABASE_URL
-        fromDatabase:
-          name: msimulation-xml-db
-          property: connectionString
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: PASSWORD_PEPPER
@@ -82,6 +82,8 @@ services:
       - key: FISCAL_VALIDATOR_URL
         value: https://msimulation-xml-fiscal-validator.onrender.com
 
+# Banco Render pago ainda listado de propósito: NÃO remover/sync-delete sem
+# autorização humana. A API já usa Neon via DATABASE_URL (sync: false).
 databases:
   - name: msimulation-xml-db
     plan: basic-256mb

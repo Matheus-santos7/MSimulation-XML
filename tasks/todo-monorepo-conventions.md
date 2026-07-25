@@ -20,5 +20,5 @@ Plan: [`tasks/plan-monorepo-conventions.md`](./plan-monorepo-conventions.md) **A
 - [x] Plan APPROVED → IMPLEMENT
 - [x] Q1 links CONTRIBUTING+README = SIM (2026-07-25)
 - [x] Q2 `.cursor/skills/` canônico = SIM (2026-07-25)
-- [ ] Commit (quando pedir)
+- [x] Commit (quando pedir) — `bee52aa`
 - [ ] Push (quando pedir)

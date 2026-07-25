@@ -10,6 +10,10 @@
 # Frontend em produção: https://msimulation-xml.vercel.app
 
 services:
+  # Plano free: dorme ~15 min sem tráfego (cold start 30–50s no login).
+  # Keep-alive só da API — ver .github/workflows/render-keep-alive.yml.
+  # Não keep-alive o validador: 2 instâncias 24/7 estouram ~750 h/mês do free.
+  # Free não recebe rede privada → FISCAL_VALIDATOR_URL usa URL pública (.onrender.com).
   # Validador MCP — criar manualmente se não existir após sync do blueprint.
   - type: web
     name: msimulation-xml-fiscal-validator
@@ -19,7 +23,7 @@ services:
     autoDeployTrigger: commit
     dockerfilePath: ./Dockerfile.fiscal-validator
     dockerContext: .
-    plan: starter
+    plan: free
     healthCheckPath: /health
     envVars:
       - key: HOST
@@ -35,7 +39,7 @@ services:
     autoDeployTrigger: commit
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    plan: starter
+    plan: free
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
@@ -70,11 +74,9 @@ services:
         value: "true"
       - key: FISCAL_VALIDATOR_ENABLED
         value: "true"
+      # URL pública: free web service não recebe tráfego de rede privada (hostport).
       - key: FISCAL_VALIDATOR_URL
-        fromService:
-          type: web
-          name: msimulation-xml-fiscal-validator
-          property: hostport
+        value: https://msimulation-xml-fiscal-validator.onrender.com
 
 databases:
   - name: msimulation-xml-db

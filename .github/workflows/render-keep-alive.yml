@@ -1,0 +1,41 @@
+# Mantém a API free do Render acordada (spin-down ~15 min sem tráfego).
+# Ping externo via GitHub Actions — não consome um segundo serviço no Render.
+#
+# Orçamento free (~750 h/mês): só a API fica always-on (~720 h). O validador
+# fiscal permanece cold-start sob demanda.
+#
+# Limitações conhecidas:
+# - Após deploy ainda há 1 cold start até o próximo ping.
+# - Em repos privados, schedules do Actions podem atrasar se o repo ficar inativo.
+# - workflow_dispatch: use Actions → "Render keep-alive" → Run workflow para testar.
+
+name: Render keep-alive
+
+on:
+  schedule:
+    # Idle free ~15 min; */5 dá margem para atraso do GitHub Actions schedule.
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: render-keep-alive
+  cancel-in-progress: true
+
+jobs:
+  ping-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping API /api/health
+        env:
+          API_HEALTH_URL: https://msimulation-xml-api.onrender.com/api/health
+        run: |
+          set -euo pipefail
+          # max-time alto: se a API dormiu, o próprio ping paga o cold start.
+          http_code="$(curl -sS -o /tmp/health-body.txt -w "%{http_code}" \
+            --connect-timeout 15 --max-time 120 \
+            "$API_HEALTH_URL")"
+          echo "HTTP $http_code"
+          cat /tmp/health-body.txt
+          echo
+          test "$http_code" = "200"

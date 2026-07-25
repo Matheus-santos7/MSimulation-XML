@@ -10,7 +10,7 @@ Monorepo · pnpm workspaces · Fastify · Next.js · `@msimulation-xml/fiscal-co
 
 **Diferencial:** motor tributário + geração de XML NF-e/CT-e em packages testáveis, orquestrados por um backend em Clean Architecture / DDD (bounded contexts).
 
-[Licença MIT](./LICENSE) · [Contribuir](./CONTRIBUTING.md) · [Backend](./backend/README.md) · [Frontend](./frontend/README.md)
+[Licença MIT](./LICENSE) · [Contribuir](./CONTRIBUTING.md) · [Convenções do monorepo](./docs/specs/monorepo-conventions.md) · [Backend](./backend/README.md) · [Frontend](./frontend/README.md)
 
 ---
 

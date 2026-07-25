@@ -40,6 +40,8 @@ pnpm --filter @msimulation-xml/backend exec tsc --noEmit
 - **Secrets:** só placeholders em `.env.example`. Sem chaves reais, dumps ou CNPJs de produção no git.
 - **Idioma do código:** inglês (exceto termos fiscais BR: NFe, CTe, CFOP, CST…).
 
+Convenções completas (commands, estrutura, estilo, testes, boundaries): [`docs/specs/monorepo-conventions.md`](./docs/specs/monorepo-conventions.md).
+
 ## Por onde começar (onboarding)
 
 Sugestão de exploração (1–2 semanas):

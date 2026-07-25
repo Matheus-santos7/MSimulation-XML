@@ -8,11 +8,15 @@
 #
 # Deploy automático: push na branch `main` dispara build + deploy (autoDeployTrigger).
 # Frontend em produção: https://msimulation-xml.vercel.app
+#
+# Horário free (GitHub Actions → render-service-schedule.yml):
+#   Seg–sex 07:40 BRT resume API + validador · 20:30 BRT suspend.
+# Keep-alive da API só no expediente: render-keep-alive.yml.
 
 services:
   # Plano free: dorme ~15 min sem tráfego (cold start 30–50s no login).
-  # Keep-alive só da API — ver .github/workflows/render-keep-alive.yml.
-  # Não keep-alive o validador: 2 instâncias 24/7 estouram ~750 h/mês do free.
+  # Schedule ligar/desligar: .github/workflows/render-service-schedule.yml
+  # Keep-alive da API no expediente: .github/workflows/render-keep-alive.yml
   # Free não recebe rede privada → FISCAL_VALIDATOR_URL usa URL pública (.onrender.com).
   # Validador MCP — criar manualmente se não existir após sync do blueprint.
   - type: web

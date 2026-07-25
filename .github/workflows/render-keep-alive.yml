@@ -1,20 +1,21 @@
-# Mantém a API free do Render acordada (spin-down ~15 min sem tráfego).
+# Mantém a API free do Render acordada no horário comercial (spin-down ~15 min).
 # Ping externo via GitHub Actions — não consome um segundo serviço no Render.
 #
-# Orçamento free (~750 h/mês): só a API fica always-on (~720 h). O validador
-# fiscal permanece cold-start sob demanda.
+# Só roda seg–sex ~08:00–19:59 BRT (UTC 11–22), alinhado ao
+# render-service-schedule.yml (ligado 07:40–20:30 BRT). Fora disso a API está
+# suspensa e o ping falharia de propósito.
 #
 # Limitações conhecidas:
-# - Após deploy ainda há 1 cold start até o próximo ping.
+# - Após resume/deploy ainda pode haver cold start até o próximo ping.
 # - Em repos privados, schedules do Actions podem atrasar se o repo ficar inativo.
-# - workflow_dispatch: use Actions → "Render keep-alive" → Run workflow para testar.
+# - workflow_dispatch: Actions → "Render keep-alive" → Run workflow para testar.
 
 name: Render keep-alive
 
 on:
   schedule:
-    # Idle free ~15 min; */5 dá margem para atraso do GitHub Actions schedule.
-    - cron: "*/5 * * * *"
+    # */5 entre 11–22 UTC = 08:00–19:59 BRT, seg–sex.
+    - cron: "*/5 11-22 * * 1-5"
   workflow_dispatch:
 
 concurrency:

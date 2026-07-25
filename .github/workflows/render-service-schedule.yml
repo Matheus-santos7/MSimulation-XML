@@ -1,0 +1,113 @@
+# Liga/desliga API + validador fiscal no Render (plano free).
+#
+# Horário (America/Sao_Paulo, sem DST desde 2019 → UTC−3 fixo):
+#   Seg–sex 07:40 → resume  (cron UTC: 40 10 * * 1-5)
+#   Seg–sex 20:30 → suspend (cron UTC: 30 23 * * 1-5)
+#
+# Pré-requisito (GitHub → Settings → Secrets and variables → Actions):
+#   RENDER_API_KEY — API Key em https://dashboard.render.com/u/settings#api-keys
+#
+# Service IDs (não secretos). Postgres fica de fora — migração de banco é outro passo.
+# workflow_dispatch: Actions → "Render service schedule" → resume | suspend
+
+name: Render service schedule
+
+on:
+  schedule:
+    - cron: "40 10 * * 1-5"
+    - cron: "30 23 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "resume = ligar · suspend = desligar"
+        required: true
+        type: choice
+        options:
+          - resume
+          - suspend
+
+concurrency:
+  group: render-service-schedule
+  cancel-in-progress: false
+
+jobs:
+  toggle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      # msimulation-xml-api / msimulation-xml-fiscal-validator
+      RENDER_SERVICE_IDS: srv-d8jhh4m7r5hc73dt2d9g srv-d8rghournols73fder4g
+    steps:
+      - name: Resolve action
+        id: resolve
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            action="${{ inputs.action }}"
+          elif [ "${{ github.event.schedule }}" = "40 10 * * 1-5" ]; then
+            action="resume"
+          elif [ "${{ github.event.schedule }}" = "30 23 * * 1-5" ]; then
+            action="suspend"
+          else
+            echo "::error::Cron schedule não mapeado: ${{ github.event.schedule }}"
+            exit 1
+          fi
+          echo "action=$action" >> "$GITHUB_OUTPUT"
+          echo "Ação: $action"
+
+      - name: Require RENDER_API_KEY
+        run: |
+          set -euo pipefail
+          if [ -z "${RENDER_API_KEY:-}" ]; then
+            echo "::error::Secret RENDER_API_KEY ausente. Crie em Settings → Secrets → Actions."
+            exit 1
+          fi
+
+      - name: Call Render API
+        env:
+          ACTION: ${{ steps.resolve.outputs.action }}
+        run: |
+          set -euo pipefail
+          failed=0
+          for service_id in $RENDER_SERVICE_IDS; do
+            echo "→ POST /v1/services/${service_id}/${ACTION}"
+            http_code="$(curl -sS -o /tmp/render-body.txt -w "%{http_code}" \
+              -X POST \
+              -H "Authorization: Bearer ${RENDER_API_KEY}" \
+              -H "Accept: application/json" \
+              "https://api.render.com/v1/services/${service_id}/${ACTION}")"
+            echo "HTTP ${http_code}"
+            cat /tmp/render-body.txt || true
+            echo
+            # 202 = aceito; 409/4xx com serviço já no estado desejado ainda é falha — reportar.
+            if [ "$http_code" != "202" ] && [ "$http_code" != "200" ]; then
+              echo "::warning::Falha em ${service_id} (${ACTION}): HTTP ${http_code}"
+              failed=1
+            fi
+          done
+          if [ "$failed" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Warm API after resume
+        if: steps.resolve.outputs.action == 'resume'
+        env:
+          API_HEALTH_URL: https://msimulation-xml-api.onrender.com/api/health
+        run: |
+          set -euo pipefail
+          # Resume é assíncrono; tenta health por até ~3 min.
+          for i in $(seq 1 12); do
+            code="$(curl -sS -o /tmp/health-body.txt -w "%{http_code}" \
+              --connect-timeout 10 --max-time 30 \
+              "$API_HEALTH_URL" || true)"
+            echo "tentativa $i → HTTP ${code}"
+            if [ "$code" = "200" ]; then
+              cat /tmp/health-body.txt
+              echo
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "::warning::API ainda não respondeu 200 após resume (cold start/deploy em andamento)."
+          exit 0

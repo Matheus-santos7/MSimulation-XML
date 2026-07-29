@@ -1,9 +1,10 @@
-# Mantém a API free do Render acordada no horário comercial (spin-down ~15 min).
-# Ping externo via GitHub Actions — não consome um segundo serviço no Render.
+# Mantém API + validador fiscal free do Render acordados no horário comercial
+# (spin-down ~15 min). Ping externo via GitHub Actions — não consome um segundo
+# serviço no Render.
 #
 # Só roda seg–sex ~08:00–19:59 BRT (UTC 11–22), alinhado ao
-# render-service-schedule.yml (ligado 07:40–20:30 BRT). Fora disso a API está
-# suspensa e o ping falharia de propósito.
+# render-service-schedule.yml (ligado 07:40–20:30 BRT). Fora disso os serviços
+# estão suspensos e o ping falharia de propósito.
 #
 # Limitações conhecidas:
 # - Após resume/deploy ainda pode haver cold start até o próximo ping.
@@ -36,6 +37,24 @@ jobs:
           http_code="$(curl -sS -o /tmp/health-body.txt -w "%{http_code}" \
             --connect-timeout 15 --max-time 120 \
             "$API_HEALTH_URL")"
+          echo "HTTP $http_code"
+          cat /tmp/health-body.txt
+          echo
+          test "$http_code" = "200"
+
+  ping-fiscal-validator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping fiscal validator /health
+        env:
+          VALIDATOR_HEALTH_URL: https://msimulation-xml-fiscal-validator.onrender.com/health
+        run: |
+          set -euo pipefail
+          # max-time alto: se o validador dormiu, o próprio ping paga o cold start.
+          http_code="$(curl -sS -o /tmp/health-body.txt -w "%{http_code}" \
+            --connect-timeout 15 --max-time 120 \
+            "$VALIDATOR_HEALTH_URL")"
           echo "HTTP $http_code"
           cat /tmp/health-body.txt
           echo

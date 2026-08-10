@@ -11,15 +11,23 @@ import {
 } from "../../fiscal/fiscal-xml.util.js";
 import { formatMoney2, asNumeric } from "../../taxes/tax-format.util.js";
 
-/** Monta nó `<ICMSTot>`. */
+/** Monta nó `<ICMSTot>`. Ordem de tags alinhada ao leiaute NF-e 4.00 (MOC). */
 export function buildIcmsTotNode(t: IcmsTotValues): XmlObject {
   const hasDifalValues =
     (t.vFCPUFDest ?? 0) !== 0 || (t.vICMSUFDest ?? 0) !== 0 || (t.vICMSUFRemet ?? 0) !== 0;
 
+  // Ordem XSD: vBC → vICMS → vICMSDeson → [DIFAL] → vFCP → vBCST → vST → vFCPST…
   const icmsTot: XmlObject = {
     vBC: formatMoney2(t.vBC),
     vICMS: formatMoney2(t.vICMS),
     vICMSDeson: "0.00",
+    ...(hasDifalValues
+      ? {
+          vFCPUFDest: formatMoney2(t.vFCPUFDest ?? 0),
+          vICMSUFDest: formatMoney2(t.vICMSUFDest ?? 0),
+          vICMSUFRemet: formatMoney2(t.vICMSUFRemet ?? 0),
+        }
+      : {}),
     vFCP: formatMoney2(t.vFCP ?? 0),
     vBCST: formatMoney2(t.vBCST ?? 0),
     vST: formatMoney2(t.vST ?? 0),
@@ -38,12 +46,6 @@ export function buildIcmsTotNode(t: IcmsTotValues): XmlObject {
     vNF: formatMoney2(t.vNF),
     vTotTrib: formatMoney2(t.vTotTrib ?? 0),
   };
-
-  if (hasDifalValues) {
-    icmsTot.vFCPUFDest = formatMoney2(t.vFCPUFDest ?? 0);
-    icmsTot.vICMSUFDest = formatMoney2(t.vICMSUFDest ?? 0);
-    icmsTot.vICMSUFRemet = formatMoney2(t.vICMSUFRemet ?? 0);
-  }
 
   return { ICMSTot: icmsTot };
 }

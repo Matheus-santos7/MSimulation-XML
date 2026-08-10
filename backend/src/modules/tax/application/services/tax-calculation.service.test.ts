@@ -629,3 +629,98 @@ describe("buildFiscalItem — campos ST só em CST ST", () => {
     assert.equal(item.icms.pMVAST, 40);
   });
 });
+
+describe("buildFiscalItem — FCP placement (EC 87)", () => {
+  const ruleComFcp: ResolvedTaxRule = {
+    ruleId: "sku-RJ-non_taxpayer-sale",
+    aliquotaIcmsInterna: 18,
+    cfop: "6108",
+    payload: {
+      taxes: {
+        pis: { st: "01", aliquota: 1.65 },
+        cofins: { st: "01", aliquota: 7.6 },
+        ipi: { st: "50", aliquota: 0, codEnq: "999" },
+      },
+      icmsByUf: {
+        ICMS_RJ_CST: "00",
+        ICMS_RJ_PICMS_INTERNAL: 18,
+        ICMS_RJ_PICMS_INTERSTATE: 12,
+        ICMS_RJ_PICMS_FCP: 2,
+      },
+    },
+    icms: {
+      cst: "00",
+      pIcmsInternal: 18,
+      pIcmsInterstate: 12,
+      pIcmsFcp: 2,
+    },
+  };
+
+  it("DIFAL interestadual CF: pFCP=0 no ICMS e pFCPUFDest na partilha", () => {
+    const line = orderLineFromProduct(product, {
+      cfop: "6108",
+      quantidade: 1,
+      valorUnitario: 1000,
+    });
+    const item = buildFiscalItem(
+      line,
+      ruleComFcp,
+      {
+        ufOrigem: "SP",
+        ufDestino: "RJ",
+        customerType: "non_taxpayer",
+        operationTipo: "VENDA",
+      },
+      12,
+    );
+    assert.equal(item.icms.pFCP, 0);
+    assert.ok(item.difal);
+    assert.equal(item.difal!.pFCPUFDest, 2);
+
+    const nota = calcularNotaFiscal([item]);
+    assert.equal(nota.itens[0]!.icms.vFCP, 0);
+    assert.equal(nota.itens[0]!.difal?.vFCPUFDest, 20);
+    assert.equal(nota.totais.vFCP, 0);
+    assert.equal(nota.totais.vFCPUFDest, 20);
+  });
+
+  it("operação interna: FCP no ICMS próprio, sem DIFAL", () => {
+    const ruleSp: ResolvedTaxRule = {
+      ...ruleComFcp,
+      ruleId: "sku-SP-non_taxpayer-sale-fcp",
+      cfop: "5102",
+      payload: {
+        ...ruleComFcp.payload,
+        icmsByUf: {
+          ICMS_SP_CST: "00",
+          ICMS_SP_PICMS_INTERNAL: 18,
+          ICMS_SP_PICMS_FCP: 2,
+        },
+      },
+      icms: { cst: "00", pIcmsInternal: 18, pIcmsFcp: 2 },
+    };
+    const line = orderLineFromProduct(product, {
+      cfop: "5102",
+      quantidade: 1,
+      valorUnitario: 1000,
+    });
+    const item = buildFiscalItem(
+      line,
+      ruleSp,
+      {
+        ufOrigem: "SP",
+        ufDestino: "SP",
+        customerType: "non_taxpayer",
+        operationTipo: "VENDA",
+      },
+      18,
+    );
+    assert.equal(item.icms.pFCP, 2);
+    assert.equal(item.difal, undefined);
+
+    const nota = calcularNotaFiscal([item]);
+    assert.equal(nota.itens[0]!.icms.vFCP, 20);
+    assert.equal(nota.totais.vFCP, 20);
+    assert.equal(nota.totais.vFCPUFDest, 0);
+  });
+});

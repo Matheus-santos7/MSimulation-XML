@@ -384,43 +384,90 @@ describe("tax-engine", () => {
     },
   );
 
-  it(
-    "PIS/COFINS — FCP do ICMS DEDUCT e FCP do DIFAL DEDUCT subtraem os valores corretos",
-    () => {
-      const config: BasePisCofinsConfig = {
-        frete: "INCLUDE",
-        desconto: "DEDUCT",
-        icms: "NONE",
-        difal: "NONE",
-        fcpIcms: "DEDUCT",
-        fcpDifal: "DEDUCT",
-        ipi: "NONE",
-        acrescimo: "NONE",
-      };
-      const item = calcularItem({
-        numeroItem: 1,
-        codigo: "FCP-DEDUCT",
-        descricao: "Item com FCP do ICMS e FCP do DIFAL deduzidos",
-        ncm: "00000000",
-        cfop: "6108",
-        unidade: "UN",
-        quantidade: 1,
-        valorUnitario: 1000,
-        icms: { cst: "00", orig: 0, pICMS: 12, pFCP: 2 },
-        pis: { cst: "01", aliquota: 1.65, baseConfig: config },
-        cofins: { cst: "01", aliquota: 7.6, baseConfig: config },
-        difal: { pICMSInter: 12, pICMSUFDest: 18, pFCPUFDest: 1, pICMSInterPart: 100 },
-      });
-      // vBC ICMS = 1000; vFCP = round2(1000 × 0.02) = 20.
-      // vBCUFDest = 1000; pDiff = 6 → vDifal = 60; partilha 100% → vICMSUFDest=60.
-      // vFCPUFDest = round2(1000 × 0.01) = 10.
-      // base PIS = vProd + vSeg − vFCP − vFCPUFDest = 1000 − 20 − 10 = 970.
-      assert.equal(item.icms.vFCP, 20);
-      assert.equal(item.difal?.vFCPUFDest, 10);
-      assert.equal(item.pis.vBC, 970);
-      assert.equal(item.cofins.vBC, 970);
-    },
-  );
+  it("DIFAL EC 87: FCP só em UFDest — vFCP próprio zerado mesmo com pFCP no input", () => {
+    const item = calcularItem({
+      numeroItem: 1,
+      codigo: "DIFAL-FCP",
+      descricao: "Interestadual CF",
+      ncm: "00000000",
+      cfop: "6108",
+      unidade: "UN",
+      quantidade: 1,
+      valorUnitario: 1000,
+      icms: { cst: "00", orig: 0, pICMS: 12, pFCP: 2 },
+      pis: { cst: "01", aliquota: 0 },
+      cofins: { cst: "01", aliquota: 0 },
+      difal: { pICMSInter: 12, pICMSUFDest: 18, pFCPUFDest: 2, pICMSInterPart: 100 },
+    });
+    assert.equal(item.icms.pFCP, 0);
+    assert.equal(item.icms.vFCP, 0);
+    assert.equal(item.difal?.pFCPUFDest, 2);
+    assert.equal(item.difal?.vFCPUFDest, 20);
+    const nota = calcularNotaFiscal([item]);
+    assert.equal(nota.totais.vFCP, 0);
+    assert.equal(nota.totais.vFCPUFDest, 20);
+  });
+
+  it("PIS/COFINS — FCP DIFAL DEDUCT (EC 87: sem vFCP próprio)", () => {
+    const config: BasePisCofinsConfig = {
+      frete: "INCLUDE",
+      desconto: "DEDUCT",
+      icms: "NONE",
+      difal: "NONE",
+      fcpIcms: "DEDUCT",
+      fcpDifal: "DEDUCT",
+      ipi: "NONE",
+      acrescimo: "NONE",
+    };
+    const item = calcularItem({
+      numeroItem: 1,
+      codigo: "FCP-DEDUCT",
+      descricao: "Item com FCP do DIFAL deduzido",
+      ncm: "00000000",
+      cfop: "6108",
+      unidade: "UN",
+      quantidade: 1,
+      valorUnitario: 1000,
+      icms: { cst: "00", orig: 0, pICMS: 12, pFCP: 0 },
+      pis: { cst: "01", aliquota: 1.65, baseConfig: config },
+      cofins: { cst: "01", aliquota: 7.6, baseConfig: config },
+      difal: { pICMSInter: 12, pICMSUFDest: 18, pFCPUFDest: 1, pICMSInterPart: 100 },
+    });
+    // vFCP = 0 (DIFAL). vFCPUFDest = 10. base PIS = 1000 − 10 = 990.
+    assert.equal(item.icms.vFCP, 0);
+    assert.equal(item.difal?.vFCPUFDest, 10);
+    assert.equal(item.pis.vBC, 990);
+    assert.equal(item.cofins.vBC, 990);
+  });
+
+  it("PIS/COFINS — FCP ICMS DEDUCT em operação interna", () => {
+    const config: BasePisCofinsConfig = {
+      frete: "INCLUDE",
+      desconto: "DEDUCT",
+      icms: "NONE",
+      difal: "NONE",
+      fcpIcms: "DEDUCT",
+      fcpDifal: "NONE",
+      ipi: "NONE",
+      acrescimo: "NONE",
+    };
+    const item = calcularItem({
+      numeroItem: 1,
+      codigo: "FCP-INT",
+      descricao: "Interno com FCP",
+      ncm: "00000000",
+      cfop: "5102",
+      unidade: "UN",
+      quantidade: 1,
+      valorUnitario: 1000,
+      icms: { cst: "00", orig: 0, pICMS: 18, pFCP: 2 },
+      pis: { cst: "01", aliquota: 1.65, baseConfig: config },
+      cofins: { cst: "01", aliquota: 7.6, baseConfig: config },
+    });
+    assert.equal(item.icms.vFCP, 20);
+    assert.equal(item.pis.vBC, 980);
+    assert.equal(item.cofins.vBC, 980);
+  });
 
   it("zera vBC de ICMS/PIS/COFINS/IPI quando alíquota é 0% (remessa/retorno)", () => {
     const item = calcularItem({

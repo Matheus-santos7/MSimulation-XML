@@ -319,7 +319,9 @@ export function calcularItem(input: ItemFiscalInput): ItemFiscalResult {
   const baseAntesReducao = round2(baseBruta + (input.incluirIpiNaBaseIcms ? vIPI : 0));
   const pRedBcIcms = pct(input.icms.pRedBC);
   const pICMS = pct(input.icms.pICMS);
-  const pFCP = pct(input.icms.pFCP);
+  // EC 87: com DIFAL ativo o FCP vai só para ICMSUFDest — zera pFCP/vFCP do ICMS próprio
+  // mesmo se o chamador passar pFCP por engano (defesa em profundidade).
+  const pFCP = input.difal ? 0 : pct(input.icms.pFCP);
   const vBCIcmsBruta = round2(baseAntesReducao * (1 - pRedBcIcms / 100));
   const semTributacaoIcms = isIcmsSemTributacaoPropria(input.icms.cst, pICMS, pFCP);
   const vBCIcms = semTributacaoIcms ? 0 : vBCIcmsBruta;

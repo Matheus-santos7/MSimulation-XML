@@ -282,6 +282,7 @@ export function resolveIcmsFromEngine(icms: EngineIcms): NfeIcmsImposto {
           vICMS: formatMoney2(icms.vICMS),
           ...fcpFields,
           ...stFields,
+          ...fcpStFields,
         },
       },
     };
@@ -313,6 +314,26 @@ export function resolveIcmsFromEngine(icms: EngineIcms): NfeIcmsImposto {
           vICMS: formatMoney2(icms.vICMS),
           ...fcpFields,
           ...stFields,
+          ...fcpStFields,
+        },
+      },
+    };
+  }
+
+  if (cst === "90" && hasSt) {
+    return {
+      ICMS: {
+        ICMS90: {
+          orig: icms.orig,
+          CST: "90",
+          modBC,
+          vBC: formatMoney2(icms.vBC),
+          pRedBC: formatMoney4(icms.pRedBC ?? 0),
+          pICMS: formatMoney4(icms.pICMS),
+          vICMS: formatMoney2(icms.vICMS),
+          ...fcpFields,
+          ...stFields,
+          ...fcpStFields,
         },
       },
     };

@@ -65,6 +65,50 @@ describe("resolveIcmsFromEngine", () => {
     assert.equal(icms10.pMVAST, "40.0000");
   });
 
+  it("CST 10 com FCP-ST emite vBCFCPST/pFCPST/vFCPST", () => {
+    const node = resolveIcmsFromEngine({
+      cst: "10",
+      orig: 0,
+      modBC: 3,
+      vBC: 100,
+      pICMS: 12,
+      vICMS: 12,
+      pFCP: 0,
+      vFCP: 0,
+      modBCST: 4,
+      pMVAST: 40,
+      pRedBCST: 0,
+      vBCST: 140,
+      pICMSST: 18,
+      vICMSST: 13.2,
+      pFCPST: 2,
+      vFCPST: 2.8,
+      stCobraNaOperacao: true,
+    });
+    const icms10 = node.ICMS.ICMS10 as Record<string, string>;
+    assert.equal(icms10.pFCPST, "2.0000");
+    assert.equal(icms10.vFCPST, "2.80");
+    assert.equal(icms10.vBCFCPST, "140.00");
+    assert.equal(icms10.pFCP, undefined);
+  });
+
+  it("CST 00 DIFAL: sem pFCP no ICMS quando pFCP=0", () => {
+    const node = resolveIcmsFromEngine({
+      cst: "00",
+      orig: 0,
+      modBC: 3,
+      vBC: 1000,
+      pICMS: 12,
+      vICMS: 120,
+      pFCP: 0,
+      vFCP: 0,
+    });
+    const icms00 = node.ICMS.ICMS00 as Record<string, string>;
+    assert.equal(icms00.pICMS, "12.0000");
+    assert.equal(icms00.pFCP, undefined);
+    assert.equal(icms00.vFCP, undefined);
+  });
+
   it("CST 60 emite Ret sem grupo de cobrança própria", () => {
     const node = resolveIcmsFromEngine({
       cst: "60",

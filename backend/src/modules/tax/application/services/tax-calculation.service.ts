@@ -16,6 +16,10 @@ import {
   type NotaFiscalResult,
 } from "../../domain/services/tax-engine.js";
 import { taxSnapshotFromRule } from "../../domain/services/tax-snapshot.js";
+import {
+  isInterstateByCfopOrUf,
+  resolveFcpPlacement,
+} from "../../domain/services/fcp-placement.js";
 import type { BasePisCofinsConfig } from "../../domain/entities/base-pis-cofins-config.entity.js";
 import { resolveBasePisCofinsConfig } from "../../domain/services/base-pis-cofins-config.resolver.js";
 import type {
@@ -263,6 +267,11 @@ function shouldApplyDifal(ctx: BuildFiscalItemContext, isInterstate: boolean, is
   return mode !== "SEM_DIFAL";
 }
 
+/** Alíquota FCP da TaxRule (UF destino × produto/NCM) — sem hardcode. */
+function resolveFcpAliquotaFromRule(pIcmsFcp: number | undefined): number {
+  return typeof pIcmsFcp === "number" && Number.isFinite(pIcmsFcp) ? pIcmsFcp : 0;
+}
+
 /**
  * Monta um {@link ItemFiscalInput} pronto para o tax-engine.
  *
@@ -287,7 +296,7 @@ export function buildFiscalItem(
   const snapshot = taxSnapshotFromRule(rule, fallbackIcmsRate, ctx.emitterSettings);
 
   const fiscalOriginUf = resolveFiscalOriginUf(ctx);
-  const isInterstate = fiscalOriginUf !== ctx.ufDestino.toUpperCase();
+  const isInterstate = isInterstateByCfopOrUf(line.cfop, fiscalOriginUf, ctx.ufDestino);
   const isFinalConsumer = ctx.customerType === "non_taxpayer";
   const appliesDifal = shouldApplyDifal(ctx, isInterstate, isFinalConsumer);
 
@@ -320,6 +329,17 @@ export function buildFiscalItem(
   );
 
   const stOnCst = isIcmsCstComSt(icmsCst);
+  // FCP: TaxRule por UF destino + NCM; placement evita duplicar próprio + DIFAL (EC 87).
+  const fcp = resolveFcpPlacement({
+    cfop: line.cfop,
+    ufOrigem: fiscalOriginUf,
+    ufDestino: ctx.ufDestino,
+    isFinalConsumer,
+    appliesDifal,
+    pFcpFromRule: resolveFcpAliquotaFromRule(snapshot.icms.pIcmsFcp),
+    pFcpStFromRule: resolveFcpAliquotaFromRule(snapshot.icms.pFcpStRet),
+    hasSt: stOnCst,
+  });
 
   return {
     numeroItem: line.numeroItem ?? 1,
@@ -343,7 +363,7 @@ export function buildFiscalItem(
       pICMS: effectivePIcms,
       modBC: 3,
       pRedBC: snapshot.icms.pRedBc,
-      pFCP: snapshot.icms.pIcmsFcp,
+      pFCP: fcp.pFCP,
       ...(stOnCst
         ? {
             modBCST: 4,
@@ -352,7 +372,7 @@ export function buildFiscalItem(
             // Planilha: PICMSST_RET; se 0, usa interna do destino (só em CST ST).
             pICMSST:
               snapshot.icms.pIcmsStRet > 0 ? snapshot.icms.pIcmsStRet : internalRate,
-            pFCPST: snapshot.icms.pFcpStRet,
+            pFCPST: fcp.pFCPST,
           }
         : {}),
     },
@@ -380,7 +400,7 @@ export function buildFiscalItem(
       ? {
           pICMSInter: icmsRate,
           pICMSUFDest: internalRate,
-          pFCPUFDest: snapshot.icms.pIcmsFcp,
+          pFCPUFDest: fcp.pFCPUFDest,
           pRedBC: snapshot.icms.pRedBcDifal,
           pICMSInterPart: 100,
         }

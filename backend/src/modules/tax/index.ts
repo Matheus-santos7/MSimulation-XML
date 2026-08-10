@@ -24,6 +24,12 @@ export {
 } from "./application/services/tax-calculation.service.js";
 
 export {
+  isInterstateByCfopOrUf,
+  resolveFcpPlacement,
+} from "./domain/services/fcp-placement.js";
+export type { FcpPlacement, FcpPlacementInput } from "./domain/services/fcp-placement.js";
+
+export {
   inferIcmsRateForShipment,
   inferIntraStateIcmsRate,
   normalizeProductOrigin,

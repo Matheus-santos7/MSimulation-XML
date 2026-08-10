@@ -1,10 +1,12 @@
 """
 Proxy HTTP para validação de NF-e via corpo XML.
 
-O mcp-fiscal-brasil 0.4.0 expõe `validate_nfe_full` com `xml_path` em disco.
-Este proxy traduz POST /api/v1/validate-nfe { "xml": "..." } para o retorno cru
-do MCP com validações incrementais (CST, CFOP, NCM, CEST, CEP/IBGE).
-A auditoria legada CAT 31 permanece em POST /api/v1/audit-nfe.
+O mcp-fiscal-brasil expõe `validate_nfe_full` com `xml_path` em disco.
+Este proxy traduz POST /api/v1/validate-nfe { "xml": "..." } para o retorno
+estruturado do MCP + tabelas (CST/CFOP/NCM/CEST/CEP/IBGE) + regras de negócio
+CAT 31 / fulfillment / assinatura / alíquota ICMS (antes só em audit-nfe).
+
+POST /api/v1/audit-nfe permanece como endpoint legado com o mesmo conjunto de regras.
 """
 
 from __future__ import annotations
@@ -56,7 +58,7 @@ async def validate_nfe(body: ValidateNfeRequest) -> dict[str, Any]:
 
 @app.post("/api/v1/audit-nfe", response_model=AuditNfeResponse)
 async def audit_nfe(body: ValidateNfeRequest) -> AuditNfeResponse:
-    """Auditoria estendida (CAT 31 / fulfillment) — legado."""
+    """Auditoria estendida (CAT 31 / fulfillment) — legado; regras também no validate-nfe."""
     import tempfile
 
     fd, raw_path = tempfile.mkstemp(suffix=".xml", dir=BASE_DIR)

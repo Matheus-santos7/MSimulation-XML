@@ -528,7 +528,7 @@ Mutações usam Server Actions no frontend com POST/PUT/DELETE na API.
 
 ## Validador MCP
 
-Auditoria de XML NF-e **após** geração e **antes** de persistir — **não bloqueante**. Escopo v1: só NF-e (CT-e fora). Pacote: [mcp-fiscal-brasil](https://github.com/dehor-labs/mcp-fiscal-brasil). Proxy: [`../infra/fiscal-validator-proxy`](../infra/fiscal-validator-proxy/).
+Auditoria de XML NF-e **após** geração e **antes** de persistir — **não bloqueante**. Escopo v1: só NF-e (CT-e fora). Pacote: [mcp-fiscal-brasil](https://github.com/dehor-labs/mcp-fiscal-brasil). Proxy: [`../infra/fiscal-validator-proxy`](../infra/fiscal-validator-proxy/). Path ativo (`validate-nfe`) inclui tabelas MCP + regras CAT 31 / fulfillment / assinatura / alíquota ICMS.
 
 ### Comportamento
 

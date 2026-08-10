@@ -9,6 +9,7 @@ from typing import Any
 
 from mcp_fiscal_brasil.agentic import validate_nfe_full
 
+from audit import apply_fulfillment_audit_to_payload
 from mcp_nfe_extended_checks import apply_mcp_extended_checks
 from validate_nfe_full_response import (
     enrich_validate_nfe_full_payload,
@@ -19,6 +20,8 @@ from validate_nfe_full_response import (
 async def run_validate_nfe_full(xml_content: str, base_dir: Path) -> dict[str, Any]:
     """
     Grava XML em arquivo temporário e retorna o JSON cru do MCP.
+
+    Pipeline: validate_nfe_full → enrich chave → tabelas MCP → audit CAT 31 / fulfillment.
 
     @param xml_content - XML completo (nfeProc ou NFe)
     @param base_dir - Diretório para arquivos temporários
@@ -32,6 +35,7 @@ async def run_validate_nfe_full(xml_content: str, base_dir: Path) -> dict[str, A
         report = await validate_nfe_full(path)
         payload = serialize_validate_nfe_full_report(report)
         payload = await enrich_validate_nfe_full_payload(payload, xml_content)
-        return await apply_mcp_extended_checks(payload, xml_content)
+        payload = await apply_mcp_extended_checks(payload, xml_content)
+        return await apply_fulfillment_audit_to_payload(payload, xml_content)
     finally:
         path.unlink(missing_ok=True)

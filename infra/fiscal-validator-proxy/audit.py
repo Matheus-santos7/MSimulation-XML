@@ -244,78 +244,32 @@ def _should_skip_assinatura_check(tp_amb: str, motivo: str | None) -> bool:
     return False
 
 
-async def audit_nfe_xml(xml_content: str, xml_path: Path | None = None) -> AuditResult:
-    """
-    Executa auditoria completa de NF-e conforme fluxo MCP + regras CAT 31.
+def achado_to_issue_dict(achado: Achado) -> dict[str, str]:
+    """Converte Achado para o formato de issue do validate_nfe_full."""
+    return {
+        "severidade": achado.severidade.value,
+        "código": achado.codigo,
+        "descrição": achado.mensagem,
+    }
 
-    @param xml_content - XML completo (nfeProc ou NFe)
-    @param xml_path - Caminho temporário para validate_nfe_full (obrigatório se None usa tmp)
+
+async def collect_fulfillment_business_achados(
+    xml_content: str,
+    *,
+    chave: str | None = None,
+) -> list[Achado]:
+    """
+    Regras de negócio CAT 31 / fulfillment / marketplace + assinatura + alíquota ICMS.
+
+    Não chama `validate_nfe_full` — use no path ativo após a validação estrutural
+    para evitar consulta duplicada de CNPJ/estrutura.
     """
     achados: list[Achado] = []
-
-    chave = extract_chave_acesso(xml_content)
-    if not chave:
-        _append(achados, Severidade.CRITICO, "CHAVE_AUSENTE", "Chave de acesso não encontrada no XML.")
-        erros = [a.as_erro() for a in achados]
-        return AuditResult(valida=False, erros=erros, achados=achados, resumo=_build_resumo(achados, False))
+    resolved_chave = chave or extract_chave_acesso(xml_content) or ""
 
     try:
-        chave_result = await validar_chave_nfe(chave)
-        if not chave_result.get("válido"):
-            _append(
-                achados,
-                Severidade.CRITICO,
-                "CHAVE_INVALIDA",
-                f"Chave de acesso inválida: {chave_result}",
-            )
-    except Exception as exc:
-        _append(achados, Severidade.CRITICO, "CHAVE_VALIDACAO", f"Falha ao validar chave: {exc}")
-
-    path = xml_path
-    cleanup = False
-    if path is None:
-        import os
-        import tempfile
-
-        fd, raw = tempfile.mkstemp(suffix=".xml")
-        path = Path(raw)
-        os.write(fd, xml_content.encode("utf-8"))
-        os.close(fd)
-        cleanup = True
-
-    try:
-        report = await validate_nfe_full(path)
-        if not report.valida_estruturalmente:
-            _append(
-                achados,
-                Severidade.CRITICO,
-                "ESTRUTURA_XML",
-                "XML inválido estruturalmente (validate_nfe_full).",
-            )
-        if not report.emissor_ativo:
-            _append(
-                achados,
-                Severidade.CRITICO,
-                "EMISSOR_INATIVO",
-                f"CNPJ emissor {report.cnpj_emissor} não está ativo.",
-            )
-        for issue in report.issues:
-            _append(
-                achados,
-                Severidade.CRITICO,
-                issue.código,
-                issue.descrição,
-            )
-    except Exception as exc:
-        _append(achados, Severidade.CRITICO, "VALIDATE_NFE_FULL", f"Falha na validação estrutural: {exc}")
-    finally:
-        if cleanup and path is not None:
-            path.unlink(missing_ok=True)
-
-    try:
-        parsed = parse_nfe_xml(xml_content, chave)
+        parsed = parse_nfe_xml(xml_content, resolved_chave)
         extra = _parse_xml_fields(xml_content)
-        tp_amb = extra.get("tp_amb", "")
 
         if not extra.get("c_mun_dest"):
             _append(
@@ -395,6 +349,110 @@ async def audit_nfe_xml(xml_content: str, xml_path: Path | None = None) -> Audit
                 )
     except Exception as exc:
         _append(achados, Severidade.ALTO, "ASSINATURA_ERRO", f"Falha ao validar assinatura: {exc}")
+
+    return achados
+
+
+async def apply_fulfillment_audit_to_payload(
+    payload: dict[str, Any],
+    xml_content: str,
+) -> dict[str, Any]:
+    """
+    Anexa issues de negócio (CAT 31 / assinatura / alíquota) ao payload de validate_nfe_full.
+
+    Usado pelo path ativo POST /api/v1/validate-nfe. Não reexecuta validate_nfe_full.
+    """
+    from validate_nfe_full_response import finalize_validate_nfe_full_payload
+
+    if not payload.get("valida_estruturalmente"):
+        return payload
+
+    chave = str(payload.get("chave_acesso") or "").strip() or None
+    achados = await collect_fulfillment_business_achados(xml_content, chave=chave)
+    merged = list(payload.get("issues") or [])
+    known = {
+        str(item.get("código") or item.get("codigo") or "")
+        for item in merged
+    }
+    for achado in achados:
+        if achado.codigo in known:
+            continue
+        merged.append(achado_to_issue_dict(achado))
+        known.add(achado.codigo)
+
+    payload["issues"] = merged
+    return finalize_validate_nfe_full_payload(payload)
+
+
+async def audit_nfe_xml(xml_content: str, xml_path: Path | None = None) -> AuditResult:
+    """
+    Executa auditoria completa de NF-e conforme fluxo MCP + regras CAT 31.
+
+    @param xml_content - XML completo (nfeProc ou NFe)
+    @param xml_path - Caminho temporário para validate_nfe_full (obrigatório se None usa tmp)
+    """
+    achados: list[Achado] = []
+
+    chave = extract_chave_acesso(xml_content)
+    if not chave:
+        _append(achados, Severidade.CRITICO, "CHAVE_AUSENTE", "Chave de acesso não encontrada no XML.")
+        erros = [a.as_erro() for a in achados]
+        return AuditResult(valida=False, erros=erros, achados=achados, resumo=_build_resumo(achados, False))
+
+    try:
+        chave_result = await validar_chave_nfe(chave)
+        if not chave_result.get("válido"):
+            _append(
+                achados,
+                Severidade.CRITICO,
+                "CHAVE_INVALIDA",
+                f"Chave de acesso inválida: {chave_result}",
+            )
+    except Exception as exc:
+        _append(achados, Severidade.CRITICO, "CHAVE_VALIDACAO", f"Falha ao validar chave: {exc}")
+
+    path = xml_path
+    cleanup = False
+    if path is None:
+        import os
+        import tempfile
+
+        fd, raw = tempfile.mkstemp(suffix=".xml")
+        path = Path(raw)
+        os.write(fd, xml_content.encode("utf-8"))
+        os.close(fd)
+        cleanup = True
+
+    try:
+        report = await validate_nfe_full(path)
+        if not report.valida_estruturalmente:
+            _append(
+                achados,
+                Severidade.CRITICO,
+                "ESTRUTURA_XML",
+                "XML inválido estruturalmente (validate_nfe_full).",
+            )
+        if not report.emissor_ativo:
+            _append(
+                achados,
+                Severidade.CRITICO,
+                "EMISSOR_INATIVO",
+                f"CNPJ emissor {report.cnpj_emissor} não está ativo.",
+            )
+        for issue in report.issues:
+            _append(
+                achados,
+                Severidade.CRITICO,
+                issue.código,
+                issue.descrição,
+            )
+    except Exception as exc:
+        _append(achados, Severidade.CRITICO, "VALIDATE_NFE_FULL", f"Falha na validação estrutural: {exc}")
+    finally:
+        if cleanup and path is not None:
+            path.unlink(missing_ok=True)
+
+    achados.extend(await collect_fulfillment_business_achados(xml_content, chave=chave))
 
     has_critico = any(a.severidade == Severidade.CRITICO for a in achados)
     has_alto = any(a.severidade == Severidade.ALTO for a in achados)

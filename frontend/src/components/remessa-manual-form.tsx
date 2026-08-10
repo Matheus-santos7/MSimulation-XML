@@ -173,12 +173,7 @@ export function RemessaManualForm({ products, unidades }: Props) {
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
       {state.success && (
         <p className="text-sm text-success">
-          Remessa emitida
-          {state.totalItens && state.totalItens > 1 ? ` com ${state.totalItens} produtos` : ""}. NF-e …
-          {state.chaveNfe?.slice(-8)} · CT-e …{state.chaveCte?.slice(-8)}.{" "}
-          <Link href="/nfe" className="underline">
-            Ver NF-e
-          </Link>
+          Remessa emitida.
         </p>
       )}
     </form>

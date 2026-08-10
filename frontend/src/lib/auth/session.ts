@@ -61,25 +61,36 @@ export async function getRefreshToken(): Promise<string | undefined> {
 }
 
 /**
+ * Resolve token + `/auth/me` uma única vez por request RSC.
+ * Antes: `resolveAccessToken` e `getAuthMe` cada um chamavam `/auth/me` (~2× latência Neon).
+ */
+const resolveAuthSession = cache(async (): Promise<{ token: string; me: AuthMeDto } | null> => {
+  const accessToken = await getAccessToken();
+  if (accessToken) {
+    const me = await fetchAuthMe(accessToken);
+    if (me) return { token: accessToken, me };
+  }
+
+  const refreshToken = await getRefreshToken();
+  if (!refreshToken) return null;
+
+  try {
+    const session = await refreshSessionApi(refreshToken);
+    const me = await fetchAuthMe(session.accessToken);
+    if (!me) return null;
+    return { token: session.accessToken, me };
+  } catch {
+    return null;
+  }
+});
+
+/**
  * Resolve um access token válido sem alterar cookies (seguro em Server Components).
  * Tenta o cookie atual; se expirado, usa refresh só para esta requisição.
  */
 export const resolveAccessToken = cache(async (): Promise<string | undefined> => {
-  const accessToken = await getAccessToken();
-  if (accessToken) {
-    const me = await fetchAuthMe(accessToken);
-    if (me) return accessToken;
-  }
-
-  const refreshToken = await getRefreshToken();
-  if (!refreshToken) return undefined;
-
-  try {
-    const session = await refreshSessionApi(refreshToken);
-    return session.accessToken;
-  } catch {
-    return undefined;
-  }
+  const session = await resolveAuthSession();
+  return session?.token;
 });
 
 /** Renova sessão e persiste cookies — use só em Server Actions. */
@@ -97,9 +108,8 @@ export async function refreshAndPersistSession(): Promise<AuthSessionDto | null>
 }
 
 export const getAuthMe = cache(async (): Promise<AuthMeDto | null> => {
-  const token = await resolveAccessToken();
-  if (!token) return null;
-  return fetchAuthMe(token);
+  const session = await resolveAuthSession();
+  return session?.me ?? null;
 });
 
 export function redirectAfterAuth(session: AuthSessionPayload): never {

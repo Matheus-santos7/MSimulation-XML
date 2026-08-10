@@ -32,22 +32,17 @@ export class PrismaNfeQueryRepository implements NfeQueryPort {
   async list(tenantId: string) {
     const rows = await this.db.nFe.findMany({
       where: { tenantId, ...fiscalNotDeleted },
+      // Listagem não precisa do XML autorizado (texto grande) — baixa payload Neon→API.
+      omit: { xmlAutorizado: true },
       include: nfeListInclude,
       orderBy: [{ emitidaEm: "desc" }, { serie: "desc" }, { numero: "desc" }],
     });
     if (rows.length === 0) return [];
 
-    await refreshRemessaFifoItemsForNfes(this.db, tenantId, rows);
-    return Promise.all(
-      rows.map(async (row) => {
-        const fifoBalance = isShipmentWithFifoBalance(row.tipo)
-          ? await getNetRemessaNfeBalance(this.db, row.id, row.quantidade)
-          : undefined;
-        return mapNfe(row, row.nfeReferencia?.chave, row.itens, fifoBalance) as Record<
-          string,
-          unknown
-        >;
-      }),
+    // Sem reconcile FIFO no GET (write-on-read): saldo vem dos itens já carregados via mapNfe.
+    // Reconcile permanece no detalhe / mutações de remessa.
+    return rows.map(
+      (row) => mapNfe(row, row.nfeReferencia?.chave, row.itens) as Record<string, unknown>,
     );
   }
 

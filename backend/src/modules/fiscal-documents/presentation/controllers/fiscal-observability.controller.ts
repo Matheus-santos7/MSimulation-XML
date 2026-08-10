@@ -19,9 +19,11 @@ async function listFiscalEventsForTenant(
   const [rows, inutilizations] = await Promise.all([
     prisma.fiscalEvent.findMany({
       where: { tenantId },
-      include: { nfe: true },
+      // Só a chave — `nfe: true` puxava xmlAutorizado (@db.Text) de cada NF-e.
+      include: { nfe: { select: { chave: true } } },
       orderBy: { ocorridoEm: "desc" },
     }),
+
     prisma.nfeInutilizacao.findMany({
       where: { tenantId },
       orderBy: { ocorridoEm: "desc" },

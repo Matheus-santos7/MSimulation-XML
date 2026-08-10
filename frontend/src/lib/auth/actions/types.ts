@@ -11,7 +11,12 @@ export type ResetPasswordState = {
   success?: string;
   fieldErrors?: Record<string, string[]>;
 };
-export type Verify2faState = { error?: string; fieldErrors?: Record<string, string[]> };
+export type Verify2faState = {
+  error?: string;
+  fieldErrors?: Record<string, string[]>;
+  /** Destino pós-2FA — navegação no cliente (redirect() em SA + useActionState falha em prod). */
+  redirectTo?: string;
+};
 
 export type SecurityActionState = {
   error?: string;

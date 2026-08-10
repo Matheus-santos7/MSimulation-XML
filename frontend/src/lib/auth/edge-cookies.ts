@@ -10,9 +10,10 @@ import {
 } from "@/lib/auth/cookie";
 
 export function clearAuthCookiesOn(response: NextResponse): void {
-  response.cookies.delete(ACCESS_TOKEN_COOKIE);
-  response.cookies.delete(REFRESH_TOKEN_COOKIE);
-  response.cookies.delete(TWO_FACTOR_PENDING_COOKIE);
+  const clear = { ...authCookieBaseOptions(), maxAge: 0 };
+  response.cookies.set(ACCESS_TOKEN_COOKIE, "", clear);
+  response.cookies.set(REFRESH_TOKEN_COOKIE, "", clear);
+  response.cookies.set(TWO_FACTOR_PENDING_COOKIE, "", clear);
 }
 
 export function setSessionCookiesOn(

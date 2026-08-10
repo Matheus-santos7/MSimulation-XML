@@ -17,6 +17,7 @@ import {
   getAccessToken,
   getRefreshToken,
   getTwoFactorPending,
+  pathAfterAuth,
   redirectAfterAuth,
   setAuthSession,
   setTwoFactorPending,
@@ -158,10 +159,12 @@ export async function verify2faAction(
 
   try {
     const session = await verify2faApi(twoFactorToken, code, captchaToken);
-    await clearTwoFactorPending();
+    // Sessão antes de limpar o pending — se o Soft Navigate falhar, o proxy ainda vê access.
     await setAuthSession(session);
-    redirectAfterAuth(session);
-    return {};
+    await clearTwoFactorPending();
+    // Não usar redirect() aqui: com useActionState em produção a action retorna 200
+    // e a navegação frequentemente não acontece (cookies já gravados).
+    return { redirectTo: pathAfterAuth(session) };
   } catch (e) {
     return formatAuthError(e);
   }

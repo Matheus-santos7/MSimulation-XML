@@ -8,6 +8,7 @@ import {
   REFRESH_TOKEN_COOKIE,
   TWO_FACTOR_PENDING_COOKIE,
   TWO_FACTOR_PENDING_MAX_AGE,
+  authCookieBaseOptions,
   authCookieOptions,
 } from "@/lib/auth/cookie";
 import { fetchAuthMe, refreshSessionApi } from "@/lib/auth/api/session";
@@ -21,12 +22,17 @@ export type AuthSessionPayload = {
   emailVerified?: boolean;
 };
 
+function clearCookie(store: Awaited<ReturnType<typeof cookies>>, name: string): void {
+  // Em produção (Secure) o delete precisa espelhar path/sameSite/secure do Set-Cookie.
+  store.set(name, "", { ...authCookieBaseOptions(), maxAge: 0 });
+}
+
 /** Apenas em Server Actions / Route Handlers — não chame em Server Components. */
 export async function clearAuthSession(): Promise<void> {
   const store = await cookies();
-  store.delete(ACCESS_TOKEN_COOKIE);
-  store.delete(REFRESH_TOKEN_COOKIE);
-  store.delete(TWO_FACTOR_PENDING_COOKIE);
+  clearCookie(store, ACCESS_TOKEN_COOKIE);
+  clearCookie(store, REFRESH_TOKEN_COOKIE);
+  clearCookie(store, TWO_FACTOR_PENDING_COOKIE);
 }
 
 export async function setTwoFactorPending(twoFactorToken: string): Promise<void> {
@@ -41,7 +47,7 @@ export async function getTwoFactorPending(): Promise<string | undefined> {
 
 export async function clearTwoFactorPending(): Promise<void> {
   const store = await cookies();
-  store.delete(TWO_FACTOR_PENDING_COOKIE);
+  clearCookie(store, TWO_FACTOR_PENDING_COOKIE);
 }
 
 export async function setAuthSession(session: AuthSessionDto): Promise<void> {
@@ -112,11 +118,16 @@ export const getAuthMe = cache(async (): Promise<AuthMeDto | null> => {
   return session?.me ?? null;
 });
 
-export function redirectAfterAuth(session: AuthSessionPayload): never {
+/** Destino pós-login/2FA sem lançar redirect (útil com useActionState no cliente). */
+export function pathAfterAuth(session: AuthSessionPayload): string {
   if (session.emailVerified === false) {
-    redirect("/login/verificar-email");
+    return "/login/verificar-email";
   }
   const needsOnboarding =
     session.needsOnboarding === true || session.tenantId === null || session.tenantId === undefined;
-  redirect(needsOnboarding ? "/onboarding/empresa" : "/");
+  return needsOnboarding ? "/onboarding/empresa" : "/";
+}
+
+export function redirectAfterAuth(session: AuthSessionPayload): never {
+  redirect(pathAfterAuth(session));
 }

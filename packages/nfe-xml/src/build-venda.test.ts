@@ -729,6 +729,78 @@ describe("buildNFeXmlFromBuilder — DEVOLUCAO / INSULCESSO", () => {
     );
   });
 
+  it("DEVOLUCAO emite impostoDevol, vIPIDevol, entrega OL e FCP só em UFDest", () => {
+    const nfe = baseDevolucao("DEVOLUCAO");
+    nfe.fiscalPayload = {
+      ...nfe.fiscalPayload,
+      ufSaidaFisica: "SC",
+      cMunSaidaFisica: "4205407",
+      entrega: {
+        CNPJ: "03007331012077",
+        xNome: "EBZAR.COM.BR LTDA",
+        xLgr: "Rua do Operador",
+        nro: "100",
+        xBairro: "CD",
+        cMun: "4205407",
+        xMun: "Florianopolis",
+        UF: "SC",
+        CEP: "88010000",
+      },
+      infIntermed: { CNPJ: "10573521000191", idCadIntTran: "12345678901" },
+      engine: {
+        itens: [
+          {
+            vProd: 1000,
+            quantidade: 1,
+            valorUnitario: 1000,
+            icms: { cst: "00", orig: 2, vBC: 1050, pICMS: 12, vICMS: 126, pFCP: 0, vFCP: 0 },
+            pis: { cst: "01", vBC: 874, pPIS: 1.65, vPIS: 14.42 },
+            cofins: { cst: "01", vBC: 874, pCOFINS: 7.6, vCOFINS: 66.42 },
+            difal: {
+              vBCUFDest: 1050,
+              pICMSUFDest: 18,
+              pICMSInter: 12,
+              pICMSInterPart: 100,
+              vICMSUFDest: 63,
+              vICMSUFRemet: 0,
+              vBCFCPUFDest: 1050,
+              pFCPUFDest: 2,
+              vFCPUFDest: 21,
+            },
+            impostoDevol: { pDevol: 100, vIPIDevol: 50 },
+          },
+        ],
+        totais: {
+          vBC: 1050,
+          vICMS: 126,
+          vFCP: 0,
+          vProd: 1000,
+          vIPI: 0,
+          vIPIDevol: 50,
+          vPIS: 14.42,
+          vCOFINS: 66.42,
+          vNF: 1050,
+          vFCPUFDest: 21,
+          vICMSUFDest: 63,
+          vICMSUFRemet: 0,
+        },
+      },
+    };
+
+    const xml = buildNFeXML(nfe, emit, product);
+    assert.match(xml, /<tpNF>0<\/tpNF>/);
+    assert.match(xml, /<finNFe>4<\/finNFe>/);
+    assert.match(xml, /<orig>2<\/orig>/);
+    assert.match(xml, /<CST>00<\/CST>/);
+    assert.match(xml, /<impostoDevol>[\s\S]*<pDevol>100\.00<\/pDevol>[\s\S]*<vIPIDevol>50\.00<\/vIPIDevol>[\s\S]*<\/impostoDevol>/);
+    assert.match(xml, /<ICMSTot>[\s\S]*<vIPIDevol>50\.00<\/vIPIDevol>/);
+    assert.match(xml, /<entrega>[\s\S]*<CNPJ>03007331012077<\/CNPJ>/);
+    assert.match(xml, /<vFCPUFDest>21\.00<\/vFCPUFDest>/);
+    assert.match(xml, /<vICMSUFDest>63\.00<\/vICMSUFDest>/);
+    assert.match(xml, /<vFCP>0\.00<\/vFCP>/);
+    assert.match(xml, /<infIntermed>[\s\S]*<CNPJ>10573521000191<\/CNPJ>[\s\S]*<idCadIntTran>12345678901<\/idCadIntTran>/);
+  });
+
   it("VENDA multi-item emite xPed distinto por nItem (fiscal.xPeds)", () => {
     const xPedA = "200001579233991";
     const xPedB = "200001579233992";

@@ -37,6 +37,7 @@ import {
   optionalText,
 } from "./nodes/builder.util.js";
 import { vendaIdeOptions } from "./nodes/ide.node.js";
+import { buildImpostoDevolNode } from "./nodes/imposto-devol.node.js";
 import { buildItemImpostoNode } from "./nodes/imposto.node.js";
 import { buildTotalNode } from "./nodes/total.node.js";
 import { buildTranspFromEmitter } from "./nodes/transp.node.js";
@@ -353,10 +354,13 @@ export class VendaNFeStrategyBuilder extends BaseNFeBuilder {
       if (item.xPed) prod.xPed = item.xPed;
       if (item.nfci) prod.nFCI = item.nfci;
 
+      const impostoDevol = buildImpostoDevolNode(engineItem?.impostoDevol);
+
       const detNode: XmlObject = {
         "@nItem": String(item.index + 1),
         prod,
         imposto: impostoNode.imposto,
+        ...(impostoDevol ?? {}),
         vItem: item.vProd.toFixed(2),
       };
       if (item.infAdProd) detNode.infAdProd = item.infAdProd;

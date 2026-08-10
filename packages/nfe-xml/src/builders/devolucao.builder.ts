@@ -9,6 +9,7 @@
 
 import {
   buildFulfillmentInfCplText,
+  resolveVendaIdeFields,
   type FulfillmentInfCplOperation,
 } from "@msimulation-xml/fiscal-core";
 import type { XmlObject } from "../core/xml-serializer.js";
@@ -23,9 +24,22 @@ import { VendaNFeStrategyBuilder } from "./venda.builder.js";
 export class DevolucaoNFeStrategyBuilder extends VendaNFeStrategyBuilder {
   protected getIdeOptions(): IdeBuildOptions {
     const d = this.ctx.nfe.destinatario;
+    const fiscal = this.ctx.fiscal;
+    // cUF/cMunFG seguem saída física do fulfillment (mesmo da venda).
+    const ideFields = resolveVendaIdeFields({
+      emitUf: this.ctx.emit.endereco.uf,
+      emitCMun: this.ctx.emit.endereco.cMun,
+      ufSaidaFisica:
+        typeof fiscal.ufSaidaFisica === "string" ? fiscal.ufSaidaFisica : undefined,
+      cMunSaidaFisica:
+        typeof fiscal.cMunSaidaFisica === "string" ? fiscal.cMunSaidaFisica : undefined,
+    });
+
     return {
       ...devolucaoIdeOptions(this.vendaCtx.stockUf, d.endereco.uf),
       idDest: this.vendaCtx.idDest,
+      cUfIde: ideFields.cUf,
+      cMunFGIde: ideFields.cMunFG,
     };
   }
 

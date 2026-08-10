@@ -234,6 +234,14 @@ export type ItemFiscalResult = {
     pFCPUFDest: number;
     vFCPUFDest: number;
   };
+  /**
+   * NT 2016.002 — IPI devolvido por não contribuinte.
+   * Quando presente, o XML emite `<impostoDevol>` e zera `<IPI>` tributado do item.
+   */
+  impostoDevol?: {
+    pDevol: number;
+    vIPIDevol: number;
+  };
 };
 
 export type NotaFiscalTotais = {
@@ -251,6 +259,8 @@ export type NotaFiscalTotais = {
   vSeg: number;
   vDesc: number;
   vIPI: number;
+  /** Soma `<vIPIDevol>` (NT 2016.002) — entra no vNF. */
+  vIPIDevol: number;
   vPIS: number;
   vCOFINS: number;
   vOutro: number;
@@ -493,7 +503,7 @@ export function calcularTotais(itens: ItemFiscalResult[]): NotaFiscalTotais {
   const acc: NotaFiscalTotais = {
     vBC: 0, vICMS: 0, vFCP: 0, vBCST: 0, vST: 0, vFCPST: 0, vFCPSTRet: 0,
     vProd: 0, vFrete: 0, vSeg: 0,
-    vDesc: 0, vIPI: 0, vPIS: 0, vCOFINS: 0, vOutro: 0, vFCPUFDest: 0,
+    vDesc: 0, vIPI: 0, vIPIDevol: 0, vPIS: 0, vCOFINS: 0, vOutro: 0, vFCPUFDest: 0,
     vICMSUFDest: 0, vICMSUFRemet: 0, vNF: 0,
   };
 
@@ -516,6 +526,7 @@ export function calcularTotais(itens: ItemFiscalResult[]): NotaFiscalTotais {
     acc.vDesc = round2(acc.vDesc + item.vDesc);
     acc.vOutro = round2(acc.vOutro + item.vOutro);
     acc.vIPI = round2(acc.vIPI + (item.ipi?.vIPI ?? 0));
+    acc.vIPIDevol = round2(acc.vIPIDevol + (item.impostoDevol?.vIPIDevol ?? 0));
     acc.vPIS = round2(acc.vPIS + item.pis.vPIS);
     acc.vCOFINS = round2(acc.vCOFINS + item.cofins.vCOFINS);
     if (item.difal) {
@@ -526,11 +537,17 @@ export function calcularTotais(itens: ItemFiscalResult[]): NotaFiscalTotais {
   }
 
   // vNF (regra oficial da SEFAZ): produtos + ST + frete + seguro + outras + IPI
-  //                              − desconto − ICMS desonerado.
+  //                              + IPI devolvido − desconto − ICMS desonerado.
   // FCP-ST NÃO integra vNF aqui (decisão da fatia; ver spec icms-st-engine).
-  // Quando IPI = 0, recai na fórmula simplificada: vProd + vFrete − vDesc.
   acc.vNF = round2(
-    acc.vProd + acc.vST + acc.vFrete + acc.vSeg + acc.vOutro + acc.vIPI - acc.vDesc,
+    acc.vProd +
+      acc.vST +
+      acc.vFrete +
+      acc.vSeg +
+      acc.vOutro +
+      acc.vIPI +
+      acc.vIPIDevol -
+      acc.vDesc,
   );
 
   return acc;

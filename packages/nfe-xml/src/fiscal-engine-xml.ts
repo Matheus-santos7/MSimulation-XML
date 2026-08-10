@@ -55,6 +55,11 @@ export type EngineDifal = {
   vICMSUFRemet?: number;
 };
 
+export type EngineImpostoDevol = {
+  pDevol: number;
+  vIPIDevol: number;
+};
+
 export type EngineItem = {
   vProd: number;
   vFrete?: number;
@@ -67,6 +72,8 @@ export type EngineItem = {
   pis: EnginePisCofins;
   cofins: EnginePisCofins;
   difal?: EngineDifal;
+  /** NT 2016.002 — IPI devolvido (não contribuinte). */
+  impostoDevol?: EngineImpostoDevol;
 };
 
 export type EngineTotais = {
@@ -82,6 +89,8 @@ export type EngineTotais = {
   /** Somatório dos `vDesc` dos itens (já arredondados). Vai para `<ICMSTot><vDesc>`. */
   vDesc?: number;
   vIPI: number;
+  /** Soma `<vIPIDevol>` (NT 2016.002). */
+  vIPIDevol?: number;
   vPIS: number;
   vCOFINS: number;
   vNF: number;
@@ -108,6 +117,7 @@ export type IcmsTotInput = {
   vFrete: number;
   vDesc?: number;
   vIPI: number;
+  vIPIDevol?: number;
   vPIS: number;
   vCOFINS: number;
   vNF: number;
@@ -154,6 +164,7 @@ export function parseEngineFromFiscalPayload(
     const cofins = asRecord(item.cofins) ?? {};
     const ipi = asRecord(item.ipi);
     const difal = asRecord(item.difal);
+    const impostoDevol = asRecord(item.impostoDevol);
 
     return {
       vProd: num(item.vProd),
@@ -219,6 +230,12 @@ export function parseEngineFromFiscalPayload(
             vICMSUFRemet: num(difal.vICMSUFRemet),
           }
         : undefined,
+      impostoDevol: impostoDevol
+        ? {
+            pDevol: num(impostoDevol.pDevol),
+            vIPIDevol: num(impostoDevol.vIPIDevol),
+          }
+        : undefined,
     };
   });
 
@@ -234,6 +251,7 @@ export function parseEngineFromFiscalPayload(
     vFrete: num(totaisRaw.vFrete),
     vDesc: num(totaisRaw.vDesc),
     vIPI: num(totaisRaw.vIPI),
+    vIPIDevol: num(totaisRaw.vIPIDevol),
     vPIS: num(totaisRaw.vPIS),
     vCOFINS: num(totaisRaw.vCOFINS),
     vNF: num(totaisRaw.vNF),
@@ -259,6 +277,7 @@ export function icmsTotFromEngine(totais: EngineTotais, vFrete: number): IcmsTot
     vFrete,
     vDesc: totais.vDesc,
     vIPI: totais.vIPI,
+    vIPIDevol: totais.vIPIDevol,
     vPIS: totais.vPIS,
     vCOFINS: totais.vCOFINS,
     vNF: totais.vNF,

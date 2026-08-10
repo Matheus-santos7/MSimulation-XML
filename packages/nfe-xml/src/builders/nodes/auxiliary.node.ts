@@ -83,12 +83,14 @@ export function buildInfAdicNode(input: InfAdicNodeInput): XmlObject | null {
   return { infAdic };
 }
 
-/** Monta `<infIntermed>` (marketplace). */
+/** Monta `<infIntermed>` (marketplace). Prefer `fiscal.infIntermed` (NT 2023.004). */
 export function buildInfIntermedNode(fiscal: Record<string, unknown>): XmlObject {
   const idCadIntTran = resolveIdCadIntTran(fiscal, REMESSA_ML_INTERMED_ID);
+  const raw = fiscal.infIntermed as Record<string, unknown> | undefined;
+  const cnpjFromPayload = digitsOnly(String(raw?.CNPJ ?? ""));
   return {
     infIntermed: {
-      CNPJ: REMESSA_ML_INTERMED_CNPJ,
+      CNPJ: cnpjFromPayload.length === 14 ? cnpjFromPayload : REMESSA_ML_INTERMED_CNPJ,
       idCadIntTran,
     },
   };

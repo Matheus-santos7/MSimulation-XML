@@ -30,6 +30,15 @@ export {
 export type { FcpPlacement, FcpPlacementInput } from "./domain/services/fcp-placement.js";
 
 export {
+  mirrorOriginForDevolucao,
+  parseOriginEngine,
+} from "./domain/services/mirror-origin-for-devolucao.js";
+export type {
+  ImpostoDevolItem,
+  MirrorOriginForDevolucaoInput,
+} from "./domain/services/mirror-origin-for-devolucao.js";
+
+export {
   inferIcmsRateForShipment,
   inferIntraStateIcmsRate,
   normalizeProductOrigin,

@@ -26,6 +26,10 @@ import { enrichTaxSnapshot, loadEmitterSettings } from "../../../fiscal-settings
 import { enrichFiscalPayloadWithXTexto, resolveNumeroInicialNfe } from "@msimulation-xml/fiscal-core";
 import { taxSnapshotFromRule } from "../../../tax/domain/services/tax-snapshot.js";
 import { calcularNotaFiscal } from "../../../tax/domain/services/tax-engine.js";
+import {
+  mirrorOriginForDevolucao,
+  parseOriginEngine,
+} from "../../../tax/domain/services/mirror-origin-for-devolucao.js";
 import { buildFiscalItem, resolveTaxRule, resolveIcmsFallbackRate, type CustomerType } from "../../../tax/index.js";
 import { persistNfeXmlFromEmission } from "../xml/nfe-xml-service.js";
 import {
@@ -116,36 +120,57 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
         num(sale.aliqIcms) ||
         resolveIcmsFallbackRate(tenant.uf, sale.destUf, "sale", emitterSettings);
       const referencedSaleCst = extractCstFromPayload(sale.fiscalPayload);
+      const saleFiscalPayload = sale.fiscalPayload as Record<string, unknown> | undefined;
+      const ufSaidaFisica =
+        typeof saleFiscalPayload?.ufSaidaFisica === "string"
+          ? saleFiscalPayload.ufSaidaFisica
+          : undefined;
+      const cMunSaidaFisica =
+        typeof saleFiscalPayload?.cMunSaidaFisica === "string"
+          ? saleFiscalPayload.cMunSaidaFisica
+          : undefined;
 
-      const fiscalItem = buildFiscalItem(
-        {
-          codigo: product.sku ?? product.id,
-          descricao: product.nome,
-          ncm: product.ncm,
-          cfop,
-          unidade: product.unidade ?? "UN",
-          cest: product.cest ?? undefined,
-          ean: product.ean ?? undefined,
-          exTipi: product.exTipi ?? undefined,
-          origem: product.origem ?? 0,
-          quantidade: quantity,
-          valorUnitario: unitValue,
-        },
-        saleTaxRule,
-        {
-          ufOrigem: tenant.uf,
-          ufDestino: sale.destUf,
-          customerType,
-          emitterSettings,
-          operationTipo: "DEVOLUCAO",
-          cstVendaReferencia: referencedSaleCst,
-        },
-        icmsFallbackRate,
-      );
-      const invoice = calcularNotaFiscal([fiscalItem]);
+      // Regra de ouro: espelhar engine da venda (proporcional). Fallback = recalcular TaxRule.
+      const originEngine = parseOriginEngine(saleFiscalPayload?.engine);
+      const invoice = originEngine
+        ? mirrorOriginForDevolucao({
+            origin: originEngine,
+            ratio: 1,
+            nonContributorIpi: customerType === "non_taxpayer",
+          })
+        : calcularNotaFiscal([
+            buildFiscalItem(
+              {
+                codigo: product.sku ?? product.id,
+                descricao: product.nome,
+                ncm: product.ncm,
+                cfop,
+                unidade: product.unidade ?? "UN",
+                cest: product.cest ?? undefined,
+                ean: product.ean ?? undefined,
+                exTipi: product.exTipi ?? undefined,
+                origem: product.origem ?? 0,
+                quantidade: quantity,
+                valorUnitario: unitValue,
+              },
+              saleTaxRule,
+              {
+                ufOrigem: tenant.uf,
+                ufSaidaFisica,
+                ufDestino: sale.destUf,
+                customerType,
+                emitterSettings,
+                operationTipo: "DEVOLUCAO",
+                cstVendaReferencia: referencedSaleCst,
+              },
+              icmsFallbackRate,
+            ),
+          ]);
 
-      const returnIcmsRate = fiscalItem.icms.pICMS || icmsFallbackRate;
+      const returnIcmsRate = invoice.itens[0]?.icms.pICMS || icmsFallbackRate;
       const returnIcmsValue = invoice.totais.vICMS;
+      const entregaOl = entregaFromOperadorLogistico(sale.nfeReferencia);
+      const infIntermed = resolveInfIntermedForReturn(saleFiscalPayload, sale.nfeReferencia);
 
       const numeroInicial = resolveNumeroInicialNfe(emitterSettings, series, {
         serieRemessa: tenant.serieRemessa,
@@ -166,8 +191,6 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
         indFinal: customerType === "non_taxpayer" ? 1 : 0,
         cstVendaReferencia: referencedSaleCst,
       });
-
-      const saleFiscalPayload = sale.fiscalPayload as Record<string, unknown> | undefined;
 
       const returnRow = await tx.nFe.create({
         data: {
@@ -193,7 +216,7 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
           destNomePais: sale.destNomePais,
           destTelefone: sale.destTelefone,
           destIndIeDest: sale.destIndIeDest,
-          valor: totalValue,
+          valor: invoice.totais.vNF,
           valorIcms: returnIcmsValue,
           aliqIcms: returnIcmsRate,
           status: FiscalStatus.AUTORIZADA,
@@ -221,12 +244,10 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
                     cnpjFilialInfCpl: sale.nfeReferencia.destDoc,
                   }
                 : {}),
-              ...(typeof saleFiscalPayload?.ufSaidaFisica === "string"
-                ? { ufSaidaFisica: saleFiscalPayload.ufSaidaFisica }
-                : {}),
-              ...(typeof saleFiscalPayload?.cMunSaidaFisica === "string"
-                ? { cMunSaidaFisica: saleFiscalPayload.cMunSaidaFisica }
-                : {}),
+              ...(ufSaidaFisica ? { ufSaidaFisica } : {}),
+              ...(cMunSaidaFisica ? { cMunSaidaFisica } : {}),
+              ...(entregaOl ? { entrega: entregaOl } : {}),
+              ...(infIntermed ? { infIntermed } : {}),
             } as Record<string, unknown>,
             {
               tipo: returnTipo,
@@ -594,6 +615,75 @@ function idCadIntTranFromRemessaFiscalPayload(payload: unknown): string | undefi
   const intermed = root.infIntermed as Record<string, unknown> | undefined;
   const id = intermed?.idCadIntTran;
   return typeof id === "string" && id.trim() ? id.trim() : undefined;
+}
+
+/**
+ * `<entrega>` = OL onde a mercadoria retorna fisicamente (dest da remessa/retorno simbólico).
+ */
+function entregaFromOperadorLogistico(
+  ol: {
+    destDoc: string;
+    destNome: string;
+    destLogradouro: string | null;
+    destNumero: string | null;
+    destComplemento: string | null;
+    destBairro: string | null;
+    destCodigoMunicipio: string | null;
+    destMunicipio: string | null;
+    destUf: string;
+    destCep: string | null;
+    destCodigoPais: string | null;
+    destNomePais: string | null;
+    destTelefone: string | null;
+  } | null | undefined,
+): Record<string, unknown> | undefined {
+  if (!ol) return undefined;
+  const cnpj = String(ol.destDoc ?? "").replace(/\D/g, "");
+  if (cnpj.length !== 14) return undefined;
+  if (!ol.destLogradouro?.trim() || !ol.destCodigoMunicipio?.trim() || !ol.destUf?.trim()) {
+    return undefined;
+  }
+  return {
+    CNPJ: cnpj,
+    xNome: ol.destNome,
+    xLgr: ol.destLogradouro,
+    nro: ol.destNumero?.trim() || "S/N",
+    ...(ol.destComplemento?.trim() ? { xCpl: ol.destComplemento.trim() } : {}),
+    xBairro: ol.destBairro?.trim() || "S/N",
+    cMun: ol.destCodigoMunicipio.trim(),
+    xMun: ol.destMunicipio?.trim() || ol.destCodigoMunicipio.trim(),
+    UF: ol.destUf.trim().toUpperCase(),
+    ...(ol.destCep ? { CEP: String(ol.destCep).replace(/\D/g, "").padStart(8, "0").slice(0, 8) } : {}),
+    ...(ol.destCodigoPais ? { cPais: ol.destCodigoPais } : {}),
+    ...(ol.destNomePais ? { xPais: ol.destNomePais } : {}),
+    ...(ol.destTelefone
+      ? { fone: String(ol.destTelefone).replace(/\D/g, "") }
+      : {}),
+  };
+}
+
+/** Mantém `infIntermed` da venda/remessa (NT 2023.004 / marketplace). */
+function resolveInfIntermedForReturn(
+  salePayload: Record<string, unknown> | undefined,
+  olNfe: { fiscalPayload: unknown } | null | undefined,
+): { CNPJ?: string; idCadIntTran: string } | undefined {
+  const fromSale = salePayload?.infIntermed;
+  if (fromSale && typeof fromSale === "object" && !Array.isArray(fromSale)) {
+    const id = (fromSale as Record<string, unknown>).idCadIntTran;
+    if (typeof id === "string" && id.trim()) {
+      return fromSale as { CNPJ?: string; idCadIntTran: string };
+    }
+  }
+  const idFromOl = idCadIntTranFromRemessaFiscalPayload(olNfe?.fiscalPayload);
+  if (!idFromOl) return undefined;
+  const olRoot = (olNfe?.fiscalPayload ?? {}) as Record<string, unknown>;
+  const olIntermed = olRoot.infIntermed as Record<string, unknown> | undefined;
+  const cnpj =
+    typeof olIntermed?.CNPJ === "string" ? olIntermed.CNPJ.replace(/\D/g, "") : undefined;
+  return {
+    ...(cnpj && cnpj.length === 14 ? { CNPJ: cnpj } : {}),
+    idCadIntTran: idFromOl,
+  };
 }
 
 function extractCstFromPayload(payload: unknown): {

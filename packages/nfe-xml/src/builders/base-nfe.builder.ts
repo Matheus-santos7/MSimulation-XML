@@ -44,6 +44,7 @@ import {
 } from "./nodes/auxiliary.node.js";
 import { buildDestNode } from "./nodes/dest.node.js";
 import { buildEmitNode } from "./nodes/emit.node.js";
+import { buildEntregaNode } from "./nodes/entrega.node.js";
 import { buildIdeNode } from "./nodes/ide.node.js";
 
 /** Mescla filhos de `infNFe` preservando tags repetidas (`autXML`, `det`) como arrays. */
@@ -161,6 +162,14 @@ export abstract class BaseNFeBuilder {
     });
   }
 
+  /**
+   * Monta `<entrega>` (Local de Entrega) a partir de `fiscalPayload.entrega`.
+   * Devolução fulfillment: CNPJ/endereço do Operador Logístico.
+   */
+  protected buildEntrega(): XmlObject | null {
+    return buildEntregaNode(this.ctx.fiscal);
+  }
+
   /** Monta blocos `<autXML>`. */
   protected buildAutXml(): XmlObject[] {
     return buildAutXmlNodes(this.ctx.autXmlCpfs);
@@ -177,8 +186,12 @@ export abstract class BaseNFeBuilder {
       this.buildIde(),
       this.buildEmit(),
       this.buildDest(),
-      ...this.buildAutXml(),
     ];
+
+    const entrega = this.buildEntrega();
+    if (entrega) infNFeChildren.push(entrega);
+
+    infNFeChildren.push(...this.buildAutXml());
 
     const det = this.buildDet();
     if (Array.isArray(det)) {

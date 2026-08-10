@@ -1,0 +1,120 @@
+# Deploy manual dos serviços Render (quando auto-deploy do GitHub falha).
+#
+# Pré-requisito: secret RENDER_API_KEY
+# Uso: Actions → "Render deploy" → Run workflow
+#   service: validator | api | both
+#   clear_cache: true recomendado após mudanças no Dockerfile / proxy Python
+
+name: Render deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: "Qual serviço redeployar"
+        required: true
+        type: choice
+        default: validator
+        options:
+          - validator
+          - api
+          - both
+      clear_cache:
+        description: "Limpar build cache"
+        required: true
+        type: boolean
+        default: true
+
+concurrency:
+  group: render-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      # msimulation-xml-api / msimulation-xml-fiscal-validator
+      RENDER_SERVICE_API: srv-d8jhh4m7r5hc73dt2d9g
+      RENDER_SERVICE_VALIDATOR: srv-d8rghournols73fder4g
+    steps:
+      - name: Require RENDER_API_KEY
+        run: |
+          set -euo pipefail
+          if [ -z "${RENDER_API_KEY:-}" ]; then
+            echo "::error::Secret RENDER_API_KEY ausente."
+            exit 1
+          fi
+
+      - name: Resolve service IDs
+        id: targets
+        run: |
+          set -euo pipefail
+          case "${{ inputs.service }}" in
+            validator) ids="$RENDER_SERVICE_VALIDATOR" ;;
+            api) ids="$RENDER_SERVICE_API" ;;
+            both) ids="$RENDER_SERVICE_API $RENDER_SERVICE_VALIDATOR" ;;
+            *)
+              echo "::error::service inválido: ${{ inputs.service }}"
+              exit 1
+              ;;
+          esac
+          echo "ids=$ids" >> "$GITHUB_OUTPUT"
+          echo "Serviços: $ids"
+
+      - name: Trigger Render deploys
+        env:
+          CLEAR_CACHE: ${{ inputs.clear_cache }}
+          SERVICE_IDS: ${{ steps.targets.outputs.ids }}
+        run: |
+          set -euo pipefail
+          if [ "$CLEAR_CACHE" = "true" ]; then
+            body='{"clearCache":"clear"}'
+          else
+            body='{"clearCache":"do_not_clear"}'
+          fi
+          failed=0
+          for service_id in $SERVICE_IDS; do
+            echo "→ POST /v1/services/${service_id}/deploys"
+            echo "body=$body"
+            http_code="$(curl -sS -o /tmp/render-deploy.txt -w "%{http_code}" \
+              -X POST \
+              -H "Authorization: Bearer ${RENDER_API_KEY}" \
+              -H "Accept: application/json" \
+              -H "Content-Type: application/json" \
+              -d "$body" \
+              "https://api.render.com/v1/services/${service_id}/deploys")"
+            echo "HTTP ${http_code}"
+            cat /tmp/render-deploy.txt || true
+            echo
+            if [ "$http_code" != "201" ] && [ "$http_code" != "200" ] && [ "$http_code" != "202" ]; then
+              echo "::error::Deploy falhou em ${service_id}: HTTP ${http_code}"
+              failed=1
+            fi
+          done
+          if [ "$failed" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Wait validator health (when targeted)
+        if: inputs.service == 'validator' || inputs.service == 'both'
+        env:
+          VALIDATOR_HEALTH_URL: https://msimulation-xml-fiscal-validator.onrender.com/health
+        run: |
+          set -euo pipefail
+          # Deploy free tier pode levar vários minutos.
+          for i in $(seq 1 24); do
+            code="$(curl -sS -o /tmp/health-body.txt -w "%{http_code}" \
+              --connect-timeout 15 --max-time 60 \
+              "$VALIDATOR_HEALTH_URL" || true)"
+            echo "tentativa $i → HTTP ${code}"
+            if [ "$code" = "200" ]; then
+              cat /tmp/health-body.txt
+              echo
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "::warning::Validador ainda sem /health 200 após ~6 min (deploy pode continuar no Render)."
+          exit 0

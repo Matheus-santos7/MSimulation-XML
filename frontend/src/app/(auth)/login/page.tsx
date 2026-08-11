@@ -44,7 +44,7 @@ export default function LoginPage() {
               <span>
                 <strong className="text-foreground font-medium">Cadastrar empresa emitente</strong>
                 <span className="block mt-0.5 text-muted-foreground/90">
-                  Dados fiscais e certificado
+                  Dados fiscais e regras tributárias
                 </span>
               </span>
             </li>

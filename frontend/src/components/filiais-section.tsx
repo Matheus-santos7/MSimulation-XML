@@ -46,8 +46,8 @@ export function FiliaisSection({ tenant, filiais, unidades }: Props) {
         />
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
-            <Button className="text-warning" type="button" size="sm">
-              <Plus className="size-4 mr-1 text-warning" />
+            <Button className="text-warning-foreground" type="button" size="sm">
+              <Plus className="size-4 mr-1 text-warning-foreground" />
               Adicionar filial
             </Button>
           </SheetTrigger>

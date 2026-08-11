@@ -13,9 +13,9 @@ export const BRAND = {
   /** Nome completo para metadata e títulos. */
   fullName: "MSimulation XML",
   /** Descrição curta da função do produto. */
-  tagline: "Fluxo logístico e fiscal fulfullment",
+  tagline: "Fluxo logístico e fiscal fulfillment",
   /** Subtítulo para login e onboarding. */
   description:
-    "Simule, NF-e, Eventos fiscais e CT-e e monte cenários para operações fulfullment.",
+    "Simule, NF-e, Eventos fiscais e CT-e e monte cenários para operações fulfillment.",
   author: "Matheus Santos",
 } as const;

@@ -632,7 +632,7 @@ function entregaFromOperadorLogistico(
     destMunicipio: string | null;
     destUf: string;
     destCep: string | null;
-    destCodigoPais: string | null;
+    destCodigoPais: number | null;
     destNomePais: string | null;
     destTelefone: string | null;
   } | null | undefined,
@@ -654,7 +654,7 @@ function entregaFromOperadorLogistico(
     xMun: ol.destMunicipio?.trim() || ol.destCodigoMunicipio.trim(),
     UF: ol.destUf.trim().toUpperCase(),
     ...(ol.destCep ? { CEP: String(ol.destCep).replace(/\D/g, "").padStart(8, "0").slice(0, 8) } : {}),
-    ...(ol.destCodigoPais ? { cPais: ol.destCodigoPais } : {}),
+    ...(ol.destCodigoPais != null ? { cPais: String(ol.destCodigoPais) } : {}),
     ...(ol.destNomePais ? { xPais: ol.destNomePais } : {}),
     ...(ol.destTelefone
       ? { fone: String(ol.destTelefone).replace(/\D/g, "") }

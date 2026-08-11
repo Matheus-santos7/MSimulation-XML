@@ -142,11 +142,12 @@ export function parseOriginEngine(raw: unknown): NotaFiscalResult | null {
   if (itensRaw.length === 0) return null;
 
   try {
+    const totais = totaisRaw as NotaFiscalTotais;
     return {
       itens: itensRaw as ItemFiscalResult[],
       totais: {
-        vIPIDevol: 0,
-        ...(totaisRaw as NotaFiscalTotais),
+        ...totais,
+        vIPIDevol: totais.vIPIDevol ?? 0,
       },
     };
   } catch {

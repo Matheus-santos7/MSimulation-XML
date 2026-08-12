@@ -97,4 +97,22 @@ describe("avanço CD interestadual (SP origem → SC destino)", () => {
   it("remessa física ao CD destino SC usa CFOP interestadual 6949", () => {
     assert.equal(resolveRemessaCfop("SP", "SC"), "6949");
   });
+
+  it("grava destIe no fiscalPayload a partir da IE do CD destino", async () => {
+    const result = await prepareSymbolicShipmentFiscal(createPrismaMock(), {
+      tenantId,
+      emitUf: "SP",
+      destUf: "BA",
+      product,
+      quantidade: 5,
+      pedidoMl: "2178649511016403",
+      nfeTipo: "REMESSA_AVANCO",
+      destIe: "123.456.789",
+      idCadIntTran: "279642028",
+    });
+
+    assert.equal(result.fiscalPayload.destIe, "123456789");
+    const intermed = result.fiscalPayload.infIntermed as { idCadIntTran?: string };
+    assert.equal(intermed.idCadIntTran, "279642028");
+  });
 });

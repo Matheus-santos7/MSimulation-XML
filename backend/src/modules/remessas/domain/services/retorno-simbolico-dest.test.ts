@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { destinoRetornoFromRemessa, resolveRetornoSimbolicoCfop } from "./retorno-simbolico-dest.js";
+import {
+  destIeRetornoFromRemessa,
+  destinoRetornoFromRemessa,
+  resolveRetornoSimbolicoCfop,
+} from "./retorno-simbolico-dest.js";
 
 describe("destinoRetornoFromRemessa", () => {
   it("preenche cMun a partir da unidade destino quando a remessa está vazia", () => {
@@ -36,6 +40,30 @@ describe("destinoRetornoFromRemessa", () => {
     assert.equal(destino.destCodigoMunicipio, "4206009");
     assert.equal(destino.destMunicipio, "Governador Celso Ramos");
     assert.equal(destino.destBairro, "Guaporanga");
+  });
+});
+
+describe("destIeRetornoFromRemessa", () => {
+  it("usa fiscalPayload.destIe quando presente", () => {
+    assert.equal(
+      destIeRetornoFromRemessa(
+        { fiscalPayload: { destIe: "123.456.789" } },
+        { ie: "999999999" },
+      ),
+      "123456789",
+    );
+  });
+
+  it("cai na IE da unidade quando o payload não tem destIe", () => {
+    assert.equal(
+      destIeRetornoFromRemessa({ fiscalPayload: {} }, { ie: "241174886113" }),
+      "241174886113",
+    );
+  });
+
+  it("retorna undefined quando payload e unidade não têm IE", () => {
+    assert.equal(destIeRetornoFromRemessa({ fiscalPayload: {} }, { ie: null }), undefined);
+    assert.equal(destIeRetornoFromRemessa({ fiscalPayload: null }, null), undefined);
   });
 });
 

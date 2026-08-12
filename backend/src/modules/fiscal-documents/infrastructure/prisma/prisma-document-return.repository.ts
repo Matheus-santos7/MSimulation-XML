@@ -18,7 +18,11 @@ import {
   Prisma,
   type PrismaClient,
 } from "../../../../generated/prisma/client.js";
-import { runFiscalTransaction, type DbClient } from "../../../../lib/db/prisma-tx.js";
+import {
+  runFiscalTransaction,
+  type DbClient,
+  type PrismaTx,
+} from "../../../../lib/db/prisma-tx.js";
 import { mapNfe, num } from "../../presentation/mappers/fiscal-mappers.js";
 import { buildChaveNFe } from "../../domain/services/nfe-chave.js";
 import { proximoNumeroNfe } from "../../domain/services/nfe-sequencia.js";
@@ -43,6 +47,7 @@ import {
   prepareSymbolicShipmentFiscal,
   SymbolicShipmentFiscalError,
 } from "../../../remessas/infrastructure/fiscal/symbolic-shipment/index.js";
+import { destIeRetornoFromRemessa } from "../../../remessas/domain/services/retorno-simbolico-dest.js";
 import type { ProcessReturnResult } from "../../domain/entities/lifecycle-result.entity.js";
 import { DocumentReturnError } from "../../domain/errors/document-return.error.js";
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
@@ -273,7 +278,12 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
         : [];
 
       const mainShipment = sale.nfeReferencia?.nfeReferenciaId
-        ? await tx.nFe.findUnique({ where: { id: sale.nfeReferencia.nfeReferenciaId } })
+        ? await tx.nFe.findUnique({
+            where: { id: sale.nfeReferencia.nfeReferenciaId },
+            include: {
+              unidadeDestino: { select: { ie: true, idCadIntTran: true } },
+            },
+          })
         : null;
 
       let symbolicShipmentDto: Record<string, unknown> | undefined;
@@ -285,6 +295,15 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
           serie: series,
           numero: symbolicNumber,
         });
+
+        const destIe = await resolveDestIeForOperadorLogistico(tx, {
+          fiscalPayload: mainShipment.fiscalPayload,
+          destDoc: mainShipment.destDoc,
+          unidadeDestino: mainShipment.unidadeDestino,
+        });
+        const idCadIntTran =
+          mainShipment.unidadeDestino?.idCadIntTran?.trim() ||
+          idCadIntTranFromRemessaFiscalPayload(mainShipment.fiscalPayload);
 
         let symbolicFiscal;
         try {
@@ -300,9 +319,9 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
               serie: returnRow.serie,
               emitidaEm: returnRow.emitidaEm,
             },
-            destIe: destIeFromRemessaFiscalPayload(mainShipment.fiscalPayload),
+            destIe,
             remessaSerie: series,
-            idCadIntTran: idCadIntTranFromRemessaFiscalPayload(mainShipment.fiscalPayload),
+            idCadIntTran,
           });
         } catch (error) {
           if (error instanceof SymbolicShipmentFiscalError) {
@@ -347,6 +366,7 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
             tipo: NFeTipo.REMESSA_SIMBOLICA,
             saldoDisponivel: null,
             nfeReferenciaId: returnRow.id,
+            unidadeDestinoId: mainShipment.unidadeDestinoId ?? undefined,
             fiscalPayload: fiscalPayload as Prisma.InputJsonValue,
           },
         });
@@ -377,7 +397,11 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
 
     const remessa = await this.db.nFe.findFirst({
       where: { chave: remessaNfeKey, tenantId },
-      include: { tenant: true, product: true },
+      include: {
+        tenant: true,
+        product: true,
+        unidadeDestino: { select: { ie: true, idCadIntTran: true } },
+      },
     });
 
     if (!remessa || remessa.deletedAt) {
@@ -487,7 +511,11 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
         numero: number,
       });
 
-      const destIe = destIeFromRemessaFiscalPayload(remessa.fiscalPayload);
+      const destIe = await resolveDestIeForOperadorLogistico(tx, {
+        fiscalPayload: remessa.fiscalPayload,
+        destDoc: remessa.destDoc,
+        unidadeDestino: remessa.unidadeDestino,
+      });
       const taxSnapshot = enrichTaxSnapshot(
         taxSnapshotFromRule(inboundTaxRule, icmsFallbackRate, emitterSettings),
         {
@@ -604,10 +632,34 @@ function resolveRetornoFisicoCfop(emitterUf: string, destinationUf: string): str
   return emitterUf.toUpperCase() === destinationUf.toUpperCase() ? "1949" : "2949";
 }
 
-function destIeFromRemessaFiscalPayload(payload: unknown): string | undefined {
-  const root = (payload ?? {}) as Record<string, unknown>;
-  const destIe = root.destIe;
-  return typeof destIe === "string" && destIe.trim() ? destIe.replace(/\D/g, "") : undefined;
+/**
+ * IE do Operador Logístico para `<dest><IE>` / `fiscalPayload.destIe`.
+ * Ordem: payload da remessa → unidade vinculada → cadastro global por CNPJ do dest.
+ * Conforme CAT 31 / MOC: com indIEDest=1 a IE do CD é obrigatória.
+ */
+async function resolveDestIeForOperadorLogistico(
+  tx: PrismaTx,
+  remessa: {
+    fiscalPayload: unknown;
+    destDoc: string;
+    unidadeDestino?: { ie: string | null } | null;
+  },
+): Promise<string | undefined> {
+  const fromChain = destIeRetornoFromRemessa(
+    { fiscalPayload: remessa.fiscalPayload },
+    remessa.unidadeDestino ?? null,
+  );
+  if (fromChain) return fromChain;
+
+  const cnpj = remessa.destDoc.replace(/\D/g, "");
+  if (cnpj.length !== 14) return undefined;
+
+  const unit = await tx.meliUnidadeLogistica.findUnique({
+    where: { cnpj },
+    select: { ie: true },
+  });
+  const digits = unit?.ie?.replace(/\D/g, "") ?? "";
+  return digits || undefined;
 }
 
 function idCadIntTranFromRemessaFiscalPayload(payload: unknown): string | undefined {

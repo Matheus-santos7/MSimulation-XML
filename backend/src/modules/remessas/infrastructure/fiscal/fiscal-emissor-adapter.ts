@@ -219,6 +219,9 @@ export class FiscalEmissorAdapter implements EmissorNotaPort {
       quantidade,
       pedidoMl: ctx.pedidoMl,
       nfeTipo: NFeTipo.REMESSA_AVANCO,
+      // IE do CD destino (meli_unidades_logisticas.ie) → fiscalPayload.destIe → <dest><IE>
+      destIe: destino.ie,
+      idCadIntTran: unidade.idCadIntTran,
     });
 
     const emitterSettings = await loadEmitterSettings(tx, ctx.tenant.id);

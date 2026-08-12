@@ -646,7 +646,7 @@ async function resolveDestIeForOperadorLogistico(
   },
 ): Promise<string | undefined> {
   const fromChain = destIeRetornoFromRemessa(
-    { fiscalPayload: remessa.fiscalPayload },
+    { fiscalPayload: remessa.fiscalPayload as Prisma.JsonValue },
     remessa.unidadeDestino ?? null,
   );
   if (fromChain) return fromChain;

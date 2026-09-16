@@ -122,6 +122,8 @@ Se o consumidor pessoa física não contribuinte devolver o produto e o mesmo fo
 Devolucao de mercadoria referente a NF-e de origem n {numero} serie {serie} emitida em {dd/mm/aaaa}. [Regime Especial {UF CD} - ...]?
 ```
 
+**Devolução parcial (por item e por quantidade):** a mesma venda pode receber várias devoluções até esgotar as quantidades vendidas. Cada devolução lista só os `nItem` devolvidos (renumerados a partir de 1), com bases e impostos **espelhados da venda na proporção `qtd devolvida / qtd vendida`**, arredondados por item antes da soma; `vProd = qCom × vUnCom` da linha devolvida. IPI de não contribuinte segue para `<impostoDevol>` com `pDevol` = percentual da mercadoria devolvida (NT 2016.002). A remessa simbólica do § 4.2 leva apenas os itens/quantidades devolvidos. Spec: `docs/specs/devolucao-parcial.md`.
+
 ### 4.1-bis. Insucesso de entrega — `INSULCESSO_DE_ENTREGA`
 
 Mesma estrutura de devolução (entrada contra o consumidor / NF-e de origem), quando a mercadoria retorna por **insucesso de entrega**.

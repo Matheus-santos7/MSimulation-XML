@@ -18,6 +18,34 @@ export interface ProcessReturnResult {
   saldoEstornado: ReversedShipmentBalance[];
 }
 
+/** Linha da venda com o que já foi devolvido e o que ainda pode ser devolvido. */
+export interface ReturnableItem {
+  numeroItem: number;
+  productId: string;
+  sku: string | null;
+  nome: string;
+  unidade: string;
+  quantidadeVendida: number;
+  quantidadeDevolvida: number;
+  quantidadeDisponivel: number;
+  valorUnitario: number;
+}
+
+/** Situação de devolução de uma venda (GET /nfes/:chave/devolucao). */
+export interface ReturnableItemsResult {
+  venda: { chave: string; numero: number; serie: number; quantidade: number };
+  itens: ReturnableItem[];
+  quantidadeDevolvida: number;
+  quantidadeDisponivel: number;
+  devolucoes: Array<{
+    chave: string;
+    numero: number;
+    serie: number;
+    tipo: string;
+    quantidade: number;
+  }>;
+}
+
 /** Resultado da inutilização de numeração (registo administrativo, não é NF-e). */
 export interface InutilizationResult {
   id: string;

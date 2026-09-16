@@ -1,7 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { cancelSale, deleteNfe, emitInboundConference, emitInsucessoNote, emitRetornoFisicoNote, emitReturnNote, getInboundConferenceExpected } from "@/lib/fiscal-api";
+import {
+  cancelSale,
+  deleteNfe,
+  emitInboundConference,
+  emitInsucessoNote,
+  emitRetornoFisicoNote,
+  emitReturnNote,
+  getInboundConferenceExpected,
+  getReturnableItems,
+  type DevolucaoDisponivel,
+  type DevolucaoItemInput,
+} from "@/lib/fiscal-api";
 
 export async function excluirNfeAction(chave: string): Promise<{ error?: string }> {
   try {
@@ -14,11 +25,26 @@ export async function excluirNfeAction(chave: string): Promise<{ error?: string 
   }
 }
 
+export async function carregarItensDevolucaoAction(
+  chave: string,
+): Promise<{ error?: string; disponivel?: DevolucaoDisponivel }> {
+  try {
+    const disponivel = await getReturnableItems(chave);
+    return { disponivel };
+  } catch (e) {
+    return {
+      error: e instanceof Error ? e.message : "Erro ao carregar itens da venda",
+    };
+  }
+}
+
+/** Sem `itens` devolve tudo que ainda resta da venda. */
 export async function devolverVendaAction(
   chave: string,
+  itens?: DevolucaoItemInput[],
 ): Promise<{ error?: string; numero?: number; serie?: number }> {
   try {
-    const { devolucao } = await emitReturnNote(chave);
+    const { devolucao } = await emitReturnNote(chave, itens);
     revalidatePath("/nfe");
     revalidatePath("/");
     revalidatePath("/eventos");

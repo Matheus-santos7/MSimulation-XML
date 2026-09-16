@@ -801,6 +801,67 @@ describe("buildNFeXmlFromBuilder — DEVOLUCAO / INSULCESSO", () => {
     assert.match(xml, /<infIntermed>[\s\S]*<CNPJ>10573521000191<\/CNPJ>[\s\S]*<idCadIntTran>12345678901<\/idCadIntTran>/);
   });
 
+  it("DEVOLUCAO parcial multi-item usa o produto de cada linha (nfe.itens) e pDevol proporcional", () => {
+    const productB: ProductXmlInput = {
+      ...product,
+      sku: "300009999",
+      nome: "Cooktop 2 Bocas",
+      ncm: "73211200",
+    };
+    const nfe = baseDevolucao("DEVOLUCAO");
+    nfe.quantidade = 2;
+    nfe.valor = 350;
+    nfe.itens = [
+      { numeroItem: 1, quantidade: 1, valor: 100, ncm: product.ncm, cfop: "1202", product },
+      { numeroItem: 2, quantidade: 1, valor: 250, ncm: productB.ncm, cfop: "1202", product: productB },
+    ];
+    nfe.fiscalPayload = {
+      ...nfe.fiscalPayload,
+      engine: {
+        itens: [
+          {
+            vProd: 100,
+            quantidade: 1,
+            valorUnitario: 100,
+            icms: { cst: "00", orig: 5, vBC: 0, pICMS: 0, vICMS: 0 },
+            pis: { cst: "01", vBC: 0, pPIS: 0, vPIS: 0 },
+            cofins: { cst: "01", vBC: 0, pCOFINS: 0, vCOFINS: 0 },
+          },
+          {
+            vProd: 250,
+            quantidade: 1,
+            valorUnitario: 250,
+            icms: { cst: "00", orig: 5, vBC: 0, pICMS: 0, vICMS: 0 },
+            pis: { cst: "01", vBC: 0, pPIS: 0, vPIS: 0 },
+            cofins: { cst: "01", vBC: 0, pCOFINS: 0, vCOFINS: 0 },
+            impostoDevol: { pDevol: 50, vIPIDevol: 12.5 },
+          },
+        ],
+        totais: {
+          vBC: 0,
+          vICMS: 0,
+          vProd: 350,
+          vIPI: 0,
+          vIPIDevol: 12.5,
+          vPIS: 0,
+          vCOFINS: 0,
+          vNF: 362.5,
+        },
+      },
+    };
+
+    // Só o produto do cabeçalho é passado: o 2º det deve vir de `nfe.itens[1].product`.
+    const xml = buildNFeXML(nfe, emit, product);
+    const dets = xml.match(/<det nItem="\d+">[\s\S]*?<\/det>/g) ?? [];
+    assert.equal(dets.length, 2);
+    assert.match(dets[0]!, /<cProd>300002137<\/cProd>[\s\S]*<qCom>1\.0000<\/qCom>/);
+    assert.match(dets[1]!, /<cProd>300009999<\/cProd>[\s\S]*<xProd>Cooktop 2 Bocas<\/xProd>[\s\S]*<NCM>73211200<\/NCM>/);
+    assert.match(dets[1]!, /<impostoDevol>[\s\S]*<pDevol>50\.00<\/pDevol>[\s\S]*<vIPIDevol>12\.50<\/vIPIDevol>/);
+    assert.doesNotMatch(dets[0]!, /<impostoDevol>/);
+    assert.doesNotMatch(xml, /SKU-9-2/);
+    assert.match(xml, /<ICMSTot>[\s\S]*<vProd>350\.00<\/vProd>[\s\S]*<vIPIDevol>12\.50<\/vIPIDevol>[\s\S]*<vNF>362\.50<\/vNF>/);
+  });
+
   it("VENDA multi-item emite xPed distinto por nItem (fiscal.xPeds)", () => {
     const xPedA = "200001579233991";
     const xPedB = "200001579233992";

@@ -116,3 +116,76 @@ describe("avanço CD interestadual (SP origem → SC destino)", () => {
     assert.equal(intermed.idCadIntTran, "279642028");
   });
 });
+
+describe("prepareSymbolicShipmentFiscal — multi-item (reposição pós-devolução parcial)", () => {
+  const productB = {
+    id: "prod-2",
+    sku: "SKU-B",
+    nome: "Produto B",
+    ncm: "61091000",
+    preco: 40,
+    precoCusto: 20,
+    taxRuleBaseId: "4133250058",
+  };
+
+  it("itens[] gera engine com uma linha por produto e totais somados", async () => {
+    const result = await prepareSymbolicShipmentFiscal(createPrismaMock(), {
+      tenantId,
+      emitUf: "SP",
+      destUf: "SP",
+      itens: [
+        { product, quantidade: 1 },
+        { product: productB, quantidade: 2 },
+      ],
+      pedidoMl: "PACK-1",
+    });
+
+    const [a, b] = result.calc.nota.itens;
+    assert.equal(result.calc.nota.itens.length, 2);
+    assert.equal(a!.codigo, "SKU-TEST");
+    assert.equal(a!.quantidade, 1);
+    assert.equal(a!.vProd, 50);
+    assert.equal(b!.codigo, "SKU-B");
+    assert.equal(b!.quantidade, 2);
+    assert.equal(b!.vProd, 40);
+    assert.equal(result.calc.nota.totais.vProd, 90);
+    assert.equal(result.calc.valor, result.calc.nota.totais.vNF);
+    assert.equal(result.calc.valorIcms, result.calc.nota.totais.vICMS);
+    const transp = result.fiscalPayload.transp as { qVol: number };
+    assert.equal(transp.qVol, 3);
+  });
+
+  it("linha única via itens[] equivale ao caminho product/quantidade", async () => {
+    const legacy = await prepareSymbolicShipmentFiscal(createPrismaMock(), {
+      tenantId,
+      emitUf: "SP",
+      destUf: "SC",
+      product,
+      quantidade: 2,
+      pedidoMl: "PACK-2",
+    });
+    const viaItens = await prepareSymbolicShipmentFiscal(createPrismaMock(), {
+      tenantId,
+      emitUf: "SP",
+      destUf: "SC",
+      itens: [{ product, quantidade: 2 }],
+      pedidoMl: "PACK-2",
+    });
+    assert.deepEqual(viaItens.calc, legacy.calc);
+    assert.deepEqual(viaItens.fiscalPayload, legacy.fiscalPayload);
+  });
+
+  it("falha quando não há linhas", async () => {
+    await assert.rejects(
+      () =>
+        prepareSymbolicShipmentFiscal(createPrismaMock(), {
+          tenantId,
+          emitUf: "SP",
+          destUf: "SP",
+          itens: [],
+          pedidoMl: "PACK-3",
+        }),
+      /sem itens/i,
+    );
+  });
+});

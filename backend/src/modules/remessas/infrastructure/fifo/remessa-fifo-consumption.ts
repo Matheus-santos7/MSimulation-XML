@@ -284,6 +284,69 @@ export async function debitRemessaBalanceByNfeId(
   return debitRemessaFifoItems(tx, itens, quantidade, retornoNfeId, productId);
 }
 
+/** Linha de devolução a estornar no FIFO (produto + IDs legados por SKU). */
+export type ReturnFifoReversalLine = {
+  productIds: string[];
+  /** Quantidade devolvida nesta operação. */
+  quantidade: number;
+  /** Quantidade do mesmo produto já devolvida (e estornada) em devoluções anteriores. */
+  jaEstornado: number;
+};
+
+/**
+ * Estorno FIFO de devolução **parcial**: para cada produto, credita apenas a
+ * janela `[jaEstornado, jaEstornado + quantidade)` sobre a sequência ordenada
+ * dos consumos do retorno simbólico. Devoluções sucessivas tilam a sequência sem
+ * re-creditar o que a anterior já devolveu às remessas.
+ */
+export async function reverseRemessaFifoConsumptionsForReturn(
+  tx: RemessaFifoTx,
+  retornoNfeId: string,
+  linhas: ReturnFifoReversalLine[],
+): Promise<{ remessaNfeId: string; quantidade: number; nfeItemId: string }[]> {
+  const consumos = await tx.nfeRemessaConsumo.findMany({
+    where: { retornoNfeId },
+    select: {
+      id: true,
+      remessaNfeId: true,
+      nfeItemId: true,
+      quantidade: true,
+      nfeItem: { select: { productId: true } },
+    },
+    // `createdAt` é igual dentro da mesma transação; `id` garante ordem estável.
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+  });
+
+  const estornos: { remessaNfeId: string; quantidade: number; nfeItemId: string }[] = [];
+  for (const linha of linhas) {
+    const produtos = new Set(linha.productIds);
+    let pular = Math.max(0, linha.jaEstornado);
+    let restante = linha.quantidade;
+
+    for (const consumo of consumos) {
+      if (restante <= 0) break;
+      if (!produtos.has(consumo.nfeItem.productId)) continue;
+
+      let disponivel = consumo.quantidade;
+      if (pular > 0) {
+        const pulado = Math.min(pular, disponivel);
+        pular -= pulado;
+        disponivel -= pulado;
+      }
+      if (disponivel <= 0) continue;
+
+      const quantidade = Math.min(restante, disponivel);
+      await tx.nfeItem.update({
+        where: { id: consumo.nfeItemId },
+        data: { saldoDisponivel: { increment: quantidade } },
+      });
+      estornos.push({ remessaNfeId: consumo.remessaNfeId, quantidade, nfeItemId: consumo.nfeItemId });
+      restante -= quantidade;
+    }
+  }
+  return estornos;
+}
+
 export async function reverseRemessaFifoConsumptions(
   tx: RemessaFifoTx,
   retornoNfeId: string,

@@ -11,6 +11,7 @@ import {
   inboundConferenceBodySchema,
   inutilizeNumberBodySchema,
   nfeAccessKeyParamSchema,
+  processReturnBodySchema,
 } from "../schemas/fiscal-document.schemas.js";
 
 const NFE_LIFECYCLE_ERRORS = [
@@ -44,14 +45,31 @@ export const nfeLifecycleController: FastifyPluginAsync = async (app) => {
     }
   });
 
+  app.get("/nfes/:chave/devolucao", { onRequest: [requireAdminHook] }, async (req, reply) => {
+    try {
+      const tenantId = tenantIdFromRequest(req);
+      const { chave } = nfeAccessKeyParamSchema.parse(req.params);
+      const result = await fiscalDocuments.processReturn.getReturnableItems({
+        tenantId,
+        saleNfeKey: chave,
+      });
+      return reply.status(200).send(result);
+    } catch (error) {
+      if (handleRouteError(reply, error, { statusErrors: [...NFE_LIFECYCLE_ERRORS] })) return;
+      throw error;
+    }
+  });
+
   app.post("/nfes/:chave/devolucao", { onRequest: [requireAdminHook] }, async (req, reply) => {
     try {
       const tenantId = tenantIdFromRequest(req);
       const { chave } = nfeAccessKeyParamSchema.parse(req.params);
+      const body = processReturnBodySchema.parse(req.body ?? {});
       const result = await fiscalDocuments.processReturn.execute({
         tenantId,
         saleNfeKey: chave,
         returnTipo: "DEVOLUCAO",
+        itens: body.itens,
       });
       return reply.status(201).send(result);
     } catch (error) {

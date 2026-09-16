@@ -26,7 +26,12 @@ export type NfeRowActionsMenuProps = {
   saldoDisponivel?: number | null;
   vendaCancelDisabled?: boolean;
   vendaCancelReason?: string;
+  /** Venda sem saldo a devolver (integralmente devolvida ou cancelada). */
   vendaJaDevolvida?: boolean;
+  /** Venda com devolução parcial emitida — ainda há itens a devolver. */
+  vendaDevolucaoParcial?: boolean;
+  /** Venda com qualquer devolução/insucesso emitido (bloqueia insucesso). */
+  vendaComDevolucao?: boolean;
 };
 
 /**
@@ -42,6 +47,8 @@ export function NfeRowActionsMenu({
   vendaCancelDisabled,
   vendaCancelReason,
   vendaJaDevolvida,
+  vendaDevolucaoParcial,
+  vendaComDevolucao,
 }: NfeRowActionsMenuProps) {
   const isVenda = tipo === "VENDA";
   const isRemessa =
@@ -82,12 +89,13 @@ export function NfeRowActionsMenu({
               chave={chave}
               label={label}
               jaDevolvida={vendaJaDevolvida}
+              parcial={vendaDevolucaoParcial}
             />
             <NfeInsucessoButton
               asMenuItem
               chave={chave}
               label={label}
-              disabled={vendaJaDevolvida}
+              disabled={vendaJaDevolvida || vendaComDevolucao}
             />
             <DropdownMenuSeparator />
           </>

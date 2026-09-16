@@ -24,17 +24,16 @@ export default async function NFeListPage() {
     }
   }
 
-  const vendasDevolvidas = new Set(
-    nfesRaw
-      .filter(
-        (n) =>
-          (n.tipo === "DEVOLUCAO" || n.tipo === "INSULCESSO_DE_ENTREGA") && n.nfeReferenciaChave,
-      )
-      .flatMap((n) => {
-        const ref = n.nfeReferenciaChave;
-        return Array.isArray(ref) ? ref : ref ? [ref] : [];
-      }),
-  );
+  // Quantidade já devolvida por venda (devoluções parciais somam até a quantidade vendida).
+  const devolvidoPorVenda = new Map<string, number>();
+  for (const n of nfesRaw) {
+    if (n.tipo !== "DEVOLUCAO" && n.tipo !== "INSULCESSO_DE_ENTREGA") continue;
+    const ref = n.nfeReferenciaChave;
+    const refs = Array.isArray(ref) ? ref : ref ? [ref] : [];
+    for (const chaveVenda of refs) {
+      devolvidoPorVenda.set(chaveVenda, (devolvidoPorVenda.get(chaveVenda) ?? 0) + n.quantidade);
+    }
+  }
 
   const vendasCanceladas = new Set(
     nfesRaw.filter((n) => n.tipo === "VENDA" && n.status === "CANCELADA").map((n) => n.chave),
@@ -118,6 +117,10 @@ export default async function NFeListPage() {
                   }
 
                   const nfe = row.nfe;
+                  const devolvido = nfe.tipo === "VENDA" ? (devolvidoPorVenda.get(nfe.chave) ?? 0) : 0;
+                  const devolvidaIntegral = devolvido > 0 && devolvido >= nfe.quantidade;
+                  const devolvidaParcial = devolvido > 0 && !devolvidaIntegral;
+                  const vendaCancelada = vendasCanceladas.has(nfe.chave);
 
                   return (
                     <tr key={nfe.chave} className="hover:bg-foreground/[0.02] transition-colors">
@@ -146,6 +149,20 @@ export default async function NFeListPage() {
                             }`}
                           >
                             saldo {nfe.saldoDisponivel ?? 0}
+                          </span>
+                        )}
+                        {devolvido > 0 && (
+                          <span
+                            className={`block text-[11px] font-semibold mt-0.5 ${
+                              devolvidaParcial ? "text-amber-500" : "text-muted-foreground"
+                            }`}
+                            title={
+                              devolvidaParcial
+                                ? "Devolução parcial — ainda há itens a devolver"
+                                : "Venda devolvida integralmente"
+                            }
+                          >
+                            devolvido {Math.min(devolvido, nfe.quantidade)}/{nfe.quantidade}
                           </span>
                         )}
                       </td>
@@ -180,21 +197,21 @@ export default async function NFeListPage() {
                             saldoDisponivel={nfe.saldoDisponivel}
                             vendaCancelDisabled={
                               nfe.status === "CANCELADA" ||
-                              vendasDevolvidas.has(nfe.chave) ||
+                              devolvido > 0 ||
                               nfe.status !== "AUTORIZADA"
                             }
                             vendaCancelReason={
                               nfe.status === "CANCELADA"
                                 ? "Venda já cancelada"
-                                : vendasDevolvidas.has(nfe.chave)
+                                : devolvido > 0
                                   ? "Venda com devolução emitida"
                                   : nfe.status !== "AUTORIZADA"
                                     ? "Só NF-e autorizadas podem ser canceladas"
                                     : undefined
                             }
-                            vendaJaDevolvida={
-                              vendasDevolvidas.has(nfe.chave) || vendasCanceladas.has(nfe.chave)
-                            }
+                            vendaJaDevolvida={devolvidaIntegral || vendaCancelada}
+                            vendaDevolucaoParcial={devolvidaParcial}
+                            vendaComDevolucao={devolvido > 0}
                           />
                         </div>
                       </td>

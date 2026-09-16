@@ -30,4 +30,6 @@ export {
   debitRemessaBalanceByCd,
   debitRemessaBalanceByNfeId,
   reverseRemessaFifoConsumptions,
+  reverseRemessaFifoConsumptionsForReturn,
 } from "./remessa-fifo-consumption.js";
+export type { ReturnFifoReversalLine } from "./remessa-fifo-consumption.js";

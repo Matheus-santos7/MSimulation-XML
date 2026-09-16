@@ -6,9 +6,14 @@
  *
  * The return:
  *  - references the original sale NF-e (nfeReferenciaId → sale);
- *  - mirrors sale tax math (same rates/CST via engine);
+ *  - mirrors sale tax math (same rates/CST via engine), proportionally to the
+ *    returned quantity of each line (partial returns by `nItem` are allowed
+ *    until the sold quantities are exhausted);
  *  - applies return CST mapping from fiscal settings;
- *  - reverses FIFO balance consumed in the chain back to shipments.
+ *  - reverses FIFO balance consumed in the chain back to shipments (only the
+ *    returned quantities);
+ *  - re-ships the returned lines to the CD via a multi-item symbolic shipment
+ *    (CAT 31 §4.2).
  */
 
 import { normalizeTaxStCode } from "@msimulation-xml/fiscal-core";
@@ -16,6 +21,7 @@ import {
   FiscalStatus,
   NFeTipo,
   Prisma,
+  type Product,
   type PrismaClient,
 } from "../../../../generated/prisma/client.js";
 import {
@@ -29,7 +35,11 @@ import { proximoNumeroNfe } from "../../domain/services/nfe-sequencia.js";
 import { enrichTaxSnapshot, loadEmitterSettings } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
 import { enrichFiscalPayloadWithXTexto, resolveNumeroInicialNfe } from "@msimulation-xml/fiscal-core";
 import { taxSnapshotFromRule } from "../../../tax/domain/services/tax-snapshot.js";
-import { calcularNotaFiscal } from "../../../tax/domain/services/tax-engine.js";
+import {
+  calcularNotaFiscal,
+  type ItemFiscalResult,
+  type NotaFiscalResult,
+} from "../../../tax/domain/services/tax-engine.js";
 import {
   mirrorOriginForDevolucao,
   parseOriginEngine,
@@ -37,26 +47,75 @@ import {
 import { buildFiscalItem, resolveTaxRule, resolveIcmsFallbackRate, type CustomerType } from "../../../tax/index.js";
 import { persistNfeXmlFromEmission } from "../xml/nfe-xml-service.js";
 import {
+  collectRemessaSaldoProductIds,
   debitRemessaBalanceByNfeId,
   getNetRemessaNfeBalance,
   prepareRemessaFifoForOperation,
-  reverseRemessaFifoConsumptions,
+  reverseRemessaFifoConsumptionsForReturn,
   SaldoRemessaInsuficienteError,
+  type ReturnFifoReversalLine,
 } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
 import {
   prepareSymbolicShipmentFiscal,
   SymbolicShipmentFiscalError,
 } from "../../../remessas/infrastructure/fiscal/symbolic-shipment/index.js";
 import { destIeRetornoFromRemessa } from "../../../remessas/domain/services/retorno-simbolico-dest.js";
-import type { ProcessReturnResult } from "../../domain/entities/lifecycle-result.entity.js";
+import type {
+  ProcessReturnResult,
+  ReturnableItemsResult,
+} from "../../domain/entities/lifecycle-result.entity.js";
 import { DocumentReturnError } from "../../domain/errors/document-return.error.js";
+import {
+  computeReturnableLines,
+  DevolucaoItensError,
+  resolveRequestedReturnLines,
+  type RequestedReturnLine,
+  type ReturnableLine,
+} from "../../domain/services/devolucao-itens.js";
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import type {
   DocumentReturnPort,
   ProcessPhysicalReturnInput,
   ProcessPhysicalReturnResult,
   ProcessReturnInput,
+  ReturnableItemsInput,
 } from "../../domain/ports/fiscal-document-lifecycle.port.js";
+
+/** Linha (`<det>`) da venda com o produto do catálogo resolvido. */
+type SaleLine = {
+  numeroItem: number;
+  product: Product;
+  quantidade: number;
+  valorUnitario: number;
+};
+
+/** Linha devolvida nesta operação, já validada, com o produto da venda. */
+type ReturnLine = RequestedReturnLine & { product: Product };
+
+const RETURN_TIPOS = [NFeTipo.DEVOLUCAO, NFeTipo.INSULCESSO_DE_ENTREGA] as const;
+
+const saleForReturnInclude = {
+  tenant: true,
+  product: true,
+  nfeReferencia: true,
+  pedido: {
+    include: {
+      itens: { include: { product: true }, orderBy: { numeroItem: "asc" as const } },
+    },
+  },
+} satisfies Prisma.NFeInclude;
+
+type SaleForReturn = Prisma.NFeGetPayload<{ include: typeof saleForReturnInclude }>;
+
+type PriorReturnRow = {
+  id: string;
+  chave: string;
+  numero: number;
+  serie: number;
+  tipo: NFeTipo;
+  quantidade: number;
+  itens: Array<{ productId: string; quantidade: number }>;
+};
 
 export class PrismaDocumentReturnRepository implements DocumentReturnPort {
   private get db() {
@@ -71,43 +130,42 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
         ? "Insucesso de entrega de mercadorias"
         : "Devolucao de mercadorias";
 
-    const sale = await this.db.nFe.findFirst({
-      where: { chave: saleNfeKey, tenantId },
-      include: { tenant: true, product: true, nfeReferencia: true },
-    });
+    const sale = await this.loadSaleForReturn(tenantId, saleNfeKey);
+    const saleLines = await this.resolveSaleLines(sale);
+    const priorReturns = await this.loadPriorReturns(sale.id);
+    const returnable = computeReturnableLines(
+      saleLines.map((line) => ({
+        numeroItem: line.numeroItem,
+        productId: line.product.id,
+        quantidade: line.quantidade,
+      })),
+      priorReturns,
+    );
 
-    if (!sale || sale.deletedAt) {
-      throw new DocumentReturnError("NF-e de venda não encontrada.", 404);
-    }
-    if (sale.tipo !== NFeTipo.VENDA) {
-      throw new DocumentReturnError("Só é possível devolver uma NF-e do tipo Venda.", 422);
-    }
-    if (!sale.product) {
-      throw new DocumentReturnError("Venda sem produto vinculado; não é possível devolver.", 422);
+    let requested: RequestedReturnLine[];
+    try {
+      requested = resolveRequestedReturnLines(returnable, input.itens);
+    } catch (error) {
+      if (error instanceof DevolucaoItensError) {
+        const last = priorReturns.at(-1);
+        const suffix =
+          error.status === 409 && last ? ` Última NF-e: ${last.numero}/${last.serie}.` : "";
+        throw new DocumentReturnError(`${error.message}${suffix}`, error.status);
+      }
+      throw error;
     }
 
-    const existingReturn = await this.db.nFe.findFirst({
-      where: {
-        tipo: { in: [NFeTipo.DEVOLUCAO, NFeTipo.INSULCESSO_DE_ENTREGA] },
-        nfeReferenciaId: sale.id,
-        deletedAt: null,
-      },
-      select: { id: true, numero: true, serie: true, tipo: true },
-    });
-    if (existingReturn) {
-      throw new DocumentReturnError(
-        `Esta venda já possui ${existingReturn.tipo === NFeTipo.INSULCESSO_DE_ENTREGA ? "insucesso de entrega" : "devolução"} (NF-e ${existingReturn.numero}/${existingReturn.serie}).`,
-        409,
-      );
-    }
+    const returnLines: ReturnLine[] = requested.map((line) => ({
+      ...line,
+      product: saleLines.find((sl) => sl.numeroItem === line.numeroItem)!.product,
+    }));
+    const primaryLine = returnLines[0]!;
+    const product = primaryLine.product;
 
     const tenant = sale.tenant;
-    const product = sale.product;
     const series = tenant.serieRemessa;
     const customerType = resolveCustomerType(sale.destIndIeDest);
-    const quantity = sale.quantidade;
-    const totalValue = num(sale.valor);
-    const unitValue = quantity > 0 ? totalValue / quantity : totalValue;
+    const quantity = returnLines.reduce((sum, line) => sum + line.quantidade, 0);
     const cfop = resolveReturnCfop(tenant.uf, sale.destUf);
 
     return runFiscalTransaction(this.db, tenantId, async (tx) => {
@@ -135,43 +193,59 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
           ? saleFiscalPayload.cMunSaidaFisica
           : undefined;
 
-      // Regra de ouro: espelhar engine da venda (proporcional). Fallback = recalcular TaxRule.
+      // Regra de ouro: espelhar engine da venda, proporcional à quantidade devolvida de
+      // cada linha (MOC finNFe=4 / NT 2016.002). Fallback (venda legada sem engine) =
+      // recalcular pela TaxRule com a quantidade devolvida.
       const originEngine = parseOriginEngine(saleFiscalPayload?.engine);
-      const invoice = originEngine
+      const invoice: NotaFiscalResult = originEngine
         ? mirrorOriginForDevolucao({
             origin: originEngine,
-            ratio: 1,
+            itens: returnLines.map((line) => ({
+              numeroItem: line.numeroItem,
+              quantidade: line.quantidade,
+            })),
             nonContributorIpi: customerType === "non_taxpayer",
           })
-        : calcularNotaFiscal([
-            buildFiscalItem(
-              {
-                codigo: product.sku ?? product.id,
-                descricao: product.nome,
-                ncm: product.ncm,
-                cfop,
-                unidade: product.unidade ?? "UN",
-                cest: product.cest ?? undefined,
-                ean: product.ean ?? undefined,
-                exTipi: product.exTipi ?? undefined,
-                origem: product.origem ?? 0,
-                quantidade: quantity,
-                valorUnitario: unitValue,
-              },
-              saleTaxRule,
-              {
-                ufOrigem: tenant.uf,
-                ufSaidaFisica,
-                ufDestino: sale.destUf,
-                customerType,
-                emitterSettings,
-                operationTipo: "DEVOLUCAO",
-                cstVendaReferencia: referencedSaleCst,
-              },
-              icmsFallbackRate,
-            ),
-          ]);
+        : calcularNotaFiscal(
+            returnLines.map((line, index) => {
+              const saleLine = saleLines.find((sl) => sl.numeroItem === line.numeroItem)!;
+              return buildFiscalItem(
+                {
+                  codigo: line.product.sku ?? line.product.id,
+                  descricao: line.product.nome,
+                  ncm: line.product.ncm,
+                  cfop,
+                  unidade: line.product.unidade ?? "UN",
+                  cest: line.product.cest ?? undefined,
+                  ean: line.product.ean ?? undefined,
+                  exTipi: line.product.exTipi ?? undefined,
+                  origem: line.product.origem ?? 0,
+                  quantidade: line.quantidade,
+                  valorUnitario: saleLine.valorUnitario,
+                  numeroItem: index + 1,
+                },
+                saleTaxRule,
+                {
+                  ufOrigem: tenant.uf,
+                  ufSaidaFisica,
+                  ufDestino: sale.destUf,
+                  customerType,
+                  emitterSettings,
+                  operationTipo: "DEVOLUCAO",
+                  cstVendaReferencia: referencedSaleCst,
+                },
+                icmsFallbackRate,
+              );
+            }),
+          );
+      if (invoice.itens.length !== returnLines.length) {
+        throw new DocumentReturnError(
+          "Falha ao espelhar os itens da venda na devolução (linhas divergentes).",
+          422,
+        );
+      }
 
+      const totalValue = invoice.totais.vNF;
       const returnIcmsRate = invoice.itens[0]?.icms.pICMS || icmsFallbackRate;
       const returnIcmsValue = invoice.totais.vICMS;
       const entregaOl = entregaFromOperadorLogistico(sale.nfeReferencia);
@@ -243,6 +317,14 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
                     ? sale.emitidaEm.toISOString()
                     : String(sale.emitidaEm),
               },
+              // Auditoria da devolução parcial: det da devolução ↔ nItem da venda.
+              devolucaoItens: returnLines.map((line, index) => ({
+                numeroItem: index + 1,
+                nItemOrigem: line.numeroItem,
+                productId: line.product.id,
+                sku: line.product.sku ?? null,
+                quantidade: line.quantidade,
+              })),
               ...(sale.nfeReferencia
                 ? {
                     ufFilialInfCpl: sale.nfeReferencia.destUf,
@@ -265,16 +347,31 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
         },
       });
 
+      const returnItemRows = await createReturnItemRows(tx, {
+        tenantId: tenant.id,
+        nfeId: returnRow.id,
+        cfop,
+        lines: returnLines,
+        engineItems: invoice.itens,
+      });
+
       await persistNfeXmlFromEmission(tx, {
         nfeId: returnRow.id,
         tenant,
         productId: product.id,
+        products: returnLines.map((line) => line.product),
         settings: emitterSettings,
         nfeReferenciaChave: sale.chave,
       });
 
+      // Estorno FIFO só das quantidades devolvidas agora; o que devoluções anteriores
+      // já creditaram às remessas é pulado (janela por produto sobre os consumos).
       const reversals = sale.nfeReferenciaId
-        ? await reverseRemessaFifoConsumptions(tx, sale.nfeReferenciaId)
+        ? await reverseRemessaFifoConsumptionsForReturn(
+            tx,
+            sale.nfeReferenciaId,
+            await buildFifoReversalLines(tx, tenant.id, returnLines, returnable),
+          )
         : [];
 
       const mainShipment = sale.nfeReferencia?.nfeReferenciaId
@@ -307,12 +404,15 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
 
         let symbolicFiscal;
         try {
+          // CAT 31 §4.2: reposição ao CD com os itens devolvidos — 1 NF-e, N <det>.
           symbolicFiscal = await prepareSymbolicShipmentFiscal(tx, {
             tenantId: tenant.id,
             emitUf: tenant.uf,
             destUf: mainShipment.destUf,
-            product,
-            quantidade: quantity,
+            itens: returnLines.map((line) => ({
+              product: line.product,
+              quantidade: line.quantidade,
+            })),
             pedidoMl: sale.pedidoMl,
             posDevolucao: {
               numero: returnRow.numero,
@@ -371,23 +471,195 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
           },
         });
 
+        const symbolicItemRows = await createReturnItemRows(tx, {
+          tenantId: tenant.id,
+          nfeId: symbolicRow.id,
+          cfop: symbolicCfop,
+          lines: returnLines,
+          engineItems: calc.nota.itens,
+        });
+
         await persistNfeXmlFromEmission(tx, {
           nfeId: symbolicRow.id,
           tenant,
           productId: product.id,
+          products: returnLines.map((line) => line.product),
           settings: emitterSettings,
           nfeReferenciaChave: returnRow.chave,
         });
 
-        symbolicShipmentDto = mapNfe(symbolicRow, returnRow.chave) as Record<string, unknown>;
+        symbolicShipmentDto = mapNfe(
+          symbolicRow,
+          returnRow.chave,
+          symbolicItemRows,
+        ) as Record<string, unknown>;
       }
 
       return {
-        devolucao: mapNfe(returnRow, sale.chave) as Record<string, unknown>,
+        devolucao: mapNfe(returnRow, sale.chave, returnItemRows) as Record<string, unknown>,
         remessaSimbolica: symbolicShipmentDto,
         saldoEstornado: reversals,
       };
     });
+  }
+
+  async getReturnableItems(input: ReturnableItemsInput): Promise<ReturnableItemsResult> {
+    const sale = await this.loadSaleForReturn(input.tenantId, input.saleNfeKey);
+    const saleLines = await this.resolveSaleLines(sale);
+    const priorReturns = await this.loadPriorReturns(sale.id);
+    const returnable = computeReturnableLines(
+      saleLines.map((line) => ({
+        numeroItem: line.numeroItem,
+        productId: line.product.id,
+        quantidade: line.quantidade,
+      })),
+      priorReturns,
+    );
+
+    const itens = returnable.map((line, index) => {
+      const saleLine = saleLines[index]!;
+      return {
+        numeroItem: line.numeroItem,
+        productId: line.productId,
+        sku: saleLine.product.sku ?? null,
+        nome: saleLine.product.nome,
+        unidade: saleLine.product.unidade ?? "UN",
+        quantidadeVendida: line.quantidade,
+        quantidadeDevolvida: line.quantidadeDevolvida,
+        quantidadeDisponivel: line.quantidadeDisponivel,
+        valorUnitario: saleLine.valorUnitario,
+      };
+    });
+
+    return {
+      venda: {
+        chave: sale.chave,
+        numero: sale.numero,
+        serie: sale.serie,
+        quantidade: sale.quantidade,
+      },
+      itens,
+      quantidadeDevolvida: itens.reduce((sum, item) => sum + item.quantidadeDevolvida, 0),
+      quantidadeDisponivel: itens.reduce((sum, item) => sum + item.quantidadeDisponivel, 0),
+      devolucoes: priorReturns.map((row) => ({
+        chave: row.chave,
+        numero: row.numero,
+        serie: row.serie,
+        tipo: row.tipo,
+        quantidade: row.quantidade,
+      })),
+    };
+  }
+
+  private async loadSaleForReturn(tenantId: string, saleNfeKey: string): Promise<SaleForReturn> {
+    const sale = await this.db.nFe.findFirst({
+      where: { chave: saleNfeKey, tenantId },
+      include: saleForReturnInclude,
+    });
+
+    if (!sale || sale.deletedAt) {
+      throw new DocumentReturnError("NF-e de venda não encontrada.", 404);
+    }
+    if (sale.tipo !== NFeTipo.VENDA) {
+      throw new DocumentReturnError("Só é possível devolver uma NF-e do tipo Venda.", 422);
+    }
+    return sale;
+  }
+
+  /** Devoluções/insucessos já emitidos para a venda (ordem de emissão). */
+  private async loadPriorReturns(saleId: string): Promise<PriorReturnRow[]> {
+    return this.db.nFe.findMany({
+      where: {
+        tipo: { in: [...RETURN_TIPOS] },
+        nfeReferenciaId: saleId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        chave: true,
+        numero: true,
+        serie: true,
+        tipo: true,
+        quantidade: true,
+        itens: { select: { productId: true, quantidade: true } },
+      },
+      orderBy: [{ emitidaEm: "asc" }, { numero: "asc" }],
+    });
+  }
+
+  /**
+   * Linhas (`<det>`) da venda com produto do catálogo.
+   * Fonte: `fiscalPayload.engine.itens`; produto por posição no pedido faturado,
+   * depois por SKU (`codigo` do engine) e, em venda de item único, o produto do cabeçalho.
+   * Venda legada sem engine → linha única do produto do cabeçalho.
+   */
+  private async resolveSaleLines(sale: SaleForReturn): Promise<SaleLine[]> {
+    const payload = (sale.fiscalPayload ?? {}) as Record<string, unknown>;
+    const engine = parseOriginEngine(payload.engine);
+
+    if (!engine) {
+      if (!sale.product) {
+        throw new DocumentReturnError(
+          "Venda sem produto vinculado; não é possível devolver.",
+          422,
+        );
+      }
+      const totalValue = num(sale.valor);
+      return [
+        {
+          numeroItem: 1,
+          product: sale.product,
+          quantidade: sale.quantidade,
+          valorUnitario: sale.quantidade > 0 ? totalValue / sale.quantidade : totalValue,
+        },
+      ];
+    }
+
+    const pedidoItens = sale.pedido?.itens ?? [];
+    const pedidoAlinhado = pedidoItens.length === engine.itens.length;
+    const bySku = new Map<string, Product>();
+    for (const item of pedidoItens) {
+      if (item.product.sku) bySku.set(item.product.sku, item.product);
+    }
+    if (sale.product?.sku) bySku.set(sale.product.sku, sale.product);
+
+    const lines: SaleLine[] = [];
+    for (const [index, engineItem] of engine.itens.entries()) {
+      const numeroItem =
+        typeof engineItem.numeroItem === "number" && engineItem.numeroItem > 0
+          ? engineItem.numeroItem
+          : index + 1;
+      const codigo = typeof engineItem.codigo === "string" ? engineItem.codigo.trim() : "";
+
+      let product: Product | undefined;
+      const pedidoProduct = pedidoAlinhado ? pedidoItens[index]?.product : undefined;
+      if (pedidoProduct && (!codigo || !pedidoProduct.sku || pedidoProduct.sku === codigo)) {
+        product = pedidoProduct;
+      }
+      product ??= codigo ? bySku.get(codigo) : undefined;
+      if (!product && codigo) {
+        product =
+          (await this.db.product.findFirst({ where: { tenantId: sale.tenantId, sku: codigo } })) ??
+          undefined;
+      }
+      if (!product && engine.itens.length === 1 && sale.product) {
+        product = sale.product;
+      }
+      if (!product) {
+        throw new DocumentReturnError(
+          `Não foi possível identificar o produto do item ${numeroItem} da venda${codigo ? ` (código ${codigo})` : ""}.`,
+          422,
+        );
+      }
+
+      lines.push({
+        numeroItem,
+        product,
+        quantidade: engineItem.quantidade,
+        valorUnitario: engineItem.valorUnitario,
+      });
+    }
+    return lines;
   }
 
   async processPhysicalReturn(
@@ -620,6 +892,83 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
 
 function resolveCustomerType(destIndIeDest: number): CustomerType {
   return destIndIeDest === 9 ? "non_taxpayer" : "taxpayer";
+}
+
+/**
+ * Persiste as linhas (`nfe_itens`) da devolução / remessa simbólica pós-devolução.
+ * `saldoDisponivel` fica nulo: essas notas não alimentam o FIFO de remessas.
+ */
+async function createReturnItemRows(
+  tx: PrismaTx,
+  args: {
+    tenantId: string;
+    nfeId: string;
+    cfop: string;
+    lines: ReturnLine[];
+    engineItems: ItemFiscalResult[];
+  },
+) {
+  const rows = [];
+  for (const [index, line] of args.lines.entries()) {
+    const engineItem = args.engineItems[index];
+    if (!engineItem) {
+      throw new DocumentReturnError(
+        `Falha ao calcular o item ${index + 1} da devolução.`,
+        422,
+      );
+    }
+    rows.push(
+      await tx.nfeItem.create({
+        data: {
+          tenantId: args.tenantId,
+          nfeId: args.nfeId,
+          productId: line.product.id,
+          numeroItem: index + 1,
+          quantidade: line.quantidade,
+          valor: engineItem.vProd,
+          valorIcms: engineItem.icms.vICMS,
+          ncm: line.product.ncm,
+          cfop: args.cfop,
+          saldoDisponivel: null,
+        },
+        include: { product: true },
+      }),
+    );
+  }
+  return rows;
+}
+
+/**
+ * Linhas de estorno FIFO por produto: quantidade devolvida agora e quanto do mesmo
+ * produto já havia sido devolvido (e estornado) antes. Inclui IDs legados do SKU.
+ */
+async function buildFifoReversalLines(
+  tx: PrismaTx,
+  tenantId: string,
+  returnLines: ReturnLine[],
+  returnable: ReturnableLine[],
+): Promise<ReturnFifoReversalLine[]> {
+  const byProduct = new Map<string, { product: Product; quantidade: number }>();
+  for (const line of returnLines) {
+    const acc = byProduct.get(line.product.id);
+    if (acc) acc.quantidade += line.quantidade;
+    else byProduct.set(line.product.id, { product: line.product, quantidade: line.quantidade });
+  }
+
+  const result: ReturnFifoReversalLine[] = [];
+  for (const { product, quantidade } of byProduct.values()) {
+    const jaEstornado = returnable
+      .filter((line) => line.productId === product.id)
+      .reduce((sum, line) => sum + line.quantidadeDevolvida, 0);
+    const productIds = await collectRemessaSaldoProductIds(
+      tx as unknown as Parameters<typeof collectRemessaSaldoProductIds>[0],
+      tenantId,
+      product.id,
+      product.sku ?? undefined,
+    );
+    result.push({ productIds, quantidade, jaEstornado });
+  }
+  return result;
 }
 
 /** Return CFOP (inbound): interstate → 2202, intrastate → 1202. */

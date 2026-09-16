@@ -2,16 +2,23 @@ import type {
   DocumentReturnPort,
   ProcessPhysicalReturnInput,
   ProcessReturnInput,
+  ReturnableItemsInput,
 } from "../../domain/ports/fiscal-document-lifecycle.port.js";
 
 /**
- * Emite **devolução** ou **insucesso de entrega** referenciando uma venda autorizada.
+ * Emite **devolução** (integral ou parcial por item) ou **insucesso de entrega**
+ * referenciando uma venda autorizada.
  */
 export class ProcessReturnUseCase {
   constructor(private readonly documentReturn: DocumentReturnPort) {}
 
   execute(input: ProcessReturnInput) {
     return this.documentReturn.processSaleReturn(input);
+  }
+
+  /** Linhas da venda com quantidades vendidas, já devolvidas e disponíveis. */
+  getReturnableItems(input: ReturnableItemsInput) {
+    return this.documentReturn.getReturnableItems(input);
   }
 }
 

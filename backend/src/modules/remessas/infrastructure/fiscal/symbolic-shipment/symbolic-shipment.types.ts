@@ -13,6 +13,12 @@ export type SymbolicShipmentProduct = ProductFiscalLine &
     taxRuleBaseId: string | null;
   };
 
+/** Linha (`<det>`) da remessa simbólica multi-item. */
+export type SymbolicShipmentLine = {
+  product: SymbolicShipmentProduct;
+  quantidade: number;
+};
+
 export type SymbolicShipmentFiscalPrepared = {
   calc: InboundInvoiceResult;
   cfop: string;

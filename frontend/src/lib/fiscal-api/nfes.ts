@@ -53,10 +53,46 @@ export type DevolucaoResult = {
   saldoEstornado: { remessaNfeId: string; quantidade: number }[];
 };
 
-export async function emitReturnNote(chave: string): Promise<DevolucaoResult> {
+/** Linha (`nItem`) da venda a devolver e quantidade. */
+export type DevolucaoItemInput = {
+  numeroItem: number;
+  quantidade: number;
+};
+
+/** Linha da venda com vendida / devolvida / disponível (GET /nfes/:chave/devolucao). */
+export type DevolucaoItemDisponivel = {
+  numeroItem: number;
+  productId: string;
+  sku: string | null;
+  nome: string;
+  unidade: string;
+  quantidadeVendida: number;
+  quantidadeDevolvida: number;
+  quantidadeDisponivel: number;
+  valorUnitario: number;
+};
+
+export type DevolucaoDisponivel = {
+  venda: { chave: string; numero: number; serie: number; quantidade: number };
+  itens: DevolucaoItemDisponivel[];
+  quantidadeDevolvida: number;
+  quantidadeDisponivel: number;
+  devolucoes: { chave: string; numero: number; serie: number; tipo: string; quantidade: number }[];
+};
+
+export async function getReturnableItems(chave: string): Promise<DevolucaoDisponivel> {
+  return getJson<DevolucaoDisponivel>(buildApiUrl(`/api/nfes/${chave}/devolucao`));
+}
+
+/** Sem `itens` devolve tudo que ainda resta da venda. */
+export async function emitReturnNote(
+  chave: string,
+  itens?: DevolucaoItemInput[],
+): Promise<DevolucaoResult> {
   return mutateJson<DevolucaoResult>(
     buildApiUrl(`/api/nfes/${chave}/devolucao`),
     "POST",
+    itens && itens.length > 0 ? { itens } : undefined,
   ) as Promise<DevolucaoResult>;
 }
 

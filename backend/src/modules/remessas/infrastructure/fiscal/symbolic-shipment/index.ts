@@ -4,6 +4,7 @@
 export { prepareSymbolicShipmentFiscal } from "./symbolic-shipment-fiscal.js";
 export { SymbolicShipmentFiscalError } from "./symbolic-shipment.errors.js";
 export type {
+  SymbolicShipmentLine,
   SymbolicShipmentProduct,
   SymbolicShipmentFiscalPrepared,
   SymbolicShipmentAfterReturnInput,

@@ -1,9 +1,10 @@
 "use client";
 
 import { MoreHorizontal } from "lucide-react";
+import { useRef, useState } from "react";
 import { DeleteConfirmButton } from "@/components/delete-confirm-button";
 import { NfeCancelarButton } from "@/components/nfe-cancelar-button";
-import { NfeDevolucaoButton } from "@/components/nfe-devolucao-button";
+import { NfeDevolucaoDialog, NfeDevolucaoMenuItem } from "@/components/nfe-devolucao-button";
 import {
   NfeConferenciaButton,
   NfeInsucessoButton,
@@ -54,65 +55,87 @@ export function NfeRowActionsMenu({
   const isRemessa =
     (tipo === "REMESSA" || tipo === "REMESSA_AVANCO") && status === "AUTORIZADA";
   const showRetornoFisico = isRemessa && (saldoDisponivel ?? 0) > 0;
+  const [devolucaoOpen, setDevolucaoOpen] = useState(false);
+  const openingDevolucao = useRef(false);
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-8 text-muted-foreground hover:text-foreground"
-          aria-label={`Ações da NF-e ${label}`}
-          title="Ações"
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-8 text-muted-foreground hover:text-foreground"
+            aria-label={`Ações da NF-e ${label}`}
+            title="Ações"
+          >
+            <MoreHorizontal className="size-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="end"
+          className="w-52"
+          onCloseAutoFocus={(event) => {
+            if (!openingDevolucao.current) return;
+            event.preventDefault();
+            openingDevolucao.current = false;
+          }}
         >
-          <MoreHorizontal className="size-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-52">
-        <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-          Ações · {label}
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
+          <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+            Ações · {label}
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
 
-        {isVenda && (
-          <>
-            <NfeCancelarButton
-              asMenuItem
-              chave={chave}
-              label={label}
-              desabilitado={vendaCancelDisabled}
-              motivoDesabilitado={vendaCancelReason}
-            />
-            <NfeDevolucaoButton
-              asMenuItem
-              chave={chave}
-              label={label}
-              jaDevolvida={vendaJaDevolvida}
-              parcial={vendaDevolucaoParcial}
-            />
-            <NfeInsucessoButton
-              asMenuItem
-              chave={chave}
-              label={label}
-              disabled={vendaJaDevolvida || vendaComDevolucao}
-            />
-            <DropdownMenuSeparator />
-          </>
-        )}
+          {isVenda && (
+            <>
+              <NfeCancelarButton
+                asMenuItem
+                chave={chave}
+                label={label}
+                desabilitado={vendaCancelDisabled}
+                motivoDesabilitado={vendaCancelReason}
+              />
+              <NfeDevolucaoMenuItem
+                jaDevolvida={vendaJaDevolvida}
+                parcial={vendaDevolucaoParcial}
+                onSelect={() => {
+                  openingDevolucao.current = true;
+                  setDevolucaoOpen(true);
+                }}
+              />
+              <NfeInsucessoButton
+                asMenuItem
+                chave={chave}
+                label={label}
+                disabled={vendaJaDevolvida || vendaComDevolucao}
+              />
+              <DropdownMenuSeparator />
+            </>
+          )}
 
-        {isRemessa && (
-          <>
-            <NfeConferenciaButton asMenuItem chave={chave} label={label} />
-            {showRetornoFisico && (
-              <NfeRetornoFisicoButton asMenuItem chave={chave} label={label} />
-            )}
-            <DropdownMenuSeparator />
-          </>
-        )}
+          {isRemessa && (
+            <>
+              <NfeConferenciaButton asMenuItem chave={chave} label={label} />
+              {showRetornoFisico && (
+                <NfeRetornoFisicoButton asMenuItem chave={chave} label={label} />
+              )}
+              <DropdownMenuSeparator />
+            </>
+          )}
 
-        <DeleteConfirmButton asMenuItem variant="nfe" chave={chave} label={label} />
-      </DropdownMenuContent>
-    </DropdownMenu>
+          <DeleteConfirmButton asMenuItem variant="nfe" chave={chave} label={label} />
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {isVenda && (
+        <NfeDevolucaoDialog
+          open={devolucaoOpen}
+          onOpenChange={setDevolucaoOpen}
+          chave={chave}
+          label={label}
+        />
+      )}
+    </>
   );
 }

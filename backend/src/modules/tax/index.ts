@@ -48,6 +48,9 @@ export {
   resolvePisCofinsFallbackRates,
 } from "./application/services/tax-fallback-resolver.service.js";
 
+export { resolveTaxRuleRefFromCatalog } from "./domain/services/resolve-tax-rule-ref-from-catalog.js";
+export type { ResolveTaxRuleRefResult } from "./domain/services/resolve-tax-rule-ref-from-catalog.js";
+
 export { createTaxModule, resolveTaxRuleFromDb };
 export { taxRuleController } from "./presentation/controllers/tax-rule.controller.js";
 export {

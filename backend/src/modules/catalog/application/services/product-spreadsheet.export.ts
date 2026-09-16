@@ -5,6 +5,9 @@ import { PRODUCT_SPREADSHEET_COLUMNS } from "./product-spreadsheet.parser.js";
 export const EX_TIPI_FIELD_HELP =
   "Código de exceção vinculado ao NCM para variação de IPI. Preencha apenas se o seu produto possuir essa regra específica. Caso contrário, deixe em branco.";
 
+export const TAX_RULE_BASE_ID_FIELD_HELP =
+  "Nome da família da regra (ex.: Chuveiro) ou o código (tax_rule_base_id). Não use o sufixo Contribuinte / Não contribuinte / Envio de estoque — a emissão escolhe a linha pela operação.";
+
 const EXAMPLE_ROW: Record<(typeof PRODUCT_SPREADSHEET_COLUMNS)[number], string> = {
   sku: "300002137",
   ean: "7897180513306",
@@ -18,7 +21,7 @@ const EXAMPLE_ROW: Record<(typeof PRODUCT_SPREADSHEET_COLUMNS)[number], string> 
   preco: "846,00",
   preco_custo: "520,00",
   estoque: "0",
-  tax_rule_base_id: "eletrodomesticos",
+  tax_rule_base_id: "Chuveiro",
 };
 
 function escapeCsv(value: string): string {
@@ -59,15 +62,24 @@ export function buildProductSpreadsheetCsv(products: Product[], includeExample =
   return `\uFEFF${lines.join("\r\n")}`;
 }
 
-function attachExTipiHeaderComment(ws: XLSX.WorkSheet): void {
-  const exTipiColIndex = PRODUCT_SPREADSHEET_COLUMNS.indexOf("ex_tipi");
-  if (exTipiColIndex < 0) return;
+function attachHeaderComment(
+  ws: XLSX.WorkSheet,
+  column: (typeof PRODUCT_SPREADSHEET_COLUMNS)[number],
+  text: string,
+): void {
+  const colIndex = PRODUCT_SPREADSHEET_COLUMNS.indexOf(column);
+  if (colIndex < 0) return;
 
-  const cellRef = XLSX.utils.encode_cell({ r: 0, c: exTipiColIndex });
+  const cellRef = XLSX.utils.encode_cell({ r: 0, c: colIndex });
   const cell = ws[cellRef];
   if (!cell) return;
 
-  cell.c = [{ a: "MS Edit", t: EX_TIPI_FIELD_HELP }];
+  cell.c = [{ a: "MS Edit", t: text }];
+}
+
+function attachSpreadsheetHeaderComments(ws: XLSX.WorkSheet): void {
+  attachHeaderComment(ws, "ex_tipi", EX_TIPI_FIELD_HELP);
+  attachHeaderComment(ws, "tax_rule_base_id", TAX_RULE_BASE_ID_FIELD_HELP);
 }
 
 function buildProductSpreadsheetMatrix(products: Product[], includeExample = false): string[][] {
@@ -83,7 +95,7 @@ function buildProductSpreadsheetMatrix(products: Product[], includeExample = fal
 
 export function buildProductSpreadsheetXlsx(products: Product[], includeExample = false): Buffer {
   const ws = XLSX.utils.aoa_to_sheet(buildProductSpreadsheetMatrix(products, includeExample));
-  attachExTipiHeaderComment(ws);
+  attachSpreadsheetHeaderComments(ws);
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Produtos");

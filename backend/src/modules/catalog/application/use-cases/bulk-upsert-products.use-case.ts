@@ -4,6 +4,7 @@ import type { ProductRepository } from "../../domain/ports/product.repository.js
 import type { TaxRuleValidatorPort } from "../../domain/ports/tax-rule-validator.port.js";
 import { resolveProductNfci } from "../../domain/services/product-nfci.js";
 import { dedupeBulkRowsBySku } from "../../domain/services/dedupe-bulk-rows-by-sku.service.js";
+import { resolveTaxRuleRefFromCatalog } from "../../../tax/domain/services/resolve-tax-rule-ref-from-catalog.js";
 import type {
   BulkUpsertProductsCommand,
   BulkUpsertProductsResult,
@@ -18,7 +19,7 @@ import { validateProductImportRow } from "../services/validate-product-import-ro
  * 1. Valida cada linha bruta (NCM, CEST, preços, etc.)
  * 2. Deduplica por SKU (última ocorrência vence) com avisos
  * 3. Carrega índice SKU existente numa única query
- * 4. Por linha válida: valida regra fiscal → update se SKU existe, senão create
+ * 4. Por linha válida: resolve nome/código da regra → valida → update se SKU existe, senão create
  * 5. Falhas por linha são capturadas; o lote continua (resposta parcial)
  */
 export class BulkUpsertProductsUseCase {
@@ -55,6 +56,7 @@ export class BulkUpsertProductsUseCase {
     }
 
     const skuIndex = await this.productRepository.listSkuIndex(tenantId);
+    const taxRuleCatalog = await this.taxRuleValidator.listProductTaxRuleCatalog(tenantId);
 
     let created = 0;
     let updated = 0;
@@ -63,10 +65,16 @@ export class BulkUpsertProductsUseCase {
     for (const { row, line } of dedupedRows) {
       const existing = skuIndex.get(row.sku);
       const stock = row.estoque ?? 0;
-      const taxRuleBaseId = row.taxRuleBaseId?.trim();
+      const taxRuleRef = row.taxRuleBaseId?.trim();
 
       try {
-        if (taxRuleBaseId) {
+        let taxRuleBaseId: string | undefined;
+        if (taxRuleRef) {
+          const resolved = resolveTaxRuleRefFromCatalog(taxRuleRef, taxRuleCatalog);
+          if (!resolved.ok) {
+            throw new ProductValidationError(resolved.message);
+          }
+          taxRuleBaseId = resolved.baseId;
           await this.taxRuleValidator.assertProductTaxRuleBaseId(tenantId, taxRuleBaseId, tenantUf);
         }
 

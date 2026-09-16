@@ -1,3 +1,5 @@
+import type { TaxRuleCatalogEntry } from "../../../tax/domain/entities/tax-rule-catalog-entry.entity.js";
+
 /**
  * Port para validar vínculo produto ↔ regra fiscal antes de persistir.
  *
@@ -5,6 +7,12 @@
  * pertence ao tenant e é aplicável à UF do emitente.
  */
 export interface TaxRuleValidatorPort {
+  /**
+   * Catálogo agrupado por família (`baseId` + nome) já filtrado pela UF do emitente.
+   * Usado na importação para resolver nome da planilha → `taxRuleBaseId`.
+   */
+  listProductTaxRuleCatalog(tenantId: string): Promise<TaxRuleCatalogEntry[]>;
+
   /**
    * Garante que a regra fiscal pode ser associada ao produto.
    *

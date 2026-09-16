@@ -73,6 +73,10 @@ describe("tax-engine", () => {
     const nota = calcularNotaFiscal([itemNf781, itemNf781]);
     const { itens, totais } = nota;
 
+    assert.deepEqual(
+      itens.map((i) => i.numeroItem),
+      [1, 2],
+    );
     assert.equal(totais.vBC, sumItens(itens, (i) => i.icms.vBC));
     assert.equal(totais.vICMS, sumItens(itens, (i) => i.icms.vICMS));
     assert.equal(totais.vFCP, sumItens(itens, (i) => i.icms.vFCP));

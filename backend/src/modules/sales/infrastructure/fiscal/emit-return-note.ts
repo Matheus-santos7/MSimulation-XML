@@ -106,15 +106,18 @@ export async function emitConsolidatedReturnNote(
     remessaCfop: remessa.cfop,
   });
 
-  const inboundFiscalItems = lines.map((line) => {
+  const inboundFiscalItems = lines.map((line, index) => {
     const { inboundTaxRule } = line.rules;
     const lineFallback = resolveIcmsFallbackRate(tenant.uf, destUf, "inbound", line.rules.emitterSettings);
     return buildFiscalItem(
-      orderLineFromProduct(line.item.product, {
-        cfop,
-        quantidade: line.item.quantidade,
-        valorUnitario: Number(line.item.product.precoCusto),
-      }),
+      {
+        ...orderLineFromProduct(line.item.product, {
+          cfop,
+          quantidade: line.item.quantidade,
+          valorUnitario: Number(line.item.product.precoCusto),
+        }),
+        numeroItem: index + 1,
+      },
       inboundTaxRule,
       {
         ufOrigem: tenant.uf,

@@ -553,9 +553,13 @@ export function calcularTotais(itens: ItemFiscalResult[]): NotaFiscalTotais {
   return acc;
 }
 
-/** Orquestra o cálculo completo da nota: itens + totais. */
+/** Orquestra o cálculo completo da nota: itens + totais.
+ * `nItem` segue a posição em `<det>` (MOC), independentemente do valor de entrada.
+ */
 export function calcularNotaFiscal(itens: ItemFiscalInput[]): NotaFiscalResult {
-  const itensCalculados = itens.map(calcularItem);
+  const itensCalculados = itens.map((item, index) =>
+    calcularItem({ ...item, numeroItem: index + 1 }),
+  );
   return {
     itens: itensCalculados,
     totais: calcularTotais(itensCalculados),

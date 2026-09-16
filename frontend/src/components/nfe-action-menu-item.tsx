@@ -11,6 +11,12 @@ type Props = {
   title?: string;
   /** Cancelar / remover — único tom colorido (vermelho). */
   destructive?: boolean;
+  /**
+   * Mantém o menu ⋮ aberto após o clique (padrão).
+   * AlertDialog precisa disso para o foco não voltar ao trigger;
+   * Dialog comum deve passar `false` para o menu não sobrepor o modal.
+   */
+  preventMenuClose?: boolean;
   onSelect: () => void;
 };
 
@@ -21,6 +27,7 @@ export function NfeActionMenuItem({
   disabled,
   title,
   destructive,
+  preventMenuClose = true,
   onSelect,
 }: Props) {
   return (
@@ -32,8 +39,7 @@ export function NfeActionMenuItem({
         destructive && "text-destructive focus:text-destructive focus:bg-destructive/10",
       )}
       onSelect={(e) => {
-        // Mantém o foco estável ao abrir o AlertDialog em seguida.
-        e.preventDefault();
+        if (preventMenuClose) e.preventDefault();
         onSelect();
       }}
     >

@@ -84,7 +84,9 @@ function selectLines(input: MirrorOriginForDevolucaoInput): SelectedLine[] {
 
   const selecionadas: SelectedLine[] = [];
   for (const [index, item] of input.origin.itens.entries()) {
-    const numeroItem = isPositiveFinite(item.numeroItem) ? item.numeroItem : index + 1;
+    // nItem da origem = posição em `<det>` (MOC). Engine legado de venda
+    // multi-item gravava `numeroItem: 1` em todas as linhas.
+    const numeroItem = index + 1;
     if (!pedidoPorItem.has(numeroItem)) continue;
     const quantidade = pedidoPorItem.get(numeroItem)!;
     pedidoPorItem.delete(numeroItem);

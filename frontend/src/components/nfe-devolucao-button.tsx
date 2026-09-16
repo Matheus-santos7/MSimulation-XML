@@ -104,6 +104,7 @@ export function NfeDevolucaoButton({ chave, label, jaDevolvida, parcial, asMenuI
           label={parcial ? "Devolver restante" : "Devolver"}
           disabled={jaDevolvida}
           title={title}
+          preventMenuClose={false}
           onSelect={openDialog}
         />
       ) : (
@@ -122,8 +123,11 @@ export function NfeDevolucaoButton({ chave, label, jaDevolvida, parcial, asMenuI
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
+        <DialogContent
+          overlayClassName="z-[60]"
+          className="z-[60] flex max-h-[min(90dvh,40rem)] w-[calc(100%-1.5rem)] min-w-0 flex-col gap-4 overflow-hidden sm:max-w-xl"
+        >
+          <DialogHeader className="min-w-0 shrink-0 space-y-1.5 text-left">
             <DialogTitle>Devolução da venda {label}</DialogTitle>
             <DialogDescription asChild>
               <div className="space-y-2 text-sm text-muted-foreground">
@@ -141,80 +145,93 @@ export function NfeDevolucaoButton({ chave, label, jaDevolvida, parcial, asMenuI
             </DialogDescription>
           </DialogHeader>
 
-          {loading && <p className="text-[13px] text-muted-foreground">Carregando itens da venda…</p>}
+          {loading && (
+            <p className="shrink-0 text-[13px] text-muted-foreground">Carregando itens da venda…</p>
+          )}
 
           {disponivel && (
-            <div className="space-y-3">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
               {disponivel.devolucoes.length > 0 && (
-                <p className="text-[13px] text-muted-foreground">
-                  Já devolvido: <strong className="text-foreground">{disponivel.quantidadeDevolvida}</strong>{" "}
-                  de {disponivel.venda.quantidade} un. em{" "}
+                <p className="shrink-0 text-[13px] text-muted-foreground">
+                  Já devolvido:{" "}
+                  <strong className="text-foreground">{disponivel.quantidadeDevolvida}</strong> de{" "}
+                  {disponivel.venda.quantidade} un. em{" "}
                   {disponivel.devolucoes.map((d) => `${d.numero}/${d.serie}`).join(", ")}.
                 </p>
               )}
 
-              <div className="overflow-x-auto rounded-md border border-border">
-                <table className="w-full text-left text-[13px]">
-                  <thead className="bg-muted/30 text-[12px] uppercase tracking-tighter text-muted-foreground">
-                    <tr>
-                      <th className="px-3 py-2 font-medium">Item</th>
-                      <th className="px-3 py-2 font-medium text-right">Vendida</th>
-                      <th className="px-3 py-2 font-medium text-right">Devolvida</th>
-                      <th className="px-3 py-2 font-medium text-right">Disponível</th>
-                      <th className="px-3 py-2 font-medium text-right w-[120px]">Devolver</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {disponivel.itens.map((item) => {
-                      const raw = quantidades[item.numeroItem] ?? "";
-                      const qty = raw.trim() === "" ? 0 : Number(raw);
-                      const invalido =
-                        !Number.isInteger(qty) || qty < 0 || qty > item.quantidadeDisponivel;
-                      const esgotado = item.quantidadeDisponivel === 0;
-                      const inputId = `dev-${chave}-${item.numeroItem}`;
-                      return (
-                        <tr key={item.numeroItem} className={esgotado ? "opacity-60" : undefined}>
-                          <td className="px-3 py-2 min-w-0">
-                            <label htmlFor={inputId} className="block font-medium truncate" title={item.nome}>
-                              {item.numeroItem}. {item.nome}
-                            </label>
-                            <div className="font-mono text-[12px] text-muted-foreground truncate">
-                              {item.sku ?? item.productId} · {item.unidade}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2 text-right font-mono">{item.quantidadeVendida}</td>
-                          <td className="px-3 py-2 text-right font-mono">{item.quantidadeDevolvida}</td>
-                          <td className="px-3 py-2 text-right font-mono">{item.quantidadeDisponivel}</td>
-                          <td className="px-3 py-2 text-right">
-                            <Input
-                              id={inputId}
-                              type="number"
-                              inputMode="numeric"
-                              min={0}
-                              max={item.quantidadeDisponivel}
-                              step={1}
-                              value={raw}
-                              disabled={pending || esgotado}
-                              aria-invalid={invalido || undefined}
-                              aria-label={`Quantidade a devolver do item ${item.numeroItem}`}
-                              className={`h-8 text-right font-mono ${invalido ? "border-destructive" : ""}`}
-                              onChange={(e) =>
-                                setQuantidades((prev) => ({
-                                  ...prev,
-                                  [item.numeroItem]: e.target.value,
-                                }))
-                              }
-                            />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <ul className="min-h-0 min-w-0 flex-1 divide-y divide-border overflow-y-auto overflow-x-hidden rounded-md border border-border">
+                {disponivel.itens.map((item) => {
+                  const raw = quantidades[item.numeroItem] ?? "";
+                  const qty = raw.trim() === "" ? 0 : Number(raw);
+                  const invalido =
+                    !Number.isInteger(qty) || qty < 0 || qty > item.quantidadeDisponivel;
+                  const esgotado = item.quantidadeDisponivel === 0;
+                  const inputId = `dev-${chave}-${item.numeroItem}-${item.productId}`;
+                  return (
+                    <li
+                      key={inputId}
+                      className={`flex min-w-0 flex-col gap-2 p-3 sm:flex-row sm:items-start sm:justify-between ${esgotado ? "opacity-60" : ""}`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <label
+                          htmlFor={inputId}
+                          className="block text-[13px] font-medium leading-snug break-words"
+                          title={item.nome}
+                        >
+                          {item.numeroItem}. {item.nome}
+                        </label>
+                        <div className="mt-0.5 truncate font-mono text-[12px] text-muted-foreground">
+                          {item.sku ?? item.productId} · {item.unidade}
+                        </div>
+                        <dl className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[12px] text-muted-foreground">
+                          <div>
+                            Vendida{" "}
+                            <span className="font-mono text-foreground">{item.quantidadeVendida}</span>
+                          </div>
+                          <div>
+                            Devolvida{" "}
+                            <span className="font-mono text-foreground">{item.quantidadeDevolvida}</span>
+                          </div>
+                          <div>
+                            Disponível{" "}
+                            <span className="font-mono text-foreground">
+                              {item.quantidadeDisponivel}
+                            </span>
+                          </div>
+                        </dl>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2 sm:flex-col sm:items-end">
+                        <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                          Devolver
+                        </span>
+                        <Input
+                          id={inputId}
+                          type="number"
+                          inputMode="numeric"
+                          min={0}
+                          max={item.quantidadeDisponivel}
+                          step={1}
+                          value={raw}
+                          disabled={pending || esgotado}
+                          aria-invalid={invalido || undefined}
+                          aria-label={`Quantidade a devolver do item ${item.numeroItem}`}
+                          className={`h-8 w-20 text-right font-mono ${invalido ? "border-destructive" : ""}`}
+                          onChange={(e) =>
+                            setQuantidades((prev) => ({
+                              ...prev,
+                              [item.numeroItem]: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
 
-              <div className="flex items-center justify-between gap-3 text-[13px]">
-                <p className="text-muted-foreground">
+              <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 text-[13px]">
+                <p className="min-w-0 flex-1 text-muted-foreground">
                   {montado == null
                     ? "Informe quantidades inteiras entre 0 e o disponível."
                     : montado.total === 0
@@ -227,6 +244,7 @@ export function NfeDevolucaoButton({ chave, label, jaDevolvida, parcial, asMenuI
                   type="button"
                   variant="outline"
                   size="sm"
+                  className="shrink-0"
                   disabled={pending || devolvendoTudo}
                   onClick={() => setQuantidades(quantidadesIniciais(disponivel))}
                 >
@@ -236,9 +254,9 @@ export function NfeDevolucaoButton({ chave, label, jaDevolvida, parcial, asMenuI
             </div>
           )}
 
-          {error && <p className="text-[13px] text-destructive px-1">{error}</p>}
+          {error && <p className="shrink-0 px-1 text-[13px] text-destructive">{error}</p>}
 
-          <DialogFooter>
+          <DialogFooter className="shrink-0">
             <Button type="button" variant="outline" disabled={pending} onClick={() => setOpen(false)}>
               Cancelar
             </Button>

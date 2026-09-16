@@ -98,6 +98,23 @@ describe("mirrorOriginForDevolucao — devolução parcial por item", () => {
       }),
     ]);
 
+  it("engine legado com nItem=1 em todas as linhas usa a posição em <det> (MOC)", () => {
+    const sale = twoItemSale();
+    const origin = {
+      ...sale,
+      itens: sale.itens.map((item) => ({ ...item, numeroItem: 1 })),
+    };
+    const partial = mirrorOriginForDevolucao({
+      origin,
+      itens: [{ numeroItem: 2, quantidade: 1 }],
+      nonContributorIpi: true,
+    });
+
+    assert.equal(partial.itens.length, 1);
+    assert.equal(partial.itens[0]!.codigo, "SKU2");
+    assert.equal(partial.itens[0]!.quantidade, 1);
+  });
+
   it("espelha só as linhas pedidas, renumera nItem e escala pela quantidade devolvida", () => {
     const sale = twoItemSale();
     const partial = mirrorOriginForDevolucao({

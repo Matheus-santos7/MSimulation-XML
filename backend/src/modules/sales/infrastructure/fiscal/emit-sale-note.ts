@@ -133,6 +133,7 @@ export async function emitSaleNote(
     saleFiscalItems.push(
       buildFiscalItem(
         {
+          numeroItem: index + 1,
           codigo: item.product.sku ?? item.product.id,
           descricao: item.product.nome ?? "Mercadoria",
           ncm: item.product.ncm,

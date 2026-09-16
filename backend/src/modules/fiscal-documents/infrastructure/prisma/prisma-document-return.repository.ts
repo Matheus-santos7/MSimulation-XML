@@ -516,8 +516,15 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
       priorReturns,
     );
 
-    const itens = returnable.map((line, index) => {
-      const saleLine = saleLines[index]!;
+    const saleByNItem = new Map(saleLines.map((line) => [line.numeroItem, line]));
+    const itens = returnable.map((line) => {
+      const saleLine = saleByNItem.get(line.numeroItem);
+      if (!saleLine) {
+        throw new DocumentReturnError(
+          `Item ${line.numeroItem} da venda não pôde ser associado ao catálogo.`,
+          422,
+        );
+      }
       return {
         numeroItem: line.numeroItem,
         productId: line.productId,
@@ -625,10 +632,9 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
 
     const lines: SaleLine[] = [];
     for (const [index, engineItem] of engine.itens.entries()) {
-      const numeroItem =
-        typeof engineItem.numeroItem === "number" && engineItem.numeroItem > 0
-          ? engineItem.numeroItem
-          : index + 1;
+      // nItem da NF-e = posição em `<det>` (MOC / nfe-xml). Não usar
+      // engine.numeroItem: venda multi-item gravava 1 em todas as linhas.
+      const numeroItem = index + 1;
       const codigo = typeof engineItem.codigo === "string" ? engineItem.codigo.trim() : "";
 
       let product: Product | undefined;

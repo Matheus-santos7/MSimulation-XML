@@ -29,6 +29,7 @@ export {
 } from "./domain/services/fcp-placement.js";
 export type { FcpPlacement, FcpPlacementInput } from "./domain/services/fcp-placement.js";
 
+export { applyCstDevolucaoMap } from "./domain/services/apply-cst-devolucao-map.js";
 export {
   mirrorOriginForDevolucao,
   parseOriginEngine,

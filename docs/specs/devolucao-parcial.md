@@ -26,6 +26,7 @@ Hoje (`POST /api/nfes/:chave/devolucao`) a devolução é sempre integral (`rati
 | Devolução espelha a nota de origem, **proporcional** à quantidade devolvida; não recalcula imposto "do zero" | MOC 7.0 (finNFe=4) · `mirror-origin-for-devolucao.ts` | ratio por item = `qtdDevolvida / qtdOrigem`; bases e impostos escalados e arredondados **por item** (`round2`) antes da soma |
 | `vProd = qCom × vUnCom` | MOC (validação do item) | `vProd` da linha devolvida = `round2(qtd × valorUnitario)` (não o `vProd` origem escalado) |
 | Totais = `reduce` dos itens arredondados; `vNF = vProd − vDesc + vFrete + vSeg + vOutro + vST + vIPI (+ vIPIDevol)` | Regra de fechamento SEFAZ · `calcularTotais` | inalterado — totais derivam dos itens espelhados |
+| CST da devolução segue o DE/PARA da tela `configuracoes-fiscais/cst-devolucao` **por item** (ICMS e PIS/COFINS) | Config. fiscais · `applyCstDevolucaoMap` · MOC grupo ICMS40 | após o espelhamento; CST 40/41/50 zera `vBC`/`vICMS` (Rejeição 532); IPI não entra nesse DE/PARA |
 | IPI de não contribuinte → `<impostoDevol>` (`pDevol`, `vIPIDevol`); `vIPI` = 0 | NT 2016.002 | `pDevol` = percentual da mercadoria devolvida = `round2(ratio × 100)` (100 na devolução integral, igual a hoje) |
 | DIFAL/FCP: mantêm `vICMSUFDest`/`vICMSUFRemet` da saída (não inverte); FCP só em `vFCPUFDest` | EC 87/15 · NT 2015.003 | inalterado (escala proporcional) |
 | `<NFref>` da venda + `infCpl` "Devolucao de mercadoria referente a NF-e de origem n … serie … emitida em …" | CAT 31 §4.1 | inalterado; vale para cada devolução parcial |

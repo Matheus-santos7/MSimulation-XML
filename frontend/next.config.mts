@@ -12,6 +12,14 @@ const apiOrigin = (process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "ht
   "",
 );
 
+const scriptSrc = isProd
+  ? "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com"
+  : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com";
+
+const connectSrc = isProd
+  ? `connect-src 'self' ${apiOrigin} https://challenges.cloudflare.com`
+  : `connect-src 'self' ${apiOrigin} ws: wss: http://127.0.0.1:* http://localhost:* https://challenges.cloudflare.com`;
+
 const securityHeaders = [
   {
     key: "X-Frame-Options",
@@ -33,10 +41,10 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
+      scriptSrc,
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://challenges.cloudflare.com",
-      `connect-src 'self' ${apiOrigin} https://challenges.cloudflare.com`,
+      connectSrc,
       "frame-src https://challenges.cloudflare.com",
       "object-src 'none'",
       "base-uri 'self'",

@@ -6,10 +6,10 @@
  *
  * The return:
  *  - references the original sale NF-e (nfeReferenciaId → sale);
- *  - mirrors sale tax math (same rates/CST via engine), proportionally to the
+ *  - mirrors sale tax math (same rates via engine), proportionally to the
  *    returned quantity of each line (partial returns by `nItem` are allowed
  *    until the sold quantities are exhausted);
- *  - applies return CST mapping from fiscal settings;
+ *  - applies the tenant DE/PARA of CST devolução (`cstDevolucao`) per item;
  *  - reverses FIFO balance consumed in the chain back to shipments (only the
  *    returned quantities);
  *  - re-ships the returned lines to the CD via a multi-item symbolic shipment
@@ -40,6 +40,7 @@ import {
   type ItemFiscalResult,
   type NotaFiscalResult,
 } from "../../../tax/domain/services/tax-engine.js";
+import { applyCstDevolucaoMap } from "../../../tax/domain/services/apply-cst-devolucao-map.js";
 import {
   mirrorOriginForDevolucao,
   parseOriginEngine,
@@ -197,47 +198,50 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
       // cada linha (MOC finNFe=4 / NT 2016.002). Fallback (venda legada sem engine) =
       // recalcular pela TaxRule com a quantidade devolvida.
       const originEngine = parseOriginEngine(saleFiscalPayload?.engine);
-      const invoice: NotaFiscalResult = originEngine
-        ? mirrorOriginForDevolucao({
-            origin: originEngine,
-            itens: returnLines.map((line) => ({
-              numeroItem: line.numeroItem,
-              quantidade: line.quantidade,
-            })),
-            nonContributorIpi: customerType === "non_taxpayer",
-          })
-        : calcularNotaFiscal(
-            returnLines.map((line, index) => {
-              const saleLine = saleLines.find((sl) => sl.numeroItem === line.numeroItem)!;
-              return buildFiscalItem(
-                {
-                  codigo: line.product.sku ?? line.product.id,
-                  descricao: line.product.nome,
-                  ncm: line.product.ncm,
-                  cfop,
-                  unidade: line.product.unidade ?? "UN",
-                  cest: line.product.cest ?? undefined,
-                  ean: line.product.ean ?? undefined,
-                  exTipi: line.product.exTipi ?? undefined,
-                  origem: line.product.origem ?? 0,
-                  quantidade: line.quantidade,
-                  valorUnitario: saleLine.valorUnitario,
-                  numeroItem: index + 1,
-                },
-                saleTaxRule,
-                {
-                  ufOrigem: tenant.uf,
-                  ufSaidaFisica,
-                  ufDestino: sale.destUf,
-                  customerType,
-                  emitterSettings,
-                  operationTipo: "DEVOLUCAO",
-                  cstVendaReferencia: referencedSaleCst,
-                },
-                icmsFallbackRate,
-              );
-            }),
-          );
+      const invoice: NotaFiscalResult = applyCstDevolucaoMap(
+        originEngine
+          ? mirrorOriginForDevolucao({
+              origin: originEngine,
+              itens: returnLines.map((line) => ({
+                numeroItem: line.numeroItem,
+                quantidade: line.quantidade,
+              })),
+              nonContributorIpi: customerType === "non_taxpayer",
+            })
+          : calcularNotaFiscal(
+              returnLines.map((line, index) => {
+                const saleLine = saleLines.find((sl) => sl.numeroItem === line.numeroItem)!;
+                return buildFiscalItem(
+                  {
+                    codigo: line.product.sku ?? line.product.id,
+                    descricao: line.product.nome,
+                    ncm: line.product.ncm,
+                    cfop,
+                    unidade: line.product.unidade ?? "UN",
+                    cest: line.product.cest ?? undefined,
+                    ean: line.product.ean ?? undefined,
+                    exTipi: line.product.exTipi ?? undefined,
+                    origem: line.product.origem ?? 0,
+                    quantidade: line.quantidade,
+                    valorUnitario: saleLine.valorUnitario,
+                    numeroItem: index + 1,
+                  },
+                  saleTaxRule,
+                  {
+                    ufOrigem: tenant.uf,
+                    ufSaidaFisica,
+                    ufDestino: sale.destUf,
+                    customerType,
+                    emitterSettings,
+                    operationTipo: "DEVOLUCAO",
+                    cstVendaReferencia: referencedSaleCst,
+                  },
+                  icmsFallbackRate,
+                );
+              }),
+            ),
+        emitterSettings.taxes.cstDevolucao,
+      );
       if (invoice.itens.length !== returnLines.length) {
         throw new DocumentReturnError(
           "Falha ao espelhar os itens da venda na devolução (linhas divergentes).",

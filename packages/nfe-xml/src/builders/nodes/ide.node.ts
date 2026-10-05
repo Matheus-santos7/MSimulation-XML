@@ -124,11 +124,12 @@ export function retornoIdeOptions(emitUf: string, destUf: string): IdeBuildOptio
   };
 }
 
-/** Defaults de ide para devolução (`tpNF=0`, `finNFe=4`). */
+/** Defaults de ide para devolução (`tpNF=0`, `finNFe=4`). `<NFref>` fica proibido. */
 export function devolucaoIdeOptions(stockUf: string, destUf: string): IdeBuildOptions {
   return {
     ...vendaIdeOptions(stockUf, destUf),
     tpNF: 0,
     finNFe: 4,
+    includeNfRef: false,
   };
 }

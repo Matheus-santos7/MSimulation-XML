@@ -12,10 +12,10 @@ import {
   resolveVendaIdeFields,
   type FulfillmentInfCplOperation,
 } from "@msimulation-xml/fiscal-core";
-import type { XmlObject } from "../core/xml-serializer.js";
-import type { IdeBuildOptions, NFeBuilderInput } from "./builder.types.js";
+import type { XmlNodeValue, XmlObject } from "../core/xml-serializer.js";
+import type { DetBuildResult, IdeBuildOptions, NFeBuilderInput } from "./builder.types.js";
 import { buildInfAdicNode } from "./nodes/auxiliary.node.js";
-import { devolucaoIdeOptions } from "./nodes/ide.node.js";
+import { devolucaoIdeOptions, normalizeNfeReferenciaChaves } from "./nodes/ide.node.js";
 import { VendaNFeStrategyBuilder } from "./venda.builder.js";
 
 /**
@@ -41,6 +41,30 @@ export class DevolucaoNFeStrategyBuilder extends VendaNFeStrategyBuilder {
       cUfIde: ideFields.cUf,
       cMunFGIde: ideFields.cMunFG,
     };
+  }
+
+  protected buildDet(): DetBuildResult {
+    const built = super.buildDet();
+    const nodes = Array.isArray(built) ? built : [built];
+    const chaveAcesso = normalizeNfeReferenciaChaves(this.ctx.nfe.nfeReferenciaChave)[0];
+    const nItensOrigem = readNItemOrigem(this.ctx.fiscal.devolucaoItens);
+
+    return nodes.map((node, index) => {
+      const nItem = nItensOrigem[index];
+      const det = node.det;
+      if (!chaveAcesso || nItem == null || !isXmlObject(det)) return node;
+
+      return {
+        ...node,
+        det: {
+          ...det,
+          DFeReferenciado: {
+            chaveAcesso,
+            nItem: String(nItem),
+          },
+        },
+      };
+    });
   }
 
   protected buildInfAdic(): XmlObject | null {
@@ -94,6 +118,23 @@ export class DevolucaoNFeStrategyBuilder extends VendaNFeStrategyBuilder {
       nfeOrigem,
     });
   }
+}
+
+function readNItemOrigem(raw: unknown): Array<number | undefined> {
+  if (!Array.isArray(raw)) return [];
+
+  return raw.map((entry) => {
+    if (entry == null || typeof entry !== "object") return undefined;
+    const nItemOrigem = (entry as { nItemOrigem?: unknown }).nItemOrigem;
+    const n = typeof nItemOrigem === "number" ? nItemOrigem : Number(nItemOrigem);
+    if (!Number.isInteger(n) || n <= 0) return undefined;
+
+    return n;
+  });
+}
+
+function isXmlObject(value: XmlNodeValue): value is XmlObject {
+  return value != null && typeof value === "object" && !Array.isArray(value);
 }
 
 /** Atalho funcional — retorna AST `nfeProc` de devolução. */

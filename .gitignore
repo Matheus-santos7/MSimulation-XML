@@ -11,6 +11,7 @@ node_modules/
 !.yarn/versions
 .pnpm-store/
 .turbo/
+.cursor/
 
 # =============================================================================
 # Build e artefatos compilados

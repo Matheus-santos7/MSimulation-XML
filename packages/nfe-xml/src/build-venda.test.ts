@@ -703,6 +703,31 @@ describe("buildNFeXmlFromBuilder — DEVOLUCAO / INSULCESSO", () => {
     };
   }
 
+  it("DEVOLUCAO (finNFe=4) emite DFeReferenciado por det e omite NFref", () => {
+    const chaveOrigem = "41260678242849000169550050000000041410852632";
+    const nfe = baseDevolucao("DEVOLUCAO");
+    nfe.nfeReferenciaChave = chaveOrigem;
+    nfe.fiscalPayload = {
+      ...nfe.fiscalPayload,
+      devolucaoItens: [{ numeroItem: 1, nItemOrigem: 3 }],
+    };
+
+    const xml = buildNFeXML(nfe, emit, product);
+
+    assert.match(xml, /<finNFe>4<\/finNFe>/);
+    assert.doesNotMatch(xml, /<NFref>/);
+    assert.doesNotMatch(xml, /<refNFe>/);
+    const dets = xml.match(/<det nItem="\d+">[\s\S]*?<\/det>/g) ?? [];
+    assert.equal(dets.length, 1);
+    assert.match(dets[0]!, /<det nItem="1">/);
+    assert.match(
+      dets[0]!,
+      new RegExp(
+        `<DFeReferenciado>\\s*<chaveAcesso>${chaveOrigem}</chaveAcesso>\\s*<nItem>3</nItem>\\s*</DFeReferenciado>`,
+      ),
+    );
+  });
+
   it("DEVOLUCAO emite infCpl com n+serie+data e regime da filial", () => {
     const xml = buildNFeXML(baseDevolucao("DEVOLUCAO"), emit, product);
     assert.match(

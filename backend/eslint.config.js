@@ -3,11 +3,12 @@ import tseslint from "typescript-eslint";
 
 export default [
   {
-    ignores: ["dist", "node_modules", "generated", "*.test.ts"],
+    ignores: ["dist", "node_modules", "generated", "**/*.test.ts", "*.test.ts"],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    files: ["src/**/*.ts"],
     languageOptions: {
       parserOptions: {
         project: true,

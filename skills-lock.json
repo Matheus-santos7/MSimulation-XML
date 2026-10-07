@@ -115,6 +115,12 @@
       "skillPath": "skills/security-and-hardening/SKILL.md",
       "computedHash": "a0246e67cf8f8a18687a7736442738318b1997715fbdf53dfcf767082c51cca5"
     },
+    "security-audit": {
+      "source": "cloudflare/security-audit-skill",
+      "sourceType": "github",
+      "skillPath": "skills/security-audit/SKILL.md",
+      "computedHash": "98b97aad2873b3b9a8e064007c25e7827b493ba27fda8bfbdb41dab586767973"
+    },
     "shipping-and-launch": {
       "source": "addyosmani/agent-skills",
       "sourceType": "github",

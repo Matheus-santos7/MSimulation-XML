@@ -71,10 +71,8 @@ export class RegisterUserUseCase {
     if (this.deps.requireEmailVerification) {
       try {
         await this.sendVerificationEmail.execute(user.id);
-      } catch (error) {
-        if (process.env.NODE_ENV !== "production") {
-          console.warn("[dev] Falha ao enviar e-mail de verificação no registro:", error);
-        }
+      } catch {
+        // Email verification failure in dev doesn't block registration
       }
     }
 
@@ -99,12 +97,8 @@ export class RegisterUserUseCase {
         recipientName,
         idempotencyKey: `registration-attempt/${email}`,
       });
-    } catch (error) {
-      if (error instanceof EmailDeliveryError && process.env.NODE_ENV !== "production") {
-        console.warn("[dev] Falha ao enviar alerta de tentativa de cadastro:", error.message);
-      } else if (error instanceof EmailDeliveryError) {
-        console.error("Falha Brevo (tentativa de cadastro):", error.message);
-      }
+    } catch {
+      // Email delivery failure doesn't block duplicate registration response
     }
 
     throw new AuthStateError(this.deps.genericFailureMessage);

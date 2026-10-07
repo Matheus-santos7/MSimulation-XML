@@ -27,7 +27,7 @@ function fakeProductRepo(created: ProductWriteData[]): ProductRepository {
   return {
     getTenantUf: async () => "SP",
     listSkuIndex: async () => new Map(),
-    create: async (_tenantId, data) => {
+    create: async (_tenantId: string, data: ProductWriteData) => {
       created.push(data);
       return { id: "p1", tenantId, ...data } as Product;
     },
@@ -42,7 +42,7 @@ function fakeTaxValidator(asserted: string[]): TaxRuleValidatorPort {
     listProductTaxRuleCatalog: async () => [
       { baseId: "355076", nome: "Chuveiro", origin: "SP", label: "Chuveiro · origem SP" },
     ],
-    assertProductTaxRuleBaseId: async (_tenantId, taxRuleBaseId) => {
+    assertProductTaxRuleBaseId: async (_tenantId: string, taxRuleBaseId: string) => {
       asserted.push(taxRuleBaseId);
     },
   };

@@ -13,17 +13,25 @@ export class HttpMcpFiscalValidatorAdapter implements McpFiscalValidatorPort {
   ) {}
 
   async validateNfe(xmlContent: string) {
-    const response = await this.fetchImpl(`${this.apiUrl}/api/v1/validate-nfe`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ xml: xmlContent }),
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-    if (!response.ok) {
-      throw new Error(VALIDATOR_HTTP_ERROR_MESSAGE);
+    try {
+      const response = await this.fetchImpl(`${this.apiUrl}/api/v1/validate-nfe`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ xml: xmlContent }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(VALIDATOR_HTTP_ERROR_MESSAGE);
+      }
+
+      const data = (await response.json()) as Parameters<typeof mapMcpValidateNfeResponse>[0];
+      return mapMcpValidateNfeResponse(data);
+    } finally {
+      clearTimeout(timeoutId);
     }
-
-    const data = (await response.json()) as Parameters<typeof mapMcpValidateNfeResponse>[0];
-    return mapMcpValidateNfeResponse(data);
   }
 }

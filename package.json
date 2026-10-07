@@ -18,10 +18,14 @@
     "db:setup": "pnpm docker:up && pnpm --filter @msimulation-xml/backend db:migrate:deploy",
     "test:backend": "pnpm --filter @msimulation-xml/fiscal-core test && pnpm --filter @msimulation-xml/nfe-xml test && pnpm --filter @msimulation-xml/backend test",
     "test:fiscal-core": "pnpm --filter @msimulation-xml/fiscal-core test",
-    "test:nfe-xml": "pnpm --filter @msimulation-xml/nfe-xml test"
+    "test:nfe-xml": "pnpm --filter @msimulation-xml/nfe-xml test",
+    "depcheck": "depcruise --validate .dependency-cruiser.js backend/src packages/*/src"
   },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.71.1",
+    "@typescript-eslint/parser": "^8.71.1",
     "concurrently": "^9.2.1",
+    "dependency-cruiser": "^18.5.0",
     "prettier": "^3.7.3"
   }
 }

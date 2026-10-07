@@ -18,7 +18,7 @@ describe("product-nfci", () => {
 
   it("validateProductNfciForOrigem exige UUID nas origens FCI", () => {
     assert.match(
-      validateProductNfciForOrigem(5, undefined),
+      validateProductNfciForOrigem(5, null),
       /obrigatório/i,
     );
     assert.match(
@@ -32,10 +32,8 @@ describe("product-nfci", () => {
   });
 
   it("validateProductNfciForOrigem rejeita nFCI em origem 0", () => {
-    assert.match(
-      validateProductNfciForOrigem(0, "A7B816FF-59CC-41D9-97C1-B39BCED07B17"),
-      /origens 3, 5 e 8/i,
-    );
+    const result = validateProductNfciForOrigem(0, "A7B816FF-59CC-41D9-97C1-B39BCED07B17");
+    assert.match(result ?? "", /origens 3, 5 e 8/i);
   });
 
   it("resolveProductNfci limpa valor quando origem não exige FCI", () => {

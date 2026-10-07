@@ -45,7 +45,6 @@ export async function sendTransactionalEmail(input: SendTransactionalEmailInput)
     );
   } catch (error) {
     const message = mapBrevoErrorToMessage(error);
-    console.error("[brevo] Falha ao enviar e-mail transacional:", message);
     throw new Error(message);
   }
 }

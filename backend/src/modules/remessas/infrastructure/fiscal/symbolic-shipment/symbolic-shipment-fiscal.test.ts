@@ -1,17 +1,13 @@
 import assert from "node:assert/strict";
-import type { PrismaTransactionClient } from "../../../../lib/db/prisma-tx.js";
 import { describe, it } from "node:test";
-import type { PrismaTransactionClient } from "../../../../lib/db/prisma-tx.js";
 import {
-import type { PrismaTransactionClient } from "../../../../lib/db/prisma-tx.js";
   REMESSA_CFOP_INTERSTATE,
   REMESSA_CFOP_INTRASTATE,
   resolveRemessaCfop,
 } from "../helpers/remessa-dest.js";
 import { prepareSymbolicShipmentFiscal } from "./symbolic-shipment-fiscal.js";
-import type { PrismaTransactionClient } from "../../../../lib/db/prisma-tx.js";
 
-const tenantId = "tenant-test" as unknown as PrismaTransactionClient;
+const tenantId = "tenant-test";
 
 const mockTaxRuleRow = {
   ruleId: "4133250058-SP-taxpayer-inbound",
@@ -116,7 +112,7 @@ describe("avanço CD interestadual (SP origem → SC destino)", () => {
     });
 
     assert.equal(result.fiscalPayload.destIe, "123456789");
-    const intermed = result.fiscalPayload.infIntermed as { idCadIntTran?: string } as unknown as PrismaTransactionClient;
+    const intermed = result.fiscalPayload.infIntermed as { idCadIntTran?: string };
     assert.equal(intermed.idCadIntTran, "279642028");
   });
 });
@@ -155,7 +151,7 @@ describe("prepareSymbolicShipmentFiscal — multi-item (reposição pós-devolu�
     assert.equal(result.calc.nota.totais.vProd, 90);
     assert.equal(result.calc.valor, result.calc.nota.totais.vNF);
     assert.equal(result.calc.valorIcms, result.calc.nota.totais.vICMS);
-    const transp = result.fiscalPayload.transp as { qVol: number } as unknown as PrismaTransactionClient;
+    const transp = result.fiscalPayload.transp as { qVol: number };
     assert.equal(transp.qVol, 3);
   });
 

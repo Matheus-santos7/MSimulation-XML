@@ -1,18 +1,9 @@
 import assert from "node:assert/strict";
-import type { RemessaFifoTx } from "../../../../lib/db/prisma-tx.js";
-import type { PrismaTransactionClient } from "../../../../lib/db/prisma-tx.js";
 import { describe, it } from "node:test";
-import type { RemessaFifoTx } from "../../../../lib/db/prisma-tx.js";
-import type { PrismaTransactionClient } from "../../../../lib/db/prisma-tx.js";
 import { NFeTipo } from "../../../../generated/prisma/client.js";
-import type { RemessaFifoTx } from "../../../../lib/db/prisma-tx.js";
-import type { PrismaTransactionClient } from "../../../../lib/db/prisma-tx.js";
 import type { PrismaClient } from "../../../../generated/prisma/client.js";
-import type { RemessaFifoTx } from "../../../../lib/db/prisma-tx.js";
-import type { PrismaTransactionClient } from "../../../../lib/db/prisma-tx.js";
+import type { RemessaFifoTx } from "./remessa-fifo.types.js";
 import {
-import type { RemessaFifoTx } from "../../../../lib/db/prisma-tx.js";
-import type { PrismaTransactionClient } from "../../../../lib/db/prisma-tx.js";
   consumeRemessaFifoBalance,
   consumeRemessaFifoBalanceForSale,
   debitRemessaBalanceByCd,
@@ -208,7 +199,7 @@ function createFifoMock(
     },
   };
 
-  return { tx as unknown as RemessaFifoTx, items, consumos };
+  return { tx, items, consumos };
 }
 
 const tenantId = "tenant-1";
@@ -250,7 +241,7 @@ function item(
 
 describe("remessa-fifo", () => {
   it("consome remessa mais antiga primeiro (FIFO)", async () => {
-    const { tx as unknown as RemessaFifoTx, items } = createFifoMock([
+    const { tx, items } = createFifoMock([
       item("i-novo", "r-novo", 10, "2026-03-02", 20),
       item("i-antigo", "r-antigo", 10, "2026-01-01", 10),
     ]);
@@ -295,7 +286,7 @@ describe("remessa-fifo", () => {
   });
 
   it("reverseRemessaFifoConsumptions devolve saldo nas linhas originais", async () => {
-    const { tx as unknown as RemessaFifoTx, items } = createFifoMock([item("i1", "r1", 10, "2026-01-01", 1)]);
+    const { tx, items } = createFifoMock([item("i1", "r1", 10, "2026-01-01", 1)]);
 
     await consumeRemessaFifoBalance(tx as unknown as RemessaFifoTx, tenantId, productId, 4, "retorno-x");
     assert.equal(items.get("i1")!.saldoDisponivel, 6);
@@ -306,7 +297,7 @@ describe("remessa-fifo", () => {
   });
 
   it("debitRemessaBalanceByCd filtra por unidade de destino", async () => {
-    const { tx as unknown as RemessaFifoTx, items } = createFifoMock([
+    const { tx, items } = createFifoMock([
       item("ia", "cd-a", 5, "2026-01-01", 1, "unidade-a"),
       item("ib", "cd-b", 8, "2026-01-02", 2, "unidade-b"),
     ]);
@@ -318,7 +309,7 @@ describe("remessa-fifo", () => {
   });
 
   it("debitRemessaBalanceByNfeId debita itens e registra consumo do retorno", async () => {
-    const { tx as unknown as RemessaFifoTx, items, consumos } = createFifoMock([
+    const { tx, items, consumos } = createFifoMock([
       item("i1", "remessa-1", 10, "2026-01-01", 1),
       item("i2", "remessa-2", 7, "2026-01-02", 2),
     ]);

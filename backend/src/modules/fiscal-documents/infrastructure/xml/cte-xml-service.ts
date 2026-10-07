@@ -9,7 +9,7 @@ import {
   type CteFiscalPayload,
   type CteVinculo,
 } from "@msimulation-xml/fiscal-core";
-import type { CTe, NFe, Prisma,, Tenant } from "../../../../generated/prisma/client.js";
+import type { CTe, NFe, Prisma, Tenant } from "../../../../generated/prisma/client.js";
 import type { DbClient, PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import {
   montarDadosCteFromNfe,

@@ -6,7 +6,6 @@ import { TaxRuleError } from "../../domain/errors/tax-rule.error.js";
 import { createTaxModule } from "../../infrastructure/factory/tax-module.factory.js";
 import { resolveTaxRuleSpreadsheetUpload } from "../helpers/tax-rule-import.helper.js";
 import {
- ,
   taxRulesBulkBodySchema,
 } from "../schemas/tax.schemas.js";
 

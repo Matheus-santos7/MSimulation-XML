@@ -2,21 +2,19 @@ import {
   FiscalStatus,
   NFeTipo,
   Prisma,
-  type PrismaClient,
   type Tenant,
 } from "../../../../generated/prisma/client.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import type { NotaFiscal } from "../../domain/entities/nota-fiscal.js";
-import {
- ,
-  type NotaFiscalRepository,
-  type PersistirNotaInput,
+import type {
+  NotaFiscalRepository,
+  PersistirNotaInput,
 } from "../../domain/ports/nota-fiscal-repository.js";
 import type { TipoNota } from "../../domain/value-objects/tipo-nota.js";
 import { persistirXmlFromEmission } from "./nfe-xml-persist.js";
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 
-type = PrismaClient | PrismaTx;
+type DbClient = PrismaTx;
 
 function mapTipoToPrisma(tipo: TipoNota): NFeTipo {
   return tipo as NFeTipo;

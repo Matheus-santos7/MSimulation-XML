@@ -41,8 +41,6 @@ import {
 } from "@msimulation-xml/fiscal-core";
 import {
   defaultInterstateConvenioRate,
- ,
- ,
   resolveInterstateIcmsFallback,
 } from "./tax-fallback-resolver.service.js";
 

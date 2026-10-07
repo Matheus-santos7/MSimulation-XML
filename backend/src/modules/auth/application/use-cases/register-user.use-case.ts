@@ -1,11 +1,9 @@
 import type { AuthSessionResponse } from "../../domain/entities/auth-session.entity.js";
 import { AuthStateError } from "../../domain/errors/auth-state.error.js";
-import { EmailDeliveryError } from "../../domain/errors/email-delivery.error.js";
 import type { EmailSenderPort } from "../../domain/ports/email-sender.port.js";
 import type { PasswordHasherPort } from "../../domain/ports/password-hasher.port.js";
 import type {
   AuthMeta,
-  SessionResponsePort,
   SignAccessToken,
 } from "../../domain/ports/session-response.port.js";
 import type { UserRepository } from "../../domain/ports/user.repository.js";

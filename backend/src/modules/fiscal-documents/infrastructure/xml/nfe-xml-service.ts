@@ -17,6 +17,8 @@ import {
 import type { FiscalEmitterSettingsData } from "@msimulation-xml/fiscal-core";
 import {
   FiscalStatus,
+  NfeValidationStatus,
+  Prisma,
   type Product,
   type Tenant,
 } from "../../../../generated/prisma/client.js";
@@ -25,8 +27,6 @@ import { mapNfe } from "../../presentation/mappers/fiscal-mappers.js";
 import { mapProduct, type ProductDto } from "../../../catalog/index.js";
 import { mapEmitente } from "../../../org/infrastructure/fiscal/tenant-emitente.mapper.js";
 import { loadEmitterSettings } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
-import { createFiscalValidationModule } from "../../../fiscal-validation/infrastructure/factory/fiscal-validation-module.factory.js";
-import { toPrismaNfeValidationUpdate } from "../../../fiscal-validation/infrastructure/prisma/nfe-validation-persistence.mapper.js";
 
 export type NfeXmlPersistTx = PrismaTx;
 
@@ -99,15 +99,18 @@ export async function persistNfeXmlAutorizado(
     allProducts,
   );
 
-  const fiscalValidation = createFiscalValidationModule();
-  const outcome = await fiscalValidation.validateNfeXml.execute(xml);
-  const validationUpdate = toPrismaNfeValidationUpdate(outcome);
-
+  // Validação MCP roda fora da transação (HTTP remoto sem timeout dentro de
+  // $transaction retém conexão/lock de DB). O status fica PENDING aqui;
+  // BackfillPendingNfeValidationUseCase assume a validação assíncrona após
+  // o commit (acionado via runFiscalTransaction, ver prisma-tx.ts).
   await tx.nFe.update({
     where: { id: args.nfeId },
     data: {
       xmlAutorizado: xml,
-      ...validationUpdate,
+      statusValidacao: NfeValidationStatus.PENDING,
+      mensagemValidacao: null,
+      errosValidacao: Prisma.DbNull,
+      auditoriaMcp: Prisma.DbNull,
     },
   });
 }

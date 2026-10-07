@@ -1,4 +1,4 @@
-import type { PrismaClient } from "../../../../generated/prisma/client.js";
+import type { } from "../../../../generated/prisma/client.js";
 import type { FiscalDocumentSoftDeletePort } from "../../domain/ports/fiscal-document-soft-delete.port.js";
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 

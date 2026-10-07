@@ -1,4 +1,4 @@
-import type { Prisma, PrismaClient } from "../../../../generated/prisma/client.js";
+import type { Prisma, } from "../../../../generated/prisma/client.js";
 import { isPrismaUniqueError } from "./prisma-errors.js";
 import {
   normalizeFiscalRoleIds,

@@ -1,5 +1,5 @@
 import { formatNfeDateTime } from "@msimulation-xml/fiscal-core";
-import type { CteModal, FiscalStatus, NFeTipo, NfeValidationStatus, PrismaClient, Product, TimelineStatus } from "../../../../generated/prisma/client.js";
+import type { CteModal, FiscalStatus, NFeTipo, NfeValidationStatus,, Product, TimelineStatus } from "../../../../generated/prisma/client.js";
 import { mapProduct } from "../../../catalog/index.js";
 
 export function num(n: { toString(): string } | number): number {

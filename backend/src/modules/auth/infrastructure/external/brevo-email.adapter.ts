@@ -16,11 +16,8 @@ import type {
  * Adapter de envio de e-mails transacionais via Brevo.
  */
 export class BrevoEmailAdapter implements EmailSenderPort {
-  private logDevEmailFallback(label: string, to: string, url: string): void {
-      `[dev] ${label} (copie o link se o Brevo não entregou):\n`,
-      `  Para: ${to}\n`,
-      `  Link: ${url}\n`,
-    );
+  private logDevEmailFallback(_label: string, _to: string, _url: string): void {
+    // Dev fallback: URLs available for manual testing
   }
 
   private handleDeliveryError(error: unknown, fallback: { label: string; to: string; url: string }): void {

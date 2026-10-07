@@ -1,4 +1,4 @@
-import type { PrismaClient } from "../../../../generated/prisma/client.js";
+import type { } from "../../../../generated/prisma/client.js";
 import { CheckoutError } from "../../domain/errors/checkout.error.js";
 import { OrderLockedError } from "../../domain/errors/order-locked.error.js";
 import type { OrderCheckoutInput } from "../../domain/entities/order-checkout-input.entity.js";

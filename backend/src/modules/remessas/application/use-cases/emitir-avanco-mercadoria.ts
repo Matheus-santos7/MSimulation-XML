@@ -1,6 +1,6 @@
-import { OperacaoFiscalTipo, type Product, type Tenant } from "../../../../generated/prisma/client.js";
+import { OperacaoFiscalTipo, type Product, type } from "../../../../generated/prisma/client.js";
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
-import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
+import type { } from "../../../../lib/db/prisma-tx.js";
 import { gerarPedidoMl } from "../../../fiscal-documents/domain/services/nfe-chave.js";
 import { runFiscalTransaction } from "../../../../lib/db/prisma-tx.js";
 import { emitShipmentCte } from "../../infrastructure/fiscal/shipment-cte.service.js";

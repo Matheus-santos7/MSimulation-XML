@@ -1,6 +1,6 @@
 import type { PedidoStatus, Product } from "../../../../generated/prisma/client.js";
 import type { Buyer } from "../../domain/entities/buyer.entity.js";
-import type { Order, OrderItemSummary } from "../../domain/entities/order.entity.js";
+import type { Order, } from "../../domain/entities/order.entity.js";
 import type { OrderForEmit } from "../../domain/entities/order-for-emit.entity.js";
 import { mapOrderItemFromRow } from "./order-item-prisma.mapper.js";
 import { normalizeOrderFreight } from "../../domain/services/order-freight.validation.js";

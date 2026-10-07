@@ -16,7 +16,7 @@ import {
   Prisma,
   type Tenant,
 } from "../../../../../generated/prisma/client.js";
-import type { DbClient, PrismaTx } from "../../../../../lib/db/prisma-tx.js";
+import type { DbClient, } from "../../../../../lib/db/prisma-tx.js";
 import { runFiscalTransaction } from "../../../../../lib/db/prisma-tx.js";
 import { mapNfe } from "../../../../fiscal-documents/presentation/mappers/fiscal-mappers.js";
 import {

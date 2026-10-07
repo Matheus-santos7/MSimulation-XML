@@ -58,7 +58,9 @@ export class RequestPasswordResetUseCase {
       });
     } catch (error) {
       if (error instanceof EmailDeliveryError && process.env.NODE_ENV !== "production") {
+        // dev: log and continue
       } else if (error instanceof EmailDeliveryError) {
+        // prod: swallow email errors
       } else {
         throw error;
       }

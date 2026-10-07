@@ -245,7 +245,7 @@ describe("remessa-fifo", () => {
       item("i-antigo", "r-antigo", 10, "2026-01-01", 10),
     ]);
 
-    const alocacoes = await consumeRemessaFifoBalance(tx, tenantId, productId, 3, "retorno-1");
+    const alocacoes = await consumeRemessaFifoBalance(tx as unknown as RemessaFifoTx, tenantId, productId, 3, "retorno-1");
 
     assert.equal(alocacoes.length, 1);
     assert.equal(alocacoes[0]!.remessaNfeId, "r-antigo");
@@ -261,7 +261,7 @@ describe("remessa-fifo", () => {
       item("i2", "r2", 5, "2026-02-01", 2),
     ]);
 
-    const alocacoes = await consumeRemessaFifoBalance(tx, tenantId, productId, 4, "ret-1");
+    const alocacoes = await consumeRemessaFifoBalance(tx as unknown as RemessaFifoTx, tenantId, productId, 4, "ret-1");
 
     assert.deepEqual(alocacoes, [
       { remessaNfeId: "r1", nfeItemId: "i1", quantidade: 2 },
@@ -402,7 +402,7 @@ describe("remessa-fifo", () => {
       item("ok", "r1", 4, "2026-01-02", 2),
     ]);
 
-    const alocacoes = await consumeRemessaFifoBalance(tx, tenantId, productId, 2, "ret-1");
+    const alocacoes = await consumeRemessaFifoBalance(tx as unknown as RemessaFifoTx, tenantId, productId, 2, "ret-1");
     assert.deepEqual(alocacoes, [{ remessaNfeId: "r1", nfeItemId: "ok", quantidade: 2 }]);
   });
 });

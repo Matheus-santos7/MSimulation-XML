@@ -11,7 +11,7 @@ import {
   buildRemessaFifoItemsWhere,
 } from "../fifo/remessa-fifo.js";
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
-type DbClient = PrismaClient | PrismaTx;
+type _DbClient = PrismaClient | PrismaTx;
 
 /**
  * Adapter: implementa EstoqueFifoRepository sobre nfe_itens + remessa-fifo legado.

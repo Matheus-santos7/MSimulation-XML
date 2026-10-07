@@ -155,13 +155,17 @@ export async function emitShipmentNfeWithItems(
     serieRemessa: tenant.serieRemessa,
     serieTransferencia: tenant.serieTransferencia,
   });
-  const numero = await proximoNumeroNfe(db, tenant.id, serie, numeroInicial);
-  const chave = buildChaveNFe({ uf: chaveParams.uf, cnpj: chaveParams.cnpj, serie, numero });
   const emitidaEm = new Date();
   const destData = mapShipmentDestinationToNfeFields(destino);
 
   // --- Phases 6–9: atomic transaction (payload, NF-e, XML, CT-e) ---
   const { nfeRow, cteRow, itemRows } = await runFiscalTransaction(db, tenant.id, async (tx) => {
+    // Numeração dentro da mesma transação que insere a NF-e: o advisory lock
+    // de `proximoNumeroNfe` só fecha a condição de corrida se o número for
+    // lido e gravado na mesma transação (ver nfe-sequencia.ts).
+    const numero = await proximoNumeroNfe(tx, tenant.id, serie, numeroInicial);
+    const chave = buildChaveNFe({ uf: chaveParams.uf, cnpj: chaveParams.cnpj, serie, numero });
+
     // Phase 6: emitter settings + snapshot for XML/payload.
     const fiscalPayloadBase = enrichFiscalPayloadMlFulfillment(
       enrichFiscalPayloadWithXTexto(

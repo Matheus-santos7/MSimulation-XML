@@ -474,6 +474,7 @@ model NFe {
   movimentacoesComoSecundaria MovimentacaoProduto[] @relation("MovNfeSecundaria")
   itens                NfeItem[]
 
+  @@unique([tenantId, serie, numero], map: "uq_nfe_tenant_serie_numero")
   @@index([tenantId], map: "idx_nfe_tenant_id")
   @@index([unidadeDestinoId], map: "idx_nfe_unidade_destino")
   @@index([nfeReferenciaId], map: "idx_nfe_referencia_id")

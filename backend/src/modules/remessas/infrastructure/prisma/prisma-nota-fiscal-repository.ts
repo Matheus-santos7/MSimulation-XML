@@ -14,7 +14,7 @@ import type { TipoNota } from "../../domain/value-objects/tipo-nota.js";
 import { persistirXmlFromEmission } from "./nfe-xml-persist.js";
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 
-type DbClient = PrismaTx;
+type _DbClient = PrismaTx;
 
 function mapTipoToPrisma(tipo: TipoNota): NFeTipo {
   return tipo as NFeTipo;

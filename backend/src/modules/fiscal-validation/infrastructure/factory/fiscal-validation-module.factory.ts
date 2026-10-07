@@ -24,7 +24,7 @@ function buildFiscalValidationModule(deps: FiscalValidationModuleDeps = {}) {
     config,
     validateNfeXml: new ValidateNfeXmlUseCase(validator, config),
     getValidatorHealth: new GetValidatorHealthUseCase(config),
-    createBackfillPendingNfeValidation: (db: DbClient) => {
+    createBackfillPendingNfeValidation: (_db: DbClient) => {
       if (!deps.nfeXmlResolver) {
         throw new Error("Backfill requires nfeXmlResolver in createFiscalValidationModule deps");
       }

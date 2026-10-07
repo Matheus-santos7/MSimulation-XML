@@ -27,9 +27,7 @@ export class ResendVerificationEmailUseCase {
       await this.sendVerificationEmail.execute(userId);
     } catch (error) {
       if (error instanceof EmailDeliveryError && process.env.NODE_ENV !== "production") {
-        console.warn("[dev] Falha ao enviar e-mail de verificação:", error.message);
       } else if (error instanceof EmailDeliveryError) {
-        console.error("Falha Brevo (verificação):", error.message);
       } else {
         throw error;
       }

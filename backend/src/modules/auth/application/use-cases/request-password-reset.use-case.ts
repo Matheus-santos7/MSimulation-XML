@@ -58,9 +58,7 @@ export class RequestPasswordResetUseCase {
       });
     } catch (error) {
       if (error instanceof EmailDeliveryError && process.env.NODE_ENV !== "production") {
-        console.warn("[dev] Falha ao enviar e-mail:", error.message);
       } else if (error instanceof EmailDeliveryError) {
-        console.error("Falha Brevo:", error.message);
       } else {
         throw error;
       }

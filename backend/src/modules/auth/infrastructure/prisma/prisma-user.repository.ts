@@ -1,4 +1,4 @@
-import type { PrismaClient } from "../../../../generated/prisma/client.js";
+import type { _PrismaClient } from "../../../../generated/prisma/client.js";
 import { clearedLockoutState } from "../../domain/services/login-lockout.service.js";
 import type { LoginLockoutState } from "../../domain/ports/login-lockout.port.js";
 import type { AuthUser, AuthUserWithTenant } from "../../domain/entities/user.entity.js";

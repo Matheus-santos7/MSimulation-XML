@@ -17,7 +17,6 @@ import type {
  */
 export class BrevoEmailAdapter implements EmailSenderPort {
   private logDevEmailFallback(label: string, to: string, url: string): void {
-    console.info(
       `[dev] ${label} (copie o link se o Brevo não entregou):\n`,
       `  Para: ${to}\n`,
       `  Link: ${url}\n`,
@@ -31,7 +30,6 @@ export class BrevoEmailAdapter implements EmailSenderPort {
       throw new EmailDeliveryError(message);
     }
 
-    console.warn("[dev] Falha ao enviar e-mail:", message);
     this.logDevEmailFallback(fallback.label, fallback.to, fallback.url);
   }
 

@@ -8,8 +8,8 @@
  *  - cancels the linked sale CT-e, if present.
  */
 
-import { FiscalStatus, NFeTipo, type _PrismaClient } from "../../../../generated/prisma/client.js";
-import { runFiscalTransaction, type _DbClient, type PrismaTx } from "../../../../lib/db/prisma-tx.js";
+import { FiscalStatus, NFeTipo } from "../../../../generated/prisma/client.js";
+import { runFiscalTransaction, type DbClient, type PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { mapNfe } from "../../presentation/mappers/fiscal-mappers.js";
 import { loadEmitterSettings } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
 import { gerarProtocoloSefaz } from "../../domain/services/sefaz-protocol.js";

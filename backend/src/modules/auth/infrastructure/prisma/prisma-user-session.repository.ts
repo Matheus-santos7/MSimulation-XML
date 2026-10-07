@@ -1,4 +1,3 @@
-import type { PrismaClient as _PrismaClient } from "../../../../lib/db/prisma-tx.js";
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import type {
   ActiveUserSession,

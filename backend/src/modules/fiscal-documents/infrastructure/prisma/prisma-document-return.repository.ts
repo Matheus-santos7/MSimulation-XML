@@ -22,11 +22,11 @@ import {
   NFeTipo,
   Prisma,
   type Product,
-  type _PrismaClient,
+  type PrismaClient,
 } from "../../../../generated/prisma/client.js";
 import {
   runFiscalTransaction,
-  type _DbClient,
+  type DbClient,
   type PrismaTx,
 } from "../../../../lib/db/prisma-tx.js";
 import { mapNfe, num } from "../../presentation/mappers/fiscal-mappers.js";

@@ -1,11 +1,15 @@
 import assert from "node:assert/strict";
+import type { PrismaTransactionClient } from "../../../../lib/db/prisma-tx.js";
 import { describe, it } from "node:test";
+import type { PrismaTransactionClient } from "../../../../lib/db/prisma-tx.js";
 import {
+import type { PrismaTransactionClient } from "../../../../lib/db/prisma-tx.js";
   REMESSA_CFOP_INTERSTATE,
   REMESSA_CFOP_INTRASTATE,
   resolveRemessaCfop,
 } from "../helpers/remessa-dest.js";
 import { prepareSymbolicShipmentFiscal } from "./symbolic-shipment-fiscal.js";
+import type { PrismaTransactionClient } from "../../../../lib/db/prisma-tx.js";
 
 const tenantId = "tenant-test" as unknown as PrismaTransactionClient;
 

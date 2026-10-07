@@ -1,8 +1,18 @@
 import assert from "node:assert/strict";
+import type { RemessaFifoTx } from "../../../../lib/db/prisma-tx.js";
+import type { PrismaTransactionClient } from "../../../../lib/db/prisma-tx.js";
 import { describe, it } from "node:test";
+import type { RemessaFifoTx } from "../../../../lib/db/prisma-tx.js";
+import type { PrismaTransactionClient } from "../../../../lib/db/prisma-tx.js";
 import { NFeTipo } from "../../../../generated/prisma/client.js";
+import type { RemessaFifoTx } from "../../../../lib/db/prisma-tx.js";
+import type { PrismaTransactionClient } from "../../../../lib/db/prisma-tx.js";
 import type { PrismaClient } from "../../../../generated/prisma/client.js";
+import type { RemessaFifoTx } from "../../../../lib/db/prisma-tx.js";
+import type { PrismaTransactionClient } from "../../../../lib/db/prisma-tx.js";
 import {
+import type { RemessaFifoTx } from "../../../../lib/db/prisma-tx.js";
+import type { PrismaTransactionClient } from "../../../../lib/db/prisma-tx.js";
   consumeRemessaFifoBalance,
   consumeRemessaFifoBalanceForSale,
   debitRemessaBalanceByCd,
@@ -198,7 +208,7 @@ function createFifoMock(
     },
   };
 
-  return { tx, items, consumos };
+  return { tx as unknown as RemessaFifoTx, items, consumos };
 }
 
 const tenantId = "tenant-1";
@@ -240,7 +250,7 @@ function item(
 
 describe("remessa-fifo", () => {
   it("consome remessa mais antiga primeiro (FIFO)", async () => {
-    const { tx, items } = createFifoMock([
+    const { tx as unknown as RemessaFifoTx, items } = createFifoMock([
       item("i-novo", "r-novo", 10, "2026-03-02", 20),
       item("i-antigo", "r-antigo", 10, "2026-01-01", 10),
     ]);
@@ -273,7 +283,7 @@ describe("remessa-fifo", () => {
     const { tx } = createFifoMock([item("i1", "r1", 1, "2026-01-01", 1)]);
 
     await assert.rejects(
-      () => consumeRemessaFifoBalance(tx, tenantId, productId, 5, "ret-1"),
+      () => consumeRemessaFifoBalance(tx as unknown as RemessaFifoTx, tenantId, productId, 5, "ret-1"),
       (err: unknown) => {
         assert.ok(err instanceof SaldoRemessaInsuficienteError);
         assert.equal(err.productId, productId);
@@ -285,36 +295,36 @@ describe("remessa-fifo", () => {
   });
 
   it("reverseRemessaFifoConsumptions devolve saldo nas linhas originais", async () => {
-    const { tx, items } = createFifoMock([item("i1", "r1", 10, "2026-01-01", 1)]);
+    const { tx as unknown as RemessaFifoTx, items } = createFifoMock([item("i1", "r1", 10, "2026-01-01", 1)]);
 
-    await consumeRemessaFifoBalance(tx, tenantId, productId, 4, "retorno-x");
+    await consumeRemessaFifoBalance(tx as unknown as RemessaFifoTx, tenantId, productId, 4, "retorno-x");
     assert.equal(items.get("i1")!.saldoDisponivel, 6);
 
-    const estornos = await reverseRemessaFifoConsumptions(tx, "retorno-x");
+    const estornos = await reverseRemessaFifoConsumptions(tx as unknown as RemessaFifoTx, "retorno-x");
     assert.deepEqual(estornos, [{ remessaNfeId: "r1", nfeItemId: "i1", quantidade: 4 }]);
     assert.equal(items.get("i1")!.saldoDisponivel, 10);
   });
 
   it("debitRemessaBalanceByCd filtra por unidade de destino", async () => {
-    const { tx, items } = createFifoMock([
+    const { tx as unknown as RemessaFifoTx, items } = createFifoMock([
       item("ia", "cd-a", 5, "2026-01-01", 1, "unidade-a"),
       item("ib", "cd-b", 8, "2026-01-02", 2, "unidade-b"),
     ]);
 
-    await debitRemessaBalanceByCd(tx, tenantId, productId, 3, "unidade-b");
+    await debitRemessaBalanceByCd(tx as unknown as RemessaFifoTx, tenantId, productId, 3, "unidade-b");
 
     assert.equal(items.get("ia")!.saldoDisponivel, 5);
     assert.equal(items.get("ib")!.saldoDisponivel, 5);
   });
 
   it("debitRemessaBalanceByNfeId debita itens e registra consumo do retorno", async () => {
-    const { tx, items, consumos } = createFifoMock([
+    const { tx as unknown as RemessaFifoTx, items, consumos } = createFifoMock([
       item("i1", "remessa-1", 10, "2026-01-01", 1),
       item("i2", "remessa-2", 7, "2026-01-02", 2),
     ]);
 
     const alocacoes = await debitRemessaBalanceByNfeId(
-      tx,
+      tx as unknown as RemessaFifoTx,
       tenantId,
       "remessa-1",
       productId,
@@ -344,7 +354,7 @@ describe("remessa-fifo", () => {
     ]);
 
     const alocacoes = await consumeRemessaFifoBalanceForSale(
-      tx,
+      tx as unknown as RemessaFifoTx,
       tenantId,
       productId,
       2,
@@ -363,7 +373,7 @@ describe("remessa-fifo", () => {
     );
 
     const alocacoes = await consumeRemessaFifoBalanceForSale(
-      tx,
+      tx as unknown as RemessaFifoTx,
       tenantId,
       productId,
       2,
@@ -384,7 +394,7 @@ describe("remessa-fifo", () => {
     );
 
     const alocacoes = await consumeRemessaFifoBalanceForSale(
-      tx,
+      tx as unknown as RemessaFifoTx,
       tenantId,
       productId,
       2,

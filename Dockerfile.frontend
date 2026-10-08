@@ -1,0 +1,36 @@
+FROM node:24-alpine AS build
+
+RUN corepack enable \
+  && corepack prepare pnpm@9.15.9 --activate
+
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
+COPY frontend ./frontend
+
+# NEXT_PUBLIC_* é embutido no bundle do client em build-time (sem override em runtime).
+ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
+ENV NEXT_PUBLIC_TURNSTILE_SITE_KEY=${NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+
+RUN pnpm install --frozen-lockfile \
+  && pnpm --filter @msimulation-xml/frontend build
+
+FROM node:24-alpine AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV HOST=0.0.0.0
+ENV PORT=3000
+
+# Next.js "standalone" output: server.js + node_modules já podados pelo tracing.
+COPY --from=build /app/frontend/.next/standalone ./
+COPY --from=build /app/frontend/.next/static ./frontend/.next/static
+COPY --from=build /app/frontend/public ./frontend/public
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget -qO- "http://127.0.0.1:${PORT}/" || exit 1
+
+CMD ["node", "frontend/server.js"]

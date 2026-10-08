@@ -159,6 +159,7 @@ Prisma Studio (opcional): `pnpm --filter @msimulation-xml/backend exec prisma st
 | [backend/docs/fiscal/regras-fulfillment-cat31.md](./backend/docs/fiscal/regras-fulfillment-cat31.md) | CAT 31 / ML Full                         |
 | [backend/docs/fiscal/manual-nfe-moc.md](./backend/docs/fiscal/manual-nfe-moc.md)                     | MOC NF-e                                 |
 | [docs/specs/readme-github-share.md](./docs/specs/readme-github-share.md)                             | SPEC desta documentação                  |
+| [docs/deploy-docker-aws.md](./docs/deploy-docker-aws.md)                                             | Deploy Docker (backend+frontend+TLS) na AWS |
 
 
 ---

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { FiscalEmitterSettingsData } from "@msimulation-xml/fiscal-core";
-import { calcularItem, calcularNotaFiscal, type ItemFiscalInput } from "./tax-engine.js";
+import { calcularNotaFiscal, type ItemFiscalInput } from "./tax-engine.js";
 import { mirrorOriginForDevolucao } from "./mirror-origin-for-devolucao.js";
 import { applyCstDevolucaoMap } from "./apply-cst-devolucao-map.js";
 
@@ -45,7 +45,7 @@ const cstDevolucao = (
 
 describe("applyCstDevolucaoMap", () => {
   it("não altera a nota quando o modo é DEFAULT", () => {
-    const origin = calcularNotaFiscal([calcularItem(saleItem())]);
+    const origin = calcularNotaFiscal([saleItem()]);
     const mirrored = mirrorOriginForDevolucao({ origin, ratio: 1, nonContributorIpi: true });
     const mapped = applyCstDevolucaoMap(mirrored, cstDevolucao({ mode: "DEFAULT" }));
 
@@ -56,7 +56,7 @@ describe("applyCstDevolucaoMap", () => {
   });
 
   it("aplica o DE/PARA da tela: PIS/COFINS 01→50 e preserva bases/valores", () => {
-    const origin = calcularNotaFiscal([calcularItem(saleItem())]);
+    const origin = calcularNotaFiscal([saleItem()]);
     const mirrored = mirrorOriginForDevolucao({ origin, ratio: 1, nonContributorIpi: false });
     const mapped = applyCstDevolucaoMap(mirrored, cstDevolucao({ icms: [] }));
 
@@ -72,7 +72,7 @@ describe("applyCstDevolucaoMap", () => {
 
   it("mapeia PIS/COFINS monofásico 04→98 (DE/PARA customizado da tela)", () => {
     const origin = calcularNotaFiscal([
-      calcularItem(saleItem({ pis: { cst: "04", aliquota: 0 }, cofins: { cst: "04", aliquota: 0 } })),
+      saleItem({ pis: { cst: "04", aliquota: 0 }, cofins: { cst: "04", aliquota: 0 } }),
     ]);
     const mirrored = mirrorOriginForDevolucao({ origin, ratio: 1, nonContributorIpi: false });
     const mapped = applyCstDevolucaoMap(mirrored, cstDevolucao({ icms: [] }));
@@ -82,7 +82,7 @@ describe("applyCstDevolucaoMap", () => {
   });
 
   it("ICMS 00→41 zera vBC/vICMS e reconcilia ICMSTot (Rejeição 532)", () => {
-    const origin = calcularNotaFiscal([calcularItem(saleItem())]);
+    const origin = calcularNotaFiscal([saleItem()]);
     const mirrored = mirrorOriginForDevolucao({ origin, ratio: 1, nonContributorIpi: true });
     assert.ok(mirrored.itens[0]!.icms.vICMS > 0);
 
@@ -101,7 +101,7 @@ describe("applyCstDevolucaoMap", () => {
 
   it("mapeia CSOSN 102 da venda para CST 41 na devolução", () => {
     const origin = calcularNotaFiscal([
-      calcularItem(saleItem({ icms: { cst: "102", orig: 0, pICMS: 0, pFCP: 0 } })),
+      saleItem({ icms: { cst: "102", orig: 0, pICMS: 0, pFCP: 0 } }),
     ]);
     const mirrored = mirrorOriginForDevolucao({ origin, ratio: 1, nonContributorIpi: false });
     const mapped = applyCstDevolucaoMap(
@@ -116,15 +116,13 @@ describe("applyCstDevolucaoMap", () => {
 
   it("aplica o DE/PARA por item (não pelo CST do cabeçalho)", () => {
     const origin = calcularNotaFiscal([
-      calcularItem(saleItem({ numeroItem: 1, codigo: "A" })),
-      calcularItem(
-        saleItem({
-          numeroItem: 2,
-          codigo: "B",
-          pis: { cst: "04", aliquota: 0 },
-          cofins: { cst: "04", aliquota: 0 },
-        }),
-      ),
+      saleItem({ numeroItem: 1, codigo: "A" }),
+      saleItem({
+        numeroItem: 2,
+        codigo: "B",
+        pis: { cst: "04", aliquota: 0 },
+        cofins: { cst: "04", aliquota: 0 },
+      }),
     ]);
     const mirrored = mirrorOriginForDevolucao({ origin, ratio: 1, nonContributorIpi: false });
     const mapped = applyCstDevolucaoMap(mirrored, cstDevolucao({ icms: [] }));
@@ -134,7 +132,7 @@ describe("applyCstDevolucaoMap", () => {
   });
 
   it("é idempotente: CST já mapeado não é remapeado de volta", () => {
-    const origin = calcularNotaFiscal([calcularItem(saleItem())]);
+    const origin = calcularNotaFiscal([saleItem()]);
     const mirrored = mirrorOriginForDevolucao({ origin, ratio: 1, nonContributorIpi: true });
     const once = applyCstDevolucaoMap(mirrored, cstDevolucao());
     const twice = applyCstDevolucaoMap(once, cstDevolucao());

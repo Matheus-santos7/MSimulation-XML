@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { calcularItem, calcularNotaFiscal, type ItemFiscalInput } from "./tax-engine.js";
+import { calcularNotaFiscal, type ItemFiscalInput } from "./tax-engine.js";
 import { mirrorOriginForDevolucao } from "./mirror-origin-for-devolucao.js";
 
 const baseSaleItem = (): ItemFiscalInput => ({
@@ -22,7 +22,7 @@ const baseSaleItem = (): ItemFiscalInput => ({
 
 describe("mirrorOriginForDevolucao", () => {
   it("espelha BC/ICMS/DIFAL/FCP proporcionalmente e mantém vICMSUFDest", () => {
-    const sale = calcularNotaFiscal([calcularItem(baseSaleItem())]);
+    const sale = calcularNotaFiscal([baseSaleItem()]);
     const half = mirrorOriginForDevolucao({
       origin: sale,
       ratio: 0.5,
@@ -45,7 +45,7 @@ describe("mirrorOriginForDevolucao", () => {
   });
 
   it("IPI de não contribuinte vai para impostoDevol — não em vIPI/vProd", () => {
-    const sale = calcularNotaFiscal([calcularItem(baseSaleItem())]);
+    const sale = calcularNotaFiscal([baseSaleItem()]);
     const full = mirrorOriginForDevolucao({
       origin: sale,
       ratio: 1,
@@ -72,7 +72,7 @@ describe("mirrorOriginForDevolucao", () => {
   });
 
   it("contribuinte de IPI mantém IPI tributado (sem impostoDevol)", () => {
-    const sale = calcularNotaFiscal([calcularItem(baseSaleItem())]);
+    const sale = calcularNotaFiscal([baseSaleItem()]);
     const full = mirrorOriginForDevolucao({
       origin: sale,
       ratio: 1,
@@ -87,15 +87,15 @@ describe("mirrorOriginForDevolucao", () => {
 describe("mirrorOriginForDevolucao — devolução parcial por item", () => {
   const twoItemSale = () =>
     calcularNotaFiscal([
-      calcularItem({ ...baseSaleItem(), numeroItem: 1, codigo: "SKU1", quantidade: 1 }),
-      calcularItem({
+      { ...baseSaleItem(), numeroItem: 1, codigo: "SKU1", quantidade: 1 },
+      {
         ...baseSaleItem(),
         numeroItem: 2,
         codigo: "SKU2",
         quantidade: 2,
         valorUnitario: 333.33,
         frete: 0,
-      }),
+      },
     ]);
 
   it("engine legado com nItem=1 em todas as linhas usa a posição em <det> (MOC)", () => {

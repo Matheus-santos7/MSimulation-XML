@@ -18,11 +18,11 @@ describe("product-nfci", () => {
 
   it("validateProductNfciForOrigem exige UUID nas origens FCI", () => {
     assert.match(
-      validateProductNfciForOrigem(5, null),
+      validateProductNfciForOrigem(5, null) ?? "",
       /obrigatório/i,
     );
     assert.match(
-      validateProductNfciForOrigem(5, "invalid"),
+      validateProductNfciForOrigem(5, "invalid") ?? "",
       /UUID/i,
     );
     assert.equal(

@@ -39,7 +39,7 @@ const product = {
   taxRuleBaseId: "4133250058",
 };
 
-function createPrismaMock() {
+function createPrismaMock(): Parameters<typeof prepareSymbolicShipmentFiscal>[0] {
   return {
     taxRule: {
       findUnique: async () => mockTaxRuleRow,
@@ -47,7 +47,7 @@ function createPrismaMock() {
     fiscalEmitterSettings: {
       findUnique: async () => null,
     },
-  };
+  } as unknown as Parameters<typeof prepareSymbolicShipmentFiscal>[0];
 }
 
 describe("prepareSymbolicShipmentFiscal — CFOP", () => {

@@ -2,7 +2,13 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { FiscalStatus, NFeTipo } from "../../../../generated/prisma/client.js";
 import { enrichScenarioStepsWithEvents } from "./timeline-chain-enrichment.js";
-import type { TimelineNfeStepDto } from "./timeline-step.dto.js";
+import type { TimelineChainStepDto, TimelineNfeStepDto } from "./timeline-step.dto.js";
+
+function stepLabel(s: TimelineChainStepDto): string {
+  if (s.kind === "nfe") return `nfe:${s.numero}`;
+  if (s.kind === "event") return `evt:${s.eventTipo}:${s.numero}`;
+  return `cte:${s.numero}`;
+}
 
 function nfeStep(
   overrides: Partial<TimelineNfeStepDto> & Pick<TimelineNfeStepDto, "tipo" | "chave" | "numero" | "serie">,
@@ -40,7 +46,7 @@ describe("enrichScenarioStepsWithEvents", () => {
     );
 
     assert.deepEqual(
-      steps.map((s) => (s.kind === "nfe" ? `nfe:${s.numero}` : `evt:${s.eventTipo}:${s.numero}`)),
+      steps.map(stepLabel),
       ["nfe:8", "nfe:9", "evt:INUT:11", "nfe:14"],
     );
   });
@@ -151,7 +157,7 @@ describe("enrichScenarioStepsWithEvents", () => {
     );
 
     assert.deepEqual(
-      steps.map((s) => (s.kind === "nfe" ? `nfe:${s.numero}` : `evt:${s.eventTipo}:${s.numero}`)),
+      steps.map(stepLabel),
       ["nfe:160", "evt:INUT:161", "nfe:163", "nfe:164"],
     );
   });

@@ -38,7 +38,7 @@ const nfeVenda = {
   destCep: "22041080",
   tipo: "VENDA",
   fiscalPayload: null,
-} as Parameters<typeof montarDadosCteFromNfe>[2];
+} as unknown as Parameters<typeof montarDadosCteFromNfe>[2];
 
 const prismaStub = {
   product: {

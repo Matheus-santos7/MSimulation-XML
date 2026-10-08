@@ -407,9 +407,9 @@ describe("tax-engine", () => {
     assert.equal(item.icms.vFCP, 0);
     assert.equal(item.difal?.pFCPUFDest, 2);
     assert.equal(item.difal?.vFCPUFDest, 20);
-    const nota = calcularNotaFiscal([item]);
-    assert.equal(nota.totais.vFCP, 0);
-    assert.equal(nota.totais.vFCPUFDest, 20);
+    const totais = calcularTotais([item]);
+    assert.equal(totais.vFCP, 0);
+    assert.equal(totais.vFCPUFDest, 20);
   });
 
   it("PIS/COFINS — FCP DIFAL DEDUCT (EC 87: sem vFCP próprio)", () => {

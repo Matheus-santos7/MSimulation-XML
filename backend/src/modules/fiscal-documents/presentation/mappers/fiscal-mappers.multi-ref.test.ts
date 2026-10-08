@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { FiscalStatus, NFeTipo } from "../../../../generated/prisma/client.js";
 import { mapNfe } from "./fiscal-mappers.js";
 
 const baseRow = {
@@ -29,11 +30,11 @@ const baseRow = {
   valor: 100,
   valorIcms: 0,
   aliqIcms: 0,
-  status: "AUTORIZADA",
+  status: FiscalStatus.AUTORIZADA,
   emitidaEm: new Date("2026-07-24T12:00:00-03:00"),
   pedidoMl: "PACK",
   quantidade: 2,
-  tipo: "RETORNO_SIMBOLICO",
+  tipo: NFeTipo.RETORNO_SIMBOLICO,
   saldoDisponivel: null as number | null,
   fiscalPayload: {},
   statusValidacao: "PENDING" as const,

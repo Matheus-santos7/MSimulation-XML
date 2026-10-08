@@ -57,7 +57,7 @@ function prismaStub(units: typeof cdSp[], links: { unidadeId: string; padrao: bo
     nFe: {
       findUnique: async () => null,
     },
-  } as Parameters<typeof resolveCteEmitente>[0];
+  } as unknown as Parameters<typeof resolveCteEmitente>[0];
 }
 
 describe("resolveCteEmitente", () => {

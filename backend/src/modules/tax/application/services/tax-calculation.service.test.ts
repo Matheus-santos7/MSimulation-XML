@@ -432,7 +432,7 @@ describe("buildFiscalItem — composição base PIS/COFINS por canal (fiscal-set
           pisCofins: {
             ...DEFAULT_FISCAL_EMITTER_SETTINGS.taxes.composicaoBaseCalculo.pisCofins,
             icms: {
-              ...DEFAULT_FISCAL_EMITTER_SETTINGS.taxes.composicaoBaseCalculo.pisCofins.icms,
+              ...DEFAULT_FISCAL_EMITTER_SETTINGS.taxes.composicaoBaseCalculo.pisCofins.icms!,
               remessa: "NAO_SUBTRAIR" as const,
             },
           },

@@ -1,4 +1,8 @@
-# Stack de produção (servidor Linux): postgres + backend + frontend + caddy (TLS).
+# Stack de produção (servidor Linux): backend + frontend + caddy (TLS).
+#
+# Banco de dados: backend conecta direto no Postgres gerenciado (Neon) via
+# DATABASE_URL em backend/.env — mesma base usada pelo Render. Não há um
+# serviço de Postgres neste compose.
 #
 # As imagens de backend/frontend são publicadas no ghcr.io pelo workflow
 # .github/workflows/docker-publish.yml (push em main ou manual) — este compose
@@ -7,7 +11,6 @@
 # Uso:
 #   cp .env.prod.example .env.prod
 #   # editar backend/.env e frontend/.env.local com os segredos de produção
-#   # DATABASE_URL em backend/.env deve apontar para o host "postgres" (ver .env.prod.example)
 #   docker login ghcr.io -u <usuario-github>   # uma vez (ver docs/deploy-docker-aws.md)
 #   docker compose --env-file .env.prod -f docker-compose.prod.yml pull
 #   docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
@@ -17,29 +20,6 @@
 # O Caddy obtém e renova os certificados Let's Encrypt automaticamente (HTTP-01 na porta 80).
 
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: msimulation-xml-db
-    restart: unless-stopped
-    expose:
-      - "5432"
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-msimulation}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-msimulation}
-      POSTGRES_DB: ${POSTGRES_DB:-msimulation_xml}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB",
-        ]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-
   backend:
     image: ghcr.io/matheus-santos7/msimulation-xml-backend:${IMAGE_TAG:-latest}
     pull_policy: always
@@ -54,9 +34,6 @@ services:
     # O tráfego público chega pelo Caddy (API_DOMAIN), via rede interna do compose.
     ports:
       - "127.0.0.1:${BACKEND_PORT:-3001}:3001"
-    depends_on:
-      postgres:
-        condition: service_healthy
 
   frontend:
     image: ghcr.io/matheus-santos7/msimulation-xml-frontend:${IMAGE_TAG:-latest}
@@ -96,8 +73,6 @@ services:
       - frontend
 
 volumes:
-  postgres_data:
-    name: msimulation-xml-postgres-data
   caddy_data:
     name: msimulation-xml-caddy-data
   caddy_config:

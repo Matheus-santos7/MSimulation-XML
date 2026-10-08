@@ -1,8 +1,9 @@
 # Deploy via Docker em servidor Linux (AWS) — backend + frontend + TLS
 
-Stack: `postgres` + `backend` (porta 3001) + `frontend` (porta 3000) + `caddy`
+Stack: `backend` (porta 3001) + `frontend` (porta 3000) + `caddy`
 (TLS automático via Let's Encrypt, portas 80/443). Arquivos: `docker-compose.prod.yml`,
-`infra/caddy/Caddyfile`.
+`infra/caddy/Caddyfile`. O banco de dados é o Postgres gerenciado (Neon) já usado
+pelo Render — não há container de banco neste compose.
 
 As imagens de `backend`/`frontend` **não são buildadas no servidor**: o workflow
 `.github/workflows/docker-publish.yml` builda `Dockerfile` e `Dockerfile.frontend`
@@ -33,7 +34,7 @@ Libere entrada TCP para:
 - `443` (HTTPS — tráfego real)
 - `22` (SSH, administração)
 
-Não é necessário abrir 3000/3001/5432 publicamente — essas portas ficam em loopback.
+Não é necessário abrir 3000/3001 publicamente — essas portas ficam em loopback.
 
 ## 3. Autenticar o servidor no ghcr.io (uma vez)
 
@@ -62,15 +63,15 @@ cp frontend/.env.example frontend/.env.local
 Edite `.env.prod`:
 
 - `API_DOMAIN` / `APP_DOMAIN`: os subdomínios criados no passo 1.
-- `ACME_EMAIL`: e-mail para o Let's Encrypt.
-- `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB`: credenciais do Postgres do container.
+- `ACME_EMAIL`: **e-mail real que você controla** — o Caddy registra conta ACME
+  (Let's Encrypt) com ele; deixar o placeholder não impede o funcionamento, mas
+  você perde avisos de expiração.
 - `IMAGE_TAG`: deixe `latest` (padrão) para sempre pegar a última imagem publicada.
 
 Edite `backend/.env` (produção):
 
-- `DATABASE_URL`: use o host `postgres` (nome do serviço no compose), ex.:
-  `postgresql://msimulation:msimulation@postgres:5432/msimulation_xml?schema=public`
-  (usuário/senha/db iguais aos definidos em `.env.prod`).
+- `DATABASE_URL`: aponte para o mesmo Postgres gerenciado (Neon) usado pelo
+  Render — não altere o host para `postgres`, esse serviço não existe neste compose.
 - `CORS_ORIGINS=https://app.seudominio.com`
 - `APP_PUBLIC_URL=https://app.seudominio.com`
 - `JWT_SECRET`, `PASSWORD_PEPPER`, `TOTP_ENCRYPTION_KEY`: gere com `openssl rand -base64 32`.
@@ -85,6 +86,50 @@ Edite `frontend/.env.local` (produção):
   servidor.
 - Não é necessário setar `API_URL` aqui — o compose já injeta
   `API_URL=http://backend:3001` (chamada servidor-a-servidor, sem passar pela internet).
+
+## ⚠️ Banco compartilhado com o Render
+
+Este backend aponta pro **mesmo Postgres gerenciado (Neon)** que o Render já usa.
+Se o Render continuar rodando ao mesmo tempo que esta stack Docker, os dois
+processos vão rodar `prisma migrate deploy` contra a mesma base — normalmente
+inofensivo (idempotente), mas evite fazer deploy dos dois lados simultaneamente
+em janelas de migration nova. Se a intenção é o Docker **substituir** o Render,
+desative o auto-deploy do Render depois que a stack Docker estiver validada.
+
+## Resolvendo uma migration travada (erro P3009)
+
+Se o backend ficar em loop de restart com `Error: P3009` nos logs, uma migration
+anterior falhou no banco e o Prisma se recusa a continuar até isso ser resolvido
+manualmente — ele **nunca** reaplica ou ignora sozinho.
+
+1. Abra o console do Neon (ou `psql` na `DATABASE_URL`) e rode a query de
+   diagnóstico — **somente leitura**, não altera nada:
+
+   ```sql
+   SELECT tenant_id, serie, numero, count(*)
+   FROM nfes
+   GROUP BY tenant_id, serie, numero
+   HAVING count(*) > 1;
+   ```
+
+2. **Se não retornar nenhuma linha** (sem duplicidade real): a migration falhou
+   sem aplicar nada (é um `ALTER TABLE ADD CONSTRAINT` atômico — ou aplica tudo,
+   ou nada). É seguro marcar como revertida e deixar o próximo restart do
+   container reaplicar:
+
+   ```bash
+   docker compose --env-file .env.prod -f docker-compose.prod.yml exec backend \
+     pnpm exec prisma migrate resolve --rolled-back 20261007120000_nfe_tenant_serie_numero_unique
+   ```
+
+   (se o container estiver em loop de restart, use `docker run` com a mesma
+   imagem e `DATABASE_URL`, ou pare o restart com `docker compose stop backend`
+   antes de rodar o `exec`.)
+
+3. **Se retornar linhas** (há NF-e com mesmo tenant+série+número): isso é um
+   problema de dados fiscais real, não só técnico — decida com quem acompanha
+   o fiscal como renumerar/inutilizar as duplicatas antes de resolver a
+   migration. Não rode o passo 2 até isso estar decidido.
 
 ## 5. Subir a stack
 
@@ -131,7 +176,7 @@ pnpm docker:prod:up
 
 ## Notas
 
-- `postgres`, `backend`, `frontend` não têm portas públicas; só o `caddy` publica
+- `backend` e `frontend` não têm portas públicas; só o `caddy` publica
   80/443. Para depurar um serviço direto, use um túnel SSH para a porta em
   `127.0.0.1` (`BACKEND_PORT`/`FRONTEND_PORT` em `.env.prod`).
 - Para adicionar mais variáveis de ambiente de app (Brevo, Turnstile, etc.), edite

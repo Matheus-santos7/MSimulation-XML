@@ -63,6 +63,9 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname, ".."),
+  // Standalone output: runtime mínimo (server.js + node_modules podados) para a imagem Docker.
+  // Source: https://nextjs.org/docs/app/api-reference/config/next-config-js/output
+  output: "standalone",
   // React Compiler (stable in Next.js 16) — auto-memoization; expect slower compiles.
   // Source: https://nextjs.org/docs/app/api-reference/config/next-config-js/reactCompiler
   reactCompiler: true,

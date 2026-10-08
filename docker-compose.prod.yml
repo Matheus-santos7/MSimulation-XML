@@ -1,0 +1,102 @@
+# Stack de produção (servidor Linux): postgres + backend + frontend + caddy (TLS).
+#
+# Uso:
+#   cp .env.prod.example .env.prod
+#   # editar backend/.env e frontend/.env.local com os segredos de produção
+#   # DATABASE_URL em backend/.env deve apontar para o host "postgres" (ver .env.prod.example)
+#   docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
+#
+# DNS (Route53): registros A de API_DOMAIN e APP_DOMAIN apontando para o IP do servidor.
+# Security group: liberar as portas 80 e 443 (TCP) de entrada.
+# O Caddy obtém e renova os certificados Let's Encrypt automaticamente (HTTP-01 na porta 80).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: msimulation-xml-db
+    restart: unless-stopped
+    expose:
+      - "5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-msimulation}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-msimulation}
+      POSTGRES_DB: ${POSTGRES_DB:-msimulation_xml}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: msimulation-xml-backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      PORT: 3001
+      HOST: 0.0.0.0
+    # Porta do backend, separada da do frontend — acesso direto só via loopback (debug/SSH tunnel).
+    # O tráfego público chega pelo Caddy (API_DOMAIN), via rede interna do compose.
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-3001}:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-}
+    container_name: msimulation-xml-frontend
+    restart: unless-stopped
+    env_file:
+      - ./frontend/.env.local
+    environment:
+      PORT: 3000
+      HOST: 0.0.0.0
+      # BFF server-side: fala com o backend pela rede interna do compose, não pelo domínio público.
+      API_URL: http://backend:3001
+    # Porta do frontend, separada da do backend — acesso direto só via loopback (debug/SSH tunnel).
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      - backend
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: msimulation-xml-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      API_DOMAIN: ${API_DOMAIN}
+      APP_DOMAIN: ${APP_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+      - frontend
+
+volumes:
+  postgres_data:
+    name: msimulation-xml-postgres-data
+  caddy_data:
+    name: msimulation-xml-caddy-data
+  caddy_config:
+    name: msimulation-xml-caddy-config

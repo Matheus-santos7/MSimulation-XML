@@ -1,10 +1,16 @@
 # Stack de produção (servidor Linux): postgres + backend + frontend + caddy (TLS).
 #
+# As imagens de backend/frontend são publicadas no ghcr.io pelo workflow
+# .github/workflows/docker-publish.yml (push em main ou manual) — este compose
+# só baixa (`pull_policy: always`), nunca builda localmente.
+#
 # Uso:
 #   cp .env.prod.example .env.prod
 #   # editar backend/.env e frontend/.env.local com os segredos de produção
 #   # DATABASE_URL em backend/.env deve apontar para o host "postgres" (ver .env.prod.example)
-#   docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
+#   docker login ghcr.io -u <usuario-github>   # uma vez (ver docs/deploy-docker-aws.md)
+#   docker compose --env-file .env.prod -f docker-compose.prod.yml pull
+#   docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
 #
 # DNS (Route53): registros A de API_DOMAIN e APP_DOMAIN apontando para o IP do servidor.
 # Security group: liberar as portas 80 e 443 (TCP) de entrada.
@@ -35,9 +41,8 @@ services:
       start_period: 10s
 
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/matheus-santos7/msimulation-xml-backend:${IMAGE_TAG:-latest}
+    pull_policy: always
     container_name: msimulation-xml-backend
     restart: unless-stopped
     env_file:
@@ -54,11 +59,8 @@ services:
         condition: service_healthy
 
   frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
-      args:
-        NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-}
+    image: ghcr.io/matheus-santos7/msimulation-xml-frontend:${IMAGE_TAG:-latest}
+    pull_policy: always
     container_name: msimulation-xml-frontend
     restart: unless-stopped
     env_file:

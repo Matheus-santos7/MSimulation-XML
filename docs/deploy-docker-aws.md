@@ -2,7 +2,13 @@
 
 Stack: `postgres` + `backend` (porta 3001) + `frontend` (porta 3000) + `caddy`
 (TLS automático via Let's Encrypt, portas 80/443). Arquivos: `docker-compose.prod.yml`,
-`Dockerfile` (backend), `Dockerfile.frontend`, `infra/caddy/Caddyfile`.
+`infra/caddy/Caddyfile`.
+
+As imagens de `backend`/`frontend` **não são buildadas no servidor**: o workflow
+`.github/workflows/docker-publish.yml` builda `Dockerfile` e `Dockerfile.frontend`
+e publica no GitHub Container Registry (ghcr.io) a cada push em `main` (ou
+manualmente via Actions → "Docker publish" → Run workflow). O servidor só faz
+`docker compose pull` + `up -d`.
 
 Backend e frontend ficam em subdomínios separados (`api.seudominio.com` /
 `app.seudominio.com`), cada um com sua porta interna própria (3001 / 3000). O
@@ -29,11 +35,24 @@ Libere entrada TCP para:
 
 Não é necessário abrir 3000/3001/5432 publicamente — essas portas ficam em loopback.
 
-## 3. No servidor
+## 3. Autenticar o servidor no ghcr.io (uma vez)
+
+As imagens ficam privadas por padrão no ghcr.io, mesmo sendo o repositório
+público. Gere um Personal Access Token (classic) em
+<https://github.com/settings/tokens> com o escopo `read:packages`, depois no
+servidor:
+
+```bash
+echo "<SEU_TOKEN>" | docker login ghcr.io -u <seu-usuario-github> --password-stdin
+```
+
+Isso fica salvo em `~/.docker/config.json` — não precisa repetir a cada deploy.
+
+## 4. No servidor
 
 ```bash
 git clone <repo> && cd MSimulation-XML
-git checkout feat/docker-deploy-aws   # ou a branch de deploy escolhida
+git checkout main   # ou a branch de deploy escolhida
 
 cp .env.prod.example .env.prod
 cp backend/.env.example backend/.env
@@ -45,6 +64,7 @@ Edite `.env.prod`:
 - `API_DOMAIN` / `APP_DOMAIN`: os subdomínios criados no passo 1.
 - `ACME_EMAIL`: e-mail para o Let's Encrypt.
 - `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB`: credenciais do Postgres do container.
+- `IMAGE_TAG`: deixe `latest` (padrão) para sempre pegar a última imagem publicada.
 
 Edite `backend/.env` (produção):
 
@@ -58,18 +78,19 @@ Edite `backend/.env` (produção):
 
 Edite `frontend/.env.local` (produção):
 
-- `NEXT_PUBLIC_TURNSTILE_SITE_KEY`: mesma chave pública do Turnstile.
-  (Também precisa estar em `.env.prod` — é embutida no build do frontend, veja abaixo.)
+- Não precisa de `NEXT_PUBLIC_TURNSTILE_SITE_KEY` aqui — essa chave já foi
+  embutida na imagem pelo workflow (via a variável de repositório
+  `NEXT_PUBLIC_TURNSTILE_SITE_KEY` no GitHub Actions). Trocar a chave exige
+  reeditar essa variável no GitHub e rodar o workflow de novo, não editar o
+  servidor.
 - Não é necessário setar `API_URL` aqui — o compose já injeta
   `API_URL=http://backend:3001` (chamada servidor-a-servidor, sem passar pela internet).
 
-## 4. Subir a stack
+## 5. Subir a stack
 
 ```bash
+pnpm docker:prod:pull
 pnpm docker:prod:up
-# equivalente a:
-# docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
-
 pnpm docker:prod:logs
 ```
 
@@ -77,7 +98,7 @@ Na primeira subida, o Caddy emite os certificados automaticamente (requer DNS j�
 propagado e porta 80 acessível). O backend roda `prisma migrate deploy` no boot
 (`CMD` do `Dockerfile`).
 
-## 5. Verificação
+## 6. Verificação
 
 ```bash
 curl -I https://api.seudominio.com/api/health
@@ -86,26 +107,36 @@ curl -I https://app.seudominio.com
 
 ## Atualizando uma versão nova
 
+Cada push em `main` já publica uma imagem `:latest` nova no ghcr.io. No servidor:
+
 ```bash
-git pull
-pnpm docker:prod:up   # --build reconstrói as imagens alteradas
+pnpm docker:prod:pull   # baixa a latest mais recente
+pnpm docker:prod:up     # recria os containers que mudaram (pull_policy: always)
 ```
+
+Não precisa de `git pull` no servidor, a menos que `docker-compose.prod.yml`,
+o `Caddyfile` ou os `.env.*` tenham mudado.
 
 ## Rollback
 
+Toda imagem publicada também fica marcada com o SHA do commit
+(`ghcr.io/.../msimulation-xml-backend:<sha>`). Para voltar uma versão, edite
+`IMAGE_TAG` em `.env.prod` com o SHA desejado e suba de novo:
+
 ```bash
-git checkout <tag-ou-commit-anterior>
+# .env.prod: IMAGE_TAG=<sha-anterior>
+pnpm docker:prod:pull
 pnpm docker:prod:up
 ```
 
 ## Notas
 
-- `NEXT_PUBLIC_*` é embutido no bundle JS no **build**, não dá para trocar só com
-  `docker compose restart` — qualquer mudança nessas variáveis exige
-  `pnpm docker:prod:up` (rebuild).
 - `postgres`, `backend`, `frontend` não têm portas públicas; só o `caddy` publica
   80/443. Para depurar um serviço direto, use um túnel SSH para a porta em
   `127.0.0.1` (`BACKEND_PORT`/`FRONTEND_PORT` em `.env.prod`).
 - Para adicionar mais variáveis de ambiente de app (Brevo, Turnstile, etc.), edite
   `backend/.env` / `frontend/.env.local` no servidor — eles já são lidos via
   `env_file` no `docker-compose.prod.yml`, sem precisar tocar no compose.
+- `NEXT_PUBLIC_*` continua sendo embutido no bundle JS no **build**, só que agora
+  esse build é o do GitHub Actions — mudar essas variáveis exige atualizar a
+  variável de repositório e rodar o workflow `docker-publish.yml` de novo.

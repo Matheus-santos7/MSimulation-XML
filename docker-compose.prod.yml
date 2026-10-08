@@ -1,4 +1,13 @@
-# Stack de produção (servidor Linux): backend + frontend + caddy (TLS).
+# Stack de produção (servidor Linux): backend + frontend.
+#
+# TLS/domínio: NÃO é feito por este compose. O servidor (implantacao.nerus1)
+# tem um proxy/load balancer compartilhado, gerenciado pela infra, que já
+# possui as portas 80/443 e decide o roteamento por domínio → porta fixa:
+#   app.msimulation-xml.nerus.com.br → porta 5000 (frontend)
+#   api.msimulation-xml.nerus.com.br → porta 5001 (backend)
+# Esse mapeamento de domínio/porta é configurado no proxy da infra, fora
+# deste repositório — aqui só garantimos que os containers escutam nessas
+# portas fixas.
 #
 # Banco de dados: backend conecta direto no Postgres gerenciado (Neon) via
 # DATABASE_URL em backend/.env — mesma base usada pelo Render. Não há um
@@ -13,11 +22,7 @@
 #   # editar backend/.env e frontend/.env.local com os segredos de produção
 #   docker login ghcr.io -u <usuario-github>   # uma vez (ver docs/deploy-docker-aws.md)
 #   docker compose --env-file .env.prod -f docker-compose.prod.yml pull
-#   docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
-#
-# DNS (Route53): registros A de API_DOMAIN e APP_DOMAIN apontando para o IP do servidor.
-# Security group: liberar as portas 80 e 443 (TCP) de entrada.
-# O Caddy obtém e renova os certificados Let's Encrypt automaticamente (HTTP-01 na porta 80).
+#   docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --remove-orphans
 
 services:
   backend:
@@ -30,10 +35,9 @@ services:
     environment:
       PORT: 3001
       HOST: 0.0.0.0
-    # Porta do backend, separada da do frontend — acesso direto só via loopback (debug/SSH tunnel).
-    # O tráfego público chega pelo Caddy (API_DOMAIN), via rede interna do compose.
+    # Porta fixa esperada pelo proxy compartilhado da infra (api. → 5001).
     ports:
-      - "127.0.0.1:${BACKEND_PORT:-3001}:3001"
+      - "${BACKEND_PORT:-5001}:3001"
 
   frontend:
     image: ghcr.io/matheus-santos7/msimulation-xml-frontend:${IMAGE_TAG:-latest}
@@ -47,33 +51,8 @@ services:
       HOST: 0.0.0.0
       # BFF server-side: fala com o backend pela rede interna do compose, não pelo domínio público.
       API_URL: http://backend:3001
-    # Porta do frontend, separada da do backend — acesso direto só via loopback (debug/SSH tunnel).
+    # Porta fixa esperada pelo proxy compartilhado da infra (app. → 5000).
     ports:
-      - "127.0.0.1:${FRONTEND_PORT:-3000}:3000"
+      - "${FRONTEND_PORT:-5000}:3000"
     depends_on:
       - backend
-
-  caddy:
-    image: caddy:2-alpine
-    container_name: msimulation-xml-caddy
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    environment:
-      API_DOMAIN: ${API_DOMAIN}
-      APP_DOMAIN: ${APP_DOMAIN}
-      ACME_EMAIL: ${ACME_EMAIL}
-    volumes:
-      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - backend
-      - frontend
-
-volumes:
-  caddy_data:
-    name: msimulation-xml-caddy-data
-  caddy_config:
-    name: msimulation-xml-caddy-config

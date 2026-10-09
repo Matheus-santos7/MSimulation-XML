@@ -10,6 +10,8 @@ const ENV_KEYS = [
   "TURNSTILE_SECRET_KEY",
   "REQUIRE_EMAIL_VERIFICATION",
   "APP_PUBLIC_URL",
+  "BREVO_API_KEY",
+  "BREVO_SENDER_EMAIL",
 ] as const;
 
 function snapshotEnv(): Record<string, string | undefined> {
@@ -52,7 +54,7 @@ describe("assertProductionSecurityConfig", () => {
     );
   });
 
-  it("falha em produção com REQUIRE_EMAIL_VERIFICATION=false", () => {
+  it("permite REQUIRE_EMAIL_VERIFICATION=false em produção (exceção temporária de pré-lançamento)", () => {
     process.env.NODE_ENV = "production";
     process.env.JWT_SECRET = "a".repeat(32);
     process.env.PASSWORD_PEPPER = "b".repeat(16);
@@ -60,10 +62,9 @@ describe("assertProductionSecurityConfig", () => {
     process.env.TURNSTILE_SECRET_KEY = "turnstile-secret-key";
     process.env.REQUIRE_EMAIL_VERIFICATION = "false";
     process.env.APP_PUBLIC_URL = "https://app.example.com";
+    process.env.BREVO_API_KEY = "brevo-key";
+    process.env.BREVO_SENDER_EMAIL = "contato@example.com";
 
-    assert.throws(
-      () => assertProductionSecurityConfig(),
-      /REQUIRE_EMAIL_VERIFICATION deve ser true em produção/,
-    );
+    assert.doesNotThrow(() => assertProductionSecurityConfig());
   });
 });

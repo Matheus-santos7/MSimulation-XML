@@ -1,7 +1,6 @@
 import { brevoApiKey, brevoSenderEmail } from "../brevo/config.js";
 import {
   appPublicUrl,
-  requireEmailVerification,
   requireJwtSecret,
   requirePasswordPepper,
   requireTotpEncryptionKey,
@@ -47,10 +46,6 @@ export function assertProductionSecurityConfig(): void {
 
   if (!turnstileSecretKey()) {
     throw new Error("TURNSTILE_SECRET_KEY é obrigatório em produção");
-  }
-
-  if (!requireEmailVerification()) {
-    throw new Error("REQUIRE_EMAIL_VERIFICATION deve ser true em produção");
   }
 
   if (!brevoApiKey()) {

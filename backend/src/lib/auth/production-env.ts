@@ -1,4 +1,3 @@
-import { brevoApiKey, brevoSenderEmail } from "../brevo/config.js";
 import {
   appPublicUrl,
   requireJwtSecret,
@@ -46,14 +45,5 @@ export function assertProductionSecurityConfig(): void {
 
   if (!turnstileSecretKey()) {
     throw new Error("TURNSTILE_SECRET_KEY é obrigatório em produção");
-  }
-
-  if (!brevoApiKey()) {
-    throw new Error("BREVO_API_KEY é obrigatório em produção");
-  }
-
-  const senderEmail = brevoSenderEmail();
-  if (!senderEmail || senderEmail === "noreply@example.com") {
-    throw new Error("BREVO_SENDER_EMAIL deve ser um remetente verificado em produção");
   }
 }

@@ -54,7 +54,7 @@ describe("assertProductionSecurityConfig", () => {
     );
   });
 
-  it("permite REQUIRE_EMAIL_VERIFICATION=false em produção (exceção temporária de pré-lançamento)", () => {
+  it("permite REQUIRE_EMAIL_VERIFICATION e Brevo não configurados em produção (exceções temporárias de pré-lançamento)", () => {
     process.env.NODE_ENV = "production";
     process.env.JWT_SECRET = "a".repeat(32);
     process.env.PASSWORD_PEPPER = "b".repeat(16);
@@ -62,8 +62,8 @@ describe("assertProductionSecurityConfig", () => {
     process.env.TURNSTILE_SECRET_KEY = "turnstile-secret-key";
     process.env.REQUIRE_EMAIL_VERIFICATION = "false";
     process.env.APP_PUBLIC_URL = "https://app.example.com";
-    process.env.BREVO_API_KEY = "brevo-key";
-    process.env.BREVO_SENDER_EMAIL = "contato@example.com";
+    delete process.env.BREVO_API_KEY;
+    delete process.env.BREVO_SENDER_EMAIL;
 
     assert.doesNotThrow(() => assertProductionSecurityConfig());
   });

@@ -82,7 +82,11 @@ export async function proxy(request: NextRequest) {
   if (!access && refresh) {
     const renewed = await refreshTokensViaApi(refresh);
     if (renewed) {
-      const response = NextResponse.next();
+      // O refresh antigo foi revogado (rotação): os Server Components desta requisição
+      // precisam ler os tokens novos, não só o navegador.
+      request.cookies.set(ACCESS_TOKEN_COOKIE, renewed.accessToken);
+      request.cookies.set(REFRESH_TOKEN_COOKIE, renewed.refreshToken);
+      const response = NextResponse.next({ request: { headers: request.headers } });
       setSessionCookiesOn(response, renewed.accessToken, renewed.refreshToken);
       return response;
     }

@@ -1,3 +1,4 @@
+import pg from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../../generated/prisma/client.js";
 
@@ -10,7 +11,14 @@ function createPrismaClient(): PrismaClient {
   if (!url) {
     throw new Error("DATABASE_URL não definida (backend/.env)");
   }
-  const adapter = new PrismaPg({ connectionString: url });
+  // connectionTimeoutMillis dá tempo ao Neon serverless de acordar do sleep (pode levar ~5 s).
+  const pool = new pg.Pool({
+    connectionString: url,
+    connectionTimeoutMillis: 30_000,
+    idleTimeoutMillis: 30_000,
+    max: 5,
+  });
+  const adapter = new PrismaPg(pool);
   return new PrismaClient({ adapter, log: ["error", "warn"] });
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 type Props = {
   error: Error & { digest?: string };
@@ -8,13 +9,24 @@ type Props = {
 };
 
 export default function AppError({ error, reset }: Props) {
+  const router = useRouter();
+
   useEffect(() => {
     console.error(error);
   }, [error]);
 
+  const isAuth = /não autorizado|unauthorized|token/i.test(error.message);
   const isUnavailable =
     /indispon|unavailable|timeout|ETIMEDOUT/i.test(error.message) ||
     error.message === "Banco de dados indisponível";
+
+  useEffect(() => {
+    if (isAuth) {
+      router.replace("/login?session=expired");
+    }
+  }, [isAuth, router]);
+
+  if (isAuth) return null;
 
   return (
     <div className="flex flex-1 items-center justify-center p-8">

@@ -56,8 +56,10 @@ export function handleAuthError(error: unknown, reply: FastifyReply) {
     return reply.status(400).send({ error: error.message });
   }
   if (isDatabaseUnavailableError(error)) {
+    reply.log.error({ err: error }, "Banco de dados indisponível (auth)");
     return reply.status(503).send({ error: DATABASE_UNAVAILABLE_MESSAGE });
   }
+  reply.log.error({ err: error }, "Erro não tratado (auth)");
   return reply.status(500).send({
     error: "Não foi possível completar a operação. Tente novamente em instantes.",
   });

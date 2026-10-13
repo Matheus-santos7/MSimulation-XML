@@ -13,7 +13,8 @@ export const healthController: FastifyPluginAsync = async (app) => {
     let database: "ok" | "unavailable" = "ok";
     try {
       await app.prisma.$queryRaw`SELECT 1`;
-    } catch {
+    } catch (err) {
+      reply.log.error({ err }, "Health check: falha ao consultar o banco");
       database = "unavailable";
     }
 

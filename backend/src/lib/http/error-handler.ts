@@ -34,6 +34,7 @@ export function registerGlobalErrorHandler(app: FastifyInstance): void {
     }
 
     if (isDatabaseUnavailableError(error)) {
+      app.log.error({ err: error }, "Banco de dados indisponível");
       return reply.status(503).send({ error: DATABASE_UNAVAILABLE_MESSAGE });
     }
 

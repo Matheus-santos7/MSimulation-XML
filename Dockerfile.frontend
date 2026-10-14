@@ -21,6 +21,9 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0
+# server.js standalone escuta em $HOSTNAME; o Docker o define como o id do container,
+# o que deixa 127.0.0.1 de fora e derruba o HEALTHCHECK.
+ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 
 # Next.js "standalone" output: server.js + node_modules já podados pelo tracing.

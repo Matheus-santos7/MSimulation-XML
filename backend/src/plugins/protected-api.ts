@@ -1,7 +1,6 @@
 import type { FastifyPluginAsync, RouteOptions } from "fastify";
 import { wrapProtectedRouteWithDbContext } from "../lib/db/wrap-protected-route.js";
 import type { RateLimitHandler } from "../lib/http/rate-limit.js";
-import { catalogContextPlugin } from "./contexts/catalog.plugin.js";
 import { fiscalContextPlugin } from "./contexts/fiscal.plugin.js";
 import { requireEmailVerifiedHook, requireTenantHook } from "./contexts/guards.js";
 import { logisticsContextPlugin } from "./contexts/logistics.plugin.js";
@@ -40,7 +39,6 @@ export const protectedApiPlugin: FastifyPluginAsync<ProtectedApiPluginOptions> =
   app.addHook("onRequest", requireEmailVerifiedHook);
 
   await app.register(orgContextPlugin);
-  await app.register(catalogContextPlugin);
   await app.register(fiscalContextPlugin);
   await app.register(logisticsContextPlugin);
 };

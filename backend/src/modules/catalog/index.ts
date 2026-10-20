@@ -29,4 +29,5 @@ export {
   mapProduct,
   type ProductDto,
 } from "./presentation/mappers/product.mapper.js";
-export { productController } from "./presentation/controllers/product.controller.js";
+export { ProductController } from "./presentation/controllers/product.controller.js";
+export { CatalogModule } from "./catalog.module.js";

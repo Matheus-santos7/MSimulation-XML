@@ -332,6 +332,16 @@ describe("contrato HTTP — respostas por módulo (banco vazio)", () => {
     });
   }
 
+  it("GET /api/products/spreadsheet/template devolve o XLSX como anexo", async () => {
+    const res = await app.inject({ method: "GET", url: "/api/products/spreadsheet/template", headers: bearer(token) });
+
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.headers["content-type"], "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    assert.equal(res.headers["content-disposition"], 'attachment; filename="produtos-modelo.xlsx"');
+    // XLSX é um ZIP: começa com "PK".
+    assert.equal(res.rawPayload.subarray(0, 2).toString(), "PK");
+  });
+
   it("GET /api/pedidos/:id inexistente devolve 404", async () => {
     const res = await app.inject({ method: "GET", url: `/api/pedidos/${SAMPLE_ID}`, headers: bearer(token) });
 

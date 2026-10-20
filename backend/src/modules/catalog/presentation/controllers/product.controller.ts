@@ -1,22 +1,28 @@
-import type { FastifyPluginAsync } from "fastify";
-import { tenantIdFromRequest } from "../../../../lib/auth/request-context.js";
+import { Body, Controller, Delete, Get, HttpCode, Inject, Param, Patch, Post, Req, Res, UseFilters } from "@nestjs/common";
+import type { FastifyReply, FastifyRequest } from "fastify";
+import type { z } from "zod";
+import { AdminOnly, ProtectedApi } from "../../../../nest/api-access.decorators.js";
+import { TenantId } from "../../../../nest/auth/request-params.js";
+import { RouteErrorFilter } from "../../../../nest/http/api-exception.filter.js";
+import { sendFile, XLSX_CONTENT_TYPE } from "../../../../nest/http/file-download.js";
+import { orNotFound } from "../../../../nest/http/not-found.js";
+import { orUploadError } from "../../../../nest/http/upload-result.js";
+import { ZodValidationPipe } from "../../../../nest/http/zod-validation.pipe.js";
+import { TaxRuleCatalogError } from "../../../tax/index.js";
 import {
   buildProductSpreadsheetTemplateXlsx,
   buildProductSpreadsheetXlsx,
 } from "../../application/services/product-spreadsheet.export.js";
-import { handleRouteError } from "../../../../lib/http/domain-errors.js";
-import { requireAdminHook } from "../../../../plugins/contexts/guards.js";
-import {
-  productBulkUpsertBody,
-  productCreateBody,
-  productIdParam,
-  productUpdateBody,
-} from "../schemas/product.schemas.js";
-import { TaxRuleCatalogError } from "../../../tax/index.js";
+import { CATALOG, type CatalogContext } from "../../catalog.tokens.js";
 import { ProductConflictError } from "../../domain/errors/product-conflict.error.js";
 import { ProductValidationError } from "../../domain/errors/product-validation.error.js";
-import { createCatalogModule } from "../../infrastructure/factory/catalog-module.factory.js";
 import { resolveProductSpreadsheetUpload } from "../helpers/product-import.helper.js";
+import { productBulkUpsertBody, productCreateBody, productIdParam, productUpdateBody } from "../schemas/product.schemas.js";
+
+const HTTP_OK = 200;
+const HTTP_CREATED = 201;
+const HTTP_NO_CONTENT = 204;
+const PRODUCT_NOT_FOUND = "Produto não encontrado";
 
 const PRODUCT_ERROR_MAPPINGS = [
   { type: ProductConflictError, status: 409 },
@@ -24,123 +30,102 @@ const PRODUCT_ERROR_MAPPINGS = [
   { type: TaxRuleCatalogError, status: 400 },
 ] as const;
 
-export const productController: FastifyPluginAsync = async (app) => {
-  const catalog = createCatalogModule();
+type ProductIdParam = z.infer<typeof productIdParam>;
 
-  app.get("/products", async (request) => {
-    const tenantId = tenantIdFromRequest(request);
-    return catalog.listProducts.execute(tenantId);
-  });
+/**
+ * Controller HTTP de produtos (Catalog).
+ *
+ * | Método | Rota | Use case |
+ * |--------|------|----------|
+ * | GET | `/products` | ListProductsUseCase |
+ * | GET | `/products/:id` | GetProductByIdUseCase |
+ * | POST | `/products` | CreateProductUseCase (ADMIN) |
+ * | GET | `/products/spreadsheet/template` | planilha modelo |
+ * | GET | `/products/spreadsheet/export` | ListProductsUseCase → XLSX |
+ * | POST | `/products/import-spreadsheet` | ImportProductsSpreadsheetUseCase (ADMIN) |
+ * | POST | `/products/bulk-upsert` | BulkUpsertProductsUseCase (ADMIN) |
+ * | PATCH | `/products/:id` | UpdateProductUseCase (ADMIN) |
+ * | DELETE | `/products/:id` | DeleteProductUseCase (ADMIN) |
+ */
+@Controller("products")
+@ProtectedApi()
+@UseFilters(new RouteErrorFilter({ mappings: PRODUCT_ERROR_MAPPINGS }))
+export class ProductController {
+  constructor(@Inject(CATALOG) private readonly catalog: CatalogContext) {}
 
-  app.get("/products/:id", async (request, reply) => {
-    const { id } = productIdParam.parse(request.params);
-    const tenantId = tenantIdFromRequest(request);
-    const product = await catalog.getProductById.execute(id, tenantId);
-    if (!product) return reply.status(404).send({ error: "Produto não encontrado" });
-    return product;
-  });
+  @Get()
+  list(@TenantId() tenantId: string) {
+    return this.catalog.listProducts.execute(tenantId);
+  }
 
-  app.post("/products", { onRequest: [requireAdminHook] }, async (request, reply) => {
-    try {
-      const tenantId = tenantIdFromRequest(request);
-      const body = productCreateBody.parse(request.body);
-      const product = await catalog.createProduct.execute(tenantId, body);
-      return reply.status(201).send(product);
-    } catch (error) {
-      if (handleRouteError(reply, error, { mappings: [...PRODUCT_ERROR_MAPPINGS] })) return;
-      throw error;
-    }
-  });
+  @Get("spreadsheet/template")
+  template(@Res() reply: FastifyReply) {
+    return sendFile(reply, {
+      content: buildProductSpreadsheetTemplateXlsx(),
+      contentType: XLSX_CONTENT_TYPE,
+      fileName: "produtos-modelo.xlsx",
+    });
+  }
 
-  app.get("/products/spreadsheet/template", async (_request, reply) => {
-    const buffer = buildProductSpreadsheetTemplateXlsx();
-    return reply
-      .header(
-        "Content-Type",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      )
-      .header("Content-Disposition", 'attachment; filename="produtos-modelo.xlsx"')
-      .send(buffer);
-  });
+  @Get("spreadsheet/export")
+  async export(@TenantId() tenantId: string, @Res() reply: FastifyReply) {
+    const products = await this.catalog.listProducts.execute(tenantId);
 
-  app.get("/products/spreadsheet/export", async (request, reply) => {
-    const tenantId = tenantIdFromRequest(request);
-    const products = await catalog.listProducts.execute(tenantId);
-    const buffer = buildProductSpreadsheetXlsx(products);
-    return reply
-      .header(
-        "Content-Type",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      )
-      .header("Content-Disposition", 'attachment; filename="produtos-catalogo.xlsx"')
-      .send(buffer);
-  });
+    return sendFile(reply, {
+      content: buildProductSpreadsheetXlsx(products),
+      contentType: XLSX_CONTENT_TYPE,
+      fileName: "produtos-catalogo.xlsx",
+    });
+  }
 
-  app.post("/products/import-spreadsheet", { onRequest: [requireAdminHook] }, async (request, reply) => {
-    const tenantId = tenantIdFromRequest(request);
-    const payload = await resolveProductSpreadsheetUpload(request);
-    if (!payload.ok) {
-      return reply.status(payload.status).send({
-        error: payload.error,
-        ...(payload.details ? { details: payload.details } : {}),
-      });
-    }
+  @Get(":id")
+  async get(@Param(new ZodValidationPipe(productIdParam)) params: ProductIdParam, @TenantId() tenantId: string) {
+    return orNotFound(await this.catalog.getProductById.execute(params.id, tenantId), PRODUCT_NOT_FOUND);
+  }
 
-    try {
-      const result = await catalog.importProductsSpreadsheet.execute(
-        tenantId,
-        payload.buffer,
-        payload.fileName,
-      );
-      return reply.status(200).send(result);
-    } catch (error) {
-      if (error instanceof ProductValidationError) {
-        return reply.status(400).send({ error: error.message });
-      }
-      if (handleRouteError(reply, error, { mappings: [...PRODUCT_ERROR_MAPPINGS] })) return;
-      throw error;
-    }
-  });
+  @Post()
+  @AdminOnly()
+  @HttpCode(HTTP_CREATED)
+  create(
+    @TenantId() tenantId: string,
+    @Body(new ZodValidationPipe(productCreateBody)) body: z.infer<typeof productCreateBody>,
+  ) {
+    return this.catalog.createProduct.execute(tenantId, body);
+  }
 
-  app.post("/products/bulk-upsert", { onRequest: [requireAdminHook] }, async (request, reply) => {
-    try {
-      const tenantId = tenantIdFromRequest(request);
-      const { rows } = productBulkUpsertBody.parse(request.body);
-      const result = await catalog.bulkUpsertProducts.execute({ tenantId, rows });
-      return reply.status(200).send(result);
-    } catch (error) {
-      if (error instanceof ProductValidationError) {
-        return reply.status(400).send({ error: error.message });
-      }
-      if (handleRouteError(reply, error, { mappings: [...PRODUCT_ERROR_MAPPINGS] })) return;
-      throw error;
-    }
-  });
+  @Post("import-spreadsheet")
+  @AdminOnly()
+  @HttpCode(HTTP_OK)
+  async importSpreadsheet(@TenantId() tenantId: string, @Req() request: FastifyRequest) {
+    const upload = orUploadError(await resolveProductSpreadsheetUpload(request));
 
-  app.patch("/products/:id", { onRequest: [requireAdminHook] }, async (request, reply) => {
-    try {
-      const { id } = productIdParam.parse(request.params);
-      const tenantId = tenantIdFromRequest(request);
-      const body = productUpdateBody.parse(request.body);
-      const product = await catalog.updateProduct.execute(id, tenantId, body);
-      if (!product) return reply.status(404).send({ error: "Produto não encontrado" });
-      return product;
-    } catch (error) {
-      if (handleRouteError(reply, error, { mappings: [...PRODUCT_ERROR_MAPPINGS] })) return;
-      throw error;
-    }
-  });
+    return this.catalog.importProductsSpreadsheet.execute(tenantId, upload.buffer, upload.fileName);
+  }
 
-  app.delete("/products/:id", { onRequest: [requireAdminHook] }, async (request, reply) => {
-    try {
-      const { id } = productIdParam.parse(request.params);
-      const tenantId = tenantIdFromRequest(request);
-      const wasDeleted = await catalog.deleteProduct.execute(id, tenantId);
-      if (!wasDeleted) return reply.status(404).send({ error: "Produto não encontrado" });
-      return reply.status(204).send();
-    } catch (error) {
-      if (handleRouteError(reply, error, { mappings: [...PRODUCT_ERROR_MAPPINGS] })) return;
-      throw error;
-    }
-  });
-};
+  @Post("bulk-upsert")
+  @AdminOnly()
+  @HttpCode(HTTP_OK)
+  bulkUpsert(
+    @TenantId() tenantId: string,
+    @Body(new ZodValidationPipe(productBulkUpsertBody)) body: z.infer<typeof productBulkUpsertBody>,
+  ) {
+    return this.catalog.bulkUpsertProducts.execute({ tenantId, rows: body.rows });
+  }
+
+  @Patch(":id")
+  @AdminOnly()
+  async update(
+    @Param(new ZodValidationPipe(productIdParam)) params: ProductIdParam,
+    @TenantId() tenantId: string,
+    @Body(new ZodValidationPipe(productUpdateBody)) body: z.infer<typeof productUpdateBody>,
+  ) {
+    return orNotFound(await this.catalog.updateProduct.execute(params.id, tenantId, body), PRODUCT_NOT_FOUND);
+  }
+
+  @Delete(":id")
+  @AdminOnly()
+  @HttpCode(HTTP_NO_CONTENT)
+  async remove(@Param(new ZodValidationPipe(productIdParam)) params: ProductIdParam, @TenantId() tenantId: string) {
+    orNotFound(await this.catalog.deleteProduct.execute(params.id, tenantId), PRODUCT_NOT_FOUND);
+  }
+}

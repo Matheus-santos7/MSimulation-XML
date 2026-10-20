@@ -30,7 +30,6 @@ import { authController } from "./modules/auth/presentation/controllers/auth.con
 import { AppModule } from "./nest/app.module.js";
 import { ApiExceptionFilter } from "./nest/http/api-exception.filter.js";
 import { authPlugin } from "./plugins/auth/index.js";
-import { authenticatedLookupPlugin } from "./plugins/authenticated-lookup.js";
 import { prismaPlugin } from "./plugins/prisma.js";
 import { protectedApiPlugin } from "./plugins/protected-api.js";
 
@@ -77,7 +76,6 @@ async function registerLegacyRoutes(app: FastifyInstance, protectedApiRateLimit:
     registerGlobalErrorHandler(legacy);
 
     await legacy.register(authController, { prefix: `/${API_PREFIX}` });
-    await legacy.register(authenticatedLookupPlugin, { prefix: `/${API_PREFIX}` });
     await legacy.register(protectedApiPlugin, { prefix: `/${API_PREFIX}`, rateLimit: protectedApiRateLimit });
   });
 }

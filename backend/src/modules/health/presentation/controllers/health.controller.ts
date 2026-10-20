@@ -1,5 +1,10 @@
-import type { FastifyPluginAsync } from "fastify";
+import { Controller, Get, Inject, Req, Res } from "@nestjs/common";
+import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
+import type { PrismaClient } from "../../../../generated/prisma/client.js";
+import { PRISMA } from "../../../../nest/tokens.js";
+
+const HTTP_SERVICE_UNAVAILABLE = 503;
 
 const healthResponseSchema = z.object({
   status: z.enum(["ok", "degraded"]),
@@ -8,27 +13,37 @@ const healthResponseSchema = z.object({
   timestamp: z.string().datetime(),
 });
 
-export const healthController: FastifyPluginAsync = async (app) => {
-  app.get("/health", async (_req, reply) => {
-    let database: "ok" | "unavailable" = "ok";
+type HealthResponse = z.infer<typeof healthResponseSchema>;
+
+/** Health check público (ALB e healthcheck do container). Sem guard, rate limit ou transação. */
+@Controller("health")
+export class HealthController {
+  constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
+
+  @Get()
+  async check(
+    @Req() request: FastifyRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ): Promise<HealthResponse> {
+    let database: HealthResponse["database"] = "ok";
     try {
-      await app.prisma.$queryRaw`SELECT 1`;
+      await this.prisma.$queryRaw`SELECT 1`;
     } catch (err) {
-      reply.log.error({ err }, "Health check: falha ao consultar o banco");
+      request.log.error({ err }, "Health check: falha ao consultar o banco");
       database = "unavailable";
     }
 
-    const body = {
-      status: database === "ok" ? ("ok" as const) : ("degraded" as const),
-      service: "api" as const,
+    const body = healthResponseSchema.parse({
+      status: database === "ok" ? "ok" : "degraded",
+      service: "api",
       database,
       timestamp: new Date().toISOString(),
-    };
-    const parsed = healthResponseSchema.parse(body);
+    });
 
     if (database === "unavailable") {
-      return reply.status(503).send(parsed);
+      reply.status(HTTP_SERVICE_UNAVAILABLE);
     }
-    return parsed;
-  });
-};
+
+    return body;
+  }
+}

@@ -27,7 +27,6 @@ import {
   type RateLimitHandler,
 } from "./lib/http/rate-limit.js";
 import { authController } from "./modules/auth/presentation/controllers/auth.controller.js";
-import { healthController } from "./modules/health/presentation/controllers/health.controller.js";
 import { AppModule } from "./nest/app.module.js";
 import { ApiExceptionFilter } from "./nest/http/api-exception.filter.js";
 import { authPlugin } from "./plugins/auth/index.js";
@@ -77,7 +76,6 @@ async function registerLegacyRoutes(app: FastifyInstance, protectedApiRateLimit:
   await app.register(async legacy => {
     registerGlobalErrorHandler(legacy);
 
-    await legacy.register(healthController, { prefix: `/${API_PREFIX}` });
     await legacy.register(authController, { prefix: `/${API_PREFIX}` });
     await legacy.register(authenticatedLookupPlugin, { prefix: `/${API_PREFIX}` });
     await legacy.register(protectedApiPlugin, { prefix: `/${API_PREFIX}`, rateLimit: protectedApiRateLimit });

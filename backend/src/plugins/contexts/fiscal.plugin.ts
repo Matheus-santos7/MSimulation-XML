@@ -8,7 +8,6 @@ import { PrismaNfeXmlContentResolverAdapter } from "../../modules/fiscal-documen
 import { createFiscalValidationModule } from "../../modules/fiscal-validation/infrastructure/factory/fiscal-validation-module.factory.js";
 import { createFiscalValidationController } from "../../modules/fiscal-validation/presentation/controllers/fiscal-validation.controller.js";
 import { orderController } from "../../modules/sales/presentation/controllers/order.controller.js";
-import { taxRuleController } from "../../modules/tax/presentation/controllers/tax-rule.controller.js";
 
 const fiscalValidationModule = createFiscalValidationModule({
   nfeXmlResolver: new PrismaNfeXmlContentResolverAdapter(),
@@ -38,6 +37,5 @@ export const fiscalContextPlugin: FastifyPluginAsync = async (app) => {
   await app.register(cteController);
   await app.register(fiscalObservabilityController);
   await app.register(createFiscalValidationController({ module: fiscalValidationModule }));
-  await app.register(taxRuleController);
   await app.register(orderController);
 };

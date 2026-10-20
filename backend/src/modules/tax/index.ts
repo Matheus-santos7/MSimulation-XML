@@ -53,7 +53,8 @@ export { resolveTaxRuleRefFromCatalog } from "./domain/services/resolve-tax-rule
 export type { ResolveTaxRuleRefResult } from "./domain/services/resolve-tax-rule-ref-from-catalog.js";
 
 export { createTaxModule, resolveTaxRuleFromDb };
-export { taxRuleController } from "./presentation/controllers/tax-rule.controller.js";
+export { TaxRuleController } from "./presentation/controllers/tax-rule.controller.js";
+export { TaxModule } from "./tax.module.js";
 export {
   taxRuleImportRowSchema,
   taxRulesBulkBodySchema,

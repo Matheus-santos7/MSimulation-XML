@@ -367,6 +367,75 @@ describe("contrato HTTP — respostas por módulo (banco vazio)", () => {
   });
 });
 
+/** Corpo multipart com um único campo de arquivo `file`. */
+function multipartFile(fileName: string, content: string) {
+  const boundary = "----contract-boundary";
+  const payload = [
+    `--${boundary}`,
+    `Content-Disposition: form-data; name="file"; filename="${fileName}"`,
+    "Content-Type: application/octet-stream",
+    "",
+    content,
+    `--${boundary}--`,
+    "",
+  ].join("\r\n");
+
+  return { payload, headers: { "content-type": `multipart/form-data; boundary=${boundary}` } };
+}
+
+describe("contrato HTTP — uploads de planilha (ADMIN)", () => {
+  let app: FastifyInstance;
+  let headers: Record<string, string>;
+
+  before(async () => {
+    app = await startApp({ user: { role: "ADMIN" } });
+    headers = bearer(accessToken(app));
+  });
+  after(() => app.close());
+
+  const NOT_MULTIPART = "Envie a planilha como multipart/form-data (campo file)";
+
+  const CASES = [
+    { url: "/api/tax-rules/import-spreadsheet", json: { status: 400, body: { error: NOT_MULTIPART } }, badFormat: "Formato inválido. Envie um arquivo .xlsx ou .xls" },
+    { url: "/api/products/import-spreadsheet", json: { status: 400, body: { error: NOT_MULTIPART } }, badFormat: "Formato inválido. Envie um arquivo .xlsx ou .csv" },
+    { url: "/api/unidades-logisticas/bulk-import", json: null, badFormat: "Formato inválido. Envie um arquivo .xlsx ou .xls" },
+  ] as const;
+
+  for (const testCase of CASES) {
+    it(`POST ${testCase.url} recusa arquivo com extensão inválida`, async () => {
+      const file = multipartFile("dados.txt", "abc");
+      const res = await app.inject({
+        method: "POST",
+        url: testCase.url,
+        payload: file.payload,
+        headers: { ...headers, ...file.headers },
+      });
+
+      assert.equal(res.statusCode, 400);
+      assert.deepEqual(res.json(), { error: testCase.badFormat });
+    });
+
+    if (testCase.json) {
+      const expected = testCase.json;
+      it(`POST ${testCase.url} recusa corpo que não é multipart`, async () => {
+        const res = await app.inject({ method: "POST", url: testCase.url, payload: {}, headers });
+
+        assert.equal(res.statusCode, expected.status);
+        assert.deepEqual(res.json(), expected.body);
+      });
+    }
+  }
+
+  it("POST /api/unidades-logisticas/bulk-import com JSON inválido devolve 400 com details", async () => {
+    const res = await app.inject({ method: "POST", url: "/api/unidades-logisticas/bulk-import", payload: {}, headers });
+    const body = res.json();
+
+    assert.equal(res.statusCode, 400);
+    assert.equal(body.error, "Payload inválido");
+    assert.ok(body.details);
+  });
+});
+
 describe("contrato HTTP — rate limit", () => {
   const PROTECTED_API_MAX_PER_MINUTE = 300;
   const LOGIN_MAX_PER_WINDOW = 10;

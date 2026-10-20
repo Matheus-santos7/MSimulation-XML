@@ -1,40 +1,7 @@
-/**
- *
- * Rotas públicas: `/api/health`, `/api/auth/*`
- * Lookup autenticado (sem tenant): `authenticated-lookup` — onboarding.
- * Demais rotas protegidas: `protected-api` (JWT + tenant).
- */
 import "dotenv/config";
-import cors from "@fastify/cors";
-import helmet from "@fastify/helmet";
-import Fastify from "fastify";
-import { assertProductionSecurityConfig } from "./lib/auth/production-env.js";
-import { buildCorsOptions } from "./lib/http/cors-config.js";
-import { registerGlobalErrorHandler } from "./lib/http/error-handler.js";
-import { buildHelmetOptions } from "./lib/http/helmet-config.js";
-import { authController } from "./modules/auth/presentation/controllers/auth.controller.js";
-import { healthController } from "./modules/health/presentation/controllers/health.controller.js";
-import { authPlugin } from "./plugins/auth/index.js";
-import { prismaPlugin } from "./plugins/prisma.js";
-import { authenticatedLookupPlugin } from "./plugins/authenticated-lookup.js";
-import { protectedApiPlugin } from "./plugins/protected-api.js";
+import { buildApp } from "./app.js";
 
-const trustProxy = process.env.TRUST_PROXY === "true" || process.env.NODE_ENV === "production";
-const app = Fastify({ logger: true, trustProxy });
-
-assertProductionSecurityConfig();
-
-registerGlobalErrorHandler(app);
-
-await app.register(helmet, buildHelmetOptions());
-await app.register(cors, buildCorsOptions());
-await app.register(prismaPlugin);
-await app.register(authPlugin);
-
-await app.register(healthController, { prefix: "/api" });
-await app.register(authController, { prefix: "/api" });
-await app.register(authenticatedLookupPlugin, { prefix: "/api" });
-await app.register(protectedApiPlugin, { prefix: "/api" });
+const app = await buildApp();
 
 const port = Number(process.env.PORT ?? 3001);
 const host = process.env.HOST ?? "0.0.0.0";

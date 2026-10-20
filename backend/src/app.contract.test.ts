@@ -436,6 +436,37 @@ describe("contrato HTTP — uploads de planilha (ADMIN)", () => {
     }
   }
 
+  const MOVEMENT_VALIDATION_CASES = [
+    { method: "POST", url: "/api/movimentacoes/remessa", error: "Payload inválido" },
+    { method: "POST", url: "/api/movimentacoes/transferencia-filial", error: "Payload inválido" },
+    { method: "POST", url: "/api/movimentacoes/avanco-cd", error: "Payload inválido" },
+    { method: "POST", url: "/api/movimentacoes/remessa/realign-fifo", error: "SKU obrigatório" },
+    { method: "GET", url: "/api/movimentacoes/saldo-cd", error: "productId obrigatório" },
+  ] as const;
+
+  for (const testCase of MOVEMENT_VALIDATION_CASES) {
+    it(`${testCase.method} ${testCase.url} inválido devolve 400 "${testCase.error}" com details do flatten()`, async () => {
+      const res = await app.inject({
+        method: testCase.method,
+        url: testCase.url,
+        ...(testCase.method === "POST" ? { payload: {} } : {}),
+        headers,
+      });
+      const body = res.json();
+
+      assert.equal(res.statusCode, 400);
+      assert.equal(body.error, testCase.error);
+      assert.deepEqual(Object.keys(body.details).sort(), ["fieldErrors", "formErrors"]);
+    });
+  }
+
+  it("GET /api/unidades-logisticas/:id inexistente devolve 404", async () => {
+    const res = await app.inject({ method: "GET", url: `/api/unidades-logisticas/${SAMPLE_ID}`, headers });
+
+    assert.equal(res.statusCode, 404);
+    assert.deepEqual(res.json(), { error: "Unidade não encontrada" });
+  });
+
   it("POST /api/unidades-logisticas/bulk-import com JSON inválido devolve 400 com details", async () => {
     const res = await app.inject({ method: "POST", url: "/api/unidades-logisticas/bulk-import", payload: {}, headers });
     const body = res.json();

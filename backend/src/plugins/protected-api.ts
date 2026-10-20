@@ -3,7 +3,6 @@ import { wrapProtectedRouteWithDbContext } from "../lib/db/wrap-protected-route.
 import type { RateLimitHandler } from "../lib/http/rate-limit.js";
 import { fiscalContextPlugin } from "./contexts/fiscal.plugin.js";
 import { requireEmailVerifiedHook, requireTenantHook } from "./contexts/guards.js";
-import { logisticsContextPlugin } from "./contexts/logistics.plugin.js";
 import { orgContextPlugin } from "./contexts/org.plugin.js";
 
 export type ProtectedApiPluginOptions = {
@@ -40,5 +39,4 @@ export const protectedApiPlugin: FastifyPluginAsync<ProtectedApiPluginOptions> =
 
   await app.register(orgContextPlugin);
   await app.register(fiscalContextPlugin);
-  await app.register(logisticsContextPlugin);
 };

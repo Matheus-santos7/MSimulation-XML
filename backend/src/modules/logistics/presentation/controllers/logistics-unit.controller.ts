@@ -1,14 +1,30 @@
-import type { FastifyPluginAsync } from "fastify";
-import { tenantIdFromRequest } from "../../../../lib/auth/request-context.js";
-import { handleRouteError } from "../../../../lib/http/domain-errors.js";
-import { requireAdminHook } from "../../../../plugins/contexts/guards.js";
+import { Controller, Get, HttpCode, Inject, Param, Patch, Post, Query, Req, UseFilters } from "@nestjs/common";
+import type { FastifyRequest } from "fastify";
+import type { z } from "zod";
+import { AdminOnly, ProtectedApi } from "../../../../nest/api-access.decorators.js";
+import { TenantId } from "../../../../nest/auth/request-params.js";
+import { RouteErrorFilter } from "../../../../nest/http/api-exception.filter.js";
+import { orNotFound } from "../../../../nest/http/not-found.js";
+import { orUploadError } from "../../../../nest/http/upload-result.js";
+import { ZodValidationPipe } from "../../../../nest/http/zod-validation.pipe.js";
 import { LogisticsUnitError } from "../../domain/errors/logistics-unit.error.js";
-import { createLogisticsModule } from "../../infrastructure/factory/logistics-module.factory.js";
+import { LOGISTICS, type LogisticsContext } from "../../logistics.tokens.js";
 import { resolveBulkImportPayload } from "../helpers/bulk-import.helper.js";
 import { logisticsUnitIdParam, logisticsUnitsListQuery } from "../schemas/logistics.schemas.js";
 
-/** Mapeamento de erros de unidade logística para HTTP. */
-const LOGISTICS_UNIT_ERROR_MAPPINGS = [{ type: LogisticsUnitError, status: 400 }] as const;
+const HTTP_OK = 200;
+
+/** `LogisticsUnitError` vira 400 no bulk-import e na unidade padrão, como antes. */
+const logisticsUnitErrorFilter = new RouteErrorFilter({ mappings: [{ type: LogisticsUnitError, status: 400 }] });
+
+type LogisticsUnitIdParam = z.infer<typeof logisticsUnitIdParam>;
+
+function parseAtivaFilter(value: string | undefined): boolean | undefined {
+  if (value === "false") return false;
+  if (value === "true") return true;
+
+  return undefined;
+}
 
 /**
  * Controller HTTP de unidades logísticas Meli Full.
@@ -20,66 +36,51 @@ const LOGISTICS_UNIT_ERROR_MAPPINGS = [{ type: LogisticsUnitError, status: 400 }
  * | POST | `/unidades-logisticas/bulk-import` | BulkImportLogisticsUnitsUseCase (ADMIN) |
  * | PATCH | `/unidades-logisticas/:id/padrao` | SetDefaultLogisticsUnitUseCase |
  */
-export const logisticsUnitController: FastifyPluginAsync = async (app) => {
-  const logistics = createLogisticsModule();
+@Controller("unidades-logisticas")
+@ProtectedApi()
+export class LogisticsUnitController {
+  constructor(@Inject(LOGISTICS) private readonly logistics: LogisticsContext) {}
 
-  app.get("/unidades-logisticas", async (req) => {
-    const tenantId = tenantIdFromRequest(req);
-    const q = logisticsUnitsListQuery.parse(req.query);
-    const ativa = q.ativa === "false" ? false : q.ativa === "true" ? true : undefined;
-    return logistics.listLogisticsUnits.execute(tenantId, { ativa, q: q.q, cnpj: q.cnpj });
-  });
+  @Get()
+  list(
+    @TenantId() tenantId: string,
+    @Query(new ZodValidationPipe(logisticsUnitsListQuery)) query: z.infer<typeof logisticsUnitsListQuery>,
+  ) {
+    return this.logistics.listLogisticsUnits.execute(tenantId, {
+      ativa: parseAtivaFilter(query.ativa),
+      q: query.q,
+      cnpj: query.cnpj,
+    });
+  }
 
-  app.get("/unidades-logisticas/:id", async (req, reply) => {
-    const tenantId = tenantIdFromRequest(req);
-    const { id } = logisticsUnitIdParam.parse(req.params);
-    const row = await logistics.getLogisticsUnitById.execute(tenantId, id);
-    if (!row) return reply.status(404).send({ error: "Unidade não encontrada" });
-    return row;
-  });
+  @Get(":id")
+  async get(
+    @TenantId() tenantId: string,
+    @Param(new ZodValidationPipe(logisticsUnitIdParam)) params: LogisticsUnitIdParam,
+  ) {
+    return orNotFound(await this.logistics.getLogisticsUnitById.execute(tenantId, params.id), "Unidade não encontrada");
+  }
 
-  app.post(
-    "/unidades-logisticas/bulk-import",
-    { onRequest: [requireAdminHook] },
-    async (req, reply) => {
-      const tenantId = tenantIdFromRequest(req);
-      const payload = await resolveBulkImportPayload(req);
-      if (!payload.ok) {
-        return reply.status(payload.status).send({
-          error: payload.error,
-          ...(payload.details !== undefined ? { details: payload.details } : {}),
-        });
-      }
+  @Post("bulk-import")
+  @AdminOnly()
+  @HttpCode(HTTP_OK)
+  @UseFilters(logisticsUnitErrorFilter)
+  async bulkImport(@TenantId() tenantId: string, @Req() request: FastifyRequest) {
+    const payload = orUploadError(await resolveBulkImportPayload(request));
+    const result = await this.logistics.bulkImportLogisticsUnits.execute(tenantId, payload.rows, payload.enrichCep);
 
-      try {
-        const result = await logistics.bulkImportLogisticsUnits.execute(
-          tenantId,
-          payload.rows,
-          payload.enrichCep,
-        );
-        return {
-          ...result,
-          ...(payload.parseErrors.length > 0 ? { parseErrors: payload.parseErrors } : {}),
-        };
-      } catch (error) {
-        if (handleRouteError(reply, error, { mappings: [...LOGISTICS_UNIT_ERROR_MAPPINGS] })) {
-          return;
-        }
-        throw error;
-      }
-    },
-  );
+    return {
+      ...result,
+      ...(payload.parseErrors.length > 0 ? { parseErrors: payload.parseErrors } : {}),
+    };
+  }
 
-  app.patch("/unidades-logisticas/:id/padrao", async (req, reply) => {
-    const tenantId = tenantIdFromRequest(req);
-    const { id } = logisticsUnitIdParam.parse(req.params);
-    try {
-      return await logistics.setDefaultLogisticsUnit.execute(tenantId, id);
-    } catch (error) {
-      if (handleRouteError(reply, error, { mappings: [...LOGISTICS_UNIT_ERROR_MAPPINGS] })) {
-        return;
-      }
-      throw error;
-    }
-  });
-};
+  @Patch(":id/padrao")
+  @UseFilters(logisticsUnitErrorFilter)
+  setDefault(
+    @TenantId() tenantId: string,
+    @Param(new ZodValidationPipe(logisticsUnitIdParam)) params: LogisticsUnitIdParam,
+  ) {
+    return this.logistics.setDefaultLogisticsUnit.execute(tenantId, params.id);
+  }
+}

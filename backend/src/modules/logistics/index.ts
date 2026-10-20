@@ -12,7 +12,7 @@ export {
 export { findProductInTenant } from "./infrastructure/prisma/product-lookup.queries.js";
 export { mapLogisticsUnitFromPrisma } from "./infrastructure/prisma/logistics-unit-prisma.mapper.js";
 export { mapProductMovementFromPrisma } from "./infrastructure/prisma/product-movement-prisma.mapper.js";
-export { logisticsUnitController } from "./presentation/controllers/logistics-unit.controller.js";
+export { LogisticsUnitController } from "./presentation/controllers/logistics-unit.controller.js";
 export {
   importRowSchema,
   logisticsUnitsListQuery,

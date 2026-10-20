@@ -11,6 +11,6 @@ export function orUploadError<T extends { ok: true }>(result: T | UploadFailure)
 
   throw new HttpError(result.status, result.error, {
     error: result.error,
-    ...(result.details ? { details: result.details } : {}),
+    ...(result.details !== undefined ? { details: result.details } : {}),
   });
 }

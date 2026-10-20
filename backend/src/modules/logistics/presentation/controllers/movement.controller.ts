@@ -12,28 +12,28 @@
  * | GET | `/movimentacoes/saldo-cd` | Saldo FIFO por CD (remessas) |
  * | POST | `/movimentacoes/remessa/realign-fifo` | Realinhamento FIFO (ADMIN) |
  */
-import type { FastifyPluginAsync } from "fastify";
-import { tenantIdFromRequest } from "../../../../lib/auth/request-context.js";
-import { requireAdminHook } from "../../../../plugins/contexts/guards.js";
-import { SymbolicShipmentFiscalError } from "../../../remessas/infrastructure/fiscal/symbolic-shipment/index.js";
+import { Body, Controller, Get, HttpCode, Inject, Post, Query } from "@nestjs/common";
+import type { z } from "zod";
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
+import { HttpError } from "../../../../lib/http/http-error.js";
+import { AdminOnly, ProtectedApi } from "../../../../nest/api-access.decorators.js";
+import { TenantId } from "../../../../nest/auth/request-params.js";
+import { ZodValidationPipe } from "../../../../nest/http/zod-validation.pipe.js";
+import { EmitenteFiscalConfigError } from "../../../org/index.js";
 import {
   RemessaDomainError,
   SaldoFifoInsuficienteError,
   SaldoRemessaInsuficienteError,
-  createRemessasModule,
   listRemessaBalanceByCd,
   realignRemessaFifoProductIdsBySku,
   ShipmentError,
 } from "../../../remessas/index.js";
-import { EmitenteFiscalConfigError } from "../../../org/index.js";
-import {
-  BranchTransferError,
-  emitBranchTransfer,
-} from "../../../remessas/infrastructure/fiscal/branch-transfer/index.js";
+import { BranchTransferError, emitBranchTransfer } from "../../../remessas/infrastructure/fiscal/branch-transfer/index.js";
+import { SymbolicShipmentFiscalError } from "../../../remessas/infrastructure/fiscal/symbolic-shipment/index.js";
 import { mapAvancoMercadoriaParaApi } from "../../../remessas/presentation/avanco-api.mapper.js";
+import { REMESSAS, type RemessasContext } from "../../../remessas/remessas.tokens.js";
 import { LogisticsUnitError } from "../../domain/errors/logistics-unit.error.js";
-import { createLogisticsModule } from "../../infrastructure/factory/logistics-module.factory.js";
+import { LOGISTICS, type LogisticsContext } from "../../logistics.tokens.js";
 import {
   advanceWarehouseBody,
   manualShipmentBody,
@@ -43,158 +43,148 @@ import {
   warehouseBalanceQuery,
 } from "../schemas/logistics.schemas.js";
 
-function mapRemessaModuleError(e: unknown): { status: number; message: string } | null {
-  if (
-    e instanceof RemessaDomainError ||
-    e instanceof SaldoFifoInsuficienteError ||
-    e instanceof SaldoRemessaInsuficienteError
-  ) {
-    return { status: 400, message: e.message };
+const HTTP_OK = 200;
+const HTTP_BAD_REQUEST = 400;
+const HTTP_SERVICE_UNAVAILABLE = 503;
+const PRISMA_TRANSACTION_TIMEOUT = "P2028";
+const INVALID_PAYLOAD = "Payload inválido";
+
+const BAD_REQUEST_ERRORS = [
+  RemessaDomainError,
+  SaldoFifoInsuficienteError,
+  SaldoRemessaInsuficienteError,
+  ShipmentError,
+  SymbolicShipmentFiscalError,
+  BranchTransferError,
+  EmitenteFiscalConfigError,
+  LogisticsUnitError,
+] as const;
+
+/** Erros de emissão viram 400; timeout da transação interativa vira 503 com orientação. */
+function toMovementHttpError(error: unknown): unknown {
+  if (BAD_REQUEST_ERRORS.some(type => error instanceof type)) {
+    return new HttpError(HTTP_BAD_REQUEST, (error as Error).message);
   }
-  if (e instanceof ShipmentError || e instanceof SymbolicShipmentFiscalError) {
-    return { status: 400, message: e.message };
+  if (typeof error === "object" && error !== null && "code" in error && error.code === PRISMA_TRANSACTION_TIMEOUT) {
+    return new HttpError(
+      HTTP_SERVICE_UNAVAILABLE,
+      "A emissão demorou mais que o esperado. Tente novamente; se persistir, reduza a quantidade ou contate o suporte.",
+    );
   }
-  if (e instanceof BranchTransferError || e instanceof EmitenteFiscalConfigError) {
-    return { status: 400, message: e.message };
-  }
-  if (e instanceof LogisticsUnitError) {
-    return { status: 400, message: e.message };
-  }
-  if (
-    typeof e === "object" &&
-    e !== null &&
-    "code" in e &&
-    (e as { code: string }).code === "P2028"
-  ) {
-    return {
-      status: 503,
-      message:
-        "A emissão demorou mais que o esperado. Tente novamente; se persistir, reduza a quantidade ou contate o suporte.",
-    };
-  }
-  return null;
+
+  return error;
 }
 
-export const movementController: FastifyPluginAsync = async (app) => {
-  const logistics = createLogisticsModule();
-  const remessas = createRemessasModule();
+async function translatingMovementErrors<T>(run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (error) {
+    throw toMovementHttpError(error);
+  }
+}
 
-  app.post("/movimentacoes/remessa", { onRequest: [requireAdminHook] }, async (req, reply) => {
-    const tenantId = tenantIdFromRequest(req);
-    const parsed = manualShipmentBody.safeParse(req.body);
-    if (!parsed.success) {
-      return reply.status(400).send({ error: "Payload inválido", details: parsed.error.flatten() });
-    }
-    try {
-      return await remessas.emitirRemessaInicial.execute({
+@Controller()
+@ProtectedApi()
+export class MovementController {
+  constructor(
+    @Inject(LOGISTICS) private readonly logistics: LogisticsContext,
+    @Inject(REMESSAS) private readonly remessas: RemessasContext,
+  ) {}
+
+  @Post("movimentacoes/remessa")
+  @AdminOnly()
+  @HttpCode(HTTP_OK)
+  emitShipment(
+    @TenantId() tenantId: string,
+    @Body(new ZodValidationPipe(manualShipmentBody, { invalidMessage: INVALID_PAYLOAD }))
+    body: z.infer<typeof manualShipmentBody>,
+  ) {
+    return translatingMovementErrors(() =>
+      this.remessas.emitirRemessaInicial.execute({
         tenantId,
-        unidadeDestinoId: parsed.data.unidadeDestinoId,
-        items: parsed.data.items,
-      });
-    } catch (e) {
-      const mapped = mapRemessaModuleError(e);
-      if (mapped) return reply.status(mapped.status).send({ error: mapped.message });
-      throw e;
-    }
-  });
-
-  app.post("/movimentacoes/transferencia-filial", { onRequest: [requireAdminHook] }, async (req, reply) => {
-    const tenantId = tenantIdFromRequest(req);
-    const parsed = transferenciaFilialBody.safeParse(req.body);
-    if (!parsed.success) {
-      return reply.status(400).send({ error: "Payload inválido", details: parsed.error.flatten() });
-    }
-    try {
-      return await emitBranchTransfer(getDbClient(), {
-        tenantId,
-        filialId: parsed.data.filialId,
-        items: parsed.data.items,
-      });
-    } catch (e) {
-      const mapped = mapRemessaModuleError(e);
-      if (mapped) return reply.status(mapped.status).send({ error: mapped.message });
-      throw e;
-    }
-  });
-
-  app.post("/movimentacoes/avanco-cd", { onRequest: [requireAdminHook] }, async (req, reply) => {
-    const tenantId = tenantIdFromRequest(req);
-    const parsed = advanceWarehouseBody.safeParse(req.body);
-    if (!parsed.success) {
-      return reply.status(400).send({ error: "Payload inválido", details: parsed.error.flatten() });
-    }
-
-    const productId = parsed.data.productId.trim();
-    const resolved = await logistics.resolveAdvanceProduct.execute(
-      tenantId,
-      productId,
-      parsed.data.productSku,
+        unidadeDestinoId: body.unidadeDestinoId,
+        items: body.items,
+      }),
     );
-    if (!resolved) {
-      const hasStock = await logistics.hasAdvanceStock.execute(
-        tenantId,
-        productId,
-        parsed.data.productSku,
-      );
-      const skuHint = parsed.data.productSku?.trim()
-        ? ` (SKU ${parsed.data.productSku.trim()})`
-        : "";
-      if (hasStock) {
-        return reply.status(400).send({
-          error: `Há saldo FIFO${skuHint}, mas o produto não está no cadastro desta empresa. Abra Produtos e confira se o SKU está cadastrado com regra fiscal e preço de custo.`,
-        });
-      }
-      return reply.status(400).send({
-        error: `Produto não encontrado nesta empresa${skuHint}. Cadastre em Produtos ou emita nova remessa física para o CD de origem.`,
-      });
-    }
+  }
 
-    try {
-      const result = await remessas.emitirAvancoMercadoria.execute({
+  @Post("movimentacoes/transferencia-filial")
+  @AdminOnly()
+  @HttpCode(HTTP_OK)
+  transferBetweenBranches(
+    @TenantId() tenantId: string,
+    @Body(new ZodValidationPipe(transferenciaFilialBody, { invalidMessage: INVALID_PAYLOAD }))
+    body: z.infer<typeof transferenciaFilialBody>,
+  ) {
+    return translatingMovementErrors(() =>
+      emitBranchTransfer(getDbClient(), { tenantId, filialId: body.filialId, items: body.items }),
+    );
+  }
+
+  @Post("movimentacoes/avanco-cd")
+  @AdminOnly()
+  @HttpCode(HTTP_OK)
+  async advanceWarehouse(
+    @TenantId() tenantId: string,
+    @Body(new ZodValidationPipe(advanceWarehouseBody, { invalidMessage: INVALID_PAYLOAD }))
+    body: z.infer<typeof advanceWarehouseBody>,
+  ) {
+    const productId = body.productId.trim();
+    await this.assertAdvanceProduct(tenantId, productId, body.productSku);
+
+    return translatingMovementErrors(async () => {
+      const result = await this.remessas.emitirAvancoMercadoria.execute({
         tenantId,
         productId,
-        productSku: parsed.data.productSku,
-        quantidade: parsed.data.quantidade,
-        unidadeOrigemId: parsed.data.unidadeOrigemId,
-        unidadeDestinoId: parsed.data.unidadeDestinoId,
+        productSku: body.productSku,
+        quantidade: body.quantidade,
+        unidadeOrigemId: body.unidadeOrigemId,
+        unidadeDestinoId: body.unidadeDestinoId,
       });
+
       return mapAvancoMercadoriaParaApi(getDbClient(), result);
-    } catch (e) {
-      const mapped = mapRemessaModuleError(e);
-      if (mapped) return reply.status(mapped.status).send({ error: mapped.message });
-      throw e;
-    }
-  });
-
-  app.get("/movimentacoes-produto", async (req) => {
-    const tenantId = tenantIdFromRequest(req);
-    const q = productMovementsQuery.parse(req.query);
-    return logistics.listProductMovements.execute(tenantId, {
-      productId: q.productId,
-      limit: q.limit,
     });
-  });
+  }
 
-  app.post("/movimentacoes/remessa/realign-fifo", { onRequest: [requireAdminHook] }, async (req, reply) => {
-    const tenantId = tenantIdFromRequest(req);
-    const parsed = realignFifoBody.safeParse(req.body);
-    if (!parsed.success) {
-      return reply.status(400).send({ error: "SKU obrigatório", details: parsed.error.flatten() });
-    }
-    return realignRemessaFifoProductIdsBySku(getDbClient(), tenantId, parsed.data.productSku);
-  });
+  @Get("movimentacoes-produto")
+  listProductMovements(
+    @TenantId() tenantId: string,
+    @Query(new ZodValidationPipe(productMovementsQuery)) query: z.infer<typeof productMovementsQuery>,
+  ) {
+    return this.logistics.listProductMovements.execute(tenantId, { productId: query.productId, limit: query.limit });
+  }
 
-  app.get("/movimentacoes/saldo-cd", async (req, reply) => {
-    const tenantId = tenantIdFromRequest(req);
-    const parsed = warehouseBalanceQuery.safeParse(req.query);
-    if (!parsed.success) {
-      return reply.status(400).send({ error: "productId obrigatório", details: parsed.error.flatten() });
-    }
-    return listRemessaBalanceByCd(
-      getDbClient(),
-      tenantId,
-      parsed.data.productId,
-      parsed.data.productSku,
-    );
-  });
-};
+  @Post("movimentacoes/remessa/realign-fifo")
+  @AdminOnly()
+  @HttpCode(HTTP_OK)
+  realignFifo(
+    @TenantId() tenantId: string,
+    @Body(new ZodValidationPipe(realignFifoBody, { invalidMessage: "SKU obrigatório" }))
+    body: z.infer<typeof realignFifoBody>,
+  ) {
+    return realignRemessaFifoProductIdsBySku(getDbClient(), tenantId, body.productSku);
+  }
+
+  @Get("movimentacoes/saldo-cd")
+  warehouseBalance(
+    @TenantId() tenantId: string,
+    @Query(new ZodValidationPipe(warehouseBalanceQuery, { invalidMessage: "productId obrigatório" }))
+    query: z.infer<typeof warehouseBalanceQuery>,
+  ) {
+    return listRemessaBalanceByCd(getDbClient(), tenantId, query.productId, query.productSku);
+  }
+
+  /** O avanço exige o produto no cadastro; a mensagem diferencia "tem saldo" de "não existe". */
+  private async assertAdvanceProduct(tenantId: string, productId: string, productSku?: string): Promise<void> {
+    const resolved = await this.logistics.resolveAdvanceProduct.execute(tenantId, productId, productSku);
+    if (resolved) return;
+
+    const hasStock = await this.logistics.hasAdvanceStock.execute(tenantId, productId, productSku);
+    const skuHint = productSku?.trim() ? ` (SKU ${productSku.trim()})` : "";
+    const message = hasStock
+      ? `Há saldo FIFO${skuHint}, mas o produto não está no cadastro desta empresa. Abra Produtos e confira se o SKU está cadastrado com regra fiscal e preço de custo.`
+      : `Produto não encontrado nesta empresa${skuHint}. Cadastre em Produtos ou emita nova remessa física para o CD de origem.`;
+
+    throw new HttpError(HTTP_BAD_REQUEST, message);
+  }
+}

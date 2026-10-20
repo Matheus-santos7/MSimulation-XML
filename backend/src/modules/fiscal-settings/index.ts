@@ -13,5 +13,6 @@ export { UpdateEmitterSettingsUseCase } from "./application/use-cases/update-emi
 export { mergeEmitterSettingsPatch } from "./application/services/merge-emitter-settings-patch.service.js";
 
 export { createFiscalSettingsModule };
-export { emitterSettingsController } from "./presentation/controllers/emitter-settings.controller.js";
+export { EmitterSettingsController } from "./presentation/controllers/emitter-settings.controller.js";
+export { FiscalSettingsModule } from "./fiscal-settings.module.js";
 export { updateEmitterSettingsBodySchema } from "./presentation/schemas/emitter-settings.schemas.js";

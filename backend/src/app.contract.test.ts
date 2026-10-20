@@ -27,6 +27,44 @@ const TENANT_FREE_PREFIXES = ["/api/health", "/api/auth/", "/api/lookup/"];
 /** Rotas sem JWT obrigatório no escopo (as de auth que exigem token usam hook próprio). */
 const JWT_FREE_PREFIXES = ["/api/health", "/api/auth/"];
 
+/** Rotas com `requireAdminHook` no código Fastify original (commit 5ed394f). */
+const ADMIN_ROUTES = [
+  "POST /api/products",
+  "POST /api/products/import-spreadsheet",
+  "POST /api/products/bulk-upsert",
+  "PATCH /api/products/:id",
+  "DELETE /api/products/:id",
+  "DELETE /api/ctes/:chave",
+  "POST /api/nfes/inutilizar",
+  "GET /api/nfes/:chave/devolucao",
+  "POST /api/nfes/:chave/devolucao",
+  "POST /api/nfes/:chave/insulcesso",
+  "POST /api/nfes/:chave/retorno-fisico",
+  "GET /api/nfes/:chave/conferencia",
+  "POST /api/nfes/:chave/conferencia",
+  "POST /api/nfes/:chave/cancelamento",
+  "DELETE /api/nfes/:chave",
+  "PATCH /api/fiscal-settings",
+  "POST /api/fiscal-validation/backfill",
+  "POST /api/unidades-logisticas/bulk-import",
+  "POST /api/movimentacoes/remessa",
+  "POST /api/movimentacoes/transferencia-filial",
+  "POST /api/movimentacoes/avanco-cd",
+  "POST /api/movimentacoes/remessa/realign-fifo",
+  "POST /api/empresas/filiais",
+  "PUT /api/empresas/filiais/:id",
+  "DELETE /api/empresas/filiais/:id",
+  "PATCH /api/empresas/papeis-fiscais",
+  "POST /api/users",
+  "PATCH /api/users/:id",
+  "DELETE /api/users/:id",
+  "POST /api/pedidos/:id/faturar",
+  "POST /api/pedidos/checkout",
+  "POST /api/tax-rules/bulk-upsert",
+  "POST /api/tax-rules/import-spreadsheet",
+  "DELETE /api/tax-rules",
+] as const;
+
 const MESSAGES = {
   unauthorized: "Não autorizado. Token ausente ou inválido.",
   sessionEnded: "Sessão encerrada. Entre novamente.",
@@ -242,19 +280,18 @@ describe("contrato HTTP — guards de tenant, e-mail e papel", () => {
     }
   });
 
-  it("responde 403 em rota ADMIN para usuário MEMBER", async () => {
+  it("responde 403 em toda rota ADMIN para usuário MEMBER", async () => {
     const app = await startApp();
+    const headers = bearer(accessToken(app));
 
     try {
-      const res = await app.inject({
-        method: "POST",
-        url: "/api/pedidos/checkout",
-        payload: {},
-        headers: bearer(accessToken(app)),
-      });
+      for (const route of ADMIN_ROUTES) {
+        const [method, url] = route.split(" ");
+        const res = await app.inject({ method: method as never, url: fillPathParams(url!), payload: {}, headers });
 
-      assert.equal(res.statusCode, 403);
-      assert.deepEqual(res.json(), { error: MESSAGES.adminRequired });
+        assert.equal(res.statusCode, 403, route);
+        assert.deepEqual(res.json(), { error: MESSAGES.adminRequired }, route);
+      }
     } finally {
       await app.close();
     }

@@ -7,7 +7,6 @@ import { nfeLifecycleController } from "../../modules/fiscal-documents/presentat
 import { PrismaNfeXmlContentResolverAdapter } from "../../modules/fiscal-documents/infrastructure/xml/prisma-nfe-xml-content-resolver.adapter.js";
 import { createFiscalValidationModule } from "../../modules/fiscal-validation/infrastructure/factory/fiscal-validation-module.factory.js";
 import { createFiscalValidationController } from "../../modules/fiscal-validation/presentation/controllers/fiscal-validation.controller.js";
-import { emitterSettingsController } from "../../modules/fiscal-settings/presentation/controllers/emitter-settings.controller.js";
 import { orderController } from "../../modules/sales/presentation/controllers/order.controller.js";
 import { taxRuleController } from "../../modules/tax/presentation/controllers/tax-rule.controller.js";
 
@@ -40,6 +39,5 @@ export const fiscalContextPlugin: FastifyPluginAsync = async (app) => {
   await app.register(fiscalObservabilityController);
   await app.register(createFiscalValidationController({ module: fiscalValidationModule }));
   await app.register(taxRuleController);
-  await app.register(emitterSettingsController);
   await app.register(orderController);
 };

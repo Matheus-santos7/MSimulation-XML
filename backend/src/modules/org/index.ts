@@ -45,5 +45,5 @@ export {
   userUpdateBody,
   userIdParam,
 } from "./presentation/schemas/user.schemas.js";
-export { tenantController } from "./presentation/controllers/tenant.controller.js";
-export { userController } from "./presentation/controllers/user.controller.js";
+export { TenantController } from "./presentation/controllers/tenant.controller.js";
+export { UserController } from "./presentation/controllers/user.controller.js";

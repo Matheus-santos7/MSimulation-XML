@@ -4,6 +4,7 @@ import { FiscalSettingsModule } from "../modules/fiscal-settings/fiscal-settings
 import { HealthModule } from "../modules/health/health.module.js";
 import { LogisticsModule } from "../modules/logistics/logistics.module.js";
 import { LookupModule } from "../modules/lookup/lookup.module.js";
+import { OrgModule } from "../modules/org/org.module.js";
 import { TaxModule } from "../modules/tax/tax.module.js";
 import { CoreModule, type CoreDependencies } from "./core.module.js";
 
@@ -15,6 +16,7 @@ const FEATURE_MODULES: Type[] = [
   TaxModule,
   CatalogModule,
   LogisticsModule,
+  OrgModule,
 ];
 
 @Module({})

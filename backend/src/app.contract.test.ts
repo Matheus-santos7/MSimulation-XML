@@ -564,6 +564,55 @@ describe("contrato HTTP — rate limit", () => {
   });
 });
 
+describe("contrato HTTP — tenant e usuários (org)", () => {
+  const OWN_TENANT_ID = "11111111-1111-4111-8111-111111111111";
+  let app: FastifyInstance;
+  let headers: Record<string, string>;
+
+  before(async () => {
+    app = await startApp({ user: { tenantId: OWN_TENANT_ID } });
+    headers = bearer(accessToken(app));
+  });
+  after(() => app.close());
+
+  it("GET /api/tenants/:id de outra empresa devolve 404", async () => {
+    const res = await app.inject({ method: "GET", url: `/api/tenants/${SAMPLE_ID}`, headers });
+
+    assert.equal(res.statusCode, 404);
+    assert.deepEqual(res.json(), { error: "Empresa não encontrada" });
+  });
+
+  it("PATCH /api/tenants/:id de outra empresa devolve 404 antes de validar o corpo", async () => {
+    const res = await app.inject({ method: "PATCH", url: `/api/tenants/${SAMPLE_ID}`, payload: { cnpj: 1 }, headers });
+
+    assert.equal(res.statusCode, 404);
+    assert.deepEqual(res.json(), { error: "Empresa não encontrada" });
+  });
+
+  it("POST /api/tenants é bloqueado com 403", async () => {
+    const res = await app.inject({ method: "POST", url: "/api/tenants", payload: {}, headers });
+
+    assert.equal(res.statusCode, 403);
+    assert.deepEqual(res.json(), { error: "Cadastro de empresas não disponível via API autenticada" });
+  });
+
+  it("DELETE /api/tenants/:id responde 403 para a própria empresa e 404 para outra", async () => {
+    const own = await app.inject({ method: "DELETE", url: `/api/tenants/${OWN_TENANT_ID}`, headers });
+    const other = await app.inject({ method: "DELETE", url: `/api/tenants/${SAMPLE_ID}`, headers });
+
+    assert.equal(own.statusCode, 403);
+    assert.deepEqual(own.json(), { error: "Exclusão de empresa não permitida" });
+    assert.equal(other.statusCode, 404);
+  });
+
+  it("GET /api/users/:id com id inválido devolve 400 { error, details }", async () => {
+    const res = await app.inject({ method: "GET", url: "/api/users/abc", headers });
+
+    assert.equal(res.statusCode, 400);
+    assert.deepEqual(res.json(), { error: "ID inválido", details: { id: ["ID inválido"] } });
+  });
+});
+
 describe("contrato HTTP — health e banco indisponível", () => {
   it("GET /api/health responde ok com banco disponível", async () => {
     const app = await startApp();

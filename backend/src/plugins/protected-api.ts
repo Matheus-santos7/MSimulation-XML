@@ -3,7 +3,6 @@ import { wrapProtectedRouteWithDbContext } from "../lib/db/wrap-protected-route.
 import type { RateLimitHandler } from "../lib/http/rate-limit.js";
 import { fiscalContextPlugin } from "./contexts/fiscal.plugin.js";
 import { requireEmailVerifiedHook, requireTenantHook } from "./contexts/guards.js";
-import { orgContextPlugin } from "./contexts/org.plugin.js";
 
 export type ProtectedApiPluginOptions = {
   /** Limitador compartilhado com as rotas Nest protegidas (mesmo store). */
@@ -37,6 +36,5 @@ export const protectedApiPlugin: FastifyPluginAsync<ProtectedApiPluginOptions> =
   app.addHook("onRequest", requireTenantHook);
   app.addHook("onRequest", requireEmailVerifiedHook);
 
-  await app.register(orgContextPlugin);
   await app.register(fiscalContextPlugin);
 };

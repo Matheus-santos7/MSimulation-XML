@@ -1,18 +1,75 @@
-import type { FastifyPluginAsync } from "fastify";
-import { tenantIdFromRequest } from "../../../../lib/auth/request-context.js";
-import { handleRouteError } from "../../../../lib/http/domain-errors.js";
-import { requireAdminHook } from "../../../../plugins/contexts/guards.js";
+import { Body, Controller, Delete, Get, HttpCode, Inject, Param, Patch, Post, Put, UseFilters } from "@nestjs/common";
+import type { z } from "zod";
+import { AdminOnly, ProtectedApi } from "../../../../nest/api-access.decorators.js";
+import { TenantId } from "../../../../nest/auth/request-params.js";
+import { RouteErrorFilter } from "../../../../nest/http/api-exception.filter.js";
+import { orNotFound } from "../../../../nest/http/not-found.js";
+import { ZodValidationPipe } from "../../../../nest/http/zod-validation.pipe.js";
 import { TenantFilialError } from "../../domain/errors/tenant-filial.error.js";
-import { createOrgModule } from "../../infrastructure/factory/org-module.factory.js";
+import { ORG, type OrgContext } from "../../org.tokens.js";
 import {
+  normalizeFilialCnpj,
   tenantFilialCreateBody,
   tenantFilialIdParam,
   tenantFilialUpdateBody,
   tenantFiscalRolesBody,
-  normalizeFilialCnpj,
 } from "../schemas/tenant-filial.schemas.js";
 
-const TENANT_FILIAL_ERROR_MAPPINGS = [{ type: TenantFilialError, status: 400 }] as const;
+const HTTP_OK = 200;
+const HTTP_NO_CONTENT = 204;
+const INVALID_PAYLOAD = "Payload inválido";
+const FILIAL_NOT_FOUND = "Filial não encontrada";
+
+type FilialCreateBody = z.infer<typeof tenantFilialCreateBody>;
+type FilialUpdateBody = z.infer<typeof tenantFilialUpdateBody>;
+type FilialIdParam = z.infer<typeof tenantFilialIdParam>;
+
+function toFilialCreate(body: FilialCreateBody) {
+  return {
+    razaoSocial: body.razaoSocial,
+    nomeFantasia: body.nomeFantasia,
+    cnpj: normalizeFilialCnpj(body.cnpj),
+    ie: body.ie,
+    crt: body.crt,
+    logradouro: body.logradouro,
+    numero: body.numero,
+    complemento: body.complemento,
+    bairro: body.bairro,
+    codigoMunicipio: body.codigoMunicipio,
+    municipio: body.municipio,
+    uf: body.uf.toUpperCase(),
+    cep: body.cep,
+    telefone: body.telefone,
+    serieRemessa: body.serieRemessa,
+    serieTransferencia: body.serieTransferencia,
+    unidadeLogisticaPadraoId: body.unidadeLogisticaPadraoId,
+  };
+}
+
+/** Só os campos enviados; `null` limpa os opcionais (complemento, telefone, série de transferência, CD padrão). */
+function toFilialUpdate(body: FilialUpdateBody) {
+  return {
+    ...(body.razaoSocial != null ? { razaoSocial: body.razaoSocial } : {}),
+    ...(body.nomeFantasia != null ? { nomeFantasia: body.nomeFantasia } : {}),
+    ...(body.cnpj != null ? { cnpj: normalizeFilialCnpj(body.cnpj) } : {}),
+    ...(body.ie != null ? { ie: body.ie } : {}),
+    ...(body.crt != null ? { crt: body.crt } : {}),
+    ...(body.logradouro != null ? { logradouro: body.logradouro } : {}),
+    ...(body.numero != null ? { numero: body.numero } : {}),
+    ...(body.complemento !== undefined ? { complemento: body.complemento } : {}),
+    ...(body.bairro != null ? { bairro: body.bairro } : {}),
+    ...(body.codigoMunicipio != null ? { codigoMunicipio: body.codigoMunicipio } : {}),
+    ...(body.municipio != null ? { municipio: body.municipio } : {}),
+    ...(body.uf != null ? { uf: body.uf.toUpperCase() } : {}),
+    ...(body.cep != null ? { cep: body.cep } : {}),
+    ...(body.telefone !== undefined ? { telefone: body.telefone } : {}),
+    ...(body.serieRemessa != null ? { serieRemessa: body.serieRemessa } : {}),
+    ...(body.serieTransferencia !== undefined ? { serieTransferencia: body.serieTransferencia } : {}),
+    ...(body.unidadeLogisticaPadraoId !== undefined
+      ? { unidadeLogisticaPadraoId: body.unidadeLogisticaPadraoId }
+      : {}),
+  };
+}
 
 /**
  * Gestão de filiais e papéis fiscais da empresa (matriz).
@@ -24,117 +81,63 @@ const TENANT_FILIAL_ERROR_MAPPINGS = [{ type: TenantFilialError, status: 400 }] 
  * | PUT | `/empresas/filiais/:id` | UpdateTenantFilialUseCase (ADMIN) |
  * | DELETE | `/empresas/filiais/:id` | RemoveTenantFilialUseCase (ADMIN) |
  * | PATCH | `/empresas/papeis-fiscais` | SetTenantFiscalRolesUseCase (ADMIN) |
+ * | GET | `/filiais` | ListTenantFiliaisUseCase (rota legada) |
  */
-export const tenantFilialController: FastifyPluginAsync = async (app) => {
-  const org = createOrgModule();
+@Controller()
+@ProtectedApi()
+@UseFilters(new RouteErrorFilter({ mappings: [{ type: TenantFilialError, status: 400 }] }))
+export class TenantFilialController {
+  constructor(@Inject(ORG) private readonly org: OrgContext) {}
 
-  app.get("/empresas/filiais", async (request) => {
-    const tenantId = tenantIdFromRequest(request);
-    return org.listTenantFiliais.execute(tenantId);
-  });
+  @Get("empresas/filiais")
+  list(@TenantId() tenantId: string) {
+    return this.org.listTenantFiliais.execute(tenantId);
+  }
 
-  app.post("/empresas/filiais", { onRequest: [requireAdminHook] }, async (request, reply) => {
-    const tenantId = tenantIdFromRequest(request);
-    const parsed = tenantFilialCreateBody.safeParse(request.body);
-    if (!parsed.success) {
-      return reply.status(400).send({ error: "Payload inválido", details: parsed.error.flatten() });
-    }
-    const body = parsed.data;
-    try {
-      return await org.addTenantFilial.execute(tenantId, {
-        razaoSocial: body.razaoSocial,
-        nomeFantasia: body.nomeFantasia,
-        cnpj: normalizeFilialCnpj(body.cnpj),
-        ie: body.ie,
-        crt: body.crt,
-        logradouro: body.logradouro,
-        numero: body.numero,
-        complemento: body.complemento,
-        bairro: body.bairro,
-        codigoMunicipio: body.codigoMunicipio,
-        municipio: body.municipio,
-        uf: body.uf.toUpperCase(),
-        cep: body.cep,
-        telefone: body.telefone,
-        serieRemessa: body.serieRemessa,
-        serieTransferencia: body.serieTransferencia,
-        unidadeLogisticaPadraoId: body.unidadeLogisticaPadraoId,
-      });
-    } catch (error) {
-      if (handleRouteError(reply, error, { mappings: [...TENANT_FILIAL_ERROR_MAPPINGS] })) return;
-      throw error;
-    }
-  });
+  @Post("empresas/filiais")
+  @AdminOnly()
+  @HttpCode(HTTP_OK)
+  create(
+    @TenantId() tenantId: string,
+    @Body(new ZodValidationPipe(tenantFilialCreateBody, { invalidMessage: INVALID_PAYLOAD })) body: FilialCreateBody,
+  ) {
+    return this.org.addTenantFilial.execute(tenantId, toFilialCreate(body));
+  }
 
-  app.put("/empresas/filiais/:id", { onRequest: [requireAdminHook] }, async (request, reply) => {
-    const tenantId = tenantIdFromRequest(request);
-    const { id } = tenantFilialIdParam.parse(request.params);
-    const parsed = tenantFilialUpdateBody.safeParse(request.body);
-    if (!parsed.success) {
-      return reply.status(400).send({ error: "Payload inválido", details: parsed.error.flatten() });
-    }
-    const body = parsed.data;
-    try {
-      const row = await org.updateTenantFilial.execute(tenantId, id, {
-        ...(body.razaoSocial != null ? { razaoSocial: body.razaoSocial } : {}),
-        ...(body.nomeFantasia != null ? { nomeFantasia: body.nomeFantasia } : {}),
-        ...(body.cnpj != null ? { cnpj: normalizeFilialCnpj(body.cnpj) } : {}),
-        ...(body.ie != null ? { ie: body.ie } : {}),
-        ...(body.crt != null ? { crt: body.crt } : {}),
-        ...(body.logradouro != null ? { logradouro: body.logradouro } : {}),
-        ...(body.numero != null ? { numero: body.numero } : {}),
-        ...(body.complemento !== undefined ? { complemento: body.complemento } : {}),
-        ...(body.bairro != null ? { bairro: body.bairro } : {}),
-        ...(body.codigoMunicipio != null ? { codigoMunicipio: body.codigoMunicipio } : {}),
-        ...(body.municipio != null ? { municipio: body.municipio } : {}),
-        ...(body.uf != null ? { uf: body.uf.toUpperCase() } : {}),
-        ...(body.cep != null ? { cep: body.cep } : {}),
-        ...(body.telefone !== undefined ? { telefone: body.telefone } : {}),
-        ...(body.serieRemessa != null ? { serieRemessa: body.serieRemessa } : {}),
-        ...(body.serieTransferencia !== undefined ? { serieTransferencia: body.serieTransferencia } : {}),
-        ...(body.unidadeLogisticaPadraoId !== undefined
-          ? { unidadeLogisticaPadraoId: body.unidadeLogisticaPadraoId }
-          : {}),
-      });
-      if (!row) return reply.status(404).send({ error: "Filial não encontrada" });
-      return row;
-    } catch (error) {
-      if (handleRouteError(reply, error, { mappings: [...TENANT_FILIAL_ERROR_MAPPINGS] })) return;
-      throw error;
-    }
-  });
+  @Put("empresas/filiais/:id")
+  @AdminOnly()
+  async update(
+    @TenantId() tenantId: string,
+    @Param(new ZodValidationPipe(tenantFilialIdParam)) params: FilialIdParam,
+    @Body(new ZodValidationPipe(tenantFilialUpdateBody, { invalidMessage: INVALID_PAYLOAD })) body: FilialUpdateBody,
+  ) {
+    const row = await this.org.updateTenantFilial.execute(tenantId, params.id, toFilialUpdate(body));
 
-  app.delete("/empresas/filiais/:id", { onRequest: [requireAdminHook] }, async (request, reply) => {
-    const tenantId = tenantIdFromRequest(request);
-    const { id } = tenantFilialIdParam.parse(request.params);
-    try {
-      const removed = await org.removeTenantFilial.execute(tenantId, id);
-      if (!removed) return reply.status(404).send({ error: "Filial não encontrada" });
-      return reply.status(204).send();
-    } catch (error) {
-      if (handleRouteError(reply, error, { mappings: [...TENANT_FILIAL_ERROR_MAPPINGS] })) return;
-      throw error;
-    }
-  });
+    return orNotFound(row, FILIAL_NOT_FOUND);
+  }
 
-  app.patch("/empresas/papeis-fiscais", { onRequest: [requireAdminHook] }, async (request, reply) => {
-    const tenantId = tenantIdFromRequest(request);
-    const parsed = tenantFiscalRolesBody.safeParse(request.body);
-    if (!parsed.success) {
-      return reply.status(400).send({ error: "Payload inválido", details: parsed.error.flatten() });
-    }
-    try {
-      const tenant = await org.setTenantFiscalRoles.execute(tenantId, parsed.data);
-      return org.tenantRepository.findByIdWithFiliais(tenant.id);
-    } catch (error) {
-      if (handleRouteError(reply, error, { mappings: [...TENANT_FILIAL_ERROR_MAPPINGS] })) return;
-      throw error;
-    }
-  });
+  @Delete("empresas/filiais/:id")
+  @AdminOnly()
+  @HttpCode(HTTP_NO_CONTENT)
+  async remove(@TenantId() tenantId: string, @Param(new ZodValidationPipe(tenantFilialIdParam)) params: FilialIdParam) {
+    orNotFound(await this.org.removeTenantFilial.execute(tenantId, params.id), FILIAL_NOT_FOUND);
+  }
 
-  // Compatibilidade com rotas legadas `/filiais`
-  app.get("/filiais", async (request) => {
-    const tenantId = tenantIdFromRequest(request);
-    return org.listTenantFiliais.execute(tenantId);
-  });
-};
+  @Patch("empresas/papeis-fiscais")
+  @AdminOnly()
+  async setFiscalRoles(
+    @TenantId() tenantId: string,
+    @Body(new ZodValidationPipe(tenantFiscalRolesBody, { invalidMessage: INVALID_PAYLOAD }))
+    body: z.infer<typeof tenantFiscalRolesBody>,
+  ) {
+    const tenant = await this.org.setTenantFiscalRoles.execute(tenantId, body);
+
+    return this.org.tenantRepository.findByIdWithFiliais(tenant.id);
+  }
+
+  /** Compatibilidade com a rota legada `/filiais`. */
+  @Get("filiais")
+  listLegacy(@TenantId() tenantId: string) {
+    return this.org.listTenantFiliais.execute(tenantId);
+  }
+}

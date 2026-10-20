@@ -1,5 +1,4 @@
 import type { FastifyPluginAsync } from "fastify";
-import rateLimit from "@fastify/rate-limit";
 import { isEmailVerified, twoFactorPendingTtl } from "../../../../lib/auth/config.js";
 import type { TwoFactorPendingPayload } from "../../../../lib/auth/types/index.js";
 import { verifyTurnstileToken } from "../../../../lib/auth/turnstile.js";
@@ -18,6 +17,7 @@ import {
 import type { AccessTokenPayload } from "../../domain/entities/auth-session.entity.js";
 import { createAuthModule } from "../../infrastructure/factory/auth-module.factory.js";
 import { wrapRouteWithDbContext } from "../../../../lib/db/wrap-protected-route.js";
+import { strictRouteRateLimit } from "../../../../lib/http/rate-limit.js";
 import { buildAuthMeta, signAccessToken } from "../helpers/auth-request.helper.js";
 import { handleAuthError } from "../mappers/auth-error.handler.js";
 import { onboardingController } from "./onboarding.controller.js";
@@ -55,11 +55,6 @@ function signTwoFactorPendingToken(
  * | POST | `/auth/2fa/disable` | DisableTwoFactorUseCase |
  */
 export const authController: FastifyPluginAsync = async (app) => {
-  await app.register(rateLimit, {
-    global: false,
-    ban: 0,
-  });
-
   app.addHook("onRoute", (routeOptions) => {
     wrapRouteWithDbContext(app, routeOptions, (request) => ({
       userId: request.user?.userId,
@@ -78,11 +73,11 @@ export const authController: FastifyPluginAsync = async (app) => {
 
   await app.register(onboardingController, { auth, signAccess });
 
-  const twoFaRateLimit = { max: 5, timeWindow: "15 minutes" } as const;
+  const twoFaRateLimit = strictRouteRateLimit(5, "15 minutes");
 
   app.post(
     "/auth/register",
-    { config: { rateLimit: { max: 5, timeWindow: "1 hour" } } },
+    { config: { rateLimit: strictRouteRateLimit(5, "1 hour") } },
     async (request, reply) => {
       try {
         const body = registerBodySchema.parse(request.body);
@@ -97,7 +92,7 @@ export const authController: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/auth/login",
-    { config: { rateLimit: { max: 10, timeWindow: "15 minutes" } } },
+    { config: { rateLimit: strictRouteRateLimit(10, "15 minutes") } },
     async (request, reply) => {
       try {
         const body = loginBodySchema.parse(request.body);
@@ -117,7 +112,7 @@ export const authController: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/auth/forgot-password",
-    { config: { rateLimit: { max: 5, timeWindow: "1 hour" } } },
+    { config: { rateLimit: strictRouteRateLimit(5, "1 hour") } },
     async (request, reply) => {
       try {
         const body = forgotPasswordBodySchema.parse(request.body);
@@ -132,7 +127,7 @@ export const authController: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/auth/reset-password",
-    { config: { rateLimit: { max: 10, timeWindow: "15 minutes" } } },
+    { config: { rateLimit: strictRouteRateLimit(10, "15 minutes") } },
     async (request, reply) => {
       try {
         const body = resetPasswordBodySchema.parse(request.body);
@@ -146,7 +141,7 @@ export const authController: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/auth/login/verify-2fa",
-    { config: { rateLimit: { max: 10, timeWindow: "15 minutes" } } },
+    { config: { rateLimit: strictRouteRateLimit(10, "15 minutes") } },
     async (request, reply) => {
       try {
         const body = verify2faBodySchema.parse(request.body);
@@ -208,7 +203,7 @@ export const authController: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/auth/refresh",
-    { config: { rateLimit: { max: 30, timeWindow: "15 minutes" } } },
+    { config: { rateLimit: strictRouteRateLimit(30, "15 minutes") } },
     async (request, reply) => {
       try {
         const { refreshToken } = refreshBodySchema.parse(request.body);
@@ -226,7 +221,7 @@ export const authController: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/auth/logout",
-    { config: { rateLimit: { max: 20, timeWindow: "15 minutes" } } },
+    { config: { rateLimit: strictRouteRateLimit(20, "15 minutes") } },
     async (request, reply) => {
       try {
         const body = logoutBodySchema.safeParse(request.body ?? {});
@@ -270,7 +265,7 @@ export const authController: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/auth/verify-email",
-    { config: { rateLimit: { max: 10, timeWindow: "15 minutes" } } },
+    { config: { rateLimit: strictRouteRateLimit(10, "15 minutes") } },
     async (request, reply) => {
       try {
         const { token } = verifyEmailBodySchema.parse(request.body);
@@ -284,7 +279,7 @@ export const authController: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/auth/resend-verification",
-    { onRequest: [app.authenticate], config: { rateLimit: { max: 5, timeWindow: "1 hour" } } },
+    { onRequest: [app.authenticate], config: { rateLimit: strictRouteRateLimit(5, "1 hour") } },
     async (request, reply) => {
       try {
         const result = await auth.resendVerificationEmail.execute(request.user.userId);

@@ -1,16 +1,24 @@
-import type { FastifyPluginAsync } from "fastify";
-import rateLimit from "@fastify/rate-limit";
+import type { FastifyPluginAsync, RouteOptions } from "fastify";
 import { wrapProtectedRouteWithDbContext } from "../lib/db/wrap-protected-route.js";
+import type { RateLimitHandler } from "../lib/http/rate-limit.js";
 import { catalogContextPlugin } from "./contexts/catalog.plugin.js";
 import { fiscalContextPlugin } from "./contexts/fiscal.plugin.js";
 import { requireEmailVerifiedHook, requireTenantHook } from "./contexts/guards.js";
 import { logisticsContextPlugin } from "./contexts/logistics.plugin.js";
 import { orgContextPlugin } from "./contexts/org.plugin.js";
 
-const PROTECTED_API_RATE_LIMIT = {
-  max: 300,
-  timeWindow: "1 minute",
+export type ProtectedApiPluginOptions = {
+  /** Limitador compartilhado com as rotas Nest protegidas (mesmo store). */
+  rateLimit: RateLimitHandler;
 };
+
+/** Anexa o limitador no fim dos hooks `onRequest` da rota (depois de auth, tenant, e-mail e admin). */
+function appendRouteOnRequest(routeOptions: RouteOptions, handler: RateLimitHandler): void {
+  const current = routeOptions.onRequest;
+  const hooks = Array.isArray(current) ? current : current ? [current] : [];
+
+  routeOptions.onRequest = [...hooks, handler];
+}
 
 /**
  * API protegida: JWT obrigatório; tenant obrigatório nas rotas de negócio.
@@ -20,17 +28,11 @@ const PROTECTED_API_RATE_LIMIT = {
  *
  * Sem `fastify-plugin` aqui: hooks ficam encapsulados e não bloqueiam `/api/auth/*`.
  */
-export const protectedApiPlugin: FastifyPluginAsync = async (app) => {
-  await app.register(rateLimit, {
-    global: true,
-    max: PROTECTED_API_RATE_LIMIT.max,
-    timeWindow: PROTECTED_API_RATE_LIMIT.timeWindow,
-    keyGenerator: (req) => req.ip,
-  });
-
+export const protectedApiPlugin: FastifyPluginAsync<ProtectedApiPluginOptions> = async (app, options) => {
   app.addHook("onRequest", app.authenticate);
 
   app.addHook("onRoute", (routeOptions) => {
+    appendRouteOnRequest(routeOptions, options.rateLimit);
     wrapProtectedRouteWithDbContext(app, routeOptions);
   });
 
@@ -42,5 +44,3 @@ export const protectedApiPlugin: FastifyPluginAsync = async (app) => {
   await app.register(fiscalContextPlugin);
   await app.register(logisticsContextPlugin);
 };
-
-export { PROTECTED_API_RATE_LIMIT };

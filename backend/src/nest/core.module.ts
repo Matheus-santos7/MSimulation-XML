@@ -1,0 +1,24 @@
+import { Global, Module, type DynamicModule } from "@nestjs/common";
+import type { PrismaClient } from "../generated/prisma/client.js";
+import { PRISMA, RATE_LIMITS, type RateLimits } from "./tokens.js";
+
+export type CoreDependencies = {
+  prisma: PrismaClient;
+  rateLimits: RateLimits;
+};
+
+/** Dependências de infraestrutura visíveis em todos os módulos (Prisma e limitadores). */
+@Global()
+@Module({})
+export class CoreModule {
+  static register(dependencies: CoreDependencies): DynamicModule {
+    return {
+      module: CoreModule,
+      providers: [
+        { provide: PRISMA, useValue: dependencies.prisma },
+        { provide: RATE_LIMITS, useValue: dependencies.rateLimits },
+      ],
+      exports: [PRISMA, RATE_LIMITS],
+    };
+  }
+}

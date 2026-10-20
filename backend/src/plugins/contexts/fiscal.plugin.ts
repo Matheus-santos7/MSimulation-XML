@@ -1,4 +1,3 @@
-import multipart from "@fastify/multipart";
 import type { FastifyPluginAsync } from "fastify";
 import { registerFiscalTransactionCommitHook } from "../../lib/db/prisma-tx.js";
 import { cteController } from "../../modules/fiscal-documents/presentation/controllers/cte.controller.js";
@@ -35,9 +34,6 @@ export const fiscalContextPlugin: FastifyPluginAsync = async (app) => {
       });
   });
 
-  await app.register(multipart, {
-    limits: { fileSize: 15 * 1024 * 1024, files: 1 },
-  });
   await app.register(nfeLifecycleController);
   await app.register(nfeController);
   await app.register(cteController);

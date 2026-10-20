@@ -10,7 +10,7 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { after, before, describe, it } from "node:test";
-import type { FastifyInstance, RouteOptions } from "fastify";
+import type { FastifyInstance, InjectOptions, RouteOptions } from "fastify";
 
 process.env.JWT_SECRET ??= "contract-test-secret-0123456789";
 
@@ -104,8 +104,10 @@ function createFakePrisma(options: FakePrismaOptions = {}) {
   };
 }
 
+/** Sobe a API e devolve a instância Fastify, que atende as rotas legadas e as do Nest. */
 async function startApp(options: FakePrismaOptions = {}, onRoute?: (route: RouteOptions) => void) {
-  const app = await buildApp({ logger: false, prisma: createFakePrisma(options) as never, onRoute });
+  const nest = await buildApp({ logger: false, prisma: createFakePrisma(options) as never, onRoute });
+  const app = nest.getHttpAdapter().getInstance() as FastifyInstance;
   await app.ready();
 
   return app;
@@ -325,6 +327,93 @@ describe("contrato HTTP — respostas por módulo (banco vazio)", () => {
       error: "Required",
       details: { email: ["Required"], password: ["Required"] },
     });
+  });
+});
+
+describe("contrato HTTP — rate limit", () => {
+  const PROTECTED_API_MAX_PER_MINUTE = 300;
+  const LOGIN_MAX_PER_WINDOW = 10;
+
+  async function statusesOf(app: FastifyInstance, count: number, request: InjectOptions) {
+    const statuses: number[] = [];
+    for (let i = 0; i < count; i += 1) {
+      statuses.push((await app.inject(request)).statusCode);
+    }
+
+    return statuses;
+  }
+
+  it("API protegida divide 300 requisições autenticadas por minuto entre as rotas e depois responde 429", async () => {
+    const app = await startApp();
+    const headers = bearer(accessToken(app));
+
+    try {
+      const statuses = await statusesOf(app, PROTECTED_API_MAX_PER_MINUTE, { method: "GET", url: "/api/pedidos", headers });
+      const blocked = await app.inject({ method: "GET", url: "/api/products", headers });
+
+      assert.ok(statuses.every(status => status === 200));
+      assert.equal(blocked.statusCode, 429);
+      assert.deepEqual(blocked.json(), { error: "Rate limit exceeded, retry in 1 minute" });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("API protegida não conta requisições sem token (o JWT é checado antes do limite)", async () => {
+    const app = await startApp();
+
+    try {
+      const statuses = await statusesOf(app, PROTECTED_API_MAX_PER_MINUTE + 1, { method: "GET", url: "/api/pedidos" });
+
+      assert.ok(statuses.every(status => status === 401));
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("login responde 403 (ban: 0) a partir da 11ª tentativa na janela", async () => {
+    const app = await startApp();
+
+    try {
+      const request = { method: "POST", url: "/api/auth/login", payload: {} } as const;
+      const statuses = await statusesOf(app, LOGIN_MAX_PER_WINDOW, request);
+      const blocked = await app.inject(request);
+
+      assert.ok(statuses.every(status => status === 400));
+      assert.equal(blocked.statusCode, 403);
+      assert.deepEqual(blocked.json(), { error: "Rate limit exceeded, retry in 15 minutes" });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("lookup não tem rate limit (o limite de 30/min nunca foi aplicado; ver lookup-rate-limit.ts)", async () => {
+    const app = await startApp();
+    const INTENDED_LOOKUP_MAX_PER_MINUTE = 30;
+
+    try {
+      // CNPJ inválido falha na validação, sem chamar a API externa.
+      const request = { method: "GET", url: "/api/lookup/cnpj/abc", headers: bearer(accessToken(app)) } as const;
+      const statuses = await statusesOf(app, INTENDED_LOOKUP_MAX_PER_MINUTE + 1, request);
+
+      assert.ok(statuses.every(status => status === 400));
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("health e /auth/me não têm rate limit", async () => {
+    const app = await startApp();
+
+    try {
+      const health = await statusesOf(app, PROTECTED_API_MAX_PER_MINUTE + 1, { method: "GET", url: "/api/health" });
+      const me = await statusesOf(app, PROTECTED_API_MAX_PER_MINUTE + 1, { method: "GET", url: "/api/auth/me" });
+
+      assert.ok(health.every(status => status === 200));
+      assert.ok(me.every(status => status === 401));
+    } finally {
+      await app.close();
+    }
   });
 });
 

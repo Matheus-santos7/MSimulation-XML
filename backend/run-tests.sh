@@ -14,4 +14,5 @@ echo "Generating Prisma client..."
 pnpm exec prisma generate
 
 echo "Running tests ($(find src -name '*.test.ts' | wc -l) files)..."
-pnpm exec node --import tsx --test $(find src -name '*.test.ts' | sort)
+# tsconfig.json exclui *.test.ts; o de testes os inclui e herda experimentalDecorators (Nest).
+TSX_TSCONFIG_PATH=tsconfig.test.json pnpm exec node --import tsx --test $(find src -name '*.test.ts' | sort)

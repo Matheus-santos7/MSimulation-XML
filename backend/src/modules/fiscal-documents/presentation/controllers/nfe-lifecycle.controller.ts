@@ -1,11 +1,14 @@
-import type { FastifyPluginAsync } from "fastify";
-import { tenantIdFromRequest } from "../../../../lib/auth/request-context.js";
-import { handleRouteError } from "../../../../lib/http/domain-errors.js";
-import { requireAdminHook } from "../../../../plugins/contexts/guards.js";
+import { Body, Controller, Get, HttpCode, Inject, Param, Post, Res, UseFilters } from "@nestjs/common";
+import type { FastifyReply } from "fastify";
+import type { z } from "zod";
+import { AdminOnly, ProtectedApi } from "../../../../nest/api-access.decorators.js";
+import { TenantId } from "../../../../nest/auth/request-params.js";
+import { RouteErrorFilter } from "../../../../nest/http/api-exception.filter.js";
+import { ZodValidationPipe } from "../../../../nest/http/zod-validation.pipe.js";
 import { DocumentCancellationError } from "../../domain/errors/document-cancellation.error.js";
 import { DocumentReturnError } from "../../domain/errors/document-return.error.js";
 import { NumberInutilizationError } from "../../domain/errors/number-inutilization.error.js";
-import { createFiscalDocumentsModule } from "../../infrastructure/factory/fiscal-documents-module.factory.js";
+import { FISCAL_DOCUMENTS, type FiscalDocumentsContext } from "../../fiscal-documents.tokens.js";
 import {
   cancelDocumentBodySchema,
   inboundConferenceBodySchema,
@@ -14,149 +17,133 @@ import {
   processReturnBodySchema,
 } from "../schemas/fiscal-document.schemas.js";
 
-const NFE_LIFECYCLE_ERRORS = [
-  NumberInutilizationError,
-  DocumentReturnError,
-  DocumentCancellationError,
-] as const;
+const HTTP_OK = 200;
+const HTTP_CREATED = 201;
+
+/** Erros de domínio com `.status` próprio (inutilização, devolução, cancelamento). */
+const NFE_LIFECYCLE_ERRORS = [NumberInutilizationError, DocumentReturnError, DocumentCancellationError] as const;
+
+type AccessKeyParam = z.infer<typeof nfeAccessKeyParamSchema>;
 
 /**
- * NF-e lifecycle routes: inutilization, return, cancellation (ADMIN only).
- * Static `/nfes/inutilizar` is registered before parameterized routes.
+ * Ciclo de vida da NF-e: inutilização, devolução, insucesso de entrega, retorno físico,
+ * conferência de entrada e cancelamento. Todas as rotas são ADMIN (`@AdminOnly()` por
+ * método: guards de método rodam depois do JWT do controller).
+ * O corpo vazio vira `{}` antes da validação, como no controller Fastify.
  */
-export const nfeLifecycleController: FastifyPluginAsync = async (app) => {
-  const fiscalDocuments = createFiscalDocumentsModule();
+@Controller("nfes")
+@ProtectedApi()
+@UseFilters(new RouteErrorFilter({ statusErrors: NFE_LIFECYCLE_ERRORS }))
+export class NfeLifecycleController {
+  constructor(@Inject(FISCAL_DOCUMENTS) private readonly fiscalDocuments: FiscalDocumentsContext) {}
 
-  app.post("/nfes/inutilizar", { onRequest: [requireAdminHook] }, async (req, reply) => {
-    try {
-      const tenantId = tenantIdFromRequest(req);
-      const body = inutilizeNumberBodySchema.parse(req.body ?? {});
-      const result = await fiscalDocuments.inutilizeNumber.execute({
-        tenantId,
-        series: body.serie,
-        numberStart: body.numeroIni,
-        numberEnd: body.numeroFim,
-        justification: body.xJust,
-      });
-      return reply.status(201).send(result);
-    } catch (error) {
-      if (handleRouteError(reply, error, { statusErrors: [...NFE_LIFECYCLE_ERRORS] })) return;
-      throw error;
-    }
-  });
+  @Post("inutilizar")
+  @AdminOnly()
+  @HttpCode(HTTP_CREATED)
+  inutilize(@TenantId() tenantId: string, @Body() rawBody: unknown) {
+    const body = inutilizeNumberBodySchema.parse(rawBody ?? {});
 
-  app.get("/nfes/:chave/devolucao", { onRequest: [requireAdminHook] }, async (req, reply) => {
-    try {
-      const tenantId = tenantIdFromRequest(req);
-      const { chave } = nfeAccessKeyParamSchema.parse(req.params);
-      const result = await fiscalDocuments.processReturn.getReturnableItems({
-        tenantId,
-        saleNfeKey: chave,
-      });
-      return reply.status(200).send(result);
-    } catch (error) {
-      if (handleRouteError(reply, error, { statusErrors: [...NFE_LIFECYCLE_ERRORS] })) return;
-      throw error;
-    }
-  });
+    return this.fiscalDocuments.inutilizeNumber.execute({
+      tenantId,
+      series: body.serie,
+      numberStart: body.numeroIni,
+      numberEnd: body.numeroFim,
+      justification: body.xJust,
+    });
+  }
 
-  app.post("/nfes/:chave/devolucao", { onRequest: [requireAdminHook] }, async (req, reply) => {
-    try {
-      const tenantId = tenantIdFromRequest(req);
-      const { chave } = nfeAccessKeyParamSchema.parse(req.params);
-      const body = processReturnBodySchema.parse(req.body ?? {});
-      const result = await fiscalDocuments.processReturn.execute({
-        tenantId,
-        saleNfeKey: chave,
-        returnTipo: "DEVOLUCAO",
-        itens: body.itens,
-      });
-      return reply.status(201).send(result);
-    } catch (error) {
-      if (handleRouteError(reply, error, { statusErrors: [...NFE_LIFECYCLE_ERRORS] })) return;
-      throw error;
-    }
-  });
+  @Get(":chave/devolucao")
+  @AdminOnly()
+  returnableItems(
+    @TenantId() tenantId: string,
+    @Param(new ZodValidationPipe(nfeAccessKeyParamSchema)) params: AccessKeyParam,
+  ) {
+    return this.fiscalDocuments.processReturn.getReturnableItems({ tenantId, saleNfeKey: params.chave });
+  }
 
-  app.post("/nfes/:chave/insulcesso", { onRequest: [requireAdminHook] }, async (req, reply) => {
-    try {
-      const tenantId = tenantIdFromRequest(req);
-      const { chave } = nfeAccessKeyParamSchema.parse(req.params);
-      const result = await fiscalDocuments.processReturn.execute({
-        tenantId,
-        saleNfeKey: chave,
-        returnTipo: "INSULCESSO_DE_ENTREGA",
-      });
-      return reply.status(201).send(result);
-    } catch (error) {
-      if (handleRouteError(reply, error, { statusErrors: [...NFE_LIFECYCLE_ERRORS] })) return;
-      throw error;
-    }
-  });
+  @Post(":chave/devolucao")
+  @AdminOnly()
+  @HttpCode(HTTP_CREATED)
+  processReturn(
+    @TenantId() tenantId: string,
+    @Param(new ZodValidationPipe(nfeAccessKeyParamSchema)) params: AccessKeyParam,
+    @Body() rawBody: unknown,
+  ) {
+    const body = processReturnBodySchema.parse(rawBody ?? {});
 
-  app.post("/nfes/:chave/retorno-fisico", { onRequest: [requireAdminHook] }, async (req, reply) => {
-    try {
-      const tenantId = tenantIdFromRequest(req);
-      const { chave } = nfeAccessKeyParamSchema.parse(req.params);
-      const result = await fiscalDocuments.processPhysicalReturn.execute({
-        tenantId,
-        remessaNfeKey: chave,
-      });
-      return reply.status(201).send(result);
-    } catch (error) {
-      if (handleRouteError(reply, error, { statusErrors: [...NFE_LIFECYCLE_ERRORS] })) return;
-      throw error;
-    }
-  });
+    return this.fiscalDocuments.processReturn.execute({
+      tenantId,
+      saleNfeKey: params.chave,
+      returnTipo: "DEVOLUCAO",
+      itens: body.itens,
+    });
+  }
 
-  app.get("/nfes/:chave/conferencia", { onRequest: [requireAdminHook] }, async (req, reply) => {
-    try {
-      const tenantId = tenantIdFromRequest(req);
-      const { chave } = nfeAccessKeyParamSchema.parse(req.params);
-      const result = await fiscalDocuments.processInboundConference.getExpected({
-        tenantId,
-        remessaNfeKey: chave,
-      });
-      return reply.status(200).send(result);
-    } catch (error) {
-      if (handleRouteError(reply, error, { statusErrors: [...NFE_LIFECYCLE_ERRORS] })) return;
-      throw error;
-    }
-  });
+  @Post(":chave/insulcesso")
+  @AdminOnly()
+  @HttpCode(HTTP_CREATED)
+  failedDelivery(
+    @TenantId() tenantId: string,
+    @Param(new ZodValidationPipe(nfeAccessKeyParamSchema)) params: AccessKeyParam,
+  ) {
+    return this.fiscalDocuments.processReturn.execute({
+      tenantId,
+      saleNfeKey: params.chave,
+      returnTipo: "INSULCESSO_DE_ENTREGA",
+    });
+  }
 
-  app.post("/nfes/:chave/conferencia", { onRequest: [requireAdminHook] }, async (req, reply) => {
-    try {
-      const tenantId = tenantIdFromRequest(req);
-      const { chave } = nfeAccessKeyParamSchema.parse(req.params);
-      const body = inboundConferenceBodySchema.parse(req.body ?? {});
-      const result = await fiscalDocuments.processInboundConference.execute({
-        tenantId,
-        remessaNfeKey: chave,
-        receivedQty: body.receivedQty,
-        positiveCfopOverride: body.positiveCfopOverride,
-        negativeCfopOverride: body.negativeCfopOverride,
-      });
-      return reply.status(result.noop ? 200 : 201).send(result);
-    } catch (error) {
-      if (handleRouteError(reply, error, { statusErrors: [...NFE_LIFECYCLE_ERRORS] })) return;
-      throw error;
-    }
-  });
+  @Post(":chave/retorno-fisico")
+  @AdminOnly()
+  @HttpCode(HTTP_CREATED)
+  physicalReturn(
+    @TenantId() tenantId: string,
+    @Param(new ZodValidationPipe(nfeAccessKeyParamSchema)) params: AccessKeyParam,
+  ) {
+    return this.fiscalDocuments.processPhysicalReturn.execute({ tenantId, remessaNfeKey: params.chave });
+  }
 
-  app.post("/nfes/:chave/cancelamento", { onRequest: [requireAdminHook] }, async (req, reply) => {
-    try {
-      const tenantId = tenantIdFromRequest(req);
-      const { chave } = nfeAccessKeyParamSchema.parse(req.params);
-      const body = cancelDocumentBodySchema.parse(req.body ?? {});
-      const result = await fiscalDocuments.cancelDocument.execute({
-        tenantId,
-        nfeKey: chave,
-        justification: body.xJust,
-      });
-      return reply.status(200).send(result);
-    } catch (error) {
-      if (handleRouteError(reply, error, { statusErrors: [...NFE_LIFECYCLE_ERRORS] })) return;
-      throw error;
-    }
-  });
-};
+  @Get(":chave/conferencia")
+  @AdminOnly()
+  expectedConference(
+    @TenantId() tenantId: string,
+    @Param(new ZodValidationPipe(nfeAccessKeyParamSchema)) params: AccessKeyParam,
+  ) {
+    return this.fiscalDocuments.processInboundConference.getExpected({ tenantId, remessaNfeKey: params.chave });
+  }
+
+  /** 201 quando a conferência emite nota de ajuste; 200 quando não havia divergência (`noop`). */
+  @Post(":chave/conferencia")
+  @AdminOnly()
+  async inboundConference(
+    @TenantId() tenantId: string,
+    @Param(new ZodValidationPipe(nfeAccessKeyParamSchema)) params: AccessKeyParam,
+    @Body() rawBody: unknown,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
+    const body = inboundConferenceBodySchema.parse(rawBody ?? {});
+    const result = await this.fiscalDocuments.processInboundConference.execute({
+      tenantId,
+      remessaNfeKey: params.chave,
+      receivedQty: body.receivedQty,
+      positiveCfopOverride: body.positiveCfopOverride,
+      negativeCfopOverride: body.negativeCfopOverride,
+    });
+    reply.status(result.noop ? HTTP_OK : HTTP_CREATED);
+
+    return result;
+  }
+
+  @Post(":chave/cancelamento")
+  @AdminOnly()
+  @HttpCode(HTTP_OK)
+  cancel(
+    @TenantId() tenantId: string,
+    @Param(new ZodValidationPipe(nfeAccessKeyParamSchema)) params: AccessKeyParam,
+    @Body() rawBody: unknown,
+  ) {
+    const body = cancelDocumentBodySchema.parse(rawBody ?? {});
+
+    return this.fiscalDocuments.cancelDocument.execute({ tenantId, nfeKey: params.chave, justification: body.xJust });
+  }
+}

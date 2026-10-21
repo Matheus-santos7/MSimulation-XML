@@ -564,6 +564,78 @@ describe("contrato HTTP — rate limit", () => {
   });
 });
 
+describe("contrato HTTP — documentos fiscais", () => {
+  const ACCESS_KEY = "3".repeat(44);
+  let app: FastifyInstance;
+  let headers: Record<string, string>;
+
+  before(async () => {
+    app = await startApp({ user: { role: "ADMIN" } });
+    headers = bearer(accessToken(app));
+  });
+  after(() => app.close());
+
+  const NOT_FOUND_CASES = [
+    { url: `/api/nfes/${ACCESS_KEY}/xml`, error: "NF-e não encontrada" },
+    { url: `/api/nfes/${ACCESS_KEY}/xml?doc=evento`, error: "Evento de cancelamento não encontrado para esta NF-e" },
+    { url: `/api/nfes/${ACCESS_KEY}`, error: "NF-e não encontrada" },
+    { url: `/api/ctes/${ACCESS_KEY}/xml`, error: "CT-e não encontrado" },
+    { url: `/api/ctes/${ACCESS_KEY}`, error: "CT-e não encontrado" },
+    { url: "/api/fiscal-events/inut-1/xml", error: "Inutilização não encontrada" },
+  ] as const;
+
+  for (const testCase of NOT_FOUND_CASES) {
+    it(`GET ${testCase.url} sem documento devolve 404`, async () => {
+      const res = await app.inject({ method: "GET", url: testCase.url, headers });
+
+      assert.equal(res.statusCode, 404);
+      assert.deepEqual(res.json(), { error: testCase.error });
+    });
+  }
+
+  it("DELETE /api/nfes/:chave inexistente devolve 404", async () => {
+    const res = await app.inject({ method: "DELETE", url: `/api/nfes/${ACCESS_KEY}`, headers });
+
+    assert.equal(res.statusCode, 404);
+    assert.deepEqual(res.json(), { error: "NF-e não encontrada" });
+  });
+
+  it("GET /api/nfes/:chave com chave fora do formato devolve 400 Zod", async () => {
+    const res = await app.inject({ method: "GET", url: "/api/nfes/123", headers });
+
+    assert.equal(res.statusCode, 400);
+    assert.deepEqual(Object.keys(res.json()).sort(), ["details", "error"]);
+  });
+
+  it("POST /api/nfes/inutilizar sem corpo devolve 400 Zod", async () => {
+    const res = await app.inject({ method: "POST", url: "/api/nfes/inutilizar", headers });
+
+    assert.equal(res.statusCode, 400);
+    assert.deepEqual(Object.keys(res.json()).sort(), ["details", "error"]);
+  });
+
+  it("POST /api/nfes/:chave/cancelamento com justificativa curta devolve 400 Zod", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/nfes/${ACCESS_KEY}/cancelamento`,
+      payload: { xJust: "curta" },
+      headers,
+    });
+
+    assert.equal(res.statusCode, 400);
+    assert.ok(res.json().details.xJust);
+  });
+
+  for (const url of ["/api/audit-logs", "/api/timeline/steps"]) {
+    it(`GET ${url} devolve lista vazia`, async () => {
+      const res = await app.inject({ method: "GET", url, headers });
+
+      assert.equal(res.statusCode, 200);
+      assert.deepEqual(res.json(), []);
+    });
+  }
+});
+
 describe("contrato HTTP — tenant e usuários (org)", () => {
   const OWN_TENANT_ID = "11111111-1111-4111-8111-111111111111";
   let app: FastifyInstance;

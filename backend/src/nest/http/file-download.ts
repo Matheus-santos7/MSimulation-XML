@@ -7,11 +7,13 @@ export type FileResponse = {
   contentType: string;
   /** Com nome, o arquivo vai como anexo (`Content-Disposition: attachment`). */
   fileName?: string;
+  /** Headers adicionais (cache, origem do XML). */
+  headers?: Record<string, string>;
 };
 
 /** Envia um arquivo cru (use com `@Res()`; o Nest não serializa essa resposta). */
 export function sendFile(reply: FastifyReply, file: FileResponse): FastifyReply {
-  const headers: Record<string, string> = { "Content-Type": file.contentType };
+  const headers: Record<string, string> = { "Content-Type": file.contentType, ...file.headers };
   if (file.fileName) {
     headers["Content-Disposition"] = `attachment; filename="${file.fileName}"`;
   }

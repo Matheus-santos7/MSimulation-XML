@@ -35,10 +35,10 @@ export {
 export { listTimelineChains } from "./infrastructure/observability/timeline-service.js";
 
 export { createFiscalDocumentsModule };
-export { nfeController } from "./presentation/controllers/nfe.controller.js";
-export { nfeLifecycleController } from "./presentation/controllers/nfe-lifecycle.controller.js";
-export { cteController } from "./presentation/controllers/cte.controller.js";
-export { fiscalObservabilityController } from "./presentation/controllers/fiscal-observability.controller.js";
+export { NfeController } from "./presentation/controllers/nfe.controller.js";
+export { NfeLifecycleController } from "./presentation/controllers/nfe-lifecycle.controller.js";
+export { CteController } from "./presentation/controllers/cte.controller.js";
+export { FiscalObservabilityController } from "./presentation/controllers/fiscal-observability.controller.js";
 export {
   nfeAccessKeyParamSchema,
   cancelDocumentBodySchema,

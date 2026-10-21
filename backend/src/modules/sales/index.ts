@@ -18,7 +18,7 @@ export type {
 export type { EmissionContext } from "./domain/entities/emission-context.entity.js";
 export { createSalesModule, emitSalesChain };
 export { mapOrderFromPrisma } from "./infrastructure/prisma/order-prisma.mapper.js";
-export { orderController } from "./presentation/controllers/order.controller.js";
+export { OrderController } from "./presentation/controllers/order.controller.js";
 export {
   buyerCheckoutBody,
   orderCheckoutBody,

@@ -20,18 +20,12 @@ import { assertProductionSecurityConfig } from "./lib/auth/production-env.js";
 import { buildCorsOptions } from "./lib/http/cors-config.js";
 import { registerGlobalErrorHandler } from "./lib/http/error-handler.js";
 import { buildHelmetOptions } from "./lib/http/helmet-config.js";
-import {
-  createRateLimitHandler,
-  PROTECTED_API_RATE_LIMIT,
-  registerRootRateLimit,
-  type RateLimitHandler,
-} from "./lib/http/rate-limit.js";
+import { createRateLimitHandler, PROTECTED_API_RATE_LIMIT, registerRootRateLimit } from "./lib/http/rate-limit.js";
 import { authController } from "./modules/auth/presentation/controllers/auth.controller.js";
 import { AppModule } from "./nest/app.module.js";
 import { ApiExceptionFilter } from "./nest/http/api-exception.filter.js";
 import { authPlugin } from "./plugins/auth/index.js";
 import { prismaPlugin } from "./plugins/prisma.js";
-import { protectedApiPlugin } from "./plugins/protected-api.js";
 
 const API_PREFIX = "api";
 
@@ -71,26 +65,24 @@ async function buildFastify(options: BuildAppOptions): Promise<FastifyInstance> 
  * (na raiz quem responde é o handler do Nest, que passa pelo `ApiExceptionFilter`).
  * Cada fase da migração remove um registro daqui.
  */
-async function registerLegacyRoutes(app: FastifyInstance, protectedApiRateLimit: RateLimitHandler): Promise<void> {
+async function registerLegacyRoutes(app: FastifyInstance): Promise<void> {
   await app.register(async legacy => {
     registerGlobalErrorHandler(legacy);
 
     await legacy.register(authController, { prefix: `/${API_PREFIX}` });
-    await legacy.register(protectedApiPlugin, { prefix: `/${API_PREFIX}`, rateLimit: protectedApiRateLimit });
   });
 }
 
 export async function buildApp(options: BuildAppOptions = {}): Promise<NestFastifyApplication> {
   const fastify = await buildFastify(options);
-  const protectedApiRateLimit = createRateLimitHandler(fastify, PROTECTED_API_RATE_LIMIT);
 
-  await registerLegacyRoutes(fastify, protectedApiRateLimit);
+  await registerLegacyRoutes(fastify);
 
   const appModule = AppModule.register({
     prisma: fastify.prisma,
     logger: fastify.log,
     rateLimits: {
-      protectedApi: protectedApiRateLimit,
+      protectedApi: createRateLimitHandler(fastify, PROTECTED_API_RATE_LIMIT),
       create: routeOptions => createRateLimitHandler(fastify, routeOptions),
     },
   });

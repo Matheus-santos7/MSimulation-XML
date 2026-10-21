@@ -636,6 +636,47 @@ describe("contrato HTTP — documentos fiscais", () => {
   }
 });
 
+describe("contrato HTTP — pedidos (ADMIN)", () => {
+  let app: FastifyInstance;
+  let headers: Record<string, string>;
+
+  before(async () => {
+    app = await startApp({ user: { role: "ADMIN" } });
+    headers = bearer(accessToken(app));
+  });
+  after(() => app.close());
+
+  const NOT_FOUND_CASES = [
+    { method: "GET", url: `/api/pedidos/${SAMPLE_ID}/integracao` },
+    { method: "POST", url: `/api/pedidos/${SAMPLE_ID}/faturar` },
+    { method: "DELETE", url: `/api/pedidos/${SAMPLE_ID}` },
+  ] as const;
+
+  for (const testCase of NOT_FOUND_CASES) {
+    it(`${testCase.method} ${testCase.url} inexistente devolve 404`, async () => {
+      const res = await app.inject({ method: testCase.method, url: testCase.url, headers });
+
+      assert.equal(res.statusCode, 404);
+      assert.deepEqual(res.json(), { error: "Pedido não encontrado" });
+    });
+  }
+
+  for (const testCase of [
+    { method: "POST", url: "/api/pedidos/checkout" },
+    { method: "PATCH", url: `/api/pedidos/${SAMPLE_ID}` },
+  ] as const) {
+    it(`${testCase.method} ${testCase.url} com corpo inválido devolve 400 Zod`, async () => {
+      const res = await app.inject({ method: testCase.method, url: testCase.url, payload: {}, headers });
+
+      assert.equal(res.statusCode, 400);
+      assert.deepEqual(res.json(), {
+        error: "Required",
+        details: { items: ["Required"], comprador: ["Required"] },
+      });
+    });
+  }
+});
+
 describe("contrato HTTP — tenant e usuários (org)", () => {
   const OWN_TENANT_ID = "11111111-1111-4111-8111-111111111111";
   let app: FastifyInstance;

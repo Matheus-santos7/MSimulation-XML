@@ -1,14 +1,21 @@
-import type { FastifyPluginAsync } from "fastify";
-import { tenantIdFromRequest } from "../../../../lib/auth/request-context.js";
-import { handleRouteError } from "../../../../lib/http/domain-errors.js";
-import { requireAdminHook } from "../../../../plugins/contexts/guards.js";
+import { Body, Controller, Delete, Get, HttpCode, Inject, Param, Patch, Post, UseFilters } from "@nestjs/common";
+import type { z } from "zod";
+import { AdminOnly, ProtectedApi } from "../../../../nest/api-access.decorators.js";
+import { TenantId } from "../../../../nest/auth/request-params.js";
+import { RouteErrorFilter } from "../../../../nest/http/api-exception.filter.js";
+import { orNotFound } from "../../../../nest/http/not-found.js";
+import { ZodValidationPipe } from "../../../../nest/http/zod-validation.pipe.js";
 import { SaldoRemessaInsuficienteError } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
 import { CheckoutError } from "../../domain/errors/checkout.error.js";
 import { OrderLockedError } from "../../domain/errors/order-locked.error.js";
 import { SalesChainError } from "../../domain/errors/sales-chain.error.js";
-import { createSalesModule } from "../../infrastructure/factory/sales-module.factory.js";
-import { orderCheckoutBody, orderIdParam } from "../schemas/order.schemas.js";
+import { SALES, type SalesContext } from "../../sales.tokens.js";
 import { mapOrderToIntegrationPayload } from "../mappers/order-integration.mapper.js";
+import { orderCheckoutBody, orderIdParam } from "../schemas/order.schemas.js";
+
+const HTTP_CREATED = 201;
+const HTTP_NO_CONTENT = 204;
+const ORDER_NOT_FOUND = "Pedido não encontrado";
 
 /** Mapeamento de erros de domínio da venda para códigos HTTP na API. */
 const ORDER_ERROR_MAPPINGS = [
@@ -20,116 +27,90 @@ const ORDER_ERROR_MAPPINGS = [
     status: 422,
     toBody: (error: Error) => {
       const e = error as SaldoRemessaInsuficienteError;
-      return {
-        error: e.message,
-        disponivel: e.disponivel,
-        solicitado: e.solicitado,
-      };
+
+      return { error: e.message, disponivel: e.disponivel, solicitado: e.solicitado };
     },
   },
 ] as const;
 
+type OrderIdParam = z.infer<typeof orderIdParam>;
+type OrderCheckoutBody = z.infer<typeof orderCheckoutBody>;
+
 /**
  * Controller HTTP de pedidos de venda (Sales).
  *
- * Regista rotas sob o prefixo fiscal (`/pedidos`). Delega toda a lógica aos use cases
- * do módulo; valida entrada com Zod e traduz erros de domínio via `handleRouteError`.
+ * Delega toda a lógica aos use cases do módulo; valida entrada com Zod e traduz
+ * erros de domínio pelo `RouteErrorFilter`.
  *
  * | Método | Rota | Use case |
  * |--------|------|----------|
  * | GET | `/pedidos` | ListOrdersUseCase |
  * | GET | `/pedidos/:id` | GetOrderByIdUseCase |
+ * | GET | `/pedidos/:id/integracao` | GetOrderByIdUseCase → payload de integração |
  * | POST | `/pedidos` | CreateOrderDraftUseCase |
  * | PATCH | `/pedidos/:id` | UpdateOrderDraftUseCase |
  * | DELETE | `/pedidos/:id` | RemoveOrderUseCase |
  * | POST | `/pedidos/:id/faturar` | InvoiceOrderUseCase (ADMIN) |
  * | POST | `/pedidos/checkout` | ProcessCheckoutUseCase (ADMIN) |
  */
-export const orderController: FastifyPluginAsync = async (app) => {
-  const sales = createSalesModule();
+@Controller("pedidos")
+@ProtectedApi()
+@UseFilters(new RouteErrorFilter({ mappings: ORDER_ERROR_MAPPINGS }))
+export class OrderController {
+  constructor(@Inject(SALES) private readonly sales: SalesContext) {}
 
-  app.get("/pedidos", async (req) => {
-    const tenantId = tenantIdFromRequest(req);
-    return sales.listOrders.execute(tenantId);
-  });
+  @Get()
+  list(@TenantId() tenantId: string) {
+    return this.sales.listOrders.execute(tenantId);
+  }
 
-  app.get("/pedidos/:id", async (req, reply) => {
-    const { id } = orderIdParam.parse(req.params);
-    const tenantId = tenantIdFromRequest(req);
-    const order = await sales.getOrderById.execute(tenantId, id);
-    if (!order) return reply.status(404).send({ error: "Pedido não encontrado" });
-    return order;
-  });
+  @Get(":id")
+  async get(@Param(new ZodValidationPipe(orderIdParam)) params: OrderIdParam, @TenantId() tenantId: string) {
+    return orNotFound(await this.sales.getOrderById.execute(tenantId, params.id), ORDER_NOT_FOUND);
+  }
 
-  app.get("/pedidos/:id/integracao", async (req, reply) => {
-    const { id } = orderIdParam.parse(req.params);
-    const tenantId = tenantIdFromRequest(req);
-    const order = await sales.getOrderById.execute(tenantId, id);
-    if (!order) return reply.status(404).send({ error: "Pedido não encontrado" });
+  @Get(":id/integracao")
+  async integrationPayload(
+    @Param(new ZodValidationPipe(orderIdParam)) params: OrderIdParam,
+    @TenantId() tenantId: string,
+  ) {
+    const order = orNotFound(await this.sales.getOrderById.execute(tenantId, params.id), ORDER_NOT_FOUND);
+
     return mapOrderToIntegrationPayload(order);
-  });
+  }
 
-  app.post("/pedidos", async (req, reply) => {
-    try {
-      const tenantId = tenantIdFromRequest(req);
-      const body = orderCheckoutBody.parse(req.body);
-      const order = await sales.createOrderDraft.execute(tenantId, body);
-      return reply.status(201).send(order);
-    } catch (error) {
-      if (handleRouteError(reply, error, { mappings: [...ORDER_ERROR_MAPPINGS] })) return;
-      throw error;
-    }
-  });
+  @Post()
+  @HttpCode(HTTP_CREATED)
+  createDraft(@TenantId() tenantId: string, @Body(new ZodValidationPipe(orderCheckoutBody)) body: OrderCheckoutBody) {
+    return this.sales.createOrderDraft.execute(tenantId, body);
+  }
 
-  app.patch("/pedidos/:id", async (req, reply) => {
-    try {
-      const { id } = orderIdParam.parse(req.params);
-      const tenantId = tenantIdFromRequest(req);
-      const body = orderCheckoutBody.parse(req.body);
-      const order = await sales.updateOrderDraft.execute(id, tenantId, body);
-      if (!order) return reply.status(404).send({ error: "Pedido não encontrado" });
-      return order;
-    } catch (error) {
-      if (handleRouteError(reply, error, { mappings: [...ORDER_ERROR_MAPPINGS] })) return;
-      throw error;
-    }
-  });
+  @Patch(":id")
+  async updateDraft(
+    @Param(new ZodValidationPipe(orderIdParam)) params: OrderIdParam,
+    @TenantId() tenantId: string,
+    @Body(new ZodValidationPipe(orderCheckoutBody)) body: OrderCheckoutBody,
+  ) {
+    return orNotFound(await this.sales.updateOrderDraft.execute(params.id, tenantId, body), ORDER_NOT_FOUND);
+  }
 
-  app.post("/pedidos/:id/faturar", { onRequest: [requireAdminHook] }, async (req, reply) => {
-    try {
-      const { id } = orderIdParam.parse(req.params);
-      const tenantId = tenantIdFromRequest(req);
-      const result = await sales.invoiceOrder.execute(tenantId, id);
-      if (!result) return reply.status(404).send({ error: "Pedido não encontrado" });
-      return reply.status(201).send(result);
-    } catch (error) {
-      if (handleRouteError(reply, error, { mappings: [...ORDER_ERROR_MAPPINGS] })) return;
-      throw error;
-    }
-  });
+  @Post(":id/faturar")
+  @AdminOnly()
+  @HttpCode(HTTP_CREATED)
+  async invoice(@Param(new ZodValidationPipe(orderIdParam)) params: OrderIdParam, @TenantId() tenantId: string) {
+    return orNotFound(await this.sales.invoiceOrder.execute(tenantId, params.id), ORDER_NOT_FOUND);
+  }
 
-  app.delete("/pedidos/:id", async (req, reply) => {
-    try {
-      const { id } = orderIdParam.parse(req.params);
-      const tenantId = tenantIdFromRequest(req);
-      const removed = await sales.removeOrder.execute(tenantId, id);
-      if (!removed) return reply.status(404).send({ error: "Pedido não encontrado" });
-      return reply.status(204).send();
-    } catch (error) {
-      if (handleRouteError(reply, error, { mappings: [...ORDER_ERROR_MAPPINGS] })) return;
-      throw error;
-    }
-  });
+  @Delete(":id")
+  @HttpCode(HTTP_NO_CONTENT)
+  async remove(@Param(new ZodValidationPipe(orderIdParam)) params: OrderIdParam, @TenantId() tenantId: string) {
+    orNotFound(await this.sales.removeOrder.execute(tenantId, params.id), ORDER_NOT_FOUND);
+  }
 
-  app.post("/pedidos/checkout", { onRequest: [requireAdminHook] }, async (req, reply) => {
-    try {
-      const tenantId = tenantIdFromRequest(req);
-      const body = orderCheckoutBody.parse(req.body);
-      const nfe = await sales.processCheckout.execute(tenantId, body);
-      return reply.status(201).send(nfe);
-    } catch (error) {
-      if (handleRouteError(reply, error, { mappings: [...ORDER_ERROR_MAPPINGS] })) return;
-      throw error;
-    }
-  });
-};
+  @Post("checkout")
+  @AdminOnly()
+  @HttpCode(HTTP_CREATED)
+  checkout(@TenantId() tenantId: string, @Body(new ZodValidationPipe(orderCheckoutBody)) body: OrderCheckoutBody) {
+    return this.sales.processCheckout.execute(tenantId, body);
+  }
+}

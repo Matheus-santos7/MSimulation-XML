@@ -8,6 +8,8 @@ export const PRISMA = Symbol("PRISMA");
 export const RATE_LIMITS = Symbol("RATE_LIMITS");
 /** Logger do Fastify (pino), para logs de aplicação fora de uma requisição. */
 export const LOGGER = Symbol("LOGGER");
+/** `@fastify/jwt` da instância (assinatura e verificação com o mesmo segredo e TTL). */
+export const JWT = Symbol("JWT");
 
 export type RateLimits = {
   /** Limitador compartilhado da API protegida (mesmo store das rotas Fastify legadas). */

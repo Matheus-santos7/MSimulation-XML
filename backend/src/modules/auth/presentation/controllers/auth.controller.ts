@@ -1,7 +1,22 @@
-import type { FastifyPluginAsync } from "fastify";
+import { Body, Controller, Get, HttpCode, Inject, Post, Req, UseFilters, UseGuards, UseInterceptors } from "@nestjs/common";
+import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { z } from "zod";
 import { isEmailVerified, twoFactorPendingTtl } from "../../../../lib/auth/config.js";
-import type { TwoFactorPendingPayload } from "../../../../lib/auth/types/index.js";
 import { verifyTurnstileToken } from "../../../../lib/auth/turnstile.js";
+import type { TwoFactorPendingPayload } from "../../../../lib/auth/types/index.js";
+import { strictRouteRateLimit } from "../../../../lib/http/rate-limit.js";
+import { JwtAuthGuard } from "../../../../nest/auth/guards.js";
+import { UserId } from "../../../../nest/auth/request-params.js";
+import { DbContextInterceptor } from "../../../../nest/db/db-context.interceptor.js";
+import { ApiExceptionFilter } from "../../../../nest/http/api-exception.filter.js";
+import { orNotFound } from "../../../../nest/http/not-found.js";
+import { RateLimit, RateLimitInterceptor } from "../../../../nest/http/rate-limit.interceptor.js";
+import { ZodValidationPipe } from "../../../../nest/http/zod-validation.pipe.js";
+import { JWT } from "../../../../nest/tokens.js";
+import { AUTH, type AuthContext } from "../../auth.tokens.js";
+import type { AccessTokenPayload } from "../../domain/entities/auth-session.entity.js";
+import { AuthErrorFilter } from "../filters/auth-error.filter.js";
+import { buildAuthMeta, signAccessToken } from "../helpers/auth-request.helper.js";
 import {
   disable2faBodySchema,
   enable2faBodySchema,
@@ -14,28 +29,21 @@ import {
   verify2faBodySchema,
   verifyEmailBodySchema,
 } from "../schemas/auth.schemas.js";
-import type { AccessTokenPayload } from "../../domain/entities/auth-session.entity.js";
-import { createAuthModule } from "../../infrastructure/factory/auth-module.factory.js";
-import { wrapRouteWithDbContext } from "../../../../lib/db/wrap-protected-route.js";
-import { strictRouteRateLimit } from "../../../../lib/http/rate-limit.js";
-import { buildAuthMeta, signAccessToken } from "../helpers/auth-request.helper.js";
-import { handleAuthError } from "../mappers/auth-error.handler.js";
-import { onboardingController } from "./onboarding.controller.js";
 
-/** Assina JWT temporário `2fa_pending` com TTL configurável. */
-function signTwoFactorPendingToken(
-  signJwt: (payload: TwoFactorPendingPayload, options: { expiresIn: string }) => string,
-) {
-  return (payload: TwoFactorPendingPayload) =>
-    signJwt(payload, { expiresIn: twoFactorPendingTtl() });
-}
+const HTTP_OK = 200;
+const HTTP_CREATED = 201;
+const HTTP_NO_CONTENT = 204;
+
+const TWO_FACTOR_RATE_LIMIT = strictRouteRateLimit(5, "15 minutes");
+
+type Jwt = FastifyInstance["jwt"];
 
 /**
  * Controller HTTP de autenticação e gestão de sessão.
  *
- * Regista rotas sob `/auth`. Valida entrada com Zod, aplica rate-limit por rota,
- * Turnstile no registo, login, forgot-password e verify-2fa.
- * O sub-plugin `onboardingController` trata o vínculo inicial empresa ↔ utilizador.
+ * Valida entrada com Zod, aplica rate limit por rota (bloqueio 403 ao estourar) e
+ * Turnstile no registo, login, forgot-password e verify-2fa. Todas as rotas rodam na
+ * transação com RLS (`userId` quando há sessão). Onboarding em `OnboardingController`.
  *
  * | Método | Rota | Use case |
  * |--------|------|----------|
@@ -54,202 +62,152 @@ function signTwoFactorPendingToken(
  * | POST | `/auth/2fa/enable` | EnableTwoFactorUseCase |
  * | POST | `/auth/2fa/disable` | DisableTwoFactorUseCase |
  */
-export const authController: FastifyPluginAsync = async (app) => {
-  app.addHook("onRoute", (routeOptions) => {
-    wrapRouteWithDbContext(app, routeOptions, (request) => ({
-      userId: request.user?.userId,
-      tenantId: request.user?.tenantId ?? undefined,
-    }));
-  });
+@Controller("auth")
+@UseInterceptors(RateLimitInterceptor, DbContextInterceptor)
+@UseFilters(new AuthErrorFilter())
+export class AuthController {
+  private readonly signAccess: (payload: AccessTokenPayload) => string;
+  private readonly signTwoFactorPending: (payload: TwoFactorPendingPayload) => string;
 
-  const auth = createAuthModule();
-  const signAccess = signAccessToken(app);
-  const signTwoFactorPending = signTwoFactorPendingToken((payload, options) =>
-    (app.jwt.sign as unknown as (p: TwoFactorPendingPayload, o: { expiresIn: string }) => string)(
-      payload,
-      options,
-    ),
-  );
+  constructor(
+    @Inject(AUTH) private readonly auth: AuthContext,
+    @Inject(JWT) private readonly jwt: Jwt,
+  ) {
+    this.signAccess = signAccessToken({ jwt });
+    // JWT temporário `2fa_pending`, com TTL próprio. O `sign` do @fastify/jwt é tipado
+    // para o payload de acesso (`FastifyJWT.payload`), daí o cast.
+    const signPending = jwt.sign as unknown as (payload: TwoFactorPendingPayload, options: { expiresIn: string }) => string;
+    this.signTwoFactorPending = payload => signPending(payload, { expiresIn: twoFactorPendingTtl() });
+  }
 
-  await app.register(onboardingController, { auth, signAccess });
+  @Post("register")
+  @RateLimit(strictRouteRateLimit(5, "1 hour"))
+  @HttpCode(HTTP_CREATED)
+  async register(
+    @Body(new ZodValidationPipe(registerBodySchema)) body: z.infer<typeof registerBodySchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    await verifyTurnstileToken(body.captchaToken);
 
-  const twoFaRateLimit = strictRouteRateLimit(5, "15 minutes");
+    return this.auth.registerUser.execute(body, this.signAccess, buildAuthMeta(request));
+  }
 
-  app.post(
-    "/auth/register",
-    { config: { rateLimit: strictRouteRateLimit(5, "1 hour") } },
-    async (request, reply) => {
-      try {
-        const body = registerBodySchema.parse(request.body);
-        await verifyTurnstileToken(body.captchaToken);
-        const session = await auth.registerUser.execute(body, signAccess, buildAuthMeta(request));
-        return reply.status(201).send(session);
-      } catch (error) {
-        return handleAuthError(error, reply);
-      }
-    },
-  );
+  @Post("login")
+  @RateLimit(strictRouteRateLimit(10, "15 minutes"))
+  @HttpCode(HTTP_OK)
+  async login(
+    @Body(new ZodValidationPipe(loginBodySchema)) body: z.infer<typeof loginBodySchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    await verifyTurnstileToken(body.captchaToken);
 
-  app.post(
-    "/auth/login",
-    { config: { rateLimit: strictRouteRateLimit(10, "15 minutes") } },
-    async (request, reply) => {
-      try {
-        const body = loginBodySchema.parse(request.body);
-        await verifyTurnstileToken(body.captchaToken);
-        const result = await auth.login.execute(
-          { email: body.email, password: body.password },
-          signAccess,
-          buildAuthMeta(request),
-          signTwoFactorPending,
-        );
-        return result;
-      } catch (error) {
-        return handleAuthError(error, reply);
-      }
-    },
-  );
+    return this.auth.login.execute(
+      { email: body.email, password: body.password },
+      this.signAccess,
+      buildAuthMeta(request),
+      this.signTwoFactorPending,
+    );
+  }
 
-  app.post(
-    "/auth/forgot-password",
-    { config: { rateLimit: strictRouteRateLimit(5, "1 hour") } },
-    async (request, reply) => {
-      try {
-        const body = forgotPasswordBodySchema.parse(request.body);
-        await verifyTurnstileToken(body.captchaToken);
-        const result = await auth.requestPasswordReset.execute({ email: body.email });
-        return reply.status(200).send(result);
-      } catch (error) {
-        return handleAuthError(error, reply);
-      }
-    },
-  );
+  @Post("forgot-password")
+  @RateLimit(strictRouteRateLimit(5, "1 hour"))
+  @HttpCode(HTTP_OK)
+  async forgotPassword(@Body(new ZodValidationPipe(forgotPasswordBodySchema)) body: z.infer<typeof forgotPasswordBodySchema>) {
+    await verifyTurnstileToken(body.captchaToken);
 
-  app.post(
-    "/auth/reset-password",
-    { config: { rateLimit: strictRouteRateLimit(10, "15 minutes") } },
-    async (request, reply) => {
-      try {
-        const body = resetPasswordBodySchema.parse(request.body);
-        const result = await auth.resetPassword.execute(body);
-        return reply.status(200).send(result);
-      } catch (error) {
-        return handleAuthError(error, reply);
-      }
-    },
-  );
+    return this.auth.requestPasswordReset.execute({ email: body.email });
+  }
 
-  app.post(
-    "/auth/login/verify-2fa",
-    { config: { rateLimit: strictRouteRateLimit(10, "15 minutes") } },
-    async (request, reply) => {
-      try {
-        const body = verify2faBodySchema.parse(request.body);
-        await verifyTurnstileToken(body.captchaToken);
-        const session = await auth.verifyTwoFactorLogin.execute(
-          { twoFactorToken: body.twoFactorToken, code: body.code },
-          buildAuthMeta(request),
-          signAccess,
-          (token) => request.server.jwt.verify<TwoFactorPendingPayload>(token),
-        );
-        return session;
-      } catch (error) {
-        return handleAuthError(error, reply);
-      }
-    },
-  );
+  @Post("reset-password")
+  @RateLimit(strictRouteRateLimit(10, "15 minutes"))
+  @HttpCode(HTTP_OK)
+  resetPassword(@Body(new ZodValidationPipe(resetPasswordBodySchema)) body: z.infer<typeof resetPasswordBodySchema>) {
+    return this.auth.resetPassword.execute(body);
+  }
 
-  app.get("/auth/2fa/status", { onRequest: [app.authenticate] }, async (request) => {
-    return auth.getTwoFactorStatus.execute(request.user.userId);
-  });
+  @Post("login/verify-2fa")
+  @RateLimit(strictRouteRateLimit(10, "15 minutes"))
+  @HttpCode(HTTP_OK)
+  async verifyTwoFactorLogin(
+    @Body(new ZodValidationPipe(verify2faBodySchema)) body: z.infer<typeof verify2faBodySchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    await verifyTurnstileToken(body.captchaToken);
 
-  app.post(
-    "/auth/2fa/setup",
-    { onRequest: [app.authenticate], config: { rateLimit: twoFaRateLimit } },
-    async (request, reply) => {
-      try {
-        return await auth.setupTwoFactor.execute(request.user.userId);
-      } catch (error) {
-        return handleAuthError(error, reply);
-      }
-    },
-  );
+    return this.auth.verifyTwoFactorLogin.execute(
+      { twoFactorToken: body.twoFactorToken, code: body.code },
+      buildAuthMeta(request),
+      this.signAccess,
+      token => this.jwt.verify<TwoFactorPendingPayload>(token),
+    );
+  }
 
-  app.post(
-    "/auth/2fa/enable",
-    { onRequest: [app.authenticate], config: { rateLimit: twoFaRateLimit } },
-    async (request, reply) => {
-      try {
-        const { code } = enable2faBodySchema.parse(request.body);
-        return await auth.enableTwoFactor.execute(request.user.userId, code);
-      } catch (error) {
-        return handleAuthError(error, reply);
-      }
-    },
-  );
+  /** Sem `try/catch` no controller original: erros seguem o contrato global. */
+  @Get("2fa/status")
+  @UseGuards(JwtAuthGuard)
+  @UseFilters(new ApiExceptionFilter())
+  twoFactorStatus(@UserId() userId: string) {
+    return this.auth.getTwoFactorStatus.execute(userId);
+  }
 
-  app.post(
-    "/auth/2fa/disable",
-    { onRequest: [app.authenticate], config: { rateLimit: twoFaRateLimit } },
-    async (request, reply) => {
-      try {
-        const { password, code } = disable2faBodySchema.parse(request.body);
-        return await auth.disableTwoFactor.execute(request.user.userId, password, code);
-      } catch (error) {
-        return handleAuthError(error, reply);
-      }
-    },
-  );
+  @Post("2fa/setup")
+  @UseGuards(JwtAuthGuard)
+  @RateLimit(TWO_FACTOR_RATE_LIMIT)
+  @HttpCode(HTTP_OK)
+  setupTwoFactor(@UserId() userId: string) {
+    return this.auth.setupTwoFactor.execute(userId);
+  }
 
-  app.post(
-    "/auth/refresh",
-    { config: { rateLimit: strictRouteRateLimit(30, "15 minutes") } },
-    async (request, reply) => {
-      try {
-        const { refreshToken } = refreshBodySchema.parse(request.body);
-        const session = await auth.refreshSession.execute(
-          refreshToken,
-          signAccess,
-          buildAuthMeta(request),
-        );
-        return session;
-      } catch (error) {
-        return handleAuthError(error, reply);
-      }
-    },
-  );
+  @Post("2fa/enable")
+  @UseGuards(JwtAuthGuard)
+  @RateLimit(TWO_FACTOR_RATE_LIMIT)
+  @HttpCode(HTTP_OK)
+  enableTwoFactor(
+    @UserId() userId: string,
+    @Body(new ZodValidationPipe(enable2faBodySchema)) body: z.infer<typeof enable2faBodySchema>,
+  ) {
+    return this.auth.enableTwoFactor.execute(userId, body.code);
+  }
 
-  app.post(
-    "/auth/logout",
-    { config: { rateLimit: strictRouteRateLimit(20, "15 minutes") } },
-    async (request, reply) => {
-      try {
-        const body = logoutBodySchema.safeParse(request.body ?? {});
-        const refreshToken = body.success ? body.data.refreshToken : undefined;
+  @Post("2fa/disable")
+  @UseGuards(JwtAuthGuard)
+  @RateLimit(TWO_FACTOR_RATE_LIMIT)
+  @HttpCode(HTTP_OK)
+  disableTwoFactor(
+    @UserId() userId: string,
+    @Body(new ZodValidationPipe(disable2faBodySchema)) body: z.infer<typeof disable2faBodySchema>,
+  ) {
+    return this.auth.disableTwoFactor.execute(userId, body.password, body.code);
+  }
 
-        let userId: string | undefined;
-        try {
-          await request.jwtVerify<AccessTokenPayload>();
-          if (request.user.typ === "access") {
-            userId = request.user.userId;
-          }
-        } catch {
-          /* logout with refresh token only */
-        }
+  @Post("refresh")
+  @RateLimit(strictRouteRateLimit(30, "15 minutes"))
+  @HttpCode(HTTP_OK)
+  refresh(
+    @Body(new ZodValidationPipe(refreshBodySchema)) body: z.infer<typeof refreshBodySchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.auth.refreshSession.execute(body.refreshToken, this.signAccess, buildAuthMeta(request));
+  }
 
-        await auth.logout.execute(refreshToken, userId);
-        return reply.status(204).send();
-      } catch (error) {
-        return handleAuthError(error, reply);
-      }
-    },
-  );
+  /** Logout aceita refresh token, access token, os dois ou nenhum (sempre 204). */
+  @Post("logout")
+  @RateLimit(strictRouteRateLimit(20, "15 minutes"))
+  @HttpCode(HTTP_NO_CONTENT)
+  async logout(@Body() rawBody: unknown, @Req() request: FastifyRequest): Promise<void> {
+    const body = logoutBodySchema.safeParse(rawBody ?? {});
+    const refreshToken = body.success ? body.data.refreshToken : undefined;
 
-  app.get("/auth/me", { onRequest: [app.authenticate] }, async (request, reply) => {
-    const result = await auth.getCurrentUser.execute(request.user.userId);
-    if (!result) {
-      return reply.status(404).send({ error: "Usuário não encontrado" });
-    }
+    await this.auth.logout.execute(refreshToken, await this.optionalAccessUserId(request));
+  }
+
+  /** Sem `try/catch` no controller original: erros seguem o contrato global. */
+  @Get("me")
+  @UseGuards(JwtAuthGuard)
+  @UseFilters(new ApiExceptionFilter())
+  async me(@UserId() userId: string) {
+    const result = orNotFound(await this.auth.getCurrentUser.execute(userId), "Usuário não encontrado");
+
     return {
       userId: result.user.id,
       tenantId: result.user.tenantId,
@@ -261,32 +219,31 @@ export const authController: FastifyPluginAsync = async (app) => {
       emailVerified: isEmailVerified(result.user.emailVerifiedAt),
       role: result.user.role,
     };
-  });
+  }
 
-  app.post(
-    "/auth/verify-email",
-    { config: { rateLimit: strictRouteRateLimit(10, "15 minutes") } },
-    async (request, reply) => {
-      try {
-        const { token } = verifyEmailBodySchema.parse(request.body);
-        const result = await auth.verifyEmail.execute(token);
-        return reply.status(200).send(result);
-      } catch (error) {
-        return handleAuthError(error, reply);
-      }
-    },
-  );
+  @Post("verify-email")
+  @RateLimit(strictRouteRateLimit(10, "15 minutes"))
+  @HttpCode(HTTP_OK)
+  verifyEmail(@Body(new ZodValidationPipe(verifyEmailBodySchema)) body: z.infer<typeof verifyEmailBodySchema>) {
+    return this.auth.verifyEmail.execute(body.token);
+  }
 
-  app.post(
-    "/auth/resend-verification",
-    { onRequest: [app.authenticate], config: { rateLimit: strictRouteRateLimit(5, "1 hour") } },
-    async (request, reply) => {
-      try {
-        const result = await auth.resendVerificationEmail.execute(request.user.userId);
-        return reply.status(200).send(result);
-      } catch (error) {
-        return handleAuthError(error, reply);
-      }
-    },
-  );
-};
+  @Post("resend-verification")
+  @UseGuards(JwtAuthGuard)
+  @RateLimit(strictRouteRateLimit(5, "1 hour"))
+  @HttpCode(HTTP_OK)
+  resendVerification(@UserId() userId: string) {
+    return this.auth.resendVerificationEmail.execute(userId);
+  }
+
+  /** `userId` do access token, quando presente e válido; token inválido não impede o logout. */
+  private async optionalAccessUserId(request: FastifyRequest): Promise<string | undefined> {
+    try {
+      await request.jwtVerify<AccessTokenPayload>();
+    } catch {
+      return undefined;
+    }
+
+    return request.user.typ === "access" ? request.user.userId : undefined;
+  }
+}

@@ -1,12 +1,14 @@
 /**
  * Monta a API sem escutar porta (boot em `index.ts`, testes de contrato via `inject`).
  *
- * Nest (controllers em `src/modules/<feature>/<feature>.module.ts`) roda sobre a mesma
- * instância Fastify dos plugins legados enquanto a migração não termina.
+ * NestJS sobre Fastify. A instância Fastify é montada aqui com os plugins de borda
+ * (helmet, CORS, rate limit, multipart, Prisma, JWT) e entregue ao `FastifyAdapter`;
+ * as rotas ficam nos controllers de `src/modules/<feature>/<feature>.module.ts`.
  *
- * Rotas públicas: `/api/health`, `/api/auth/*`
- * Lookup autenticado (sem tenant): `authenticated-lookup` — onboarding.
- * Demais rotas protegidas: `protected-api` (JWT + tenant).
+ * Acesso por controller (`src/nest/api-access.decorators.ts`):
+ * - públicas: `/api/health`, `/api/auth/*` (algumas exigem só JWT);
+ * - só JWT, sem tenant: `/api/lookup/*` (onboarding);
+ * - `@ProtectedApi()`: JWT + empresa + e-mail confirmado + transação com RLS.
  */
 import "reflect-metadata";
 import cors from "@fastify/cors";
@@ -18,10 +20,8 @@ import Fastify, { type FastifyInstance, type RouteOptions } from "fastify";
 import type { PrismaClient } from "./generated/prisma/client.js";
 import { assertProductionSecurityConfig } from "./lib/auth/production-env.js";
 import { buildCorsOptions } from "./lib/http/cors-config.js";
-import { registerGlobalErrorHandler } from "./lib/http/error-handler.js";
 import { buildHelmetOptions } from "./lib/http/helmet-config.js";
 import { createRateLimitHandler, PROTECTED_API_RATE_LIMIT, registerRootRateLimit } from "./lib/http/rate-limit.js";
-import { authController } from "./modules/auth/presentation/controllers/auth.controller.js";
 import { AppModule } from "./nest/app.module.js";
 import { ApiExceptionFilter } from "./nest/http/api-exception.filter.js";
 import { authPlugin } from "./plugins/auth/index.js";
@@ -60,27 +60,13 @@ async function buildFastify(options: BuildAppOptions): Promise<FastifyInstance> 
   return app;
 }
 
-/**
- * Plugins Fastify ainda não migrados, num escopo próprio com o error handler legado
- * (na raiz quem responde é o handler do Nest, que passa pelo `ApiExceptionFilter`).
- * Cada fase da migração remove um registro daqui.
- */
-async function registerLegacyRoutes(app: FastifyInstance): Promise<void> {
-  await app.register(async legacy => {
-    registerGlobalErrorHandler(legacy);
-
-    await legacy.register(authController, { prefix: `/${API_PREFIX}` });
-  });
-}
-
 export async function buildApp(options: BuildAppOptions = {}): Promise<NestFastifyApplication> {
   const fastify = await buildFastify(options);
-
-  await registerLegacyRoutes(fastify);
 
   const appModule = AppModule.register({
     prisma: fastify.prisma,
     logger: fastify.log,
+    jwt: fastify.jwt,
     rateLimits: {
       protectedApi: createRateLimitHandler(fastify, PROTECTED_API_RATE_LIMIT),
       create: routeOptions => createRateLimitHandler(fastify, routeOptions),
@@ -94,6 +80,8 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<NestFasti
   });
 
   nest.setGlobalPrefix(API_PREFIX);
+  // Também trata os erros fora do pipeline do Nest (parser de corpo, 404 de rota): o
+  // error handler que o Nest registra no Fastify passa pelos filtros globais.
   nest.useGlobalFilters(new ApiExceptionFilter());
   await nest.init();
 

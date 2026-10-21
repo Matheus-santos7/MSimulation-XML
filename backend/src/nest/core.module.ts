@@ -1,15 +1,16 @@
 import { Global, Module, type DynamicModule } from "@nestjs/common";
-import type { FastifyBaseLogger } from "fastify";
+import type { FastifyBaseLogger, FastifyInstance } from "fastify";
 import type { PrismaClient } from "../generated/prisma/client.js";
-import { LOGGER, PRISMA, RATE_LIMITS, type RateLimits } from "./tokens.js";
+import { JWT, LOGGER, PRISMA, RATE_LIMITS, type RateLimits } from "./tokens.js";
 
 export type CoreDependencies = {
   prisma: PrismaClient;
   rateLimits: RateLimits;
   logger: FastifyBaseLogger;
+  jwt: FastifyInstance["jwt"];
 };
 
-/** Dependências de infraestrutura visíveis em todos os módulos (Prisma, limitadores e logger). */
+/** Dependências de infraestrutura visíveis em todos os módulos (Prisma, limitadores, logger e JWT). */
 @Global()
 @Module({})
 export class CoreModule {
@@ -20,8 +21,9 @@ export class CoreModule {
         { provide: PRISMA, useValue: dependencies.prisma },
         { provide: RATE_LIMITS, useValue: dependencies.rateLimits },
         { provide: LOGGER, useValue: dependencies.logger },
+        { provide: JWT, useValue: dependencies.jwt },
       ],
-      exports: [PRISMA, RATE_LIMITS, LOGGER],
+      exports: [PRISMA, RATE_LIMITS, LOGGER, JWT],
     };
   }
 }

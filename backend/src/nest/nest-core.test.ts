@@ -127,6 +127,7 @@ async function buildTestApp(
       CoreModule.register({
         prisma: fakePrisma as never,
         logger: fastify.log,
+        jwt: fastify.jwt,
         rateLimits: {
           protectedApi: createRateLimitHandler(fastify, { max: protectedMax, timeWindow: "1 minute" }),
           create: options => createRateLimitHandler(fastify, options),

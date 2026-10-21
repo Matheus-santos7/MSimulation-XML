@@ -1,4 +1,5 @@
 import { Module, type DynamicModule, type Type } from "@nestjs/common";
+import { AuthModule } from "../modules/auth/auth.module.js";
 import { CatalogModule } from "../modules/catalog/catalog.module.js";
 import { FiscalDocumentsModule } from "../modules/fiscal-documents/fiscal-documents.module.js";
 import { FiscalSettingsModule } from "../modules/fiscal-settings/fiscal-settings.module.js";
@@ -23,6 +24,7 @@ const FEATURE_MODULES: Type[] = [
   FiscalValidationModule,
   FiscalDocumentsModule,
   SalesModule,
+  AuthModule,
 ];
 
 @Module({})

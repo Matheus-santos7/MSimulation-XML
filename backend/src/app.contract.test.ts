@@ -366,6 +366,21 @@ describe("contrato HTTP — respostas por módulo (banco vazio)", () => {
     });
   });
 
+  for (const url of ["/api/pedidos", "/api/auth/login"]) {
+    it(`POST ${url} com JSON malformado devolve 400 { error } do parser`, async () => {
+      const res = await app.inject({
+        method: "POST",
+        url,
+        payload: "{ invalido",
+        headers: { ...bearer(token), "content-type": "application/json" },
+      });
+
+      assert.equal(res.statusCode, 400);
+      assert.deepEqual(Object.keys(res.json()), ["error"]);
+      assert.match(res.json().error, /JSON/);
+    });
+  }
+
   it("POST /api/auth/login com corpo inválido devolve 400 no formato { error, details }", async () => {
     const res = await app.inject({ method: "POST", url: "/api/auth/login", payload: {} });
 
@@ -675,6 +690,138 @@ describe("contrato HTTP — pedidos (ADMIN)", () => {
       });
     });
   }
+});
+
+describe("contrato HTTP — auth", () => {
+  let app: FastifyInstance;
+  let headers: Record<string, string>;
+
+  before(async () => {
+    app = await startApp();
+    headers = bearer(accessToken(app));
+  });
+  after(() => app.close());
+
+  const VALIDATION_CASES = [
+    { url: "/api/auth/register", details: { email: ["Required"], password: ["Required"] } },
+    { url: "/api/auth/refresh", details: { refreshToken: ["Required"] } },
+    { url: "/api/auth/forgot-password", details: { email: ["Required"] } },
+    { url: "/api/auth/reset-password", details: { token: ["Required"], password: ["Required"] } },
+    { url: "/api/auth/login/verify-2fa", details: { twoFactorToken: ["Required"], code: ["Required"] } },
+    { url: "/api/auth/verify-email", details: { token: ["Required"] } },
+    { url: "/api/auth/2fa/enable", details: { code: ["Required"] }, authenticated: true },
+    { url: "/api/auth/2fa/disable", details: { password: ["Required"], code: ["Required"] }, authenticated: true },
+  ] as const;
+
+  for (const testCase of VALIDATION_CASES) {
+    it(`POST ${testCase.url} com corpo vazio devolve 400 { error, details }`, async () => {
+      const res = await app.inject({
+        method: "POST",
+        url: testCase.url,
+        payload: {},
+        headers: "authenticated" in testCase ? headers : {},
+      });
+
+      assert.equal(res.statusCode, 400);
+      assert.deepEqual(res.json(), { error: "Required", details: testCase.details });
+    });
+  }
+
+  const AUTHENTICATED_ROUTES = [
+    "GET /api/auth/me",
+    "GET /api/auth/2fa/status",
+    "POST /api/auth/2fa/setup",
+    "POST /api/auth/2fa/enable",
+    "POST /api/auth/2fa/disable",
+    "POST /api/auth/resend-verification",
+    "POST /api/auth/onboarding/tenant",
+  ] as const;
+
+  it("responde 401 sem token nas rotas de auth que exigem sessão", async () => {
+    for (const route of AUTHENTICATED_ROUTES) {
+      const [method, url] = route.split(" ");
+      const res = await app.inject({ method: method as never, url: url!, payload: method === "POST" ? {} : undefined });
+
+      assert.equal(res.statusCode, 401, route);
+      assert.deepEqual(res.json(), { error: MESSAGES.unauthorized }, route);
+    }
+  });
+
+  it("POST /api/auth/logout sem token nem refresh devolve 204", async () => {
+    const res = await app.inject({ method: "POST", url: "/api/auth/logout", payload: {} });
+
+    assert.equal(res.statusCode, 204);
+    assert.equal(res.body, "");
+  });
+
+  it("GET /api/auth/me de usuário inexistente devolve 404", async () => {
+    const res = await app.inject({ method: "GET", url: "/api/auth/me", headers });
+
+    assert.equal(res.statusCode, 404);
+    assert.deepEqual(res.json(), { error: "Usuário não encontrado" });
+  });
+
+  it("GET /api/auth/2fa/status devolve o estado do 2FA", async () => {
+    const res = await app.inject({ method: "GET", url: "/api/auth/2fa/status", headers });
+
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual(res.json(), { enabled: false });
+  });
+
+  it("POST /api/auth/2fa/setup de usuário inexistente devolve 400", async () => {
+    const res = await app.inject({ method: "POST", url: "/api/auth/2fa/setup", payload: {}, headers });
+
+    assert.equal(res.statusCode, 400);
+    assert.deepEqual(res.json(), { error: "Usuário não encontrado" });
+  });
+
+  it("POST /api/auth/resend-verification responde a mensagem genérica", async () => {
+    const res = await app.inject({ method: "POST", url: "/api/auth/resend-verification", payload: {}, headers });
+
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual(res.json(), {
+      message: "Se o e-mail estiver cadastrado, você receberá um link de verificação em instantes.",
+    });
+  });
+
+  it("POST /api/auth/onboarding/tenant com empresa já cadastrada devolve 400", async () => {
+    const res = await app.inject({ method: "POST", url: "/api/auth/onboarding/tenant", payload: {}, headers });
+
+    assert.equal(res.statusCode, 400);
+    assert.deepEqual(res.json(), { error: "Empresa já cadastrada nesta conta" });
+  });
+
+  it("POST /api/auth/onboarding/tenant sem empresa valida o corpo com Zod", async () => {
+    const appWithoutTenant = await startApp({ user: { tenantId: null } });
+
+    try {
+      const res = await appWithoutTenant.inject({
+        method: "POST",
+        url: "/api/auth/onboarding/tenant",
+        payload: {},
+        headers: bearer(accessToken(appWithoutTenant)),
+      });
+
+      assert.equal(res.statusCode, 400);
+      assert.equal(res.json().error, "Required");
+      assert.ok(res.json().details.razaoSocial);
+    } finally {
+      await appWithoutTenant.close();
+    }
+  });
+
+  it("rota de auth responde 503 quando a transação não conecta", async () => {
+    const appWithoutDb = await startApp({ transactionError: new Error("connect ECONNREFUSED 127.0.0.1:5432") });
+
+    try {
+      const res = await appWithoutDb.inject({ method: "POST", url: "/api/auth/refresh", payload: { refreshToken: "x" } });
+
+      assert.equal(res.statusCode, 503);
+      assert.deepEqual(res.json(), { error: MESSAGES.databaseUnavailable });
+    } finally {
+      await appWithoutDb.close();
+    }
+  });
 });
 
 describe("contrato HTTP — tenant e usuários (org)", () => {

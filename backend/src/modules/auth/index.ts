@@ -18,7 +18,8 @@ export { PasswordResetInvalidError } from "./domain/errors/password-reset-invali
 export { TwoFactorRequiredError } from "./domain/errors/two-factor-required.error.js";
 export type { AuthMeta } from "./domain/ports/session-response.port.js";
 export { createAuthModule } from "./infrastructure/factory/auth-module.factory.js";
-export { authController } from "./presentation/controllers/auth.controller.js";
-export { onboardingController } from "./presentation/controllers/onboarding.controller.js";
-export { handleAuthError } from "./presentation/mappers/auth-error.handler.js";
+export { AuthController } from "./presentation/controllers/auth.controller.js";
+export { OnboardingController } from "./presentation/controllers/onboarding.controller.js";
+export { resolveAuthError } from "./presentation/mappers/auth-error.handler.js";
+export { AuthErrorFilter } from "./presentation/filters/auth-error.filter.js";
 export { buildAuthMeta, signAccessToken } from "./presentation/helpers/auth-request.helper.js";

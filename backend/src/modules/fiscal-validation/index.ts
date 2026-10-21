@@ -24,4 +24,4 @@ export {
   FakeMcpFiscalValidatorAdapter,
   buildFakeMcpAudit,
 } from "./infrastructure/external/fake-mcp-fiscal-validator.adapter.js";
-export { createFiscalValidationController } from "./presentation/controllers/fiscal-validation.controller.js";
+export { FiscalValidationController } from "./presentation/controllers/fiscal-validation.controller.js";

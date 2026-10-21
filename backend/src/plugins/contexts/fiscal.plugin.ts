@@ -1,41 +1,18 @@
 import type { FastifyPluginAsync } from "fastify";
-import { registerFiscalTransactionCommitHook } from "../../lib/db/prisma-tx.js";
 import { cteController } from "../../modules/fiscal-documents/presentation/controllers/cte.controller.js";
 import { fiscalObservabilityController } from "../../modules/fiscal-documents/presentation/controllers/fiscal-observability.controller.js";
 import { nfeController } from "../../modules/fiscal-documents/presentation/controllers/nfe.controller.js";
 import { nfeLifecycleController } from "../../modules/fiscal-documents/presentation/controllers/nfe-lifecycle.controller.js";
-import { PrismaNfeXmlContentResolverAdapter } from "../../modules/fiscal-documents/infrastructure/xml/prisma-nfe-xml-content-resolver.adapter.js";
-import { createFiscalValidationModule } from "../../modules/fiscal-validation/infrastructure/factory/fiscal-validation-module.factory.js";
-import { createFiscalValidationController } from "../../modules/fiscal-validation/presentation/controllers/fiscal-validation.controller.js";
 import { orderController } from "../../modules/sales/presentation/controllers/order.controller.js";
 
-const fiscalValidationModule = createFiscalValidationModule({
-  nfeXmlResolver: new PrismaNfeXmlContentResolverAdapter(),
-});
-
-/** Limite de NF-es pendentes revalidadas por disparo de pós-commit. */
-const NFE_VALIDATION_BACKFILL_TRIGGER_LIMIT = 10;
-
 /**
- * Núcleo fiscal: documentos, pedidos, configurações do emissor ML.
+ * Núcleo fiscal: documentos e pedidos. O hook de pós-commit fiscal (revalidação de NF-e)
+ * é registrado pelo `FiscalValidationModule` do Nest.
  */
 export const fiscalContextPlugin: FastifyPluginAsync = async (app) => {
-  // Revalidação assíncrona de NF-e (G2): persistNfeXmlAutorizado só grava
-  // status PENDING dentro da transação; o commit de qualquer transação
-  // fiscal aciona aqui o backfill, fora do caminho crítico de DB.
-  registerFiscalTransactionCommitHook((db, tenantId) => {
-    fiscalValidationModule
-      .createBackfillPendingNfeValidation(db)
-      .execute(db, tenantId, { limit: NFE_VALIDATION_BACKFILL_TRIGGER_LIMIT })
-      .catch((err: unknown) => {
-        app.log.error({ err, tenantId }, "Falha ao acionar validação assíncrona de NF-e pendente");
-      });
-  });
-
   await app.register(nfeLifecycleController);
   await app.register(nfeController);
   await app.register(cteController);
   await app.register(fiscalObservabilityController);
-  await app.register(createFiscalValidationController({ module: fiscalValidationModule }));
   await app.register(orderController);
 };

@@ -1,6 +1,7 @@
 import { Module, type DynamicModule, type Type } from "@nestjs/common";
 import { CatalogModule } from "../modules/catalog/catalog.module.js";
 import { FiscalSettingsModule } from "../modules/fiscal-settings/fiscal-settings.module.js";
+import { FiscalValidationModule } from "../modules/fiscal-validation/fiscal-validation.module.js";
 import { HealthModule } from "../modules/health/health.module.js";
 import { LogisticsModule } from "../modules/logistics/logistics.module.js";
 import { LookupModule } from "../modules/lookup/lookup.module.js";
@@ -17,6 +18,7 @@ const FEATURE_MODULES: Type[] = [
   CatalogModule,
   LogisticsModule,
   OrgModule,
+  FiscalValidationModule,
 ];
 
 @Module({})

@@ -6,6 +6,8 @@ import type { RateLimitHandler, RouteRateLimit } from "../lib/http/rate-limit.js
  */
 export const PRISMA = Symbol("PRISMA");
 export const RATE_LIMITS = Symbol("RATE_LIMITS");
+/** Logger do Fastify (pino), para logs de aplicação fora de uma requisição. */
+export const LOGGER = Symbol("LOGGER");
 
 export type RateLimits = {
   /** Limitador compartilhado da API protegida (mesmo store das rotas Fastify legadas). */

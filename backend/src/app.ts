@@ -88,6 +88,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<NestFasti
 
   const appModule = AppModule.register({
     prisma: fastify.prisma,
+    logger: fastify.log,
     rateLimits: {
       protectedApi: protectedApiRateLimit,
       create: routeOptions => createRateLimitHandler(fastify, routeOptions),

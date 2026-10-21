@@ -24,7 +24,10 @@ function toLookupHttpError(
 
   log.error(error);
 
-  return new HttpError(HTTP_BAD_GATEWAY, error instanceof Error ? error.message : messages.fallback);
+  return new HttpError(
+    HTTP_BAD_GATEWAY,
+    error instanceof Error ? error.message : messages.fallback,
+  );
 }
 
 /**
@@ -47,7 +50,11 @@ export class LookupController {
 
       return await this.lookup.lookupCnpj.execute(cnpj);
     } catch (error) {
-      throw toLookupHttpError(error, { invalid: "CNPJ inválido", fallback: "Falha ao consultar CNPJ" }, request.log);
+      throw toLookupHttpError(
+        error,
+        { invalid: "CNPJ inválido", fallback: "Falha ao consultar CNPJ" },
+        request.log,
+      );
     }
   }
 
@@ -58,7 +65,11 @@ export class LookupController {
 
       return await this.lookup.lookupCep.execute(cep);
     } catch (error) {
-      throw toLookupHttpError(error, { invalid: "CEP inválido", fallback: "Falha ao consultar CEP" }, request.log);
+      throw toLookupHttpError(
+        error,
+        { invalid: "CEP inválido", fallback: "Falha ao consultar CEP" },
+        request.log,
+      );
     }
   }
 }

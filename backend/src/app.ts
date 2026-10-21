@@ -21,7 +21,11 @@ import type { PrismaClient } from "./generated/prisma/client.js";
 import { assertProductionSecurityConfig } from "./lib/auth/production-env.js";
 import { buildCorsOptions } from "./lib/http/cors-config.js";
 import { buildHelmetOptions } from "./lib/http/helmet-config.js";
-import { createRateLimitHandler, PROTECTED_API_RATE_LIMIT, registerRootRateLimit } from "./lib/http/rate-limit.js";
+import {
+  createRateLimitHandler,
+  PROTECTED_API_RATE_LIMIT,
+  registerRootRateLimit,
+} from "./lib/http/rate-limit.js";
 import { AppModule } from "./nest/app.module.js";
 import { ApiExceptionFilter } from "./nest/http/api-exception.filter.js";
 import { authPlugin } from "./plugins/auth/index.js";
@@ -69,15 +73,19 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<NestFasti
     jwt: fastify.jwt,
     rateLimits: {
       protectedApi: createRateLimitHandler(fastify, PROTECTED_API_RATE_LIMIT),
-      create: routeOptions => createRateLimitHandler(fastify, routeOptions),
+      create: (routeOptions) => createRateLimitHandler(fastify, routeOptions),
     },
   });
-  const nest = await NestFactory.create<NestFastifyApplication>(appModule, new FastifyAdapter(fastify), {
-    // Os parsers de corpo são os do Fastify (JSON) e do @fastify/multipart; o Nest não registra os dele.
-    bodyParser: false,
-    logger: options.logger === false ? false : ["error", "warn"],
-    abortOnError: false,
-  });
+  const nest = await NestFactory.create<NestFastifyApplication>(
+    appModule,
+    new FastifyAdapter(fastify),
+    {
+      // Os parsers de corpo são os do Fastify (JSON) e do @fastify/multipart; o Nest não registra os dele.
+      bodyParser: false,
+      logger: options.logger === false ? false : ["error", "warn"],
+      abortOnError: false,
+    },
+  );
 
   nest.setGlobalPrefix(API_PREFIX);
   // Também trata os erros fora do pipeline do Nest (parser de corpo, 404 de rota): o

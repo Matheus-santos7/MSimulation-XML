@@ -1,6 +1,7 @@
 import type { FastifyReply } from "fastify";
 
-export const XLSX_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+export const XLSX_CONTENT_TYPE =
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
 export type FileResponse = {
   content: Buffer | string;

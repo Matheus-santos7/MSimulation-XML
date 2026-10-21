@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { ZodError, z } from "zod";
-import { handleRouteError, replyStatusDomainError } from "./domain-errors.js";
+import { resolveRouteError } from "./domain-errors.js";
 
 class SampleStatusError extends Error {
   constructor(
@@ -20,30 +20,8 @@ class SampleMappedError extends Error {
   }
 }
 
-function mockReply() {
-  let statusCode = 0;
-  let body: unknown;
-  const reply = {
-    status(code: number) {
-      statusCode = code;
-      return {
-        send(payload: unknown) {
-          body = payload;
-        },
-      };
-    },
-  };
-  return {
-    reply,
-    getSent() {
-      return { statusCode, body };
-    },
-  };
-}
-
 describe("domain-errors", () => {
-  it("handleRouteError responde ZodError com 400 e details", () => {
-    const { reply, getSent } = mockReply();
+  it("resolveRouteError responde ZodError com 400 e details", () => {
     const schema = z.object({ sku: z.string().min(1) });
     let err: ZodError | undefined;
     try {
@@ -53,38 +31,28 @@ describe("domain-errors", () => {
     }
 
     assert.ok(err);
-    assert.equal(handleRouteError(reply as never, err, {}), true);
-    const sent = getSent();
-    assert.equal(sent.statusCode, 400);
-    assert.ok(sent.body && typeof sent.body === "object" && "details" in sent.body);
+    const response = resolveRouteError(err, {});
+    assert.equal(response?.status, 400);
+    assert.ok(response && "details" in response.body);
   });
 
-  it("handleRouteError aplica mappings por tipo", () => {
-    const { reply, getSent } = mockReply();
-    const handled = handleRouteError(reply as never, new SampleMappedError("conflito"), {
+  it("resolveRouteError aplica mappings por tipo", () => {
+    const response = resolveRouteError(new SampleMappedError("conflito"), {
       mappings: [{ type: SampleMappedError, status: 409 }],
     });
 
-    assert.equal(handled, true);
-    const sent = getSent();
-    assert.equal(sent.statusCode, 409);
-    assert.deepEqual(sent.body, { error: "conflito" });
+    assert.deepEqual(response, { status: 409, body: { error: "conflito" } });
   });
 
-  it("replyStatusDomainError usa status do erro", () => {
-    const { reply, getSent } = mockReply();
-    const handled = replyStatusDomainError(reply as never, new SampleStatusError("faixa inválida", 422), [
-      SampleStatusError,
-    ]);
+  it("resolveRouteError usa o status do erro em statusErrors", () => {
+    const response = resolveRouteError(new SampleStatusError("faixa inválida", 422), {
+      statusErrors: [SampleStatusError],
+    });
 
-    assert.equal(handled, true);
-    const sent = getSent();
-    assert.equal(sent.statusCode, 422);
-    assert.deepEqual(sent.body, { error: "faixa inválida" });
+    assert.deepEqual(response, { status: 422, body: { error: "faixa inválida" } });
   });
 
-  it("handleRouteError retorna false para erro desconhecido", () => {
-    const { reply } = mockReply();
-    assert.equal(handleRouteError(reply as never, new Error("boom"), {}), false);
+  it("resolveRouteError retorna null para erro desconhecido", () => {
+    assert.equal(resolveRouteError(new Error("boom"), {}), null);
   });
 });

@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, UseFilters } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  UseFilters,
+} from "@nestjs/common";
 import type { z } from "zod";
 import { HttpError } from "../../../../lib/http/http-error.js";
 import { ProtectedApi } from "../../../../nest/api-access.decorators.js";
@@ -50,10 +60,16 @@ export class TenantController {
   }
 
   @Get(":id")
-  async get(@TenantId() tenantId: string, @Param(new ZodValidationPipe(tenantIdParam)) params: TenantIdParam) {
+  async get(
+    @TenantId() tenantId: string,
+    @Param(new ZodValidationPipe(tenantIdParam)) params: TenantIdParam,
+  ) {
     assertOwnTenant(params.id, tenantId);
 
-    return orNotFound(await this.org.tenantRepository.findByIdWithFiliais(params.id), TENANT_NOT_FOUND);
+    return orNotFound(
+      await this.org.tenantRepository.findByIdWithFiliais(params.id),
+      TENANT_NOT_FOUND,
+    );
   }
 
   @Post()
@@ -76,7 +92,10 @@ export class TenantController {
   }
 
   @Delete(":id")
-  remove(@TenantId() tenantId: string, @Param(new ZodValidationPipe(tenantIdParam)) params: TenantIdParam): never {
+  remove(
+    @TenantId() tenantId: string,
+    @Param(new ZodValidationPipe(tenantIdParam)) params: TenantIdParam,
+  ): never {
     assertOwnTenant(params.id, tenantId);
 
     throw new HttpError(HTTP_FORBIDDEN, "Exclusão de empresa não permitida");

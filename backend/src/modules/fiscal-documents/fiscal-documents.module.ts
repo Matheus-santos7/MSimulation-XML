@@ -7,7 +7,12 @@ import { NfeLifecycleController } from "./presentation/controllers/nfe-lifecycle
 import { NfeController } from "./presentation/controllers/nfe.controller.js";
 
 @Module({
-  controllers: [NfeLifecycleController, NfeController, CteController, FiscalObservabilityController],
+  controllers: [
+    NfeLifecycleController,
+    NfeController,
+    CteController,
+    FiscalObservabilityController,
+  ],
   providers: [{ provide: FISCAL_DOCUMENTS, useFactory: createFiscalDocumentsModule }],
 })
 export class FiscalDocumentsModule {}

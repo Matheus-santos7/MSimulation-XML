@@ -28,7 +28,10 @@ import {
   realignRemessaFifoProductIdsBySku,
   ShipmentError,
 } from "../../../remessas/index.js";
-import { BranchTransferError, emitBranchTransfer } from "../../../remessas/infrastructure/fiscal/branch-transfer/index.js";
+import {
+  BranchTransferError,
+  emitBranchTransfer,
+} from "../../../remessas/infrastructure/fiscal/branch-transfer/index.js";
 import { SymbolicShipmentFiscalError } from "../../../remessas/infrastructure/fiscal/symbolic-shipment/index.js";
 import { mapAvancoMercadoriaParaApi } from "../../../remessas/presentation/avanco-api.mapper.js";
 import { REMESSAS, type RemessasContext } from "../../../remessas/remessas.tokens.js";
@@ -62,10 +65,15 @@ const BAD_REQUEST_ERRORS = [
 
 /** Erros de emissão viram 400; timeout da transação interativa vira 503 com orientação. */
 function toMovementHttpError(error: unknown): unknown {
-  if (BAD_REQUEST_ERRORS.some(type => error instanceof type)) {
+  if (BAD_REQUEST_ERRORS.some((type) => error instanceof type)) {
     return new HttpError(HTTP_BAD_REQUEST, (error as Error).message);
   }
-  if (typeof error === "object" && error !== null && "code" in error && error.code === PRISMA_TRANSACTION_TIMEOUT) {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === PRISMA_TRANSACTION_TIMEOUT
+  ) {
     return new HttpError(
       HTTP_SERVICE_UNAVAILABLE,
       "A emissão demorou mais que o esperado. Tente novamente; se persistir, reduza a quantidade ou contate o suporte.",
@@ -149,9 +157,13 @@ export class MovementController {
   @Get("movimentacoes-produto")
   listProductMovements(
     @TenantId() tenantId: string,
-    @Query(new ZodValidationPipe(productMovementsQuery)) query: z.infer<typeof productMovementsQuery>,
+    @Query(new ZodValidationPipe(productMovementsQuery))
+    query: z.infer<typeof productMovementsQuery>,
   ) {
-    return this.logistics.listProductMovements.execute(tenantId, { productId: query.productId, limit: query.limit });
+    return this.logistics.listProductMovements.execute(tenantId, {
+      productId: query.productId,
+      limit: query.limit,
+    });
   }
 
   @Post("movimentacoes/remessa/realign-fifo")
@@ -168,15 +180,25 @@ export class MovementController {
   @Get("movimentacoes/saldo-cd")
   warehouseBalance(
     @TenantId() tenantId: string,
-    @Query(new ZodValidationPipe(warehouseBalanceQuery, { invalidMessage: "productId obrigatório" }))
+    @Query(
+      new ZodValidationPipe(warehouseBalanceQuery, { invalidMessage: "productId obrigatório" }),
+    )
     query: z.infer<typeof warehouseBalanceQuery>,
   ) {
     return listRemessaBalanceByCd(getDbClient(), tenantId, query.productId, query.productSku);
   }
 
   /** O avanço exige o produto no cadastro; a mensagem diferencia "tem saldo" de "não existe". */
-  private async assertAdvanceProduct(tenantId: string, productId: string, productSku?: string): Promise<void> {
-    const resolved = await this.logistics.resolveAdvanceProduct.execute(tenantId, productId, productSku);
+  private async assertAdvanceProduct(
+    tenantId: string,
+    productId: string,
+    productSku?: string,
+  ): Promise<void> {
+    const resolved = await this.logistics.resolveAdvanceProduct.execute(
+      tenantId,
+      productId,
+      productSku,
+    );
     if (resolved) return;
 
     const hasStock = await this.logistics.hasAdvanceStock.execute(tenantId, productId, productSku);

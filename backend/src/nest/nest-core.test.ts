@@ -2,7 +2,16 @@ import "reflect-metadata";
 import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, it } from "node:test";
 import fastifyJwt from "@fastify/jwt";
-import { Body, Controller, Get, HttpCode, Module, Post, UseFilters, UseInterceptors } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Module,
+  Post,
+  UseFilters,
+  UseInterceptors,
+} from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
 import Fastify, { type FastifyInstance } from "fastify";
@@ -10,7 +19,11 @@ import { z } from "zod";
 import { ACCESS_MESSAGES } from "../lib/auth/access-control.js";
 import { getDbClient, getDbRequestContext } from "../lib/db/tenant-rls.js";
 import { HttpError } from "../lib/http/http-error.js";
-import { createRateLimitHandler, registerRootRateLimit, strictRouteRateLimit } from "../lib/http/rate-limit.js";
+import {
+  createRateLimitHandler,
+  registerRootRateLimit,
+  strictRouteRateLimit,
+} from "../lib/http/rate-limit.js";
 import { AdminOnly, ProtectedApi } from "./api-access.decorators.js";
 import { TenantId } from "./auth/request-params.js";
 import { CoreModule } from "./core.module.js";
@@ -25,9 +38,19 @@ const PROTECTED_MAX = 3;
 const GENEROUS_PROTECTED_MAX = 1000;
 const ROUTE_MAX = 2;
 
-type UserRow = { tokenVersion: number; tenantId: string | null; role: "ADMIN" | "MEMBER"; emailVerifiedAt: Date | null };
+type UserRow = {
+  tokenVersion: number;
+  tenantId: string | null;
+  role: "ADMIN" | "MEMBER";
+  emailVerifiedAt: Date | null;
+};
 
-const VERIFIED_MEMBER: UserRow = { tokenVersion: 1, tenantId: TENANT_ID, role: "MEMBER", emailVerifiedAt: new Date() };
+const VERIFIED_MEMBER: UserRow = {
+  tokenVersion: 1,
+  tenantId: TENANT_ID,
+  role: "MEMBER",
+  emailVerifiedAt: new Date(),
+};
 
 class OutOfStockError extends Error {
   constructor(readonly available: number) {
@@ -64,7 +87,10 @@ const fakePrisma = {
 const outOfStockMapping = {
   type: OutOfStockError,
   status: 422,
-  toBody: (error: Error) => ({ error: error.message, disponivel: (error as OutOfStockError).available }),
+  toBody: (error: Error) => ({
+    error: error.message,
+    disponivel: (error as OutOfStockError).available,
+  }),
 };
 
 @Controller("items")
@@ -129,8 +155,11 @@ async function buildTestApp(
         logger: fastify.log,
         jwt: fastify.jwt,
         rateLimits: {
-          protectedApi: createRateLimitHandler(fastify, { max: protectedMax, timeWindow: "1 minute" }),
-          create: options => createRateLimitHandler(fastify, options),
+          protectedApi: createRateLimitHandler(fastify, {
+            max: protectedMax,
+            timeWindow: "1 minute",
+          }),
+          create: (options) => createRateLimitHandler(fastify, options),
         },
       }),
     ],
@@ -138,11 +167,15 @@ async function buildTestApp(
   })
   class TestModule {}
 
-  const nest = await NestFactory.create<NestFastifyApplication>(TestModule, new FastifyAdapter(fastify), {
-    bodyParser: false,
-    logger: false,
-    abortOnError: false,
-  });
+  const nest = await NestFactory.create<NestFastifyApplication>(
+    TestModule,
+    new FastifyAdapter(fastify),
+    {
+      bodyParser: false,
+      logger: false,
+      abortOnError: false,
+    },
+  );
   nest.setGlobalPrefix("api");
   nest.useGlobalFilters(new ApiExceptionFilter());
   await nest.init();
@@ -233,14 +266,27 @@ describe("Nest core — guards, RLS, filtros e rate limit", () => {
   });
 
   it("valida o corpo com Zod e responde 400 { error, details }", async () => {
-    const res = await fastify.inject({ method: "POST", url: "/api/items", headers, payload: { name: "" } });
+    const res = await fastify.inject({
+      method: "POST",
+      url: "/api/items",
+      headers,
+      payload: { name: "" },
+    });
 
     assert.equal(res.statusCode, 400);
-    assert.deepEqual(res.json(), { error: "Nome obrigatório", details: { name: ["Nome obrigatório"] } });
+    assert.deepEqual(res.json(), {
+      error: "Nome obrigatório",
+      details: { name: ["Nome obrigatório"] },
+    });
   });
 
   it("aceita corpo válido com o status declarado", async () => {
-    const res = await fastify.inject({ method: "POST", url: "/api/items", headers, payload: { name: "Caixa" } });
+    const res = await fastify.inject({
+      method: "POST",
+      url: "/api/items",
+      headers,
+      payload: { name: "Caixa" },
+    });
 
     assert.equal(res.statusCode, 201);
     assert.deepEqual(res.json(), { name: "Caixa" });
@@ -270,7 +316,9 @@ describe("Nest core — guards, RLS, filtros e rate limit", () => {
   it("aplica o limite próprio da rota com bloqueio 403", async () => {
     const statuses: number[] = [];
     for (let i = 0; i <= ROUTE_MAX; i += 1) {
-      statuses.push((await fastify.inject({ method: "GET", url: "/api/public/limited" })).statusCode);
+      statuses.push(
+        (await fastify.inject({ method: "GET", url: "/api/public/limited" })).statusCode,
+      );
     }
 
     assert.deepEqual(statuses, [200, 200, 403]);
@@ -287,9 +335,16 @@ describe("Nest core — limite compartilhado da API protegida", () => {
       const unauthenticated = await fastify.inject({ method: "GET", url: "/api/items" });
       const statuses: number[] = [];
       for (let i = 0; i < PROTECTED_MAX; i += 1) {
-        statuses.push((await fastify.inject({ method: "GET", url: "/api/items", headers })).statusCode);
+        statuses.push(
+          (await fastify.inject({ method: "GET", url: "/api/items", headers })).statusCode,
+        );
       }
-      const blocked = await fastify.inject({ method: "POST", url: "/api/items", headers, payload: { name: "x" } });
+      const blocked = await fastify.inject({
+        method: "POST",
+        url: "/api/items",
+        headers,
+        payload: { name: "x" },
+      });
 
       assert.equal(unauthenticated.statusCode, 401);
       assert.deepEqual(statuses, [200, 200, 200]);

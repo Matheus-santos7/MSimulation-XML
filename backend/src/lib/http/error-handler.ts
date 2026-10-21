@@ -1,4 +1,4 @@
-import type { FastifyBaseLogger, FastifyError, FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyBaseLogger, FastifyError } from "fastify";
 import { ZodError } from "zod";
 import { Prisma } from "../../generated/prisma/client.js";
 import { zodValidationErrorResponse } from "./domain-errors.js";
@@ -30,7 +30,7 @@ export function isDatabaseUnavailableError(e: unknown): boolean {
 
 /**
  * Traduz qualquer erro não tratado em status + `{ error }`.
- * Usado pelo error handler do Fastify e pelo filtro global do Nest.
+ * Usado pelo `ApiExceptionFilter` (rotas Nest e erros do Fastify fora do pipeline).
  */
 export function resolveErrorResponse(error: unknown, log: FastifyBaseLogger): ErrorResponse {
   if (error instanceof ZodError) {
@@ -67,12 +67,4 @@ export function resolveErrorResponse(error: unknown, log: FastifyBaseLogger): Er
   }
 
   return { status, body: { error: message || GENERIC_INTERNAL_ERROR } };
-}
-
-export function registerGlobalErrorHandler(app: FastifyInstance): void {
-  app.setErrorHandler((error: FastifyError, _req: FastifyRequest, reply: FastifyReply) => {
-    const { status, body } = resolveErrorResponse(error, app.log);
-
-    return reply.status(status).send(body);
-  });
 }

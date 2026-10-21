@@ -24,14 +24,17 @@ export function strictRouteRateLimit(max: number, timeWindow: string): RouteRate
 }
 
 /**
- * Registra `@fastify/rate-limit` uma única vez, na raiz, sem limite global.
- * Rotas Fastify declaram `config.rateLimit`; rotas Nest usam o `RateLimitInterceptor`.
+ * Registra `@fastify/rate-limit` uma única vez, na raiz, sem limite global. Os limites
+ * são aplicados pelo `RateLimitInterceptor` do Nest, depois dos guards.
  */
 export async function registerRootRateLimit(app: FastifyInstance): Promise<void> {
   await app.register(rateLimit, { global: false });
 }
 
 /** Cria um limitador avulso (store próprio) a partir do plugin registrado na raiz. */
-export function createRateLimitHandler(app: FastifyInstance, options: RouteRateLimit): RateLimitHandler {
+export function createRateLimitHandler(
+  app: FastifyInstance,
+  options: RouteRateLimit,
+): RateLimitHandler {
   return app.rateLimit(options) as RateLimitHandler;
 }

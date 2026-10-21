@@ -23,7 +23,9 @@ const backfillValidationBodySchema = z.object({
 @Controller("fiscal-validation")
 @ProtectedApi()
 export class FiscalValidationController {
-  constructor(@Inject(FISCAL_VALIDATION) private readonly fiscalValidation: FiscalValidationContext) {}
+  constructor(
+    @Inject(FISCAL_VALIDATION) private readonly fiscalValidation: FiscalValidationContext,
+  ) {}
 
   @Get("insights")
   insights(@TenantId() tenantId: string) {
@@ -43,6 +45,8 @@ export class FiscalValidationController {
     const body = backfillValidationBodySchema.parse(rawBody ?? {});
     const db = getDbClient();
 
-    return this.fiscalValidation.createBackfillPendingNfeValidation(db).execute(db, tenantId, { limit: body.limit });
+    return this.fiscalValidation
+      .createBackfillPendingNfeValidation(db)
+      .execute(db, tenantId, { limit: body.limit });
   }
 }

@@ -35,7 +35,7 @@ async function listFiscalEventsForTenant(prisma: DbClient, tenantId: string) {
     }),
   ]);
 
-  const events = rows.map(event => ({
+  const events = rows.map((event) => ({
     id: event.id,
     tipo: event.tipo,
     descricao: event.descricao,
@@ -45,7 +45,7 @@ async function listFiscalEventsForTenant(prisma: DbClient, tenantId: string) {
     xJust: event.xJust ?? undefined,
   }));
 
-  const numberInutilizations = inutilizations.map(row => ({
+  const numberInutilizations = inutilizations.map((row) => ({
     id: row.id,
     tipo: "INUT" as const,
     descricao: "Inutilização de numeração",
@@ -131,7 +131,7 @@ export class FiscalObservabilityController {
       orderBy: { ocorridoEm: "desc" },
     });
 
-    return rows.map(log => ({
+    return rows.map((log) => ({
       id: log.id,
       ator: log.ator,
       acao: log.acao,

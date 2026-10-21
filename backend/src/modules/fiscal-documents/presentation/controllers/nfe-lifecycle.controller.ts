@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, Inject, Param, Post, Res, UseFilters } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Inject,
+  Param,
+  Post,
+  Res,
+  UseFilters,
+} from "@nestjs/common";
 import type { FastifyReply } from "fastify";
 import type { z } from "zod";
 import { AdminOnly, ProtectedApi } from "../../../../nest/api-access.decorators.js";
@@ -21,7 +31,11 @@ const HTTP_OK = 200;
 const HTTP_CREATED = 201;
 
 /** Erros de domínio com `.status` próprio (inutilização, devolução, cancelamento). */
-const NFE_LIFECYCLE_ERRORS = [NumberInutilizationError, DocumentReturnError, DocumentCancellationError] as const;
+const NFE_LIFECYCLE_ERRORS = [
+  NumberInutilizationError,
+  DocumentReturnError,
+  DocumentCancellationError,
+] as const;
 
 type AccessKeyParam = z.infer<typeof nfeAccessKeyParamSchema>;
 
@@ -58,7 +72,10 @@ export class NfeLifecycleController {
     @TenantId() tenantId: string,
     @Param(new ZodValidationPipe(nfeAccessKeyParamSchema)) params: AccessKeyParam,
   ) {
-    return this.fiscalDocuments.processReturn.getReturnableItems({ tenantId, saleNfeKey: params.chave });
+    return this.fiscalDocuments.processReturn.getReturnableItems({
+      tenantId,
+      saleNfeKey: params.chave,
+    });
   }
 
   @Post(":chave/devolucao")
@@ -100,7 +117,10 @@ export class NfeLifecycleController {
     @TenantId() tenantId: string,
     @Param(new ZodValidationPipe(nfeAccessKeyParamSchema)) params: AccessKeyParam,
   ) {
-    return this.fiscalDocuments.processPhysicalReturn.execute({ tenantId, remessaNfeKey: params.chave });
+    return this.fiscalDocuments.processPhysicalReturn.execute({
+      tenantId,
+      remessaNfeKey: params.chave,
+    });
   }
 
   @Get(":chave/conferencia")
@@ -109,7 +129,10 @@ export class NfeLifecycleController {
     @TenantId() tenantId: string,
     @Param(new ZodValidationPipe(nfeAccessKeyParamSchema)) params: AccessKeyParam,
   ) {
-    return this.fiscalDocuments.processInboundConference.getExpected({ tenantId, remessaNfeKey: params.chave });
+    return this.fiscalDocuments.processInboundConference.getExpected({
+      tenantId,
+      remessaNfeKey: params.chave,
+    });
   }
 
   /** 201 quando a conferência emite nota de ajuste; 200 quando não havia divergência (`noop`). */
@@ -144,6 +167,10 @@ export class NfeLifecycleController {
   ) {
     const body = cancelDocumentBodySchema.parse(rawBody ?? {});
 
-    return this.fiscalDocuments.cancelDocument.execute({ tenantId, nfeKey: params.chave, justification: body.xJust });
+    return this.fiscalDocuments.cancelDocument.execute({
+      tenantId,
+      nfeKey: params.chave,
+      justification: body.xJust,
+    });
   }
 }

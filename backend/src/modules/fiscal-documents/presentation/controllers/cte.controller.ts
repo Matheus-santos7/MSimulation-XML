@@ -67,8 +67,14 @@ export class CteController {
   }
 
   @Get("ctes/:chave")
-  async get(@TenantId() tenantId: string, @Param(new ZodValidationPipe(nfeAccessKeyParamSchema)) params: AccessKeyParam) {
-    return orNotFound(await this.fiscalDocuments.getCteByKey.execute(tenantId, params.chave), CTE_NOT_FOUND);
+  async get(
+    @TenantId() tenantId: string,
+    @Param(new ZodValidationPipe(nfeAccessKeyParamSchema)) params: AccessKeyParam,
+  ) {
+    return orNotFound(
+      await this.fiscalDocuments.getCteByKey.execute(tenantId, params.chave),
+      CTE_NOT_FOUND,
+    );
   }
 
   @Delete("ctes/:chave")
@@ -78,7 +84,10 @@ export class CteController {
     @TenantId() tenantId: string,
     @Param(new ZodValidationPipe(nfeAccessKeyParamSchema)) params: AccessKeyParam,
   ) {
-    orNotFound(await this.fiscalDocuments.softDeleteCte.execute(params.chave, tenantId), CTE_NOT_FOUND);
+    orNotFound(
+      await this.fiscalDocuments.softDeleteCte.execute(params.chave, tenantId),
+      CTE_NOT_FOUND,
+    );
   }
 
   /** Sem XML: 404 se o CT-e não existe; 409 se existe mas os dados fiscais estão incompletos. */

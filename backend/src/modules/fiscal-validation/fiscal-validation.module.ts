@@ -15,7 +15,8 @@ const NFE_VALIDATION_BACKFILL_TRIGGER_LIMIT = 10;
   providers: [
     {
       provide: FISCAL_VALIDATION,
-      useFactory: () => createFiscalValidationModule({ nfeXmlResolver: new PrismaNfeXmlContentResolverAdapter() }),
+      useFactory: () =>
+        createFiscalValidationModule({ nfeXmlResolver: new PrismaNfeXmlContentResolverAdapter() }),
     },
   ],
 })
@@ -36,7 +37,10 @@ export class FiscalValidationModule implements OnModuleInit {
         .createBackfillPendingNfeValidation(db)
         .execute(db, tenantId, { limit: NFE_VALIDATION_BACKFILL_TRIGGER_LIMIT })
         .catch((err: unknown) => {
-          this.logger.error({ err, tenantId }, "Falha ao acionar validação assíncrona de NF-e pendente");
+          this.logger.error(
+            { err, tenantId },
+            "Falha ao acionar validação assíncrona de NF-e pendente",
+          );
         });
     });
   }

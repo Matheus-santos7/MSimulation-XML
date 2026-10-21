@@ -4,8 +4,8 @@ import { DbContextInterceptor } from "./db/db-context.interceptor.js";
 import { RateLimit, RateLimitInterceptor } from "./http/rate-limit.interceptor.js";
 
 /**
- * Controller de negócio (equivalente ao escopo `protected-api`): JWT, empresa e e-mail
- * confirmados; limite compartilhado de 300/min; handler dentro da transação com RLS.
+ * Controller de negócio: JWT, empresa e e-mail confirmados; limite compartilhado de
+ * 300/min (contado depois dos guards); handler dentro da transação com RLS.
  */
 export function ProtectedApi() {
   return applyDecorators(
@@ -15,7 +15,7 @@ export function ProtectedApi() {
   );
 }
 
-/** Só JWT, sem tenant nem transação (equivalente a `authenticated-lookup`). */
+/** Só JWT, sem tenant nem transação (lookup de CNPJ/CEP no onboarding). */
 export function AuthenticatedApi() {
   return UseGuards(JwtAuthGuard);
 }

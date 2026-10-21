@@ -5,7 +5,10 @@ import { TenantId } from "../../../../nest/auth/request-params.js";
 import { orNotFound } from "../../../../nest/http/not-found.js";
 import { ZodValidationPipe } from "../../../../nest/http/zod-validation.pipe.js";
 import { FISCAL_SETTINGS, type FiscalSettingsContext } from "../../fiscal-settings.tokens.js";
-import { nfeNumeracaoQuerySchema, updateEmitterSettingsBodySchema } from "../schemas/emitter-settings.schemas.js";
+import {
+  nfeNumeracaoQuerySchema,
+  updateEmitterSettingsBodySchema,
+} from "../schemas/emitter-settings.schemas.js";
 
 const TENANT_NOT_FOUND = "Empresa não encontrada";
 
@@ -26,7 +29,8 @@ export class EmitterSettingsController {
   @Get("nfe-numeracao")
   async nfeNumeracao(
     @TenantId() tenantId: string,
-    @Query(new ZodValidationPipe(nfeNumeracaoQuerySchema)) query: z.infer<typeof nfeNumeracaoQuerySchema>,
+    @Query(new ZodValidationPipe(nfeNumeracaoQuerySchema))
+    query: z.infer<typeof nfeNumeracaoQuerySchema>,
   ) {
     const preview = await this.fiscalSettings.getNfeNumeracaoPreview.execute(
       tenantId,
@@ -39,7 +43,10 @@ export class EmitterSettingsController {
 
   @Get()
   async get(@TenantId() tenantId: string) {
-    return orNotFound(await this.fiscalSettings.getEmitterSettings.execute(tenantId), TENANT_NOT_FOUND);
+    return orNotFound(
+      await this.fiscalSettings.getEmitterSettings.execute(tenantId),
+      TENANT_NOT_FOUND,
+    );
   }
 
   @Patch()
@@ -49,6 +56,9 @@ export class EmitterSettingsController {
     @Body(new ZodValidationPipe(updateEmitterSettingsBodySchema))
     body: z.infer<typeof updateEmitterSettingsBodySchema>,
   ) {
-    return orNotFound(await this.fiscalSettings.updateEmitterSettings.execute(tenantId, body), TENANT_NOT_FOUND);
+    return orNotFound(
+      await this.fiscalSettings.updateEmitterSettings.execute(tenantId, body),
+      TENANT_NOT_FOUND,
+    );
   }
 }

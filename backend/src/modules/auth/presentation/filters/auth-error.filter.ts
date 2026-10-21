@@ -13,12 +13,14 @@ function carriesHttpStatus(exception: unknown): boolean {
 }
 
 /**
- * Equivalente ao `handleAuthError` das rotas Fastify: erros de domínio do auth viram
- * 400/401/409/429/503 e o resto responde 500 com mensagem orientativa (não a genérica global).
+ * Erros de domínio do auth viram 400/401/409/429/503 (`resolveAuthError`) e o resto
+ * responde 500 com mensagem orientativa, não a genérica global.
  */
 @Catch()
 export class AuthErrorFilter extends ApiExceptionFilter {
   protected override resolve(exception: unknown, log: FastifyBaseLogger): ErrorResponse {
-    return carriesHttpStatus(exception) ? super.resolve(exception, log) : resolveAuthError(exception, log);
+    return carriesHttpStatus(exception)
+      ? super.resolve(exception, log)
+      : resolveAuthError(exception, log);
   }
 }

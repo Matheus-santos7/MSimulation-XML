@@ -1,4 +1,16 @@
-import { Body, Controller, Delete, Get, HttpCode, Inject, Param, Patch, Post, Put, UseFilters } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  Put,
+  UseFilters,
+} from "@nestjs/common";
 import type { z } from "zod";
 import { AdminOnly, ProtectedApi } from "../../../../nest/api-access.decorators.js";
 import { TenantId } from "../../../../nest/auth/request-params.js";
@@ -64,7 +76,9 @@ function toFilialUpdate(body: FilialUpdateBody) {
     ...(body.cep != null ? { cep: body.cep } : {}),
     ...(body.telefone !== undefined ? { telefone: body.telefone } : {}),
     ...(body.serieRemessa != null ? { serieRemessa: body.serieRemessa } : {}),
-    ...(body.serieTransferencia !== undefined ? { serieTransferencia: body.serieTransferencia } : {}),
+    ...(body.serieTransferencia !== undefined
+      ? { serieTransferencia: body.serieTransferencia }
+      : {}),
     ...(body.unidadeLogisticaPadraoId !== undefined
       ? { unidadeLogisticaPadraoId: body.unidadeLogisticaPadraoId }
       : {}),
@@ -99,7 +113,8 @@ export class TenantFilialController {
   @HttpCode(HTTP_OK)
   create(
     @TenantId() tenantId: string,
-    @Body(new ZodValidationPipe(tenantFilialCreateBody, { invalidMessage: INVALID_PAYLOAD })) body: FilialCreateBody,
+    @Body(new ZodValidationPipe(tenantFilialCreateBody, { invalidMessage: INVALID_PAYLOAD }))
+    body: FilialCreateBody,
   ) {
     return this.org.addTenantFilial.execute(tenantId, toFilialCreate(body));
   }
@@ -109,9 +124,14 @@ export class TenantFilialController {
   async update(
     @TenantId() tenantId: string,
     @Param(new ZodValidationPipe(tenantFilialIdParam)) params: FilialIdParam,
-    @Body(new ZodValidationPipe(tenantFilialUpdateBody, { invalidMessage: INVALID_PAYLOAD })) body: FilialUpdateBody,
+    @Body(new ZodValidationPipe(tenantFilialUpdateBody, { invalidMessage: INVALID_PAYLOAD }))
+    body: FilialUpdateBody,
   ) {
-    const row = await this.org.updateTenantFilial.execute(tenantId, params.id, toFilialUpdate(body));
+    const row = await this.org.updateTenantFilial.execute(
+      tenantId,
+      params.id,
+      toFilialUpdate(body),
+    );
 
     return orNotFound(row, FILIAL_NOT_FOUND);
   }
@@ -119,7 +139,10 @@ export class TenantFilialController {
   @Delete("empresas/filiais/:id")
   @AdminOnly()
   @HttpCode(HTTP_NO_CONTENT)
-  async remove(@TenantId() tenantId: string, @Param(new ZodValidationPipe(tenantFilialIdParam)) params: FilialIdParam) {
+  async remove(
+    @TenantId() tenantId: string,
+    @Param(new ZodValidationPipe(tenantFilialIdParam)) params: FilialIdParam,
+  ) {
     orNotFound(await this.org.removeTenantFilial.execute(tenantId, params.id), FILIAL_NOT_FOUND);
   }
 

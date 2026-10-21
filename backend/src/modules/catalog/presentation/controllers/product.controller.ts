@@ -1,4 +1,17 @@
-import { Body, Controller, Delete, Get, HttpCode, Inject, Param, Patch, Post, Req, Res, UseFilters } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  Req,
+  Res,
+  UseFilters,
+} from "@nestjs/common";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type { z } from "zod";
 import { AdminOnly, ProtectedApi } from "../../../../nest/api-access.decorators.js";
@@ -17,7 +30,12 @@ import { CATALOG, type CatalogContext } from "../../catalog.tokens.js";
 import { ProductConflictError } from "../../domain/errors/product-conflict.error.js";
 import { ProductValidationError } from "../../domain/errors/product-validation.error.js";
 import { resolveProductSpreadsheetUpload } from "../helpers/product-import.helper.js";
-import { productBulkUpsertBody, productCreateBody, productIdParam, productUpdateBody } from "../schemas/product.schemas.js";
+import {
+  productBulkUpsertBody,
+  productCreateBody,
+  productIdParam,
+  productUpdateBody,
+} from "../schemas/product.schemas.js";
 
 const HTTP_OK = 200;
 const HTTP_CREATED = 201;
@@ -79,8 +97,14 @@ export class ProductController {
   }
 
   @Get(":id")
-  async get(@Param(new ZodValidationPipe(productIdParam)) params: ProductIdParam, @TenantId() tenantId: string) {
-    return orNotFound(await this.catalog.getProductById.execute(params.id, tenantId), PRODUCT_NOT_FOUND);
+  async get(
+    @Param(new ZodValidationPipe(productIdParam)) params: ProductIdParam,
+    @TenantId() tenantId: string,
+  ) {
+    return orNotFound(
+      await this.catalog.getProductById.execute(params.id, tenantId),
+      PRODUCT_NOT_FOUND,
+    );
   }
 
   @Post()
@@ -119,13 +143,19 @@ export class ProductController {
     @TenantId() tenantId: string,
     @Body(new ZodValidationPipe(productUpdateBody)) body: z.infer<typeof productUpdateBody>,
   ) {
-    return orNotFound(await this.catalog.updateProduct.execute(params.id, tenantId, body), PRODUCT_NOT_FOUND);
+    return orNotFound(
+      await this.catalog.updateProduct.execute(params.id, tenantId, body),
+      PRODUCT_NOT_FOUND,
+    );
   }
 
   @Delete(":id")
   @AdminOnly()
   @HttpCode(HTTP_NO_CONTENT)
-  async remove(@Param(new ZodValidationPipe(productIdParam)) params: ProductIdParam, @TenantId() tenantId: string) {
+  async remove(
+    @Param(new ZodValidationPipe(productIdParam)) params: ProductIdParam,
+    @TenantId() tenantId: string,
+  ) {
     orNotFound(await this.catalog.deleteProduct.execute(params.id, tenantId), PRODUCT_NOT_FOUND);
   }
 }

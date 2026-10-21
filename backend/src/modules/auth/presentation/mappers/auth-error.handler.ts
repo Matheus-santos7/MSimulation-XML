@@ -42,7 +42,10 @@ export function resolveAuthError(error: unknown, log: FastifyBaseLogger): ErrorR
   }
 
   if (error instanceof EmailDeliveryError) {
-    return { status: 503, body: { error: "Não foi possível enviar o e-mail. Tente novamente em instantes." } };
+    return {
+      status: 503,
+      body: { error: "Não foi possível enviar o e-mail. Tente novamente em instantes." },
+    };
   }
   if (isDatabaseUnavailableError(error)) {
     log.error({ err: error }, "Banco de dados indisponível (auth)");

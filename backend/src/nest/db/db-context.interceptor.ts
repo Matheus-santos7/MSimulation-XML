@@ -1,4 +1,10 @@
-import { Inject, Injectable, type CallHandler, type ExecutionContext, type NestInterceptor } from "@nestjs/common";
+import {
+  Inject,
+  Injectable,
+  type CallHandler,
+  type ExecutionContext,
+  type NestInterceptor,
+} from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { from, lastValueFrom, type Observable } from "rxjs";
 import type { PrismaClient } from "../../generated/prisma/client.js";
@@ -7,7 +13,7 @@ import { PRISMA } from "../tokens.js";
 
 /**
  * Executa o handler dentro de `runWithDbContext` (transação + `app.tenant_id`/`app.user_id`
- * para a RLS), como o `wrapRouteWithDbContext` das rotas Fastify.
+ * para a RLS na mesma conexão física).
  *
  * `next.handle()` é chamado dentro da transação: o Nest amarra o handler ao
  * AsyncLocalStorage ativo nesse momento, e `getDbClient()` enxerga a transação.
@@ -26,7 +32,9 @@ export class DbContextInterceptor implements NestInterceptor {
     };
 
     return from(
-      runWithDbContext(this.prisma, dbContext, () => lastValueFrom(next.handle(), { defaultValue: undefined })),
+      runWithDbContext(this.prisma, dbContext, () =>
+        lastValueFrom(next.handle(), { defaultValue: undefined }),
+      ),
     );
   }
 }

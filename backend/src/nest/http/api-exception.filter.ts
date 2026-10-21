@@ -5,8 +5,8 @@ import { resolveErrorResponse } from "../../lib/http/error-handler.js";
 import { HttpError, type ErrorResponse } from "../../lib/http/http-error.js";
 
 /**
- * Filtro global: mesmo contrato do error handler Fastify (`{ error }`, 400 Zod,
- * 503 banco indisponível, P2002/P2025, 5xx genérico).
+ * Filtro global: contrato de erro da API (`{ error }`, 400 Zod, 503 banco indisponível,
+ * P2002/P2025, 5xx genérico). Também recebe os erros do Fastify fora do pipeline do Nest.
  */
 @Catch()
 export class ApiExceptionFilter implements ExceptionFilter {
@@ -38,7 +38,7 @@ export class ApiExceptionFilter implements ExceptionFilter {
 
 /**
  * Filtro de controller: aplica os mapeamentos de erro de domínio da rota
- * (equivalente ao `handleRouteError`) e cai no contrato global para o resto.
+ * (`resolveRouteError`) e cai no contrato global para o resto.
  */
 @Catch()
 export class RouteErrorFilter extends ApiExceptionFilter {

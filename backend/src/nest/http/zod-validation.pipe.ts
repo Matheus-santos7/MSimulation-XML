@@ -16,7 +16,10 @@ export type ZodValidationPipeOptions = {
  * Valida `@Body`, `@Param` ou `@Query` com o schema Zod da rota.
  * Sem opções, o `ZodError` segue para o filtro, que responde 400 `{ error, details }`.
  */
-export class ZodValidationPipe<TSchema extends ZodTypeAny> implements PipeTransform<unknown, z.infer<TSchema>> {
+export class ZodValidationPipe<TSchema extends ZodTypeAny> implements PipeTransform<
+  unknown,
+  z.infer<TSchema>
+> {
   constructor(
     private readonly schema: TSchema,
     private readonly options: ZodValidationPipeOptions = {},

@@ -144,7 +144,11 @@ function createFakePrisma(options: FakePrismaOptions = {}) {
 
 /** Sobe a API e devolve a instância Fastify, que atende as rotas legadas e as do Nest. */
 async function startApp(options: FakePrismaOptions = {}, onRoute?: (route: RouteOptions) => void) {
-  const nest = await buildApp({ logger: false, prisma: createFakePrisma(options) as never, onRoute });
+  const nest = await buildApp({
+    logger: false,
+    prisma: createFakePrisma(options) as never,
+    onRoute,
+  });
   const app = nest.getHttpAdapter().getInstance() as FastifyInstance;
   await app.ready();
 
@@ -164,23 +168,23 @@ function fillPathParams(url: string): string {
 }
 
 function startsWithAny(url: string, prefixes: readonly string[]): boolean {
-  return prefixes.some(prefix => url.startsWith(prefix));
+  return prefixes.some((prefix) => url.startsWith(prefix));
 }
 
 /** Rotas de negócio, sem HEAD automático e sem o `OPTIONS *` do CORS. */
 function businessRoutes(routes: readonly string[]): ContractRoute[] {
   return routes
-    .map(line => {
+    .map((line) => {
       const [method, url] = line.split(" ");
 
       return { method: method!, url: url! };
     })
-    .filter(route => route.url.startsWith("/api/"));
+    .filter((route) => route.url.startsWith("/api/"));
 }
 
 async function collectRoutes(): Promise<string[]> {
   const routes: string[] = [];
-  const app = await startApp({}, route => {
+  const app = await startApp({}, (route) => {
     const methods = Array.isArray(route.method) ? route.method : [route.method];
     for (const method of methods) {
       if (method !== "HEAD") routes.push(`${method} ${route.url}`);
@@ -214,19 +218,30 @@ describe("contrato HTTP — autenticação", () => {
 
   it("responde 401 sem token em toda rota protegida", async () => {
     const protectedRoutes = businessRoutes(registeredRoutes).filter(
-      route => !startsWithAny(route.url, JWT_FREE_PREFIXES),
+      (route) => !startsWithAny(route.url, JWT_FREE_PREFIXES),
     );
     assert.ok(protectedRoutes.length > 0);
 
     for (const route of protectedRoutes) {
-      const res = await app.inject({ method: route.method as never, url: fillPathParams(route.url) });
+      const res = await app.inject({
+        method: route.method as never,
+        url: fillPathParams(route.url),
+      });
       assert.equal(res.statusCode, 401, `${route.method} ${route.url}`);
-      assert.deepEqual(res.json(), { error: MESSAGES.unauthorized }, `${route.method} ${route.url}`);
+      assert.deepEqual(
+        res.json(),
+        { error: MESSAGES.unauthorized },
+        `${route.method} ${route.url}`,
+      );
     }
   });
 
   it("responde 401 com token malformado", async () => {
-    const res = await app.inject({ method: "GET", url: "/api/pedidos", headers: bearer("invalid.token.value") });
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/pedidos",
+      headers: bearer("invalid.token.value"),
+    });
 
     assert.equal(res.statusCode, 401);
     assert.deepEqual(res.json(), { error: MESSAGES.unauthorized });
@@ -249,7 +264,7 @@ describe("contrato HTTP — guards de tenant, e-mail e papel", () => {
     const app = await startApp({ user: { tenantId: null } });
     const token = accessToken(app);
     const tenantRoutes = businessRoutes(registeredRoutes).filter(
-      route => !startsWithAny(route.url, TENANT_FREE_PREFIXES),
+      (route) => !startsWithAny(route.url, TENANT_FREE_PREFIXES),
     );
 
     try {
@@ -260,7 +275,11 @@ describe("contrato HTTP — guards de tenant, e-mail e papel", () => {
           headers: bearer(token),
         });
         assert.equal(res.statusCode, 403, `${route.method} ${route.url}`);
-        assert.deepEqual(res.json(), { error: MESSAGES.tenantRequired }, `${route.method} ${route.url}`);
+        assert.deepEqual(
+          res.json(),
+          { error: MESSAGES.tenantRequired },
+          `${route.method} ${route.url}`,
+        );
       }
     } finally {
       await app.close();
@@ -271,7 +290,11 @@ describe("contrato HTTP — guards de tenant, e-mail e papel", () => {
     const app = await startApp({ user: { emailVerifiedAt: null } });
 
     try {
-      const res = await app.inject({ method: "GET", url: "/api/pedidos", headers: bearer(accessToken(app)) });
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/pedidos",
+        headers: bearer(accessToken(app)),
+      });
 
       assert.equal(res.statusCode, 403);
       assert.deepEqual(res.json(), { error: MESSAGES.emailNotVerified });
@@ -287,7 +310,12 @@ describe("contrato HTTP — guards de tenant, e-mail e papel", () => {
     try {
       for (const route of ADMIN_ROUTES) {
         const [method, url] = route.split(" ");
-        const res = await app.inject({ method: method as never, url: fillPathParams(url!), payload: {}, headers });
+        const res = await app.inject({
+          method: method as never,
+          url: fillPathParams(url!),
+          payload: {},
+          headers,
+        });
 
         assert.equal(res.statusCode, 403, route);
         assert.deepEqual(res.json(), { error: MESSAGES.adminRequired }, route);
@@ -333,31 +361,51 @@ describe("contrato HTTP — respostas por módulo (banco vazio)", () => {
   }
 
   it("GET /api/products/spreadsheet/template devolve o XLSX como anexo", async () => {
-    const res = await app.inject({ method: "GET", url: "/api/products/spreadsheet/template", headers: bearer(token) });
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/products/spreadsheet/template",
+      headers: bearer(token),
+    });
 
     assert.equal(res.statusCode, 200);
-    assert.equal(res.headers["content-type"], "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    assert.equal(
+      res.headers["content-type"],
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
     assert.equal(res.headers["content-disposition"], 'attachment; filename="produtos-modelo.xlsx"');
     // XLSX é um ZIP: começa com "PK".
     assert.equal(res.rawPayload.subarray(0, 2).toString(), "PK");
   });
 
   it("GET /api/pedidos/:id inexistente devolve 404", async () => {
-    const res = await app.inject({ method: "GET", url: `/api/pedidos/${SAMPLE_ID}`, headers: bearer(token) });
+    const res = await app.inject({
+      method: "GET",
+      url: `/api/pedidos/${SAMPLE_ID}`,
+      headers: bearer(token),
+    });
 
     assert.equal(res.statusCode, 404);
     assert.deepEqual(res.json(), { error: "Pedido não encontrado" });
   });
 
   it("GET /api/fiscal-settings sem empresa no banco devolve 404", async () => {
-    const res = await app.inject({ method: "GET", url: "/api/fiscal-settings", headers: bearer(token) });
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/fiscal-settings",
+      headers: bearer(token),
+    });
 
     assert.equal(res.statusCode, 404);
     assert.deepEqual(res.json(), { error: "Empresa não encontrada" });
   });
 
   it("POST /api/pedidos com corpo inválido devolve 400 no formato { error, details }", async () => {
-    const res = await app.inject({ method: "POST", url: "/api/pedidos", payload: {}, headers: bearer(token) });
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/pedidos",
+      payload: {},
+      headers: bearer(token),
+    });
 
     assert.equal(res.statusCode, 400);
     assert.deepEqual(res.json(), {
@@ -421,9 +469,21 @@ describe("contrato HTTP — uploads de planilha (ADMIN)", () => {
   const NOT_MULTIPART = "Envie a planilha como multipart/form-data (campo file)";
 
   const CASES = [
-    { url: "/api/tax-rules/import-spreadsheet", json: { status: 400, body: { error: NOT_MULTIPART } }, badFormat: "Formato inválido. Envie um arquivo .xlsx ou .xls" },
-    { url: "/api/products/import-spreadsheet", json: { status: 400, body: { error: NOT_MULTIPART } }, badFormat: "Formato inválido. Envie um arquivo .xlsx ou .csv" },
-    { url: "/api/unidades-logisticas/bulk-import", json: null, badFormat: "Formato inválido. Envie um arquivo .xlsx ou .xls" },
+    {
+      url: "/api/tax-rules/import-spreadsheet",
+      json: { status: 400, body: { error: NOT_MULTIPART } },
+      badFormat: "Formato inválido. Envie um arquivo .xlsx ou .xls",
+    },
+    {
+      url: "/api/products/import-spreadsheet",
+      json: { status: 400, body: { error: NOT_MULTIPART } },
+      badFormat: "Formato inválido. Envie um arquivo .xlsx ou .csv",
+    },
+    {
+      url: "/api/unidades-logisticas/bulk-import",
+      json: null,
+      badFormat: "Formato inválido. Envie um arquivo .xlsx ou .xls",
+    },
   ] as const;
 
   for (const testCase of CASES) {
@@ -476,14 +536,23 @@ describe("contrato HTTP — uploads de planilha (ADMIN)", () => {
   }
 
   it("GET /api/unidades-logisticas/:id inexistente devolve 404", async () => {
-    const res = await app.inject({ method: "GET", url: `/api/unidades-logisticas/${SAMPLE_ID}`, headers });
+    const res = await app.inject({
+      method: "GET",
+      url: `/api/unidades-logisticas/${SAMPLE_ID}`,
+      headers,
+    });
 
     assert.equal(res.statusCode, 404);
     assert.deepEqual(res.json(), { error: "Unidade não encontrada" });
   });
 
   it("POST /api/unidades-logisticas/bulk-import com JSON inválido devolve 400 com details", async () => {
-    const res = await app.inject({ method: "POST", url: "/api/unidades-logisticas/bulk-import", payload: {}, headers });
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/unidades-logisticas/bulk-import",
+      payload: {},
+      headers,
+    });
     const body = res.json();
 
     assert.equal(res.statusCode, 400);
@@ -510,10 +579,14 @@ describe("contrato HTTP — rate limit", () => {
     const headers = bearer(accessToken(app));
 
     try {
-      const statuses = await statusesOf(app, PROTECTED_API_MAX_PER_MINUTE, { method: "GET", url: "/api/pedidos", headers });
+      const statuses = await statusesOf(app, PROTECTED_API_MAX_PER_MINUTE, {
+        method: "GET",
+        url: "/api/pedidos",
+        headers,
+      });
       const blocked = await app.inject({ method: "GET", url: "/api/products", headers });
 
-      assert.ok(statuses.every(status => status === 200));
+      assert.ok(statuses.every((status) => status === 200));
       assert.equal(blocked.statusCode, 429);
       assert.deepEqual(blocked.json(), { error: "Rate limit exceeded, retry in 1 minute" });
     } finally {
@@ -525,9 +598,12 @@ describe("contrato HTTP — rate limit", () => {
     const app = await startApp();
 
     try {
-      const statuses = await statusesOf(app, PROTECTED_API_MAX_PER_MINUTE + 1, { method: "GET", url: "/api/pedidos" });
+      const statuses = await statusesOf(app, PROTECTED_API_MAX_PER_MINUTE + 1, {
+        method: "GET",
+        url: "/api/pedidos",
+      });
 
-      assert.ok(statuses.every(status => status === 401));
+      assert.ok(statuses.every((status) => status === 401));
     } finally {
       await app.close();
     }
@@ -541,7 +617,7 @@ describe("contrato HTTP — rate limit", () => {
       const statuses = await statusesOf(app, LOGIN_MAX_PER_WINDOW, request);
       const blocked = await app.inject(request);
 
-      assert.ok(statuses.every(status => status === 400));
+      assert.ok(statuses.every((status) => status === 400));
       assert.equal(blocked.statusCode, 403);
       assert.deepEqual(blocked.json(), { error: "Rate limit exceeded, retry in 15 minutes" });
     } finally {
@@ -555,10 +631,14 @@ describe("contrato HTTP — rate limit", () => {
 
     try {
       // CNPJ inválido falha na validação, sem chamar a API externa.
-      const request = { method: "GET", url: "/api/lookup/cnpj/abc", headers: bearer(accessToken(app)) } as const;
+      const request = {
+        method: "GET",
+        url: "/api/lookup/cnpj/abc",
+        headers: bearer(accessToken(app)),
+      } as const;
       const statuses = await statusesOf(app, INTENDED_LOOKUP_MAX_PER_MINUTE + 1, request);
 
-      assert.ok(statuses.every(status => status === 400));
+      assert.ok(statuses.every((status) => status === 400));
     } finally {
       await app.close();
     }
@@ -568,11 +648,17 @@ describe("contrato HTTP — rate limit", () => {
     const app = await startApp();
 
     try {
-      const health = await statusesOf(app, PROTECTED_API_MAX_PER_MINUTE + 1, { method: "GET", url: "/api/health" });
-      const me = await statusesOf(app, PROTECTED_API_MAX_PER_MINUTE + 1, { method: "GET", url: "/api/auth/me" });
+      const health = await statusesOf(app, PROTECTED_API_MAX_PER_MINUTE + 1, {
+        method: "GET",
+        url: "/api/health",
+      });
+      const me = await statusesOf(app, PROTECTED_API_MAX_PER_MINUTE + 1, {
+        method: "GET",
+        url: "/api/auth/me",
+      });
 
-      assert.ok(health.every(status => status === 200));
-      assert.ok(me.every(status => status === 401));
+      assert.ok(health.every((status) => status === 200));
+      assert.ok(me.every((status) => status === 401));
     } finally {
       await app.close();
     }
@@ -592,7 +678,10 @@ describe("contrato HTTP — documentos fiscais", () => {
 
   const NOT_FOUND_CASES = [
     { url: `/api/nfes/${ACCESS_KEY}/xml`, error: "NF-e não encontrada" },
-    { url: `/api/nfes/${ACCESS_KEY}/xml?doc=evento`, error: "Evento de cancelamento não encontrado para esta NF-e" },
+    {
+      url: `/api/nfes/${ACCESS_KEY}/xml?doc=evento`,
+      error: "Evento de cancelamento não encontrado para esta NF-e",
+    },
     { url: `/api/nfes/${ACCESS_KEY}`, error: "NF-e não encontrada" },
     { url: `/api/ctes/${ACCESS_KEY}/xml`, error: "CT-e não encontrado" },
     { url: `/api/ctes/${ACCESS_KEY}`, error: "CT-e não encontrado" },
@@ -681,7 +770,12 @@ describe("contrato HTTP — pedidos (ADMIN)", () => {
     { method: "PATCH", url: `/api/pedidos/${SAMPLE_ID}` },
   ] as const) {
     it(`${testCase.method} ${testCase.url} com corpo inválido devolve 400 Zod`, async () => {
-      const res = await app.inject({ method: testCase.method, url: testCase.url, payload: {}, headers });
+      const res = await app.inject({
+        method: testCase.method,
+        url: testCase.url,
+        payload: {},
+        headers,
+      });
 
       assert.equal(res.statusCode, 400);
       assert.deepEqual(res.json(), {
@@ -707,10 +801,17 @@ describe("contrato HTTP — auth", () => {
     { url: "/api/auth/refresh", details: { refreshToken: ["Required"] } },
     { url: "/api/auth/forgot-password", details: { email: ["Required"] } },
     { url: "/api/auth/reset-password", details: { token: ["Required"], password: ["Required"] } },
-    { url: "/api/auth/login/verify-2fa", details: { twoFactorToken: ["Required"], code: ["Required"] } },
+    {
+      url: "/api/auth/login/verify-2fa",
+      details: { twoFactorToken: ["Required"], code: ["Required"] },
+    },
     { url: "/api/auth/verify-email", details: { token: ["Required"] } },
     { url: "/api/auth/2fa/enable", details: { code: ["Required"] }, authenticated: true },
-    { url: "/api/auth/2fa/disable", details: { password: ["Required"], code: ["Required"] }, authenticated: true },
+    {
+      url: "/api/auth/2fa/disable",
+      details: { password: ["Required"], code: ["Required"] },
+      authenticated: true,
+    },
   ] as const;
 
   for (const testCase of VALIDATION_CASES) {
@@ -740,7 +841,11 @@ describe("contrato HTTP — auth", () => {
   it("responde 401 sem token nas rotas de auth que exigem sessão", async () => {
     for (const route of AUTHENTICATED_ROUTES) {
       const [method, url] = route.split(" ");
-      const res = await app.inject({ method: method as never, url: url!, payload: method === "POST" ? {} : undefined });
+      const res = await app.inject({
+        method: method as never,
+        url: url!,
+        payload: method === "POST" ? {} : undefined,
+      });
 
       assert.equal(res.statusCode, 401, route);
       assert.deepEqual(res.json(), { error: MESSAGES.unauthorized }, route);
@@ -769,14 +874,24 @@ describe("contrato HTTP — auth", () => {
   });
 
   it("POST /api/auth/2fa/setup de usuário inexistente devolve 400", async () => {
-    const res = await app.inject({ method: "POST", url: "/api/auth/2fa/setup", payload: {}, headers });
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/2fa/setup",
+      payload: {},
+      headers,
+    });
 
     assert.equal(res.statusCode, 400);
     assert.deepEqual(res.json(), { error: "Usuário não encontrado" });
   });
 
   it("POST /api/auth/resend-verification responde a mensagem genérica", async () => {
-    const res = await app.inject({ method: "POST", url: "/api/auth/resend-verification", payload: {}, headers });
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/resend-verification",
+      payload: {},
+      headers,
+    });
 
     assert.equal(res.statusCode, 200);
     assert.deepEqual(res.json(), {
@@ -785,7 +900,12 @@ describe("contrato HTTP — auth", () => {
   });
 
   it("POST /api/auth/onboarding/tenant com empresa já cadastrada devolve 400", async () => {
-    const res = await app.inject({ method: "POST", url: "/api/auth/onboarding/tenant", payload: {}, headers });
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/onboarding/tenant",
+      payload: {},
+      headers,
+    });
 
     assert.equal(res.statusCode, 400);
     assert.deepEqual(res.json(), { error: "Empresa já cadastrada nesta conta" });
@@ -811,10 +931,16 @@ describe("contrato HTTP — auth", () => {
   });
 
   it("rota de auth responde 503 quando a transação não conecta", async () => {
-    const appWithoutDb = await startApp({ transactionError: new Error("connect ECONNREFUSED 127.0.0.1:5432") });
+    const appWithoutDb = await startApp({
+      transactionError: new Error("connect ECONNREFUSED 127.0.0.1:5432"),
+    });
 
     try {
-      const res = await appWithoutDb.inject({ method: "POST", url: "/api/auth/refresh", payload: { refreshToken: "x" } });
+      const res = await appWithoutDb.inject({
+        method: "POST",
+        url: "/api/auth/refresh",
+        payload: { refreshToken: "x" },
+      });
 
       assert.equal(res.statusCode, 503);
       assert.deepEqual(res.json(), { error: MESSAGES.databaseUnavailable });
@@ -843,7 +969,12 @@ describe("contrato HTTP — tenant e usuários (org)", () => {
   });
 
   it("PATCH /api/tenants/:id de outra empresa devolve 404 antes de validar o corpo", async () => {
-    const res = await app.inject({ method: "PATCH", url: `/api/tenants/${SAMPLE_ID}`, payload: { cnpj: 1 }, headers });
+    const res = await app.inject({
+      method: "PATCH",
+      url: `/api/tenants/${SAMPLE_ID}`,
+      payload: { cnpj: 1 },
+      headers,
+    });
 
     assert.equal(res.statusCode, 404);
     assert.deepEqual(res.json(), { error: "Empresa não encontrada" });
@@ -853,11 +984,17 @@ describe("contrato HTTP — tenant e usuários (org)", () => {
     const res = await app.inject({ method: "POST", url: "/api/tenants", payload: {}, headers });
 
     assert.equal(res.statusCode, 403);
-    assert.deepEqual(res.json(), { error: "Cadastro de empresas não disponível via API autenticada" });
+    assert.deepEqual(res.json(), {
+      error: "Cadastro de empresas não disponível via API autenticada",
+    });
   });
 
   it("DELETE /api/tenants/:id responde 403 para a própria empresa e 404 para outra", async () => {
-    const own = await app.inject({ method: "DELETE", url: `/api/tenants/${OWN_TENANT_ID}`, headers });
+    const own = await app.inject({
+      method: "DELETE",
+      url: `/api/tenants/${OWN_TENANT_ID}`,
+      headers,
+    });
     const other = await app.inject({ method: "DELETE", url: `/api/tenants/${SAMPLE_ID}`, headers });
 
     assert.equal(own.statusCode, 403);
@@ -906,10 +1043,16 @@ describe("contrato HTTP — health e banco indisponível", () => {
   });
 
   it("rota protegida responde 503 quando a transação não conecta", async () => {
-    const app = await startApp({ transactionError: new Error("connect ECONNREFUSED 127.0.0.1:5432") });
+    const app = await startApp({
+      transactionError: new Error("connect ECONNREFUSED 127.0.0.1:5432"),
+    });
 
     try {
-      const res = await app.inject({ method: "GET", url: "/api/pedidos", headers: bearer(accessToken(app)) });
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/pedidos",
+        headers: bearer(accessToken(app)),
+      });
 
       assert.equal(res.statusCode, 503);
       assert.deepEqual(res.json(), { error: MESSAGES.databaseUnavailable });

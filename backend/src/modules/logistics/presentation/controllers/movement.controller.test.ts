@@ -9,7 +9,13 @@ import { MovementController } from "./movement.controller.js";
 
 const TENANT_ID = "tenant-1";
 const SHIPMENT = { unidadeDestinoId: "cd-1", items: [] } as never;
-const ADVANCE = { productId: " p-1 ", productSku: "SKU-9", quantidade: 1, unidadeOrigemId: "a", unidadeDestinoId: "b" } as never;
+const ADVANCE = {
+  productId: " p-1 ",
+  productSku: "SKU-9",
+  quantidade: 1,
+  unidadeOrigemId: "a",
+  unidadeDestinoId: "b",
+} as never;
 
 function controller(options: {
   emit?: () => Promise<unknown>;
@@ -82,8 +88,12 @@ describe("MovementController", () => {
   });
 
   it("recusa o avanço com 400 quando o produto não está no cadastro", async () => {
-    const withStock = await rejection(controller({ hasStock: true }).advanceWarehouse(TENANT_ID, ADVANCE));
-    const withoutStock = await rejection(controller({ hasStock: false }).advanceWarehouse(TENANT_ID, ADVANCE));
+    const withStock = await rejection(
+      controller({ hasStock: true }).advanceWarehouse(TENANT_ID, ADVANCE),
+    );
+    const withoutStock = await rejection(
+      controller({ hasStock: false }).advanceWarehouse(TENANT_ID, ADVANCE),
+    );
 
     assert.ok(withStock instanceof HttpError && withoutStock instanceof HttpError);
     assert.equal(withStock.status, 400);

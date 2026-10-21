@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, HttpCode, Inject, Param, Patch, Post, UseFilters } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  UseFilters,
+} from "@nestjs/common";
 import type { z } from "zod";
 import { AdminOnly, ProtectedApi } from "../../../../nest/api-access.decorators.js";
 import { TenantId } from "../../../../nest/auth/request-params.js";
@@ -65,7 +76,10 @@ export class OrderController {
   }
 
   @Get(":id")
-  async get(@Param(new ZodValidationPipe(orderIdParam)) params: OrderIdParam, @TenantId() tenantId: string) {
+  async get(
+    @Param(new ZodValidationPipe(orderIdParam)) params: OrderIdParam,
+    @TenantId() tenantId: string,
+  ) {
     return orNotFound(await this.sales.getOrderById.execute(tenantId, params.id), ORDER_NOT_FOUND);
   }
 
@@ -74,14 +88,20 @@ export class OrderController {
     @Param(new ZodValidationPipe(orderIdParam)) params: OrderIdParam,
     @TenantId() tenantId: string,
   ) {
-    const order = orNotFound(await this.sales.getOrderById.execute(tenantId, params.id), ORDER_NOT_FOUND);
+    const order = orNotFound(
+      await this.sales.getOrderById.execute(tenantId, params.id),
+      ORDER_NOT_FOUND,
+    );
 
     return mapOrderToIntegrationPayload(order);
   }
 
   @Post()
   @HttpCode(HTTP_CREATED)
-  createDraft(@TenantId() tenantId: string, @Body(new ZodValidationPipe(orderCheckoutBody)) body: OrderCheckoutBody) {
+  createDraft(
+    @TenantId() tenantId: string,
+    @Body(new ZodValidationPipe(orderCheckoutBody)) body: OrderCheckoutBody,
+  ) {
     return this.sales.createOrderDraft.execute(tenantId, body);
   }
 
@@ -91,26 +111,38 @@ export class OrderController {
     @TenantId() tenantId: string,
     @Body(new ZodValidationPipe(orderCheckoutBody)) body: OrderCheckoutBody,
   ) {
-    return orNotFound(await this.sales.updateOrderDraft.execute(params.id, tenantId, body), ORDER_NOT_FOUND);
+    return orNotFound(
+      await this.sales.updateOrderDraft.execute(params.id, tenantId, body),
+      ORDER_NOT_FOUND,
+    );
   }
 
   @Post(":id/faturar")
   @AdminOnly()
   @HttpCode(HTTP_CREATED)
-  async invoice(@Param(new ZodValidationPipe(orderIdParam)) params: OrderIdParam, @TenantId() tenantId: string) {
+  async invoice(
+    @Param(new ZodValidationPipe(orderIdParam)) params: OrderIdParam,
+    @TenantId() tenantId: string,
+  ) {
     return orNotFound(await this.sales.invoiceOrder.execute(tenantId, params.id), ORDER_NOT_FOUND);
   }
 
   @Delete(":id")
   @HttpCode(HTTP_NO_CONTENT)
-  async remove(@Param(new ZodValidationPipe(orderIdParam)) params: OrderIdParam, @TenantId() tenantId: string) {
+  async remove(
+    @Param(new ZodValidationPipe(orderIdParam)) params: OrderIdParam,
+    @TenantId() tenantId: string,
+  ) {
     orNotFound(await this.sales.removeOrder.execute(tenantId, params.id), ORDER_NOT_FOUND);
   }
 
   @Post("checkout")
   @AdminOnly()
   @HttpCode(HTTP_CREATED)
-  checkout(@TenantId() tenantId: string, @Body(new ZodValidationPipe(orderCheckoutBody)) body: OrderCheckoutBody) {
+  checkout(
+    @TenantId() tenantId: string,
+    @Body(new ZodValidationPipe(orderCheckoutBody)) body: OrderCheckoutBody,
+  ) {
     return this.sales.processCheckout.execute(tenantId, body);
   }
 }

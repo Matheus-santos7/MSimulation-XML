@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, HttpCode, Inject, Param, Patch, Post, UseFilters } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  UseFilters,
+} from "@nestjs/common";
 import type { z } from "zod";
 import { AdminOnly, ProtectedApi } from "../../../../nest/api-access.decorators.js";
 import { TenantId, UserId } from "../../../../nest/auth/request-params.js";
@@ -48,7 +59,10 @@ export class UserController {
   }
 
   @Get(":id")
-  async get(@TenantId() tenantId: string, @Param(new ZodValidationPipe(userIdParam)) params: UserIdParam) {
+  async get(
+    @TenantId() tenantId: string,
+    @Param(new ZodValidationPipe(userIdParam)) params: UserIdParam,
+  ) {
     return orNotFound(await this.org.getUserById.execute(params.id, tenantId), USER_NOT_FOUND);
   }
 
@@ -80,6 +94,9 @@ export class UserController {
     @UserId() currentUserId: string,
     @Param(new ZodValidationPipe(userIdParam)) params: UserIdParam,
   ) {
-    orNotFound(await this.org.deleteUser.execute(params.id, tenantId, currentUserId), USER_NOT_FOUND);
+    orNotFound(
+      await this.org.deleteUser.execute(params.id, tenantId, currentUserId),
+      USER_NOT_FOUND,
+    );
   }
 }

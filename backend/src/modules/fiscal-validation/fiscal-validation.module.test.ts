@@ -2,7 +2,10 @@ import "reflect-metadata";
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import type { FastifyBaseLogger } from "fastify";
-import { resetFiscalTransactionCommitHookForTests, runFiscalTransaction } from "../../lib/db/prisma-tx.js";
+import {
+  resetFiscalTransactionCommitHookForTests,
+  runFiscalTransaction,
+} from "../../lib/db/prisma-tx.js";
 import { FiscalValidationModule } from "./fiscal-validation.module.js";
 import type { FiscalValidationContext } from "./fiscal-validation.tokens.js";
 
@@ -23,7 +26,9 @@ function moduleWith(execute: () => Promise<unknown>, errors: unknown[] = []) {
       },
     }),
   } as unknown as FiscalValidationContext;
-  const logger = { error: (...args: unknown[]) => errors.push(args) } as unknown as FastifyBaseLogger;
+  const logger = {
+    error: (...args: unknown[]) => errors.push(args),
+  } as unknown as FastifyBaseLogger;
 
   return { module: new FiscalValidationModule(fiscalValidation, logger), calls };
 }
@@ -50,7 +55,7 @@ describe("FiscalValidationModule", () => {
     module.onModuleInit();
 
     const result = await runFiscalTransaction(fakeDb as never, TENANT_ID, async () => "ok");
-    await new Promise(resolve => setImmediate(resolve));
+    await new Promise((resolve) => setImmediate(resolve));
 
     assert.equal(result, "ok");
     assert.equal(errors.length, 1);

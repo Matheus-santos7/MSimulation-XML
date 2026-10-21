@@ -44,10 +44,10 @@ export class RateLimitInterceptor implements NestInterceptor {
   }
 
   private resolveHandler(context: ExecutionContext): RateLimitHandler | null {
-    const policy = this.reflector.getAllAndOverride<RateLimitPolicy | undefined>(RATE_LIMIT_METADATA, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const policy = this.reflector.getAllAndOverride<RateLimitPolicy | undefined>(
+      RATE_LIMIT_METADATA,
+      [context.getHandler(), context.getClass()],
+    );
     if (!policy) return null;
     if (policy === "protected-api") return this.rateLimits.protectedApi;
 

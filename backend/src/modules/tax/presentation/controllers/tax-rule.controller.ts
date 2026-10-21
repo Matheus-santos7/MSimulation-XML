@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, HttpCode, Inject, Post, Req, UseFilters } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Inject,
+  Post,
+  Req,
+  UseFilters,
+} from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import type { z } from "zod";
 import { AdminOnly, ProtectedApi } from "../../../../nest/api-access.decorators.js";
@@ -14,7 +24,9 @@ import { taxRulesBulkBodySchema } from "../schemas/tax.schemas.js";
 const HTTP_OK = 200;
 
 /** `TaxRuleError` vira 400 só no import e no delete; no bulk-upsert segue o handler global, como antes. */
-const taxRuleErrorFilter = new RouteErrorFilter({ mappings: [{ type: TaxRuleError, status: 400 }] });
+const taxRuleErrorFilter = new RouteErrorFilter({
+  mappings: [{ type: TaxRuleError, status: 400 }],
+});
 
 /**
  * Controller HTTP de regras tributárias.
@@ -47,7 +59,8 @@ export class TaxRuleController {
   @HttpCode(HTTP_OK)
   bulkUpsert(
     @TenantId() tenantId: string,
-    @Body(new ZodValidationPipe(taxRulesBulkBodySchema)) body: z.infer<typeof taxRulesBulkBodySchema>,
+    @Body(new ZodValidationPipe(taxRulesBulkBodySchema))
+    body: z.infer<typeof taxRulesBulkBodySchema>,
   ) {
     return this.tax.bulkUpsertTaxRules.execute(tenantId, body.rows);
   }

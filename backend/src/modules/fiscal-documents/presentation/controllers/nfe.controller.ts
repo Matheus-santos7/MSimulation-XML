@@ -64,8 +64,14 @@ export class NfeController {
   }
 
   @Get(":chave")
-  async get(@TenantId() tenantId: string, @Param(new ZodValidationPipe(nfeAccessKeyParamSchema)) params: AccessKeyParam) {
-    return orNotFound(await this.fiscalDocuments.getNfeByKey.execute(tenantId, params.chave), NFE_NOT_FOUND);
+  async get(
+    @TenantId() tenantId: string,
+    @Param(new ZodValidationPipe(nfeAccessKeyParamSchema)) params: AccessKeyParam,
+  ) {
+    return orNotFound(
+      await this.fiscalDocuments.getNfeByKey.execute(tenantId, params.chave),
+      NFE_NOT_FOUND,
+    );
   }
 
   @Delete(":chave")
@@ -75,13 +81,23 @@ export class NfeController {
     @TenantId() tenantId: string,
     @Param(new ZodValidationPipe(nfeAccessKeyParamSchema)) params: AccessKeyParam,
   ) {
-    orNotFound(await this.fiscalDocuments.softDeleteNfe.execute(params.chave, tenantId), NFE_NOT_FOUND);
+    orNotFound(
+      await this.fiscalDocuments.softDeleteNfe.execute(params.chave, tenantId),
+      NFE_NOT_FOUND,
+    );
   }
 
   /** Sem XML: 404 se o evento ou a NF-e não existem; 409 se a NF-e existe mas o tipo não tem XML. */
-  private async throwMissingXml(tenantId: string, chave: string, doc: "evento" | undefined): Promise<never> {
+  private async throwMissingXml(
+    tenantId: string,
+    chave: string,
+    doc: "evento" | undefined,
+  ): Promise<never> {
     orNotFound(doc !== "evento", "Evento de cancelamento não encontrado para esta NF-e");
-    const tipo = orNotFound(await this.fiscalDocuments.getNfeXml.getTipoWhenMissing(tenantId, chave), NFE_NOT_FOUND);
+    const tipo = orNotFound(
+      await this.fiscalDocuments.getNfeXml.getTipoWhenMissing(tenantId, chave),
+      NFE_NOT_FOUND,
+    );
 
     throw new HttpError(HTTP_CONFLICT, `XML indisponível para NF-e tipo ${tipo}.`);
   }

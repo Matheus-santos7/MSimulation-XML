@@ -1,4 +1,3 @@
-import type { FastifyReply } from "fastify";
 import { ZodError } from "zod";
 import type { ErrorResponse } from "./http-error.js";
 
@@ -16,11 +15,6 @@ export function zodValidationErrorResponse(error: ZodError): ErrorResponse {
   };
 }
 
-export function sendZodValidationError(reply: FastifyReply, error: ZodError): void {
-  const { status, body } = zodValidationErrorResponse(error);
-  void reply.status(status).send(body);
-}
-
 export type DomainErrorWithStatus = Error & { status: number };
 
 export type StatusErrorConstructor = new (
@@ -28,18 +22,18 @@ export type StatusErrorConstructor = new (
   status?: number,
 ) => DomainErrorWithStatus;
 
-/** Converte erros de domínio com `.status` em JSON `{ error }`. */
-export function replyStatusDomainError(
-  reply: FastifyReply,
-  e: unknown,
-  types: StatusErrorConstructor[],
-): boolean {
-  const response = resolveStatusDomainError(e, types);
-  if (!response) return false;
+export type RouteErrorMapping = {
+  type: new (...args: never[]) => Error;
+  status: number;
+  toBody?: (error: Error) => Record<string, unknown>;
+};
 
-  void reply.status(response.status).send(response.body);
-  return true;
-}
+export type RouteErrorOptions = {
+  /** Erro de domínio → status fixo (e corpo opcional). */
+  mappings?: readonly RouteErrorMapping[];
+  /** Erros de domínio que carregam o próprio `.status`. */
+  statusErrors?: readonly StatusErrorConstructor[];
+};
 
 function resolveStatusDomainError(
   e: unknown,
@@ -53,18 +47,10 @@ function resolveStatusDomainError(
   return null;
 }
 
-export type RouteErrorMapping = {
-  type: new (...args: never[]) => Error;
-  status: number;
-  toBody?: (error: Error) => Record<string, unknown>;
-};
-
-export type RouteErrorOptions = {
-  mappings?: readonly RouteErrorMapping[];
-  statusErrors?: readonly StatusErrorConstructor[];
-};
-
-/** Resolve ZodError e erros de domínio mapeados por rota; `null` quando o erro não é mapeado. */
+/**
+ * Resolve ZodError e erros de domínio mapeados por rota (usado pelo `RouteErrorFilter`).
+ * Devolve `null` quando o erro não é mapeado e deve seguir para o contrato global.
+ */
 export function resolveRouteError(e: unknown, options: RouteErrorOptions): ErrorResponse | null {
   if (e instanceof ZodError) {
     return zodValidationErrorResponse(e);
@@ -78,16 +64,4 @@ export function resolveRouteError(e: unknown, options: RouteErrorOptions): Error
   }
 
   return options.statusErrors ? resolveStatusDomainError(e, options.statusErrors) : null;
-}
-
-/**
- * Trata ZodError e erros de domínio mapeados por rota.
- * Retorna true se a resposta HTTP foi enviada; false para re-lançar.
- */
-export function handleRouteError(reply: FastifyReply, e: unknown, options: RouteErrorOptions): boolean {
-  const response = resolveRouteError(e, options);
-  if (!response) return false;
-
-  void reply.status(response.status).send(response.body);
-  return true;
 }

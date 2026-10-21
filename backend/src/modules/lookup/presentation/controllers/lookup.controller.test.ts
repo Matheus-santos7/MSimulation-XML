@@ -20,7 +20,10 @@ function controllerThatFails(error: unknown): LookupController {
     throw error;
   };
 
-  return new LookupController({ lookupCnpj: { execute: fail }, lookupCep: { execute: fail } } as unknown as LookupContext);
+  return new LookupController({
+    lookupCnpj: { execute: fail },
+    lookupCep: { execute: fail },
+  } as unknown as LookupContext);
 }
 
 async function httpErrorOf(promise: Promise<unknown>): Promise<HttpError> {
@@ -41,8 +44,12 @@ describe("LookupController", () => {
       lookupCep: { execute: async (cep: string) => ({ cep }) },
     } as unknown as LookupContext);
 
-    assert.deepEqual(await controller.cnpj({ cnpj: VALID_CNPJ }, requestWithLog([])), { cnpj: VALID_CNPJ });
-    assert.deepEqual(await controller.cep({ cep: VALID_CEP }, requestWithLog([])), { cep: VALID_CEP });
+    assert.deepEqual(await controller.cnpj({ cnpj: VALID_CNPJ }, requestWithLog([])), {
+      cnpj: VALID_CNPJ,
+    });
+    assert.deepEqual(await controller.cep({ cep: VALID_CEP }, requestWithLog([])), {
+      cep: VALID_CEP,
+    });
   });
 
   it("responde 400 com mensagem fixa quando o parâmetro é inválido", async () => {
@@ -57,10 +64,16 @@ describe("LookupController", () => {
 
   it("responde 404 e 400 para os erros de domínio", async () => {
     const notFound = await httpErrorOf(
-      controllerThatFails(new LookupNotFoundError("CNPJ não encontrado")).cnpj({ cnpj: VALID_CNPJ }, requestWithLog([])),
+      controllerThatFails(new LookupNotFoundError("CNPJ não encontrado")).cnpj(
+        { cnpj: VALID_CNPJ },
+        requestWithLog([]),
+      ),
     );
     const invalid = await httpErrorOf(
-      controllerThatFails(new LookupValidationError("CEP inválido")).cep({ cep: VALID_CEP }, requestWithLog([])),
+      controllerThatFails(new LookupValidationError("CEP inválido")).cep(
+        { cep: VALID_CEP },
+        requestWithLog([]),
+      ),
     );
 
     assert.deepEqual([notFound.status, notFound.message], [404, "CNPJ não encontrado"]);
@@ -71,7 +84,9 @@ describe("LookupController", () => {
     const errors: unknown[] = [];
     const upstream = new Error("timeout na BrasilAPI");
 
-    const error = await httpErrorOf(controllerThatFails(upstream).cnpj({ cnpj: VALID_CNPJ }, requestWithLog(errors)));
+    const error = await httpErrorOf(
+      controllerThatFails(upstream).cnpj({ cnpj: VALID_CNPJ }, requestWithLog(errors)),
+    );
 
     assert.deepEqual([error.status, error.message], [502, "timeout na BrasilAPI"]);
     assert.deepEqual(errors, [upstream]);

@@ -18,7 +18,7 @@ function requestOf(context: ExecutionContext): FastifyRequest {
   return context.switchToHttp().getRequest<FastifyRequest>();
 }
 
-/** JWT de acesso válido + `tokenVersion` atual no banco (equivalente a `app.authenticate`). */
+/** JWT de acesso válido + `tokenVersion` atual no banco; preenche `request.user`. */
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}

@@ -1,4 +1,15 @@
-import { Body, Controller, Get, HttpCode, Inject, Post, Req, UseFilters, UseGuards, UseInterceptors } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Inject,
+  Post,
+  Req,
+  UseFilters,
+  UseGuards,
+  UseInterceptors,
+} from "@nestjs/common";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { z } from "zod";
 import { isEmailVerified, twoFactorPendingTtl } from "../../../../lib/auth/config.js";
@@ -76,8 +87,12 @@ export class AuthController {
     this.signAccess = signAccessToken({ jwt });
     // JWT temporário `2fa_pending`, com TTL próprio. O `sign` do @fastify/jwt é tipado
     // para o payload de acesso (`FastifyJWT.payload`), daí o cast.
-    const signPending = jwt.sign as unknown as (payload: TwoFactorPendingPayload, options: { expiresIn: string }) => string;
-    this.signTwoFactorPending = payload => signPending(payload, { expiresIn: twoFactorPendingTtl() });
+    const signPending = jwt.sign as unknown as (
+      payload: TwoFactorPendingPayload,
+      options: { expiresIn: string },
+    ) => string;
+    this.signTwoFactorPending = (payload) =>
+      signPending(payload, { expiresIn: twoFactorPendingTtl() });
   }
 
   @Post("register")
@@ -112,7 +127,10 @@ export class AuthController {
   @Post("forgot-password")
   @RateLimit(strictRouteRateLimit(5, "1 hour"))
   @HttpCode(HTTP_OK)
-  async forgotPassword(@Body(new ZodValidationPipe(forgotPasswordBodySchema)) body: z.infer<typeof forgotPasswordBodySchema>) {
+  async forgotPassword(
+    @Body(new ZodValidationPipe(forgotPasswordBodySchema))
+    body: z.infer<typeof forgotPasswordBodySchema>,
+  ) {
     await verifyTurnstileToken(body.captchaToken);
 
     return this.auth.requestPasswordReset.execute({ email: body.email });
@@ -121,7 +139,10 @@ export class AuthController {
   @Post("reset-password")
   @RateLimit(strictRouteRateLimit(10, "15 minutes"))
   @HttpCode(HTTP_OK)
-  resetPassword(@Body(new ZodValidationPipe(resetPasswordBodySchema)) body: z.infer<typeof resetPasswordBodySchema>) {
+  resetPassword(
+    @Body(new ZodValidationPipe(resetPasswordBodySchema))
+    body: z.infer<typeof resetPasswordBodySchema>,
+  ) {
     return this.auth.resetPassword.execute(body);
   }
 
@@ -138,7 +159,7 @@ export class AuthController {
       { twoFactorToken: body.twoFactorToken, code: body.code },
       buildAuthMeta(request),
       this.signAccess,
-      token => this.jwt.verify<TwoFactorPendingPayload>(token),
+      (token) => this.jwt.verify<TwoFactorPendingPayload>(token),
     );
   }
 
@@ -187,7 +208,11 @@ export class AuthController {
     @Body(new ZodValidationPipe(refreshBodySchema)) body: z.infer<typeof refreshBodySchema>,
     @Req() request: FastifyRequest,
   ) {
-    return this.auth.refreshSession.execute(body.refreshToken, this.signAccess, buildAuthMeta(request));
+    return this.auth.refreshSession.execute(
+      body.refreshToken,
+      this.signAccess,
+      buildAuthMeta(request),
+    );
   }
 
   /** Logout aceita refresh token, access token, os dois ou nenhum (sempre 204). */
@@ -206,7 +231,10 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @UseFilters(new ApiExceptionFilter())
   async me(@UserId() userId: string) {
-    const result = orNotFound(await this.auth.getCurrentUser.execute(userId), "Usuário não encontrado");
+    const result = orNotFound(
+      await this.auth.getCurrentUser.execute(userId),
+      "Usuário não encontrado",
+    );
 
     return {
       userId: result.user.id,
@@ -224,7 +252,9 @@ export class AuthController {
   @Post("verify-email")
   @RateLimit(strictRouteRateLimit(10, "15 minutes"))
   @HttpCode(HTTP_OK)
-  verifyEmail(@Body(new ZodValidationPipe(verifyEmailBodySchema)) body: z.infer<typeof verifyEmailBodySchema>) {
+  verifyEmail(
+    @Body(new ZodValidationPipe(verifyEmailBodySchema)) body: z.infer<typeof verifyEmailBodySchema>,
+  ) {
     return this.auth.verifyEmail.execute(body.token);
   }
 

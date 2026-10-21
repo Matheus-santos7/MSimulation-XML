@@ -1,4 +1,14 @@
-import { Body, Controller, HttpCode, Inject, Post, Req, UseFilters, UseGuards, UseInterceptors } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  HttpCode,
+  Inject,
+  Post,
+  Req,
+  UseFilters,
+  UseGuards,
+  UseInterceptors,
+} from "@nestjs/common";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { AuthenticatedUser } from "../../../../lib/auth/access-control.js";
 import { HttpError } from "../../../../lib/http/http-error.js";
@@ -34,7 +44,11 @@ export class OnboardingController {
 
   @Post("tenant")
   @HttpCode(HTTP_OK)
-  attachTenant(@CurrentUser() user: AuthenticatedUser, @Body() rawBody: unknown, @Req() request: FastifyRequest) {
+  attachTenant(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() rawBody: unknown,
+    @Req() request: FastifyRequest,
+  ) {
     if (user.tenantId) {
       throw new HttpError(HTTP_BAD_REQUEST, "Empresa já cadastrada nesta conta");
     }

@@ -1,4 +1,15 @@
-import { Controller, Get, HttpCode, Inject, Param, Patch, Post, Query, Req, UseFilters } from "@nestjs/common";
+import {
+  Controller,
+  Get,
+  HttpCode,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UseFilters,
+} from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import type { z } from "zod";
 import { AdminOnly, ProtectedApi } from "../../../../nest/api-access.decorators.js";
@@ -15,7 +26,9 @@ import { logisticsUnitIdParam, logisticsUnitsListQuery } from "../schemas/logist
 const HTTP_OK = 200;
 
 /** `LogisticsUnitError` vira 400 no bulk-import e na unidade padrão, como antes. */
-const logisticsUnitErrorFilter = new RouteErrorFilter({ mappings: [{ type: LogisticsUnitError, status: 400 }] });
+const logisticsUnitErrorFilter = new RouteErrorFilter({
+  mappings: [{ type: LogisticsUnitError, status: 400 }],
+});
 
 type LogisticsUnitIdParam = z.infer<typeof logisticsUnitIdParam>;
 
@@ -44,7 +57,8 @@ export class LogisticsUnitController {
   @Get()
   list(
     @TenantId() tenantId: string,
-    @Query(new ZodValidationPipe(logisticsUnitsListQuery)) query: z.infer<typeof logisticsUnitsListQuery>,
+    @Query(new ZodValidationPipe(logisticsUnitsListQuery))
+    query: z.infer<typeof logisticsUnitsListQuery>,
   ) {
     return this.logistics.listLogisticsUnits.execute(tenantId, {
       ativa: parseAtivaFilter(query.ativa),
@@ -58,7 +72,10 @@ export class LogisticsUnitController {
     @TenantId() tenantId: string,
     @Param(new ZodValidationPipe(logisticsUnitIdParam)) params: LogisticsUnitIdParam,
   ) {
-    return orNotFound(await this.logistics.getLogisticsUnitById.execute(tenantId, params.id), "Unidade não encontrada");
+    return orNotFound(
+      await this.logistics.getLogisticsUnitById.execute(tenantId, params.id),
+      "Unidade não encontrada",
+    );
   }
 
   @Post("bulk-import")
@@ -67,7 +84,11 @@ export class LogisticsUnitController {
   @UseFilters(logisticsUnitErrorFilter)
   async bulkImport(@TenantId() tenantId: string, @Req() request: FastifyRequest) {
     const payload = orUploadError(await resolveBulkImportPayload(request));
-    const result = await this.logistics.bulkImportLogisticsUnits.execute(tenantId, payload.rows, payload.enrichCep);
+    const result = await this.logistics.bulkImportLogisticsUnits.execute(
+      tenantId,
+      payload.rows,
+      payload.enrichCep,
+    );
 
     return {
       ...result,

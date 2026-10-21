@@ -1,6 +1,6 @@
 # Backend — MSimulation XML
 
-API REST em **Fastify + TypeScript + Prisma + PostgreSQL** que sustenta o simulador fiscal de fulfillment (Mercado Livre Full).
+API REST em **NestJS (sobre Fastify) + TypeScript + Prisma + PostgreSQL** que sustenta o simulador fiscal de fulfillment (Mercado Livre Full).
 
 > **Contexto do produto:** simulador educacional. XMLs usam homologação (`tpAmb=2`), assinaturas fictícias e **não têm validade** perante a SEFAZ.
 
@@ -31,11 +31,12 @@ API REST em **Fastify + TypeScript + Prisma + PostgreSQL** que sustenta o simula
 
 | Tecnologia | Uso |
 |------------|-----|
-| **Fastify 5** | Servidor HTTP, plugins, hooks |
-| **TypeScript** | Tipagem estrita |
-| **Zod** | Validação HTTP (presentation) |
+| **NestJS 11** | Controllers, guards, interceptors, filtros e DI (`@nestjs/platform-fastify`) |
+| **Fastify 5** | Servidor HTTP por baixo do Nest; plugins de borda (helmet, CORS, rate limit, multipart) |
+| **TypeScript** | Tipagem estrita; decorators experimentais, sem metadata emitida (DI com `@Inject` explícito) |
+| **Zod** | Validação HTTP (presentation), via `ZodValidationPipe` |
 | **Prisma 7** | ORM + migrations PostgreSQL |
-| **@fastify/jwt** | Access / refresh tokens |
+| **@fastify/jwt** | Access / refresh tokens (injetado no Nest pelo token `JWT`) |
 | **Brevo** | E-mails transacionais |
 | **otplib** | 2FA TOTP |
 
@@ -66,11 +67,11 @@ O backend é um **monolito modular** organizado por **Bounded Contexts** (DDD), 
 | **Domain** | Entidades, erros, ports (contratos), regras puras | Nada externo |
 | **Application** | Casos de uso, DTOs, orquestração | Domain |
 | **Infrastructure** | Prisma, APIs externas, adapters, factories | Application + Domain |
-| **Presentation** | Controllers Fastify, schemas Zod | Application (+ Infrastructure via factory) |
+| **Presentation** | Controllers Nest, schemas Zod | Application (+ Infrastructure via factory) |
 
-**Regra de ouro das dependências:** o domínio nunca importa Fastify, Prisma ou HTTP. Os controladores são *burros*: validam entrada, chamam um caso de uso e devolvem a resposta.
+**Regra de ouro das dependências:** o domínio nunca importa Nest, Fastify, Prisma ou HTTP. Os controladores são *burros*: validam entrada, chamam um caso de uso e devolvem a resposta. `domain/` e `application/` sem `@nestjs/*` nem `fastify` é verificado pelo [`src/architecture.test.ts`](./src/architecture.test.ts) e pela regra `core-no-nest-layer` do `.dependency-cruiser.js`.
 
-O wiring HTTP vive em `src/index.ts` e em `src/plugins/` — não em pastas `routes/` legadas (removidas na migração para módulos).
+O wiring HTTP vive em `src/app.ts` (instância Fastify + Nest), `src/nest/` (núcleo Nest) e `src/modules/<ctx>/<ctx>.module.ts` (um `@Module` por bounded context).
 
 ---
 
@@ -82,10 +83,13 @@ Fluxo típico de uma requisição autenticada:
 HTTP Request
     │
     ▼
-plugins/ (JWT, RLS, rate-limit, guards)
+Fastify (helmet, CORS, parser de corpo, multipart)
     │
     ▼
-presentation/controllers/   ← parse Zod, tenantId, status HTTP
+Nest: guards (JWT, empresa, e-mail, ADMIN) → RateLimitInterceptor → DbContextInterceptor (transação + RLS)
+    │
+    ▼
+presentation/controllers/   ← @Controller: ZodValidationPipe, @TenantId(), status HTTP
     │
     ▼
 application/use-cases/    ← um caso de uso = uma ação de negócio
@@ -100,7 +104,7 @@ infrastructure/           ← Prisma repository, gateway HTTP, adapter
 PostgreSQL (+ RLS por tenant)
 ```
 
-Cada módulo expõe um **composition root** em `infrastructure/factory/*-module.factory.ts` que instancia repositórios e injeta nos casos de uso.
+Cada módulo expõe um **composition root** em `infrastructure/factory/*-module.factory.ts` que instancia repositórios e injeta nos casos de uso. O `<ctx>.module.ts` do Nest registra esse composition root como provider (`{ provide: <TOKEN>, useFactory: create<Ctx>Module }`, token em `<ctx>.tokens.ts`) e os controllers o recebem com `@Inject(<TOKEN>)`. Assim os casos de uso continuam classes simples, sem decorators.
 
 Código transversal (motor de impostos, geração de chaves NF-e, mappers, RLS) permanece em `src/lib/` — bibliotecas internas sem regra de negócio de um único contexto.
 
@@ -132,24 +136,22 @@ Código transversal (motor de impostos, geração de chaves NF-e, mappers, RLS) 
 graph TD
   Client[Cliente HTTP / Frontend]
 
-  subgraph Bootstrap["Bootstrap (src/index.ts)"]
-    IDX[index.ts]
-    HP[healthController]
-    AP[authController]
-    AL[authenticatedLookupPlugin]
-    PP[protectedApiPlugin]
+  subgraph Bootstrap["Bootstrap (src/app.ts)"]
+    IDX[buildApp]
+    FAST[Fastify + plugins de borda]
+    APPM[AppModule]
   end
 
-  subgraph Plugins["Plugins transversais"]
-    JWT[authPlugin JWT]
-    PRISMA[prismaPlugin]
-    RLS[RLS + guards]
-    RL[rate-limit]
+  subgraph Nest["Núcleo Nest (src/nest/)"]
+    GUARDS[Guards JWT / tenant / e-mail / ADMIN]
+    RL[RateLimitInterceptor]
+    RLS[DbContextInterceptor RLS]
+    FILTER[ApiExceptionFilter / RouteErrorFilter]
   end
 
   subgraph Presentation["Presentation"]
-    CTRL[Controllers Fastify]
-    ZOD[Schemas Zod]
+    CTRL[Controllers Nest]
+    ZOD[Schemas Zod + ZodValidationPipe]
   end
 
   subgraph Application["Application"]
@@ -176,16 +178,15 @@ graph TD
 
   DB_PG[(PostgreSQL)]
 
-  Client --> IDX
-  IDX --> HP
-  IDX --> AP
-  IDX --> AL
-  IDX --> PP
-  PP --> JWT
-  PP --> PRISMA
-  PP --> RLS
-  PP --> RL
-  PP --> CTRL
+  Client --> FAST
+  IDX --> FAST
+  IDX --> APPM
+  FAST --> GUARDS
+  APPM --> CTRL
+  GUARDS --> RL
+  RL --> RLS
+  RLS --> CTRL
+  CTRL -.->|erros| FILTER
   CTRL --> ZOD
   CTRL --> UC
   UC --> PORT
@@ -256,25 +257,20 @@ graph TD
 
 ## Bootstrap e registo de rotas
 
-[`src/index.ts`](./src/index.ts) regista plugins nesta ordem:
+[`src/app.ts`](./src/app.ts) monta a instância Fastify (helmet, CORS, `@fastify/rate-limit` sem limite global, multipart de 15 MB, Prisma, `@fastify/jwt`), entrega ao `FastifyAdapter` e sobe o [`AppModule`](./src/nest/app.module.ts) com prefixo global `/api`. [`src/index.ts`](./src/index.ts) só escuta a porta.
 
-| Escopo | Plugin / Controller | Autenticação |
-|--------|---------------------|--------------|
-| `/api/health` | `healthController` | Público |
-| `/api/auth/*` | `authController` | Público / Bearer |
-| `/api/lookup/*` | `lookupController` (via `authenticatedLookupPlugin`) | JWT, **sem** tenant |
-| `/api/*` (negócio) | `protectedApiPlugin` → contextos | JWT + tenant + e-mail verificado |
+O acesso é declarado no controller ([`src/nest/api-access.decorators.ts`](./src/nest/api-access.decorators.ts)):
 
-Contextos protegidos ([`plugins/contexts/`](./src/plugins/contexts/)):
+| Escopo | Decorator | Autenticação |
+|--------|-----------|--------------|
+| `/api/health` | nenhum | Público |
+| `/api/auth/*` | `@UseGuards(JwtAuthGuard)` por rota quando exige sessão; `@RateLimit(...)` por rota | Público / Bearer |
+| `/api/lookup/*` | `@AuthenticatedApi()` | JWT, **sem** tenant |
+| `/api/*` (negócio) | `@ProtectedApi()` (+ `@AdminOnly()` por rota) | JWT + tenant + e-mail verificado; 300 req/min por IP compartilhadas |
 
-| Plugin | Controllers registados |
-|--------|------------------------|
-| `orgContextPlugin` | `tenantController`, `userController` |
-| `catalogContextPlugin` | `productController` |
-| `fiscalContextPlugin` | NF-e, CT-e, lifecycle, observabilidade, tax rules, emitter settings, pedidos |
-| `logisticsContextPlugin` | unidades logísticas, movimentações |
+Os módulos Nest ficam em `modules/<ctx>/<ctx>.module.ts` e estão listados em `FEATURE_MODULES` (`src/nest/app.module.ts`). O `remessas` não tem rotas: o `RemessasModule` só exporta o provider usado pelas movimentações.
 
-Todos os controladores são importados diretamente de `modules/<ctx>/presentation/controllers/`.
+Erros: o `ApiExceptionFilter` (global) mantém o contrato `{ error }` (400 Zod com `details`, 503 banco indisponível, P2002 409, P2025 404, 5xx genérico). Mapeamentos de domínio por rota usam `@UseFilters(new RouteErrorFilter({ mappings, statusErrors }))`; o auth usa `AuthErrorFilter`.
 
 ---
 
@@ -284,15 +280,20 @@ Todos os controladores são importados diretamente de `modules/<ctx>/presentatio
 backend/
 ├── prisma/                    # Schema e migrations
 ├── src/
-│   ├── index.ts               # Entrada Fastify
+│   ├── index.ts               # Escuta a porta
+│   ├── app.ts                 # buildApp(): Fastify + Nest
+│   ├── app.contract.test.ts   # Contrato HTTP (status e corpo) + snapshot de rotas
+│   ├── nest/                  # Núcleo Nest: CoreModule, guards, interceptors, filtros, pipes
 │   ├── modules/               # Bounded contexts (Clean Architecture)
 │   │   └── <context>/
 │   │       ├── domain/
 │   │       ├── application/
 │   │       ├── infrastructure/
 │   │       ├── presentation/
+│   │       ├── <context>.module.ts  # @Module do Nest
+│   │       ├── <context>.tokens.ts  # token de DI do composition root
 │   │       └── index.ts
-│   ├── plugins/               # JWT, Prisma, API protegida, contextos
+│   ├── plugins/               # Plugins Fastify de borda: Prisma e @fastify/jwt
 │   ├── lib/                   # Utilitários transversais (fiscal, db, http)
 │   └── generated/prisma/      # Client gerado
 └── package.json
@@ -338,10 +339,12 @@ modules/<context>/
 |--------|-----------|
 | Ficheiros / pastas | `kebab-case` |
 | Casos de uso | `verb-noun.use-case.ts` + classe `PascalCase` |
-| Controllers | `*-controller.ts`, plugin FastifyAsync |
-| Erros de domínio | Classe com `.status` HTTP; mapear em `handleRouteError` |
-| Validação HTTP | Zod em `presentation/schemas/` |
-| IDs multi-tenant | Sempre filtrar por `tenantId` do JWT; RLS ativo em `protected-api` |
+| Controllers | `*.controller.ts`, classe `@Controller` com `@Inject(<TOKEN>)` explícito (o build não emite metadata de decorators) |
+| Status HTTP | Declarar `@HttpCode` em todo `POST` que não responde 201; 404 com `orNotFound(valor, mensagem)` |
+| Erros de domínio | Mapear em `RouteErrorFilter` (`mappings` ou `statusErrors` para classes com `.status`) |
+| Validação HTTP | Zod em `presentation/schemas/`, aplicado com `ZodValidationPipe` |
+| IDs multi-tenant | Sempre filtrar por `tenantId` do JWT (`@TenantId()`); RLS ativo via `@ProtectedApi()` |
+| Mensagens de erro | Em português: o frontend mostra o texto direto |
 | Transações | Dentro de infrastructure (repositório), não no controller |
 
 Pacotes internos do monorepo: `@msimulation-xml/fiscal-core`, `@msimulation-xml/nfe-xml` — detalhe na secção [Packages compartilhados](#packages-compartilhados).
@@ -507,13 +510,13 @@ graph TD
 sequenceDiagram
   participant B as Browser
   participant N as Next.js
-  participant F as Fastify
+  participant F as Nest/Fastify
   participant M as Use Case
   participant D as PostgreSQL
   B->>N: GET /produtos
   N->>N: layout valida sessão
   N->>F: GET /api/products
-  F->>F: JWT + tenantId + RLS
+  F->>F: guards (JWT + tenant) + rate limit + transação RLS
   F->>M: ListProductsUseCase
   M->>D: SELECT … tenant_id
   D-->>M: rows
@@ -602,8 +605,11 @@ flowchart TB
 ## Testes e scripts
 
 ```bash
-# Testes unitários (compila pacotes fiscais antes)
+# Testes (node:test + tsx; compila pacotes fiscais antes). Inclui o contrato HTTP.
 pnpm --filter @msimulation-xml/backend test
+
+# Mudança intencional de rota: regravar o snapshot do contrato
+UPDATE_CONTRACT_SNAPSHOT=1 pnpm --filter @msimulation-xml/backend test
 
 # Typecheck
 pnpm --filter @msimulation-xml/backend exec tsc --noEmit

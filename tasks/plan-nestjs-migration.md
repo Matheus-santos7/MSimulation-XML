@@ -1,108 +1,51 @@
-# Plano — migração do backend para NestJS
+# Migração do backend para NestJS — registro
 
-## Ponto de partida (levantado no código em 2026-10-20)
+Branch `test/http-contract-baseline`, criada a partir de `fix/prod-db-connect-and-frontend-health` (54fe1d8). Concluída em 2026-10-20. Nada foi publicado nem implantado.
 
-| Item | Hoje |
+## Resultado
+
+As 96 rotas (lista em `backend/src/app.contract.routes.txt`) agora são controllers NestJS 11 sobre Fastify 5. Nenhuma rota Fastify sobrou. Os paths, status e corpos de resposta continuam iguais. Quem garante isso é `backend/src/app.contract.test.ts` (85 casos), que rodou contra o código antigo antes de cada módulo ser migrado e contra o novo depois.
+
+| Commit | Fase |
 |---|---|
-| HTTP | Fastify 5 puro, plugins encapsulados (`plugins/protected-api.ts`, `plugins/contexts/*.plugin.ts`) |
-| Rotas | 96 rotas (sem os HEAD automáticos; lista em `backend/src/app.contract.routes.txt`) em 12 módulos (`auth`, `catalog`, `fiscal-documents`, `fiscal-settings`, `fiscal-validation`, `health`, `logistics`, `lookup`, `org`, `remessas`, `sales`, `tax`) |
-| Camadas | Hexagonal por módulo: `domain/` (ports, entities, services), `application/use-cases`, `infrastructure/` (prisma, fiscal, factory), `presentation/` (controllers, schemas, mappers) |
-| DI | Composition root manual: `create<X>Module()` em `infrastructure/factory/*.factory.ts` |
-| Banco | Prisma 7 + `@prisma/adapter-pg`, Postgres (Neon) com **RLS**: cada rota protegida roda dentro de `runWithDbContext` (transação + `set_config('app.tenant_id')`), via hook `onRoute` (`lib/db/wrap-protected-route.ts`) |
-| Auth | `@fastify/jwt` + decorator `app.authenticate` (confere `tokenVersion` no banco); hooks `requireTenantHook`, `requireEmailVerifiedHook`, `requireAdminHook` |
-| Validação | Zod nos `presentation/schemas`; `ZodError` vira `{ error, details }` (o frontend lê isso em `ApiValidationError`) |
-| Erros | `registerGlobalErrorHandler` + `handleRouteError` com mapeamentos por controller; corpo sempre `{ error: string }` em português |
-| Extras | `@fastify/rate-limit` (global 300/min na API protegida, limites por rota no auth), `@fastify/multipart` (imports de planilha e XML), `@fastify/helmet`, `@fastify/cors` |
-| Módulo | ESM (`"type": "module"`, `NodeNext`), dev com `tsx watch`, build `tsc`, `CMD node dist/index.js` |
-| Testes | 52 arquivos `node --test` via `tsx`, focados em domínio |
+| 5ed394f | 0 — `buildApp()`, contrato HTTP e snapshot de rotas |
+| a46a3b2 | 1 — base do Nest: guards, interceptors de RLS e rate limit, filtros e pipe Zod |
+| 1eea87c … 59fe125 | 2 — um commit por módulo: health, lookup, fiscal-settings, tax, catalog, logistics (+ remessas), org, fiscal-validation, fiscal-documents, sales, auth |
+| 2d9dad1 | 3 — remoção do código Fastify legado e regra de camadas |
 
-## Decisões
+Verificação final: `pnpm test` com 380 testes passando, `tsc` de `src` e dos testes, `eslint`, `pnpm depcheck`, `pnpm build`, e o servidor compilado (`node dist/index.js`) respondendo.
 
-1. **Migração incremental (strangler), sem big bang.** O Nest sobe com `FastifyAdapter` em cima da mesma instância Fastify. Os plugins legados continuam registrados nessa instância. Cada PR move um módulo para controllers do Nest e remove o plugin legado dele. Fastify recusa rota duplicada, então rota esquecida aparece no boot.
-2. **Contrato HTTP congelado.** Mesmos paths, métodos, status e corpo (`{ error }`, `{ error, details }`). As mensagens continuam em português porque o frontend mostra o texto direto. Isso diverge da regra "mensagens em inglês" do CLAUDE.md; traduzir fica para depois, junto com o frontend.
-3. **Domínio e aplicação continuam sem Nest.** Os use cases e ports não recebem decorators. O módulo Nest monta tudo com `useFactory`, substituindo `create<X>Module()`. Assim a DI não depende de `emitDecoratorMetadata` nas camadas internas e os 52 testes atuais não mudam.
-4. **Continua Zod.** Um `ZodValidationPipe` (cerca de 20 linhas, reaproveitando `sendZodValidationError`) no lugar de `class-validator`. Reescrever 79 schemas não traz ganho e arrisca mudar o contrato.
-5. **Do `ARCHITECTURE.md` dos Nérus Microservices, não entram:** MySQL/ZenStack, o kernel privado `@eac-nerus/microservices` (`BaseRepository`, `AsyncContext`), tenant vindo do header `x-tenant-code`. Aqui o tenant vem do JWT e o isolamento é a RLS do Postgres. **Entram:** feature module, controller fino, use case com `execute`, exceção HTTP só na borda, Vitest + SWC para specs novas.
-6. **Build com SWC.** O `tsx`/esbuild não emite metadata de decorators. Dev passa a ser `nest start --watch` com o builder SWC. Build continua `tsc` (via `nest build`), mantendo ESM e os imports `.js`.
+## Como ficou
 
-## Peças de infraestrutura (equivalência)
-
-| Hoje | No Nest |
+| Peça | Onde |
 |---|---|
-| `src/index.ts` | `src/main.ts`: `NestFactory.create(AppModule, new FastifyAdapter(fastify))`, helmet, cors, `enableShutdownHooks()` |
-| `plugins/prisma.ts` | `PrismaModule` (`@Global`) com `PrismaService` envolvendo o singleton de `lib/db/prisma.ts` e `onModuleDestroy` |
-| `app.authenticate` | `JwtAuthGuard`. Na convivência ele chama `request.jwtVerify()` do `@fastify/jwt` já registrado, e checa `tokenVersion` igual ao atual |
-| `requireTenantHook` / `requireEmailVerifiedHook` / `requireAdminHook` | `TenantGuard`, `EmailVerifiedGuard`, `RolesGuard` + `@Roles("ADMIN")`; `@Public()` e `@NoTenant()` para health, auth e lookup |
-| `wrapProtectedRouteWithDbContext` (`onRoute`) | `DbContextInterceptor`: `from(runWithDbContext(prisma, ctx, () => lastValueFrom(next.handle())))`. Guards rodam antes de interceptors, a mesma ordem dos hooks `onRequest` atuais |
-| `registerGlobalErrorHandler` + `handleRouteError` | `HttpExceptionFilter` global com a mesma tabela (Zod 400, banco indisponível 503, P2002 409, P2025 404, 5xx genérico) + mapa de erros de domínio por módulo (`ORDER_ERROR_MAPPINGS` etc.) |
-| `tenantIdFromRequest(req)` | `@CurrentUser()` / `@TenantId()` param decorators |
-| `@fastify/rate-limit` por escopo | Plugin continua na instância; limites por rota com `@RouteConfig({ rateLimit })` de `@nestjs/platform-fastify` |
-| `@fastify/multipart` | Continua registrado; controller usa `@Req() req: FastifyRequest` e `req.file()`, com os helpers atuais |
-| `registerFiscalTransactionCommitHook` em `fiscal.plugin.ts` | `onModuleInit` do `FiscalDocumentsModule`, com `Logger` do Nest |
+| Montagem | `src/app.ts`: instância Fastify (helmet, CORS, rate limit na raiz, multipart, Prisma, JWT) → `FastifyAdapter` → `AppModule`, prefixo `/api` |
+| Núcleo Nest | `src/nest/`: `CoreModule` (tokens `PRISMA`, `RATE_LIMITS`, `LOGGER`, `JWT`), guards, `DbContextInterceptor`, `RateLimitInterceptor`, `ApiExceptionFilter`/`RouteErrorFilter`, `ZodValidationPipe` |
+| Acesso | `@ProtectedApi()`, `@AuthenticatedApi()` e `@AdminOnly()` em `src/nest/api-access.decorators.ts` |
+| Módulos | `src/modules/<ctx>/<ctx>.module.ts` + `<ctx>.tokens.ts`. O composition root existente (`create<Ctx>Module()`) virou provider por `useFactory` |
+| Regras compartilhadas | `lib/auth/access-control.ts` (JWT, tenant, e-mail, ADMIN), `lib/http/rate-limit.ts`, `lib/http/http-error.ts` |
+| Camadas | `src/architecture.test.ts` e a regra `core-no-nest-layer` do dependency-cruiser: `domain/` e `application/` não importam Nest nem Fastify |
 
-## Fases
+## Onde a execução se afastou do plano
 
-### Fase 0 — Rede de segurança (PR 1, sem Nest ainda) — feita na branch `test/http-contract-baseline`
+1. **Sem SWC e sem Vitest.** A DI usa `@Inject(TOKEN)` explícito em todo construtor, então não depende de `emitDecoratorMetadata`. Com isso o `tsx` (dev e testes) e o `node:test` continuam como estavam, e os testes antigos não precisaram ser portados. O `run-tests.sh` passou a usar `TSX_TSCONFIG_PATH=tsconfig.test.json`, porque o `tsconfig.json` exclui `*.test.ts`.
+2. **As factories ficaram.** Cada `create<Ctx>Module()` continua como composition root, e o Nest injeta o objeto inteiro (por exemplo, `@Inject(SALES) sales: SalesContext`). Trocar por um provider por use case teria mexido na infraestrutura interna dos módulos (remessas monta adapters por dentro) sem ganho de comportamento.
+3. **O `@fastify/jwt` ficou.** O `JwtAuthGuard` usa `request.jwtVerify()`, e o auth assina tokens pelo token `JWT`.
+4. **O rate limit agora é um interceptor, não um hook.** Ele roda depois dos guards, como os hooks antigos: requisição recusada por JWT, tenant ou papel não entra na contagem. O limite de 300/min continua um pool só, compartilhado por todas as rotas protegidas. As rotas de auth mantêm limite próprio com `ban: 0` (a primeira requisição acima do limite recebe 403).
+5. **O hook de pós-commit fiscal mudou de lugar.** Ele é registrado no `onModuleInit` do `FiscalValidationModule` e loga pelo pino.
 
-- `src/app.ts` com `buildApp()`; `src/index.ts` só escuta a porta. `plugins/prisma.ts` aceita client injetado.
-- `src/app.contract.test.ts` (26 casos, Prisma fake, sem banco): 401 sem token em toda rota protegida, 403 sem empresa em toda rota de negócio, 403 e-mail não confirmado, 403 ADMIN, 401 `tokenVersion`, listas vazias por módulo, 404, 400 Zod `{ error, details }`, health ok/503, 503 de banco indisponível.
-- Snapshot `src/app.contract.routes.txt` com as 96 rotas. Cada PR de migração tem que manter o snapshot igual (`UPDATE_CONTRACT_SNAPSHOT=1` só para mudança intencional).
-- Observação para a fase 14: o `auth.controller.ts` também envolve as próprias rotas em `wrapRouteWithDbContext` (com `userId` opcional), então o `DbContextInterceptor` vale para o auth também.
+## Diferenças de comportamento (intencionais e pequenas)
 
-### Fase 1 — Fundação (PR 2)
+- **404 de rota inexistente:** antes `{ message, error, statusCode }`, o padrão do Fastify. Agora `{ "error": "Cannot GET /api/x" }`, no mesmo formato do resto da API.
+- **Ordem de validação em alguns POST com corpo inválido:** o parser de JSON roda antes dos guards (já era assim no Fastify), então nada muda para o frontend. O contrato cobre JSON malformado.
 
-- Dependências: `@nestjs/core`, `@nestjs/common`, `@nestjs/platform-fastify`, `reflect-metadata`, `rxjs`; dev: `@nestjs/cli`, `@nestjs/testing`, `@swc/core`, `vitest`, `unplugin-swc`.
-- `tsconfig`: `experimentalDecorators`, `emitDecoratorMetadata`. `nest-cli.json` com builder SWC.
-- `main.ts` + `AppModule` + `PrismaModule` + guards + `DbContextInterceptor` + filter + pipe, todos com spec Vitest.
-- Plugins legados registrados na instância via `getHttpAdapter().getInstance()`. Nenhuma rota muda de lugar.
-- `Dockerfile`: `CMD ... node dist/main.js`. O `HEALTHCHECK` em `/api/health` continua igual.
-- Critério: os 52 testes, o contrato e o snapshot de rotas passam; a imagem sobe em produção sem diferença visível.
+## Achado: rate limit do lookup nunca funcionou
 
-### Fase 2 — Módulos, do menor risco ao maior (1 PR por linha)
-
-| # | Módulo | Rotas | Atenção |
-|---|---|---|---|
-| 3 | `health` | 1 | Sem guard; resposta 503 mantém o corpo `degraded` |
-| 4 | `lookup` | 2 | `@NoTenant()`: só JWT, como em `authenticated-lookup.ts` |
-| 5 | `fiscal-settings` | 3 | |
-| 6 | `tax` | 5 | Import de planilha (multipart) |
-| 7 | `catalog` | 9 | Import de planilha (multipart) |
-| 8 | `logistics` | 10 | Bulk import |
-| 9 | `org` | 16 | Rotas ADMIN |
-| 10 | `fiscal-validation` | 3 | Hoje recebe `nfeXmlResolver` por parâmetro; vira provider exportado |
-| 11 | `remessas` | 0 | Só providers (FIFO, emissor, adapters), exportados para `sales` e `fiscal-documents` |
-| 12 | `fiscal-documents` | 23 | Commit hook do backfill; XML/planilha; observabilidade |
-| 13 | `sales` | 8 | Mapeamento de `SaldoRemessaInsuficienteError` (422 com `disponivel`/`solicitado`) |
-| 14 | `auth` | 15 | Por último: rate limit por rota, 2FA, refresh. A troca de `@fastify/jwt` por `@nestjs/jwt` é opcional e fica para este PR |
-
-Roteiro de cada PR:
-
-1. Criar `<modulo>/<modulo>.module.ts` com providers via `useFactory` (porta da `*.factory.ts`).
-2. Reescrever `presentation/controllers/*.controller.ts` como `@Controller`, chamando os mesmos use cases.
-3. Remover o registro do plugin legado em `plugins/contexts/*.plugin.ts` e apagar a factory.
-4. Spec Vitest do controller com `Test.createTestingModule` e use cases falsos.
-5. Rodar o contrato, o snapshot de rotas, `pnpm test`, `tsc` e um smoke manual das telas do módulo no frontend.
-
-### Fase 3 — Limpeza (PR 15)
-
-- Remover `plugins/`, `fastify-plugin`, `wrap-protected-route.ts`, `types/fastify.d.ts` (o que sobrar) e `tsx` do dev.
-- Regra no `.dependency-cruiser.js`: `domain/` e `application/` não importam `@nestjs/*` nem `fastify`.
-- Atualizar `backend/README.md` e o `CLAUDE.md` da raiz, que hoje descreve outro repositório.
-- Opcional: portar os 52 testes `node:test` para Vitest e unificar o runner.
-
-## Riscos
-
-| Risco | Mitigação |
-|---|---|
-| RLS fora da transação (`getDbClient()` lança "accessed outside of an active transaction") | Spec do `DbContextInterceptor` que confere `app.tenant_id` dentro do handler; teste de contrato com dois tenants |
-| `AsyncLocalStorage` perdido entre RxJS e o handler | `lastValueFrom(next.handle())` dentro do `run`; coberto pela spec acima |
-| Corpo de erro diferente quebra o frontend | Filter reproduz `error-handler.ts` linha a linha; teste de contrato compara o corpo |
-| Rate limit muda de escopo (hoje o auth tem limite próprio e a API protegida tem 300/min) | Registrar com `global: false` e declarar `@RouteConfig` explícito; teste de 429 no login |
-| ESM + Nest + Prisma 7 gerado em `src/generated` | Validar na fase 1 com `nest build` e `node dist/main.js` dentro da imagem |
-| Disco do servidor apertado (cerca de 60% em `/var/lib/docker`) | A imagem cresce pouco; conferir o espaço antes do deploy da fase 1 |
+O `lookupRateLimitPlugin` registrava o `@fastify/rate-limit` num escopo filho sem rotas, então `/api/lookup/cnpj` e `/api/lookup/cep` nunca tiveram limite em produção. A migração **manteve** esse comportamento. O limite pretendido (30/min, `ban: 0`) está documentado em `modules/lookup/infrastructure/http/lookup-rate-limit.ts`. Para ligar, basta adicionar `@RateLimit(lookupRouteRateLimit)` e `@UseInterceptors(RateLimitInterceptor)` no `LookupController` e ajustar o caso correspondente no contrato.
 
 ## Pendente de decisão
 
-- Manter as mensagens em português (recomendado agora) ou traduzir junto com o frontend.
-- Trocar `@fastify/jwt` por `@nestjs/jwt` no PR do auth ou manter.
-- Portar os testes antigos para Vitest na fase 3 ou deixar dois runners.
+- Ligar o rate limit do lookup (acima).
+- Mensagens de erro continuam em português, porque o frontend mostra o texto direto. Traduzir exige mudar o frontend junto.
+- O `CLAUDE.md` da raiz (não versionado) e o `.claude/ARCHITECTURE.md` descrevem os Nérus Microservices (MySQL, ZenStack, kernel `@eac-nerus`), não este repositório. Vale ajustar antes de usar esses arquivos como contrato aqui.
+- Violação de camada que já existia antes da migração: `catalog/application/services/validate-product-import-row.service.ts` importa um schema de `presentation/`.

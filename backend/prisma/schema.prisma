@@ -66,6 +66,14 @@ enum OperacaoFiscalTipo {
   TRANSFERENCIA_FILIAL
 }
 
+/// Marketplace que intermedeia a operação (perfil fiscal em `fiscal-core/src/marketplaces/`).
+enum Marketplace {
+  MERCADO_LIVRE
+  SHOPEE
+  AMAZON
+  MAGALU
+}
+
 enum UserRole {
   ADMIN
   MEMBER
@@ -117,6 +125,7 @@ model Tenant {
   timelineSteps   TimelineStep[]
   taxRules              TaxRule[]
   fiscalEmitterSettings FiscalEmitterSettings?
+  marketplaceBillingSettings MarketplaceBillingSettings[]
   unidadesLogisticas       TenantUnidadeLogistica[]
   movimentacoesProduto     MovimentacaoProduto[]
   users                    User[]
@@ -254,6 +263,8 @@ model MeliUnidadeLogistica {
   indIeDest       Int      @default(1) @map("ind_ie_dest")
   /// ID cadastro intermediador ML (`infIntermed/idCadIntTran` na NF-e de remessa).
   idCadIntTran    String?  @map("id_cad_int_tran") @db.VarChar(32)
+  /// Marketplace dono do CD. O default some quando o módulo logistics exigir o campo.
+  marketplace     Marketplace @default(MERCADO_LIVRE)
   ativa           Boolean  @default(true)
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
@@ -266,7 +277,8 @@ model MeliUnidadeLogistica {
   movimentacoesDestino     MovimentacaoProduto[] @relation("MovUnidadeDestino")
 
   @@index([ativa])
-  @@map("meli_unidades_logisticas")
+  @@index([marketplace])
+  @@map("unidades_logisticas")
 }
 
 /// Vínculo tenant ↔ unidade logística global (habilitação + unidade padrão de remessa).
@@ -322,6 +334,22 @@ model FiscalEmitterSettings {
   @@map("fiscal_emitter_settings")
 }
 
+/// Sobrescrita da configuração do faturador por marketplace (o padrão é `FiscalEmitterSettings`).
+model MarketplaceBillingSettings {
+  id          String      @id @default(uuid())
+  tenantId    String      @map("tenant_id")
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  marketplace Marketplace
+  /// Partial profundo de `FiscalEmitterSettingsData` + bloco `marketplace` (idCadIntTran, autXML...).
+  overrides   Json        @default("{}")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  @@unique([tenantId, marketplace])
+  @@index([tenantId])
+  @@map("marketplace_billing_settings")
+}
+
 model Product {
   id        String   @id @default(uuid())
   tenantId  String   @map("tenant_id")
@@ -361,7 +389,10 @@ model Pedido {
   tenantId           String       @map("tenant_id")
   tenant             Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   status             PedidoStatus @default(RASCUNHO)
-  pedidoMl           String?      @map("pedido_ml")
+  /// Marketplace que fatura o pedido. O default some quando o módulo sales exigir o campo.
+  marketplace        Marketplace  @default(MERCADO_LIVRE)
+  /// Id do pedido no marketplace (pack id no ML). Campo Prisma renomeado no módulo sales.
+  pedidoMl           String?      @map("marketplace_order_id")
   nfeId              String?      @unique @map("nfe_id")
   nfe                NFe?         @relation(fields: [nfeId], references: [id], onDelete: SetNull)
   destCpf            String       @map("dest_cpf")
@@ -387,6 +418,7 @@ model Pedido {
 
   @@index([tenantId], map: "idx_pedido_tenant_id")
   @@index([tenantId, status], map: "idx_pedido_tenant_status")
+  @@index([tenantId, marketplace], map: "idx_pedido_tenant_marketplace")
   @@map("pedidos")
 }
 
@@ -442,7 +474,10 @@ model NFe {
   aliqIcms           Decimal       @map("aliq_icms") @db.Decimal(5, 2)
   status             FiscalStatus
   emitidaEm          DateTime      @map("emitida_em")
-  pedidoMl           String        @map("pedido_ml")
+  /// Id do pedido no marketplace. Campo Prisma renomeado no módulo fiscal-documents.
+  pedidoMl           String        @map("marketplace_order_id")
+  /// Marketplace que intermedeia a nota. O default some quando fiscal-documents exigir o campo.
+  marketplace        Marketplace   @default(MERCADO_LIVRE)
   quantidade         Int           @default(1) @map("quantidade")
   tipo               NFeTipo       @default(VENDA) @map("tipo")
   saldoDisponivel    Int?          @map("saldo_disponivel")
@@ -481,6 +516,7 @@ model NFe {
   @@index([tenantId, productId, tipo, saldoDisponivel], map: "idx_nfe_remessa_saldo")
   @@index([tenantId, deletedAt], map: "idx_nfe_tenant_deleted")
   @@index([tenantId, emitidaEm], map: "idx_nfe_tenant_emitida")
+  @@index([tenantId, marketplace], map: "idx_nfe_tenant_marketplace")
   @@index([productId], map: "idx_nfe_product_id")
   @@map("nfes")
 }

@@ -1,8 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import {
-  collectRemessaSaldoProductIds,
-  buildRemessaFifoItemWhere,
-} from "../../remessas/infrastructure/fifo/remessa-fifo.js";
+import { collectRemessaSaldoProductIds, buildRemessaFifoItemWhere } from "../../remessas/index.js";
 import { getDbClient } from "../../../lib/db/tenant-rls.js";
 import type { AdvanceProductResolved } from "./types/advance-product.types.js";
 

@@ -7,7 +7,7 @@ import {
   sumLogicalConferenceQty,
 } from "@msimulation-xml/fiscal-core";
 import { NFeTipo } from "../../../../generated/prisma/client.js";
-import { getNetRemessaNfeBalance } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
+import { getNetRemessaNfeBalance } from "../../../remessas/index.js";
 
 export type PositiveChildRef = {
   id: string;

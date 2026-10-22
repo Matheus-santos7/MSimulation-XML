@@ -9,6 +9,7 @@ import { LogisticsModule } from "../modules/logistics/logistics.module.js";
 import { LookupModule } from "../modules/lookup/lookup.module.js";
 import { MarketplaceModule } from "../modules/marketplace/marketplace.module.js";
 import { OrgModule } from "../modules/org/org.module.js";
+import { RemessasModule } from "../modules/remessas/remessas.module.js";
 import { SalesModule } from "../modules/sales/sales.module.js";
 import { TaxModule } from "../modules/tax/tax.module.js";
 import { CoreModule, type CoreDependencies } from "./core.module.js";
@@ -22,6 +23,7 @@ const FEATURE_MODULES: Type[] = [
   TaxModule,
   CatalogModule,
   LogisticsModule,
+  RemessasModule,
   OrgModule,
   FiscalValidationModule,
   FiscalDocumentsModule,

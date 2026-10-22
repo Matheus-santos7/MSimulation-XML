@@ -24,6 +24,8 @@ export type BulkImportLogisticsUnitsResult = {
  */
 export type ShipmentDestinationResolution = {
   unitId: string;
+  /** Marketplace dono do CD: define o perfil fiscal e a configuração do faturador da remessa. */
+  marketplace: MarketplaceCode;
   codigo: string;
   uf: string;
   nome: string;

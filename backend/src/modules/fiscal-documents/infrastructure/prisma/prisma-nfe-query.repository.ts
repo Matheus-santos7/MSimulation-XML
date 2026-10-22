@@ -5,7 +5,7 @@ import { resolveNfeCancelamentoEventoXml, resolveNfeXml } from "../xml/nfe-xml-s
 import {
   refreshRemessaFifoItemsForNfes,
   getNetRemessaNfeBalance,
-} from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
+} from "../../../remessas/index.js";
 import type { NfeDetail, NfeQueryPort } from "../../domain/ports/nfe-query.port.js";
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import { resolveNfeReferenciaChaves } from "../../domain/services/nfe-referencia-chaves.js";

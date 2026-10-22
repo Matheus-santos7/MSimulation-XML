@@ -40,7 +40,7 @@ import {
   debitRemessaBalanceByNfeId,
   getNetRemessaNfeBalance,
   SaldoRemessaInsuficienteError,
-} from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
+} from "../../../remessas/index.js";
 import type { PositiveChildRef } from "./inbound-conference-balance.js";
 
 export type ConferenceEmitShared = {

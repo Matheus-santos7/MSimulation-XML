@@ -1,62 +1,32 @@
 /**
- * Bounded Context: Remessas (fiscal + logística FIFO).
+ * API pública do remessas para outros módulos (vendas, documentos fiscais, logística).
  *
- * Camadas:
- * - domain/       entidades, VOs, domain services, ports
- * - application/  use cases (orquestração)
- * - infrastructure/ adapters Prisma + emissores fiscais legados
+ * Só expõe funções, tipos e erros: os use cases e controllers ficam dentro do
+ * `RemessasModule`, e o logística (que o remessas importa) também lê o saldo FIFO daqui.
  */
-export { TipoNota, CADEIA_AVANCO_MERCADORIA } from "./domain/value-objects/tipo-nota.js";
 export {
-  RemessaDomainError,
   CadeiaFiscalInvalidaError,
+  RemessaDomainError,
   SaldoFifoInsuficienteError,
-} from "./domain/errors.js";
-export type { NotaFiscal, NotaFiscalRascunho } from "./domain/entities/nota-fiscal.js";
-export type { LinhaSaldoFifo, AlocacaoFifo } from "./domain/entities/linha-saldo-fifo.js";
-export { ValidadorCadeiaFiscal } from "./domain/services/validador-cadeia-fiscal.js";
-export { TransferidorSaldoFifo } from "./domain/services/transferidor-saldo-fifo.js";
-export { EmitirRemessaInicialUseCase } from "./application/use-cases/emitir-remessa-inicial.js";
-export { EmitirAvancoMercadoriaUseCase } from "./application/use-cases/emitir-avanco-mercadoria.js";
-export { createRemessasModule } from "./infrastructure/factory/remessas-module.factory.js";
-export { createRemessasAdapters } from "./infrastructure/factory/remessas-adapters.js";
-export { mapAvancoMercadoriaParaApi } from "./presentation/avanco-api.mapper.js";
-
+} from "./errors/remessas.errors.js";
+export type { NotaFiscal, NotaFiscalRascunho } from "./fiscal-chain/fiscal-chain.types.js";
+export { CADEIA_AVANCO_MERCADORIA, TipoNota } from "./fiscal-chain/rules/tipo-nota.js";
+export { ShipmentError } from "./shipment/shipment.errors.js";
+export type { AlocacaoFifo } from "./stock-fifo/stock-fifo.types.js";
+export * from "./stock-fifo/remessa-fifo.js";
+export type { RemessaFifoTx } from "./stock-fifo/types/remessa-fifo.types.js";
 export {
-  emitShipmentNfe,
-  emitManualShipment,
-  ShipmentError,
-  type EmitShipmentOptions,
-} from "./infrastructure/fiscal/physical-shipment/index.js";
-export {
-  prepareSymbolicShipmentFiscal,
-  SymbolicShipmentFiscalError,
-  type SymbolicShipmentFiscalPrepared,
-} from "./infrastructure/fiscal/symbolic-shipment/index.js";
-export {
-  consumeRemessaFifoBalance,
-  consumeRemessaFifoBalanceForSale,
-  debitRemessaBalanceByCd,
-  reverseRemessaFifoConsumptions,
-  listRemessaBalanceByCd,
-  refreshRemessaFifoItemsForNfes,
-  getNetRemessaNfeBalance,
-  prepareRemessaFifoForOperation,
-  resolveAdvanceFiscalOrigin,
-  resolveFifoOriginUnitId,
-  realignRemessaFifoProductIdsBySku,
-  buildRemessaFifoItemWhere,
-  buildRemessaFifoItemsWhere,
-  getAvailableRemessaBalance,
-  previewRemessaPrincipalFifoParaVenda,
-  loadRemessaForReturnDestination,
-  SaldoRemessaInsuficienteError,
-  type RemessaCdBalanceRow,
-} from "./infrastructure/fifo/remessa-fifo.js";
-export { emitShipmentCte } from "./infrastructure/fiscal/shipment-cte.service.js";
-
-export {
-  emitBranchTransfer,
-  BranchTransferError,
-  type BranchTransferItemInput,
-} from "./infrastructure/fiscal/branch-transfer/index.js";
+  destIeRetornoFromRemessa,
+  destinoRetornoFromRemessa,
+  resolveRetornoSimbolicoCfop,
+  RETORNO_SIMBOLICO_NAT_OP,
+  type CamposDestinoRetorno,
+} from "./symbolic-shipment/rules/retorno-simbolico-dest.js";
+export { prepareSymbolicShipmentFiscal } from "./symbolic-shipment/symbolic-shipment-fiscal.js";
+export { SymbolicShipmentFiscalError } from "./symbolic-shipment/symbolic-shipment.errors.js";
+export type {
+  SymbolicShipmentAfterReturnInput,
+  SymbolicShipmentFiscalPrepared,
+  SymbolicShipmentLine,
+  SymbolicShipmentProduct,
+} from "./symbolic-shipment/symbolic-shipment.types.js";

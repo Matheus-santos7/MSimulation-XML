@@ -2,7 +2,7 @@ import type { Tenant } from "../../../../generated/prisma/client.js";
 import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import { runFiscalTransaction } from "../../../../lib/db/prisma-tx.js";
 import { mapNfe } from "../../../fiscal-documents/presentation/mappers/fiscal-mappers.js";
-import { previewRemessaPrincipalFifoParaVenda } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
+import { previewRemessaPrincipalFifoParaVenda } from "../../../remessas/index.js";
 import type { SalesChainResult } from "../../application/dto/sales-chain.dto.js";
 import type { OrderForEmit } from "../../domain/entities/order-for-emit.entity.js";
 import { sumOrderFreteCte } from "../../domain/services/order-freight.validation.js";
@@ -22,7 +22,7 @@ import { emitSaleNote } from "./emit-sale-note.js";
 import { emitSaleCte } from "./cte-sale.adapter.js";
 import { resolveSalesChainRules } from "./resolve-sales-chain-rules.js";
 import type { SalesChainRules } from "../../application/dto/sales-chain.dto.js";
-import type { PreviewRemessaFifoVenda } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
+import type { PreviewRemessaFifoVenda } from "../../../remessas/index.js";
 
 function sumOrderFreteCteFromOrder(order: OrderForEmit): number {
   return sumOrderFreteCte({

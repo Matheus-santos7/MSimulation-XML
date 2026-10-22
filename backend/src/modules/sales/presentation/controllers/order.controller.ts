@@ -16,7 +16,7 @@ import { TenantId } from "../../../../nest/auth/request-params.js";
 import { RouteErrorFilter } from "../../../../nest/http/api-exception.filter.js";
 import { orNotFound } from "../../../../nest/http/not-found.js";
 import { ZodValidationPipe } from "../../../../nest/http/zod-validation.pipe.js";
-import { SaldoRemessaInsuficienteError } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
+import { SaldoRemessaInsuficienteError } from "../../../remessas/index.js";
 import { CheckoutError } from "../../domain/errors/checkout.error.js";
 import { OrderLockedError } from "../../domain/errors/order-locked.error.js";
 import { SalesChainError } from "../../domain/errors/sales-chain.error.js";

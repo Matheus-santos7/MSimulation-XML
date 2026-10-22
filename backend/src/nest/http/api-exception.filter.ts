@@ -1,12 +1,15 @@
 import { Catch, HttpException, type ArgumentsHost, type ExceptionFilter } from "@nestjs/common";
+import { MarketplaceNotConfiguredError } from "@msimulation-xml/fiscal-core";
 import type { FastifyBaseLogger, FastifyReply, FastifyRequest } from "fastify";
 import { resolveRouteError, type RouteErrorOptions } from "../../lib/http/domain-errors.js";
 import { resolveErrorResponse } from "../../lib/http/error-handler.js";
 import { HttpError, type ErrorResponse } from "../../lib/http/http-error.js";
 
+const HTTP_UNPROCESSABLE_ENTITY = 422;
+
 /**
- * Filtro global: contrato de erro da API (`{ error }`, 400 Zod, 503 banco indisponível,
- * P2002/P2025, 5xx genérico). Também recebe os erros do Fastify fora do pipeline do Nest.
+ * Filtro global: contrato de erro da API (`{ error }`, 400 Zod, 422 marketplace sem perfil
+ * fiscal, 503 banco indisponível, P2002/P2025, 5xx genérico). Também recebe os erros do Fastify fora do pipeline do Nest.
  */
 @Catch()
 export class ApiExceptionFilter implements ExceptionFilter {
@@ -30,6 +33,9 @@ export class ApiExceptionFilter implements ExceptionFilter {
     }
     if (exception instanceof HttpException) {
       return { status: exception.getStatus(), body: { error: exception.message } };
+    }
+    if (exception instanceof MarketplaceNotConfiguredError) {
+      return { status: HTTP_UNPROCESSABLE_ENTITY, body: { error: exception.message } };
     }
 
     return resolveErrorResponse(exception, log);

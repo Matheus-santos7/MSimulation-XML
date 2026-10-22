@@ -91,7 +91,7 @@ export class LogisticsUnitRepository {
   async findActiveById(unitId: string) {
     const row = await this.db.unidadeLogistica.findFirst({
       where: { id: unitId, ativa: true },
-      select: { id: true, codigo: true, uf: true, nome: true, ativa: true },
+      select: { id: true, marketplace: true, codigo: true, uf: true, nome: true, ativa: true },
     });
     return row;
   }
@@ -101,7 +101,7 @@ export class LogisticsUnitRepository {
     if (!norm) return null;
     return this.db.unidadeLogistica.findFirst({
       where: { codigo: norm, ativa: true },
-      select: { id: true, codigo: true, uf: true, nome: true, ativa: true },
+      select: { id: true, marketplace: true, codigo: true, uf: true, nome: true, ativa: true },
     });
   }
 
@@ -119,6 +119,7 @@ export class LogisticsUnitRepository {
       });
       return {
         unitId: full.id,
+        marketplace: full.marketplace,
         codigo: full.codigo,
         uf: full.uf,
         nome: full.nome,
@@ -135,6 +136,7 @@ export class LogisticsUnitRepository {
       const u = defaultLink.unidade;
       return {
         unitId: u.id,
+        marketplace: u.marketplace,
         codigo: u.codigo,
         uf: u.uf,
         nome: u.nome,

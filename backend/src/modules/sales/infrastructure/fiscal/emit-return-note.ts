@@ -14,7 +14,7 @@ import {
   resolveRetornoSimbolicoCfop,
   RETORNO_SIMBOLICO_NAT_OP,
   type CamposDestinoRetorno,
-} from "../../../remessas/domain/services/retorno-simbolico-dest.js";
+} from "../../../remessas/index.js";
 import { taxSnapshotFromRule } from "../../../tax/index.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import {
@@ -27,7 +27,7 @@ import {
   consumeRemessaFifoBalanceForSale,
   loadRemessaForReturnDestination,
   type PreviewRemessaFifoVenda,
-} from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
+} from "../../../remessas/index.js";
 import { persistNfeXmlFromEmission } from "../../../fiscal-documents/infrastructure/xml/nfe-xml-service.js";
 import type { EmissionContext } from "../../domain/entities/emission-context.entity.js";
 import type { OrderForEmit, OrderItemForEmit } from "../../domain/entities/order-for-emit.entity.js";

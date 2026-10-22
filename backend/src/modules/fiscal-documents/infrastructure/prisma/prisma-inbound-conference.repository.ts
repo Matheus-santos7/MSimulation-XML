@@ -15,7 +15,7 @@ import { getDbClient } from "../../../../lib/db/tenant-rls.js";
 import { DocumentReturnError } from "../../domain/errors/document-return.error.js";
 import { num } from "../../presentation/mappers/fiscal-mappers.js";
 import { loadEmitterSettings } from "../../../fiscal-settings/index.js";
-import { prepareRemessaFifoForOperation } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
+import { prepareRemessaFifoForOperation } from "../../../remessas/index.js";
 import { loadLogicalConferenceBalance } from "./inbound-conference-balance.js";
 import {
   emitNegativeDifference,

@@ -14,7 +14,7 @@ import { mapNfe } from "../../presentation/mappers/fiscal-mappers.js";
 import { loadEmitterSettings } from "../../../fiscal-settings/index.js";
 import { gerarProtocoloSefaz } from "../../domain/services/sefaz-protocol.js";
 import { fiscalNotDeleted } from "../../domain/constants/fiscal-not-deleted.js";
-import { reverseRemessaFifoConsumptions } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
+import { reverseRemessaFifoConsumptions } from "../../../remessas/index.js";
 import type { CancelDocumentResult } from "../../domain/entities/lifecycle-result.entity.js";
 import { DocumentCancellationError } from "../../domain/errors/document-cancellation.error.js";
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";

@@ -22,18 +22,16 @@ import {
   NFeTipo,
   Prisma,
   type Product,
-  
 } from "../../../../generated/prisma/client.js";
-import {
-  runFiscalTransaction,
-  
-  type PrismaTx,
-} from "../../../../lib/db/prisma-tx.js";
+import { runFiscalTransaction, type PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { mapNfe, num } from "../../presentation/mappers/fiscal-mappers.js";
 import { buildChaveNFe } from "../../domain/services/nfe-chave.js";
 import { proximoNumeroNfe } from "../../domain/services/nfe-sequencia.js";
 import { enrichTaxSnapshot, loadEmitterSettings } from "../../../fiscal-settings/index.js";
-import { enrichFiscalPayloadWithXTexto, resolveNumeroInicialNfe } from "@msimulation-xml/fiscal-core";
+import {
+  enrichFiscalPayloadWithXTexto,
+  resolveNumeroInicialNfe,
+} from "@msimulation-xml/fiscal-core";
 import { taxSnapshotFromRule } from "../../../tax/index.js";
 import {
   calcularNotaFiscal,
@@ -41,11 +39,13 @@ import {
   type NotaFiscalResult,
 } from "../../../tax/index.js";
 import { applyCstDevolucaoMap } from "../../../tax/index.js";
+import { mirrorOriginForDevolucao, parseOriginEngine } from "../../../tax/index.js";
 import {
-  mirrorOriginForDevolucao,
-  parseOriginEngine,
+  buildFiscalItem,
+  resolveTaxRule,
+  resolveIcmsFallbackRate,
+  type CustomerType,
 } from "../../../tax/index.js";
-import { buildFiscalItem, resolveTaxRule, resolveIcmsFallbackRate, type CustomerType } from "../../../tax/index.js";
 import { persistNfeXmlFromEmission } from "../xml/nfe-xml-service.js";
 import {
   collectRemessaSaldoProductIds,
@@ -55,12 +55,12 @@ import {
   reverseRemessaFifoConsumptionsForReturn,
   SaldoRemessaInsuficienteError,
   type ReturnFifoReversalLine,
-} from "../../../remessas/infrastructure/fifo/remessa-fifo.js";
+} from "../../../remessas/index.js";
 import {
   prepareSymbolicShipmentFiscal,
   SymbolicShipmentFiscalError,
-} from "../../../remessas/infrastructure/fiscal/symbolic-shipment/index.js";
-import { destIeRetornoFromRemessa } from "../../../remessas/domain/services/retorno-simbolico-dest.js";
+} from "../../../remessas/index.js";
+import { destIeRetornoFromRemessa } from "../../../remessas/index.js";
 import type {
   ProcessReturnResult,
   ReturnableItemsResult,
@@ -260,20 +260,26 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
         serieTransferencia: tenant.serieTransferencia,
       });
       const number = await proximoNumeroNfe(tx, tenant.id, series, numeroInicial);
-      const accessKey = buildChaveNFe({ uf: tenant.uf, cnpj: tenant.cnpj, serie: series, numero: number });
+      const accessKey = buildChaveNFe({
+        uf: tenant.uf,
+        cnpj: tenant.cnpj,
+        serie: series,
+        numero: number,
+      });
 
       const taxSnapshot = enrichTaxSnapshot(
         taxSnapshotFromRule(saleTaxRule, icmsFallbackRate, emitterSettings),
         {
-        settings: emitterSettings,
-        tipo: returnTipo,
-        valor: totalValue,
-        valorIcms: returnIcmsValue,
-        emitUf: tenant.uf,
-        destUf: sale.destUf,
-        indFinal: customerType === "non_taxpayer" ? 1 : 0,
-        cstVendaReferencia: referencedSaleCst,
-      });
+          settings: emitterSettings,
+          tipo: returnTipo,
+          valor: totalValue,
+          valorIcms: returnIcmsValue,
+          emitUf: tenant.uf,
+          destUf: sale.destUf,
+          indFinal: customerType === "non_taxpayer" ? 1 : 0,
+          cstVendaReferencia: referencedSaleCst,
+        },
+      );
 
       const returnRow = await tx.nFe.create({
         data: {
@@ -418,6 +424,8 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
               quantidade: line.quantidade,
             })),
             pedidoMl: sale.pedidoMl,
+            // Reposição volta ao CD da remessa principal: mesmo marketplace dela.
+            marketplace: mainShipment.marketplace,
             posDevolucao: {
               numero: returnRow.numero,
               serie: returnRow.serie,
@@ -439,6 +447,7 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
         const symbolicRow = await tx.nFe.create({
           data: {
             tenantId: tenant.id,
+            marketplace: mainShipment.marketplace,
             productId: product.id,
             chave: symbolicKey,
             numero: symbolicNumber,
@@ -492,11 +501,10 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
           nfeReferenciaChave: returnRow.chave,
         });
 
-        symbolicShipmentDto = mapNfe(
-          symbolicRow,
-          returnRow.chave,
-          symbolicItemRows,
-        ) as Record<string, unknown>;
+        symbolicShipmentDto = mapNfe(symbolicRow, returnRow.chave, symbolicItemRows) as Record<
+          string,
+          unknown
+        >;
       }
 
       return {
@@ -610,10 +618,7 @@ export class PrismaDocumentReturnRepository implements DocumentReturnPort {
 
     if (!engine) {
       if (!sale.product) {
-        throw new DocumentReturnError(
-          "Venda sem produto vinculado; não é possível devolver.",
-          422,
-        );
+        throw new DocumentReturnError("Venda sem produto vinculado; não é possível devolver.", 422);
       }
       const totalValue = num(sale.valor);
       return [
@@ -922,10 +927,7 @@ async function createReturnItemRows(
   for (const [index, line] of args.lines.entries()) {
     const engineItem = args.engineItems[index];
     if (!engineItem) {
-      throw new DocumentReturnError(
-        `Falha ao calcular o item ${index + 1} da devolução.`,
-        422,
-      );
+      throw new DocumentReturnError(`Falha ao calcular o item ${index + 1} da devolução.`, 422);
     }
     rows.push(
       await tx.nfeItem.create({
@@ -1033,21 +1035,24 @@ function idCadIntTranFromRemessaFiscalPayload(payload: unknown): string | undefi
  * `<entrega>` = OL onde a mercadoria retorna fisicamente (dest da remessa/retorno simbólico).
  */
 function entregaFromOperadorLogistico(
-  ol: {
-    destDoc: string;
-    destNome: string;
-    destLogradouro: string | null;
-    destNumero: string | null;
-    destComplemento: string | null;
-    destBairro: string | null;
-    destCodigoMunicipio: string | null;
-    destMunicipio: string | null;
-    destUf: string;
-    destCep: string | null;
-    destCodigoPais: number | null;
-    destNomePais: string | null;
-    destTelefone: string | null;
-  } | null | undefined,
+  ol:
+    | {
+        destDoc: string;
+        destNome: string;
+        destLogradouro: string | null;
+        destNumero: string | null;
+        destComplemento: string | null;
+        destBairro: string | null;
+        destCodigoMunicipio: string | null;
+        destMunicipio: string | null;
+        destUf: string;
+        destCep: string | null;
+        destCodigoPais: number | null;
+        destNomePais: string | null;
+        destTelefone: string | null;
+      }
+    | null
+    | undefined,
 ): Record<string, unknown> | undefined {
   if (!ol) return undefined;
   const cnpj = String(ol.destDoc ?? "").replace(/\D/g, "");
@@ -1065,12 +1070,12 @@ function entregaFromOperadorLogistico(
     cMun: ol.destCodigoMunicipio.trim(),
     xMun: ol.destMunicipio?.trim() || ol.destCodigoMunicipio.trim(),
     UF: ol.destUf.trim().toUpperCase(),
-    ...(ol.destCep ? { CEP: String(ol.destCep).replace(/\D/g, "").padStart(8, "0").slice(0, 8) } : {}),
+    ...(ol.destCep
+      ? { CEP: String(ol.destCep).replace(/\D/g, "").padStart(8, "0").slice(0, 8) }
+      : {}),
     ...(ol.destCodigoPais != null ? { cPais: String(ol.destCodigoPais) } : {}),
     ...(ol.destNomePais ? { xPais: ol.destNomePais } : {}),
-    ...(ol.destTelefone
-      ? { fone: String(ol.destTelefone).replace(/\D/g, "") }
-      : {}),
+    ...(ol.destTelefone ? { fone: String(ol.destTelefone).replace(/\D/g, "") } : {}),
   };
 }
 

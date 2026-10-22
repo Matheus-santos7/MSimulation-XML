@@ -8,7 +8,7 @@ export type RemessaFifoPrisma = Pick<
   | "nfeItem"
   | "product"
   | "nFe"
-  | "meliUnidadeLogistica"
+  | "unidadeLogistica"
   | "nfeRemessaConsumo"
   | "tenantUnidadeLogistica"
 >;

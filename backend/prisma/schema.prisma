@@ -158,7 +158,7 @@ model TenantFilial {
   /// Série NF-e de transferência quando esta filial é emitente matriz.
   serieTransferencia     Int?                  @map("serie_transferencia")
   unidadeLogisticaPadraoId String?             @map("unidade_logistica_padrao_id")
-  unidadeLogisticaPadrao MeliUnidadeLogistica? @relation(fields: [unidadeLogisticaPadraoId], references: [id], onDelete: SetNull)
+  unidadeLogisticaPadrao UnidadeLogistica? @relation(fields: [unidadeLogisticaPadraoId], references: [id], onDelete: SetNull)
   emitenteFiscalPrincipal Boolean              @default(false) @map("emitente_fiscal_principal")
   emitenteFiscalMatriz    Boolean              @default(false) @map("emitente_fiscal_matriz")
   createdAt              DateTime              @default(now()) @map("created_at")
@@ -243,12 +243,13 @@ model EmailVerificationToken {
 }
 
 /// CD / unidade logística Mercado Livre Full — catálogo global (importação da planilha Meli).
-model MeliUnidadeLogistica {
+/// Centro de distribuição (CD) de fulfillment de um marketplace.
+model UnidadeLogistica {
   id              String   @id @default(uuid())
-  codigo          String   @unique @db.VarChar(32)
+  codigo          String   @db.VarChar(32)
   nome            String
   destNomeFiscal  String   @default("EBAZAR.COM.BR LTDA") @map("dest_nome_fiscal")
-  cnpj            String   @unique @db.VarChar(14)
+  cnpj            String   @db.VarChar(14)
   ie              String?
   logradouro      String
   numero          String   @default("SN")
@@ -263,8 +264,8 @@ model MeliUnidadeLogistica {
   indIeDest       Int      @default(1) @map("ind_ie_dest")
   /// ID cadastro intermediador ML (`infIntermed/idCadIntTran` na NF-e de remessa).
   idCadIntTran    String?  @map("id_cad_int_tran") @db.VarChar(32)
-  /// Marketplace dono do CD. O default some quando o módulo logistics exigir o campo.
-  marketplace     Marketplace @default(MERCADO_LIVRE)
+  /// Marketplace dono do CD; código e CNPJ são únicos dentro do marketplace.
+  marketplace     Marketplace
   ativa           Boolean  @default(true)
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
@@ -276,6 +277,8 @@ model MeliUnidadeLogistica {
   movimentacoesOrigem      MovimentacaoProduto[] @relation("MovUnidadeOrigem")
   movimentacoesDestino     MovimentacaoProduto[] @relation("MovUnidadeDestino")
 
+  @@unique([marketplace, codigo])
+  @@unique([marketplace, cnpj])
   @@index([ativa])
   @@index([marketplace])
   @@map("unidades_logisticas")
@@ -287,7 +290,7 @@ model TenantUnidadeLogistica {
   tenantId  String               @map("tenant_id")
   tenant    Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   unidadeId String               @map("unidade_id")
-  unidade   MeliUnidadeLogistica @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+  unidade   UnidadeLogistica @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
   padrao    Boolean              @default(false)
   createdAt DateTime             @default(now()) @map("created_at")
   updatedAt DateTime             @updatedAt @map("updated_at")
@@ -307,9 +310,9 @@ model MovimentacaoProduto {
   tipoOperacao     OperacaoFiscalTipo @map("tipo_operacao")
   quantidade       Int
   unidadeOrigemId  String?            @map("unidade_origem_id")
-  unidadeOrigem    MeliUnidadeLogistica? @relation("MovUnidadeOrigem", fields: [unidadeOrigemId], references: [id], onDelete: SetNull)
+  unidadeOrigem    UnidadeLogistica? @relation("MovUnidadeOrigem", fields: [unidadeOrigemId], references: [id], onDelete: SetNull)
   unidadeDestinoId String?            @map("unidade_destino_id")
-  unidadeDestino   MeliUnidadeLogistica? @relation("MovUnidadeDestino", fields: [unidadeDestinoId], references: [id], onDelete: SetNull)
+  unidadeDestino   UnidadeLogistica? @relation("MovUnidadeDestino", fields: [unidadeDestinoId], references: [id], onDelete: SetNull)
   nfeId            String             @map("nfe_id")
   nfe              NFe                @relation(fields: [nfeId], references: [id], onDelete: Cascade)
   nfeSecundariaId  String?            @map("nfe_secundaria_id")
@@ -502,9 +505,9 @@ model NFe {
   consumosRemessa    NfeRemessaConsumo[] @relation("ConsumoRetorno")
   consumosRetorno    NfeRemessaConsumo[] @relation("ConsumoRemessa")
   unidadeDestinoId   String?             @map("unidade_destino_id")
-  unidadeDestino     MeliUnidadeLogistica? @relation("NfeUnidadeDestino", fields: [unidadeDestinoId], references: [id], onDelete: SetNull)
+  unidadeDestino     UnidadeLogistica? @relation("NfeUnidadeDestino", fields: [unidadeDestinoId], references: [id], onDelete: SetNull)
   unidadeOrigemId    String?             @map("unidade_origem_id")
-  unidadeOrigem      MeliUnidadeLogistica? @relation("NfeUnidadeOrigem", fields: [unidadeOrigemId], references: [id], onDelete: SetNull)
+  unidadeOrigem      UnidadeLogistica? @relation("NfeUnidadeOrigem", fields: [unidadeOrigemId], references: [id], onDelete: SetNull)
   movimentacoesProduto MovimentacaoProduto[]
   movimentacoesComoSecundaria MovimentacaoProduto[] @relation("MovNfeSecundaria")
   itens                NfeItem[]

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Verifica a migration 20261022120000_marketplaces num Postgres LOCAL descartável.
+# Verifica as migrations de marketplaces (a partir de 20261022120000) num Postgres LOCAL descartável.
 #
 # Uso (na raiz do repositório):
 #   POSTGRES_PORT=5433 docker compose up -d postgres
@@ -20,6 +20,7 @@ DB_PASSWORD="${POSTGRES_PASSWORD:-msimulation}"
 DB_PORT="${POSTGRES_PORT:-5433}"
 CHECK_DB="mkt_migration_check"
 APP_ROLE="mkt_migration_app"
+# Primeira migration do suporte a vários marketplaces: as anteriores formam o "banco atual".
 NEW_MIGRATION="20261022120000_marketplaces"
 TENANT_A="00000000-0000-0000-0000-00000000000a"
 TENANT_B="00000000-0000-0000-0000-00000000000b"
@@ -55,7 +56,7 @@ psql_admin "CREATE DATABASE ${CHECK_DB};" >/dev/null
 mkdir -p "$TMP_MIGRATIONS"
 for dir in "$BACKEND_DIR"/prisma/migrations/*/; do
   dir="${dir%/}" # cp -r com barra final copia só o conteúdo (BSD/macOS)
-  [ "$(basename "$dir")" = "$NEW_MIGRATION" ] && continue
+  [[ "$(basename "$dir")" < "$NEW_MIGRATION" ]] || continue
   cp -r "$dir" "$TMP_MIGRATIONS/"
 done
 cp "$BACKEND_DIR/prisma/migrations/migration_lock.toml" "$TMP_MIGRATIONS/"
@@ -86,7 +87,7 @@ pass "dados no formato antigo inseridos"
 
 # 2. Migration nova ----------------------------------------------------------------------
 prisma_local migrate deploy | grep "^Datasource" || true
-pass "migration ${NEW_MIGRATION} aplicada"
+pass "migrations de marketplaces aplicadas (a partir de ${NEW_MIGRATION})"
 
 [ "$(psql_check -c "SELECT marketplace || '|' || marketplace_order_id FROM pedidos WHERE id = 'pedido-1'")" = "MERCADO_LIVRE|PACK-123" ] \
   || fail "pedido antigo não virou Mercado Livre com o id preservado"
@@ -101,6 +102,20 @@ pass "nota antiga: MERCADO_LIVRE, marketplace_order_id preservado"
 [ "$(psql_check -c "SELECT count(*) FROM pg_tables WHERE tablename = 'meli_unidades_logisticas'")" = "0" ] \
   || fail "tabela antiga meli_unidades_logisticas ainda existe"
 pass "meli_unidades_logisticas renomeada para unidades_logisticas com os dados"
+
+psql_check -c "INSERT INTO unidades_logisticas (id, codigo, nome, cnpj, logradouro, municipio, uf, cep, marketplace, updated_at) VALUES ('unidade-2', 'SCCD01', 'CD Shopee', '03007331012077', 'Rua X', 'Itajaí', 'SC', '88300000', 'SHOPEE', now());" >/dev/null \
+  || fail "mesmo código e CNPJ em outro marketplace foi recusado"
+pass "unidades: mesmo código/CNPJ permitido em marketplaces diferentes"
+
+if psql_check -c "INSERT INTO unidades_logisticas (id, codigo, nome, cnpj, logradouro, municipio, uf, cep, marketplace, updated_at) VALUES ('unidade-3', 'SCCD01', 'Duplicado', '11111111000111', 'Rua Y', 'Itajaí', 'SC', '88300000', 'MERCADO_LIVRE', now());" >/dev/null 2>&1; then
+  fail "código repetido no mesmo marketplace foi aceito"
+fi
+pass "unidades: código único dentro do marketplace"
+
+if psql_check -c "INSERT INTO unidades_logisticas (id, codigo, nome, cnpj, logradouro, municipio, uf, cep, updated_at) VALUES ('unidade-4', 'XX01', 'Sem marketplace', '22222222000122', 'Rua Z', 'Itajaí', 'SC', '88300000', now());" >/dev/null 2>&1; then
+  fail "unidade sem marketplace foi aceita"
+fi
+pass "unidades: marketplace obrigatório"
 
 # 3. Drift entre banco e schema.prisma ----------------------------------------------------
 if ! prisma_local migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code >/dev/null; then

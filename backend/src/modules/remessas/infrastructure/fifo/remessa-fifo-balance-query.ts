@@ -128,7 +128,7 @@ export async function listRemessaBalanceByCd(
     ),
   ];
   if (codigos.length > 0) {
-    const unidades = await db.meliUnidadeLogistica.findMany({
+    const unidades = await db.unidadeLogistica.findMany({
       where: { codigo: { in: codigos }, ativa: true },
       select: { id: true, codigo: true, nome: true, uf: true },
     });

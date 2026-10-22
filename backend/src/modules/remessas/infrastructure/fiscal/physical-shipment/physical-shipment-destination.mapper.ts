@@ -1,4 +1,4 @@
-import type { UnidadeDestinoFiscal } from "../../../../logistics/domain/services/meli-unidade.js";
+import type { UnidadeDestinoFiscal } from "../../../../logistics/index.js";
 
 /**
  * Maps shipment destination (CD) to NF-e `dest*` table columns.

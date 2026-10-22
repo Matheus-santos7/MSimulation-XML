@@ -44,7 +44,7 @@ const prismaStub = {
   product: {
     findFirst: async () => null,
   },
-  meliUnidadeLogistica: {
+  unidadeLogistica: {
     findFirst: async () => null,
   },
   tenantUnidadeLogistica: {

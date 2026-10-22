@@ -39,7 +39,7 @@ async function findLinkedCdByUf(
   const normalizedUf = uf.trim().toUpperCase();
 
   if (preferredUnitId) {
-    const preferred = await prisma.meliUnidadeLogistica.findFirst({
+    const preferred = await prisma.unidadeLogistica.findFirst({
       where: {
         id: preferredUnitId,
         uf: normalizedUf,

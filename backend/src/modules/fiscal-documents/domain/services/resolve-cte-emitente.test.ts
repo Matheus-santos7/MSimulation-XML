@@ -24,7 +24,7 @@ const cdSp = {
 
 function prismaStub(units: typeof cdSp[], links: { unidadeId: string; padrao: boolean }[]) {
   return {
-    meliUnidadeLogistica: {
+    unidadeLogistica: {
       findFirst: async ({ where }: { where: { id?: string; uf?: string } }) => {
         if (where.id) {
           const link = links.find((l) => l.unidadeId === where.id);

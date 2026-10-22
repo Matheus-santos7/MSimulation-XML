@@ -458,7 +458,7 @@ describe("listRemessaBalanceByCd", () => {
       },
       nFe: { findMany: async () => [] },
       nfeRemessaConsumo: { aggregate: async () => ({ _sum: { quantidade: 0 } }) },
-      meliUnidadeLogistica: {
+      unidadeLogistica: {
         findMany: async () => [
           { id: "cat-a", codigo: "SP01", nome: "Cajamar", uf: "SP" },
           { id: "cat-b", codigo: "SC01", nome: "Joinville", uf: "SC" },
@@ -520,7 +520,7 @@ describe("resolveFifoOriginUnitId", () => {
       },
       nFe: { findMany: async () => [] },
       nfeRemessaConsumo: { aggregate: async () => ({ _sum: { quantidade: 0 } }) },
-      meliUnidadeLogistica: {
+      unidadeLogistica: {
         findMany: async () => [
           { id: catalogoUnidadeId, codigo: "SP02", nome: "Cajamar", uf: "SP" },
         ],

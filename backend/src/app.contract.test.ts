@@ -415,6 +415,17 @@ describe("contrato HTTP — respostas por módulo (banco vazio)", () => {
     );
   });
 
+  it("GET /api/unidades-logisticas recusa marketplace desconhecido no filtro", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/unidades-logisticas?marketplace=ALIEXPRESS",
+      headers: bearer(token),
+    });
+
+    assert.equal(res.statusCode, 400);
+    assert.ok(res.json().details.marketplace);
+  });
+
   it("GET /api/fiscal-settings/marketplaces/:marketplace sem empresa no banco devolve 404", async () => {
     const res = await app.inject({
       method: "GET",

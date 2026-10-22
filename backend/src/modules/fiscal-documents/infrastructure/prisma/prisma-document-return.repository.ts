@@ -1013,7 +1013,8 @@ async function resolveDestIeForOperadorLogistico(
   const cnpj = remessa.destDoc.replace(/\D/g, "");
   if (cnpj.length !== 14) return undefined;
 
-  const unit = await tx.meliUnidadeLogistica.findUnique({
+  // TODO(fiscal-documents): filtrar pelo marketplace da nota quando o módulo for convertido.
+  const unit = await tx.unidadeLogistica.findFirst({
     where: { cnpj },
     select: { ie: true },
   });

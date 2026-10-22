@@ -1,42 +1,42 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class CnpjLookupResponseDTO {
-  @ApiProperty()
+  @ApiProperty({ type: String })
   razaoSocial!: string;
 
-  @ApiProperty()
+  @ApiProperty({ type: String })
   nomeFantasia!: string;
 
-  @ApiProperty({ example: "12345678000199" })
+  @ApiProperty({ type: String, example: "12345678000199" })
   cnpj!: string;
 
-  @ApiProperty()
+  @ApiProperty({ type: String })
   logradouro!: string;
 
-  @ApiProperty()
+  @ApiProperty({ type: String })
   numero!: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ type: String })
   complemento?: string;
 
-  @ApiProperty()
+  @ApiProperty({ type: String })
   bairro!: string;
 
-  @ApiProperty()
+  @ApiProperty({ type: String })
   municipio!: string;
 
-  @ApiProperty({ description: "Código IBGE do município" })
+  @ApiProperty({ type: String, description: "Código IBGE do município" })
   codigoMunicipio!: string;
 
-  @ApiProperty({ example: "SP" })
+  @ApiProperty({ type: String, example: "SP" })
   uf!: string;
 
-  @ApiProperty()
+  @ApiProperty({ type: String })
   cep!: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ type: String })
   telefone?: string;
 
-  @ApiProperty({ description: "CRT inferido: 1 (Simples/MEI) ou 3 (regime normal)" })
+  @ApiProperty({ type: Number, description: "CRT inferido: 1 (Simples/MEI) ou 3 (regime normal)" })
   crt!: number;
 }

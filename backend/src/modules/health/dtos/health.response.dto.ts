@@ -4,15 +4,15 @@ export type HealthStatus = "ok" | "degraded";
 export type DatabaseStatus = "ok" | "unavailable";
 
 export class HealthResponseDTO {
-  @ApiProperty({ enum: ["ok", "degraded"] })
+  @ApiProperty({ type: String, enum: ["ok", "degraded"] })
   status!: HealthStatus;
 
-  @ApiProperty({ enum: ["api"] })
+  @ApiProperty({ type: String, enum: ["api"] })
   service!: "api";
 
-  @ApiProperty({ enum: ["ok", "unavailable"] })
+  @ApiProperty({ type: String, enum: ["ok", "unavailable"] })
   database!: DatabaseStatus;
 
-  @ApiProperty({ format: "date-time" })
+  @ApiProperty({ type: String, format: "date-time" })
   timestamp!: string;
 }

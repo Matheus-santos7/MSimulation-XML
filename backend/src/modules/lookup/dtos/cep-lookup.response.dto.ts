@@ -1,21 +1,21 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class CepLookupResponseDTO {
-  @ApiProperty({ example: "01001000" })
+  @ApiProperty({ type: String, example: "01001000" })
   cep!: string;
 
-  @ApiProperty()
+  @ApiProperty({ type: String })
   logradouro!: string;
 
-  @ApiProperty()
+  @ApiProperty({ type: String })
   bairro!: string;
 
-  @ApiProperty()
+  @ApiProperty({ type: String })
   municipio!: string;
 
-  @ApiPropertyOptional({ description: "Código IBGE do município" })
+  @ApiPropertyOptional({ type: String, description: "Código IBGE do município" })
   codigoMunicipio?: string;
 
-  @ApiProperty({ example: "SP" })
+  @ApiProperty({ type: String, example: "SP" })
   uf!: string;
 }

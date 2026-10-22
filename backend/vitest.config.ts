@@ -5,6 +5,8 @@ import { defineConfig } from "vitest/config";
  * até cada módulo ser convertido (ver `.claude/ARCHITECTURE.md`, seção 12).
  */
 export default defineConfig({
+  // O tsconfig.json exclui os specs; os decorators legados (Nest, class-validator) vêm daqui.
+  oxc: { decorator: { legacy: true } },
   test: {
     include: ["src/**/*.spec.ts"],
     environment: "node",

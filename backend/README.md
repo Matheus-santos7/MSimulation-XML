@@ -265,7 +265,7 @@ O acesso é declarado no controller ([`src/nest/api-access.decorators.ts`](./src
 |--------|-----------|--------------|
 | `/api/health` | nenhum | Público |
 | `/api/auth/*` | `@UseGuards(JwtAuthGuard)` por rota quando exige sessão; `@RateLimit(...)` por rota | Público / Bearer |
-| `/api/lookup/*` | `@AuthenticatedApi()` | JWT, **sem** tenant |
+| `/api/lookup/*` | `@AuthenticatedApi()` + `@RateLimit(lookupRouteRateLimit)` | JWT, **sem** tenant; 30 req/min por rota e por IP (403 ao estourar) |
 | `/api/*` (negócio) | `@ProtectedApi()` (+ `@AdminOnly()` por rota) | JWT + tenant + e-mail verificado; 300 req/min por IP compartilhadas |
 
 Os módulos Nest ficam em `modules/<ctx>/<ctx>.module.ts` e estão listados em `FEATURE_MODULES` (`src/nest/app.module.ts`). O `remessas` não tem rotas: o `RemessasModule` só exporta o provider usado pelas movimentações.

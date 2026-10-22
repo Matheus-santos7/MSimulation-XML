@@ -625,9 +625,9 @@ describe("contrato HTTP — rate limit", () => {
     }
   });
 
-  it("lookup não tem rate limit (o limite de 30/min nunca foi aplicado; ver lookup-rate-limit.ts)", async () => {
+  it("lookup responde 403 (ban: 0) a partir da 31ª consulta no minuto", async () => {
     const app = await startApp();
-    const INTENDED_LOOKUP_MAX_PER_MINUTE = 30;
+    const LOOKUP_MAX_PER_MINUTE = 30;
 
     try {
       // CNPJ inválido falha na validação, sem chamar a API externa.
@@ -636,9 +636,12 @@ describe("contrato HTTP — rate limit", () => {
         url: "/api/lookup/cnpj/abc",
         headers: bearer(accessToken(app)),
       } as const;
-      const statuses = await statusesOf(app, INTENDED_LOOKUP_MAX_PER_MINUTE + 1, request);
+      const statuses = await statusesOf(app, LOOKUP_MAX_PER_MINUTE, request);
+      const blocked = await app.inject(request);
 
       assert.ok(statuses.every((status) => status === 400));
+      assert.equal(blocked.statusCode, 403);
+      assert.deepEqual(blocked.json(), { error: "Rate limit exceeded, retry in 1 minute" });
     } finally {
       await app.close();
     }

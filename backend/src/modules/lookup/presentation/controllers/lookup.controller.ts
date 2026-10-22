@@ -1,10 +1,12 @@
-import { Controller, Get, Inject, Param, Req } from "@nestjs/common";
+import { Controller, Get, Inject, Param, Req, UseInterceptors } from "@nestjs/common";
 import type { FastifyBaseLogger, FastifyRequest } from "fastify";
 import { ZodError } from "zod";
 import { HttpError } from "../../../../lib/http/http-error.js";
 import { AuthenticatedApi } from "../../../../nest/api-access.decorators.js";
+import { RateLimit, RateLimitInterceptor } from "../../../../nest/http/rate-limit.interceptor.js";
 import { LookupNotFoundError } from "../../domain/errors/lookup-not-found.error.js";
 import { LookupValidationError } from "../../domain/errors/lookup-validation.error.js";
+import { lookupRouteRateLimit } from "../../infrastructure/http/lookup-rate-limit.js";
 import { LOOKUP, type LookupContext } from "../../lookup.tokens.js";
 import { cepParamSchema, cnpjParamSchema } from "../schemas/lookup.schemas.js";
 
@@ -32,6 +34,7 @@ function toLookupHttpError(
 
 /**
  * Lookup CNPJ/CEP: só JWT, sem tenant (onboarding) e sem transação.
+ * Limite de 30 consultas/min por rota e por IP, contado depois do JWT.
  *
  * | Método | Rota | Use case |
  * |--------|------|----------|
@@ -40,6 +43,8 @@ function toLookupHttpError(
  */
 @Controller("lookup")
 @AuthenticatedApi()
+@UseInterceptors(RateLimitInterceptor)
+@RateLimit(lookupRouteRateLimit)
 export class LookupController {
   constructor(@Inject(LOOKUP) private readonly lookup: LookupContext) {}
 

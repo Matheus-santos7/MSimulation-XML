@@ -33,6 +33,10 @@ export class ConfigService {
     return this.get("CORS_ORIGINS");
   }
 
+  get apiDocsEnabled(): boolean {
+    return this.get("API_DOCS_ENABLED")?.trim().toLowerCase() === "true";
+  }
+
   // Banco
   get databaseUrl(): string | undefined {
     return this.get("DATABASE_URL");

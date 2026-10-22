@@ -28,6 +28,7 @@ import {
 } from "./lib/http/rate-limit.js";
 import { AppModule } from "./nest/app.module.js";
 import { ApiExceptionFilter } from "./nest/http/api-exception.filter.js";
+import { setupApiDocs } from "./nest/http/api-docs.js";
 import { authPlugin } from "./plugins/auth/index.js";
 import { prismaPlugin } from "./plugins/prisma.js";
 import { appConfig } from "./config/config.service.js";
@@ -92,6 +93,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<NestFasti
   // Também trata os erros fora do pipeline do Nest (parser de corpo, 404 de rota): o
   // error handler que o Nest registra no Fastify passa pelos filtros globais.
   nest.useGlobalFilters(new ApiExceptionFilter());
+  setupApiDocs(nest);
   await nest.init();
 
   return nest;

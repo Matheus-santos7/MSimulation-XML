@@ -4,6 +4,7 @@ import type { PasswordHasherPort } from "../../domain/ports/password-hasher.port
 import type { PasswordResetRepository } from "../../domain/ports/password-reset.repository.js";
 import type { UserRepository } from "../../domain/ports/user.repository.js";
 import type { ForgotPasswordCommand } from "../dto/forgot-password.command.js";
+import { appConfig } from "../../../../config/config.service.js";
 
 export type RequestPasswordResetDeps = {
   appPublicUrl: string;
@@ -57,7 +58,7 @@ export class RequestPasswordResetUseCase {
         idempotencyKey: `password-reset/${tokenHash}`,
       });
     } catch (error) {
-      if (error instanceof EmailDeliveryError && process.env.NODE_ENV !== "production") {
+      if (error instanceof EmailDeliveryError && !appConfig.isProduction) {
         // dev: log and continue
       } else if (error instanceof EmailDeliveryError) {
         // prod: swallow email errors

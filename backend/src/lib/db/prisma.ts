@@ -2,13 +2,14 @@ import pg from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../../generated/prisma/client.js";
 import { applyDbNetworkDefaults } from "./network.js";
+import { appConfig } from "../../config/config.service.js";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
 function createPrismaClient(): PrismaClient {
-  const url = process.env.DATABASE_URL;
+  const url = appConfig.databaseUrl;
   if (!url) {
     throw new Error("DATABASE_URL não definida (backend/.env)");
   }
@@ -26,6 +27,6 @@ function createPrismaClient(): PrismaClient {
 
 export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
-if (process.env.NODE_ENV !== "production") {
+if (!appConfig.isProduction) {
   globalForPrisma.prisma = prisma;
 }

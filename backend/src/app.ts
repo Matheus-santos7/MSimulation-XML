@@ -30,6 +30,7 @@ import { AppModule } from "./nest/app.module.js";
 import { ApiExceptionFilter } from "./nest/http/api-exception.filter.js";
 import { authPlugin } from "./plugins/auth/index.js";
 import { prismaPlugin } from "./plugins/prisma.js";
+import { appConfig } from "./config/config.service.js";
 
 const API_PREFIX = "api";
 
@@ -45,7 +46,7 @@ export type BuildAppOptions = {
 };
 
 async function buildFastify(options: BuildAppOptions): Promise<FastifyInstance> {
-  const trustProxy = process.env.TRUST_PROXY === "true" || process.env.NODE_ENV === "production";
+  const trustProxy = appConfig.trustProxy === "true" || appConfig.isProduction;
   const app = Fastify({ logger: options.logger ?? true, trustProxy });
 
   assertProductionSecurityConfig();

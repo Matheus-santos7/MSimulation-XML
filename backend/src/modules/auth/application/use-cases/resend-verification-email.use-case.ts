@@ -1,5 +1,6 @@
 import { EmailDeliveryError } from "../../domain/errors/email-delivery.error.js";
 import { SendVerificationEmailUseCase } from "./send-verification-email.use-case.js";
+import { appConfig } from "../../../../config/config.service.js";
 
 export type ResendVerificationEmailDeps = {
   requireEmailVerification: boolean;
@@ -26,7 +27,7 @@ export class ResendVerificationEmailUseCase {
     try {
       await this.sendVerificationEmail.execute(userId);
     } catch (error) {
-      if (error instanceof EmailDeliveryError && process.env.NODE_ENV !== "production") {
+      if (error instanceof EmailDeliveryError && !appConfig.isProduction) {
         // dev: log and continue
       } else if (error instanceof EmailDeliveryError) {
         // prod: swallow email errors

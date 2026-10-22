@@ -1,4 +1,5 @@
 import { turnstileSecretKey } from "./config.js";
+import { appConfig } from "../../config/config.service.js";
 
 type TurnstileVerifyResponse = {
   success: boolean;
@@ -24,7 +25,7 @@ export class CaptchaVerificationError extends Error {
 export async function verifyTurnstileToken(token: string | undefined): Promise<void> {
   const secret = turnstileSecretKey();
   if (!secret) {
-    if (process.env.NODE_ENV === "production") {
+    if (appConfig.isProduction) {
       throw new CaptchaVerificationError("CAPTCHA não configurado no servidor");
     }
     return;

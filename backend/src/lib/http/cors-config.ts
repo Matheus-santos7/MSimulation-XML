@@ -1,4 +1,5 @@
 import type { FastifyCorsOptions } from "@fastify/cors";
+import { appConfig } from "../../config/config.service.js";
 
 const LOCAL_ORIGIN_RE = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 
@@ -8,7 +9,7 @@ const LOCAL_ORIGIN_RE = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
  * Em produção sem env: falha no boot (evita `origin: true`).
  */
 export function buildCorsOptions(): FastifyCorsOptions {
-  const raw = process.env.CORS_ORIGINS?.trim();
+  const raw = appConfig.corsOrigins?.trim();
 
   if (raw) {
     const origins = raw.split(",").map((s) => s.trim()).filter(Boolean);
@@ -18,7 +19,7 @@ export function buildCorsOptions(): FastifyCorsOptions {
     };
   }
 
-  if (process.env.NODE_ENV === "production") {
+  if (appConfig.isProduction) {
     throw new Error(
       "CORS_ORIGINS é obrigatório em produção (ex.: https://app.seudominio.com).",
     );

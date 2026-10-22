@@ -11,6 +11,7 @@ import type {
   SendPasswordResetEmailParams,
   SendRegistrationAttemptParams,
 } from "../../domain/ports/email-sender.port.js";
+import { appConfig } from "../../../../config/config.service.js";
 
 /**
  * Adapter de envio de e-mails transacionais via Brevo.
@@ -23,7 +24,7 @@ export class BrevoEmailAdapter implements EmailSenderPort {
   private handleDeliveryError(error: unknown, fallback: { label: string; to: string; url: string }): void {
     const message = error instanceof Error ? error.message : "Falha ao enviar e-mail";
 
-    if (process.env.NODE_ENV === "production") {
+    if (appConfig.isProduction) {
       throw new EmailDeliveryError(message);
     }
 
@@ -35,7 +36,7 @@ export class BrevoEmailAdapter implements EmailSenderPort {
   ): boolean {
     if (brevoApiKey()) return true;
 
-    if (process.env.NODE_ENV === "production") {
+    if (appConfig.isProduction) {
       throw new EmailDeliveryError("BREVO_API_KEY não configurada");
     }
 

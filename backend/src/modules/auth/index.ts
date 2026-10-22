@@ -3,13 +3,7 @@
  * `app.module.ts` importa pelo caminho dele), para o barrel não criar ciclo com o org.
  */
 export { AuthError } from "./errors/auth.errors.js";
-export {
-  CurrentPasswordField,
-  EmailField,
-  StrongPasswordField,
-  StrongPasswordRules,
-} from "./rules/credential.validators.js";
-export { passwordField } from "./rules/password.zod.js";
+export { emailField, passwordField } from "./rules/credential.schemas.js";
 export type {
   AccessTokenPayload,
   AuthMeta,

@@ -1,35 +1,24 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { Transform } from "class-transformer";
-import { IsText, TextMaxLength } from "../../../../nest/http/text.validators.js";
+import { z } from "zod";
 import {
-  CaptchaTokenField,
-  PermanentEmailField,
-  StrongPasswordField,
-} from "../../rules/credential.validators.js";
+  captchaTokenField,
+  DISPOSABLE_EMAIL_DOMAINS,
+  emailField,
+  passwordField,
+} from "../../rules/credential.schemas.js";
 
-const NAME_MAX_LENGTH = 120;
+export const registerRequestSchema = z.object({
+  email: emailField.refine((email) => {
+    const domain = email.split("@")[1]?.toLowerCase();
+    return domain ? !DISPOSABLE_EMAIL_DOMAINS.has(domain) : true;
+  }, "Use um e-mail permanente — domínios descartáveis não são permitidos"),
+  password: passwordField,
+  name: z
+    .string()
+    .trim()
+    .max(120)
+    .optional()
+    .transform((v) => (v && v.length > 0 ? v : undefined)),
+  captchaToken: captchaTokenField,
+});
 
-export class RegisterRequestDTO {
-  @ApiProperty({ type: String, example: "usuario@empresa.com.br" })
-  @PermanentEmailField()
-  email!: string;
-
-  @ApiProperty({ type: String, minLength: 8 })
-  @StrongPasswordField()
-  password!: string;
-
-  @ApiPropertyOptional({ type: String })
-  // `.trim()` + texto vazio vira ausente.
-  @Transform(({ value }) => {
-    if (typeof value !== "string") return value;
-    const trimmed = value.trim();
-    return trimmed.length > 0 ? trimmed : undefined;
-  })
-  @IsText()
-  @TextMaxLength(NAME_MAX_LENGTH)
-  name?: string;
-
-  @ApiPropertyOptional({ type: String, description: "Token do Cloudflare Turnstile" })
-  @CaptchaTokenField()
-  captchaToken?: string;
-}
+export type RegisterRequestDTO = z.infer<typeof registerRequestSchema>;

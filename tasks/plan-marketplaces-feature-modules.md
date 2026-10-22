@@ -135,7 +135,7 @@ modules/
 
 ### 5. Validação sem quebrar o frontend
 
-O frontend lê `{ error, details }` com `details` no formato `flatten()` do Zod (`formErrors`, `fieldErrors`). O `ClassValidatorPipe` tem que devolver esse mesmo formato. Sem isso, a troca de Zod por `class-validator` quebra as mensagens de formulário.
+O frontend lê `{ error, details }` no formato do Zod. Decidido em 2026-10-22: os DTOs continuam em Zod (um schema por arquivo em `dtos/`), em vez de `class-validator`, para as mensagens ficarem idênticas.
 
 ## Fases
 
@@ -145,7 +145,7 @@ Cada fase fecha com: suíte completa, contrato HTTP, golden XMLs, `tsc` de `src`
 
 1. ~~SWC no dev e nos testes~~ — descartado: injeção por `@Inject` explícito e `ClassValidatorPipe(Dto)` dispensam `emitDecoratorMetadata`, e dev, testes e build ficam com o mesmo comportamento.
 2. Vitest + `unplugin-swc`, rodando junto com o `node:test` no `run-tests.sh` e no CI.
-3. `class-validator`, `class-transformer`, `@nestjs/swagger`; `ClassValidatorPipe` com `details` no formato do Zod.
+3. ~~`class-validator`~~ — decidido em 2026-10-22 manter Zod nos DTOs (`dtos/<x>.request.dto.ts` com schema + tipo); `@nestjs/swagger` entrou.
 4. `BaseService`, `BaseRepository` (sobre `getDbClient()`), `BusinessException`, `SuccessResponse`, `ResponseWithPagination` em `src/nest/`.
 5. `ConfigService` em `src/config/`, substituindo leituras de `process.env`.
 6. Golden XMLs: um por tipo de nota do ML, com entradas fixas.
@@ -185,7 +185,7 @@ As mudanças de contrato desta fase são intencionais e vão listadas no commit 
 
 ### Fase 6 — limpeza
 
-26. Remover Zod, `node:test`, `create<Ctx>Module()` e os tokens que sobrarem; atualizar `ARCHITECTURE.md` (seção 12) e `backend/README.md`.
+26. Remover `node:test`, `presentation/schemas`, `create<Ctx>Module()` e os tokens que sobrarem; atualizar `ARCHITECTURE.md` (seção 12) e `backend/README.md`.
 
 ## Riscos
 

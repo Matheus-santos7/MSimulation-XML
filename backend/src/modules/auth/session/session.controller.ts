@@ -16,12 +16,12 @@ import { strictRouteRateLimit } from "../../../lib/http/rate-limit.js";
 import { JwtAuthGuard } from "../../../nest/auth/guards.js";
 import { UserId } from "../../../nest/auth/request-params.js";
 import { ApiExceptionFilter } from "../../../nest/http/api-exception.filter.js";
-import { ClassValidatorPipe } from "../../../nest/http/class-validator.pipe.js";
+import { ZodValidationPipe } from "../../../nest/http/zod-validation.pipe.js";
 import { RateLimit } from "../../../nest/http/rate-limit.interceptor.js";
 import { AuthApi, RequestMeta } from "../auth-api.decorators.js";
-import { LoginRequestDTO } from "./dtos/login.request.dto.js";
-import { LogoutRequestDTO } from "./dtos/logout.request.dto.js";
-import { RefreshRequestDTO } from "./dtos/refresh.request.dto.js";
+import { loginRequestSchema, type LoginRequestDTO } from "./dtos/login.request.dto.js";
+import { logoutRequestSchema } from "./dtos/logout.request.dto.js";
+import { refreshRequestSchema, type RefreshRequestDTO } from "./dtos/refresh.request.dto.js";
 import type { AccessTokenPayload, AuthMeta } from "./session.types.js";
 import { GetCurrentUserUseCase } from "./use-cases/get-current-user.usecase.js";
 import { LoginUseCase } from "./use-cases/login.usecase.js";
@@ -56,7 +56,7 @@ export class SessionController {
   @RateLimit(strictRouteRateLimit(10, "15 minutes"))
   @HttpCode(HTTP_OK)
   async signIn(
-    @Body(new ClassValidatorPipe(LoginRequestDTO)) body: LoginRequestDTO,
+    @Body(new ZodValidationPipe(loginRequestSchema)) body: LoginRequestDTO,
     @RequestMeta() meta: AuthMeta,
   ) {
     await verifyTurnstileToken(body.captchaToken);
@@ -68,7 +68,7 @@ export class SessionController {
   @RateLimit(strictRouteRateLimit(30, "15 minutes"))
   @HttpCode(HTTP_OK)
   refresh(
-    @Body(new ClassValidatorPipe(RefreshRequestDTO)) body: RefreshRequestDTO,
+    @Body(new ZodValidationPipe(refreshRequestSchema)) body: RefreshRequestDTO,
     @RequestMeta() meta: AuthMeta,
   ) {
     return this.refreshSession.execute(body.refreshToken, meta);
@@ -96,11 +96,9 @@ export class SessionController {
 
 /** Refresh token do corpo, quando válido; corpo ausente ou inválido não impede o logout. */
 function optionalRefreshToken(rawBody: unknown): string | undefined {
-  try {
-    return new ClassValidatorPipe(LogoutRequestDTO).transform(rawBody ?? {}).refreshToken;
-  } catch {
-    return undefined;
-  }
+  const body = logoutRequestSchema.safeParse(rawBody ?? {});
+
+  return body.success ? body.data.refreshToken : undefined;
 }
 
 /** `userId` do access token, quando presente e válido; token inválido não impede o logout. */

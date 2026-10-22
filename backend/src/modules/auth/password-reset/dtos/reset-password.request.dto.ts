@@ -1,22 +1,11 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { Required } from "../../../../nest/http/class-validator.pipe.js";
-import { IsText, TextMinLength } from "../../../../nest/http/text.validators.js";
-import { StrongPasswordField, TotpCodeRules } from "../../rules/credential.validators.js";
+import { z } from "zod";
+import { linkTokenField, passwordField, totpCodeField } from "../../rules/credential.schemas.js";
 
-export const LINK_TOKEN_MIN_LENGTH = 32;
+export const resetPasswordRequestSchema = z.object({
+  token: linkTokenField,
+  password: passwordField,
+  /** Exigido com 2FA ativo. */
+  code: totpCodeField.optional(),
+});
 
-export class ResetPasswordRequestDTO {
-  @ApiProperty({ type: String, description: "Token do link enviado por e-mail" })
-  @Required()
-  @IsText()
-  @TextMinLength(LINK_TOKEN_MIN_LENGTH, "Link inválido ou expirado")
-  token!: string;
-
-  @ApiProperty({ type: String })
-  @StrongPasswordField()
-  password!: string;
-
-  @ApiPropertyOptional({ type: String, description: "Código TOTP, exigido com 2FA ativo" })
-  @TotpCodeRules()
-  code?: string;
-}
+export type ResetPasswordRequestDTO = z.infer<typeof resetPasswordRequestSchema>;

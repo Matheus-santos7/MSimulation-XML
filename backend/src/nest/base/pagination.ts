@@ -1,5 +1,4 @@
-import { Type } from "class-transformer";
-import { IsInt, IsOptional, IsString, Min } from "class-validator";
+import { z } from "zod";
 
 export const DEFAULT_PAGE = 1;
 export const DEFAULT_PAGE_SIZE = 10;
@@ -21,27 +20,22 @@ export type PaginatedResponse<T> = {
 };
 
 /** Query de listagem: `offset` é a página (default 1), `limit` o tamanho (default 10, teto 100). */
-export class PaginationQueryDTO {
-  @IsOptional()
-  @Type(() => Number)
-  @Min(1, { message: "A página mínima é 1" })
-  @IsInt({ message: "A página precisa ser um número inteiro" })
-  offset?: number;
+export const paginationQuerySchema = z.object({
+  offset: z.coerce
+    .number()
+    .int("A página precisa ser um número inteiro")
+    .min(1, "A página mínima é 1")
+    .optional(),
+  limit: z.coerce
+    .number()
+    .int("O tamanho da página precisa ser um número inteiro")
+    .min(1, "O tamanho mínimo da página é 1")
+    .optional(),
+  sort: z.string().optional(),
+  filter: z.string().optional(),
+});
 
-  @IsOptional()
-  @Type(() => Number)
-  @Min(1, { message: "O tamanho mínimo da página é 1" })
-  @IsInt({ message: "O tamanho da página precisa ser um número inteiro" })
-  limit?: number;
-
-  @IsOptional()
-  @IsString({ message: "A ordenação precisa ser um texto" })
-  sort?: string;
-
-  @IsOptional()
-  @IsString({ message: "O filtro precisa ser um texto" })
-  filter?: string;
-}
+export type PaginationQueryDTO = z.infer<typeof paginationQuerySchema>;
 
 /** Converte a query validada nos parâmetros do use case, aplicando defaults e o teto. */
 export function toPaginationParams(query: PaginationQueryDTO): PaginationParams {

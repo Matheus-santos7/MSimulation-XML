@@ -1,23 +1,11 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { Required } from "../../../../nest/http/class-validator.pipe.js";
-import { IsText, TextMinLength } from "../../../../nest/http/text.validators.js";
-import { CaptchaTokenField, TotpCodeRules } from "../../rules/credential.validators.js";
+import { z } from "zod";
+import { captchaTokenField, totpCodeField } from "../../rules/credential.schemas.js";
 
-const TWO_FACTOR_TOKEN_MIN_LENGTH = 20;
+export const verifyTwoFactorRequestSchema = z.object({
+  /** Token `2fa_pending` devolvido pelo login. */
+  twoFactorToken: z.string().min(20, "Sessão de verificação inválida"),
+  code: totpCodeField,
+  captchaToken: captchaTokenField,
+});
 
-export class VerifyTwoFactorRequestDTO {
-  @ApiProperty({ type: String, description: "Token `2fa_pending` devolvido pelo login" })
-  @Required()
-  @IsText()
-  @TextMinLength(TWO_FACTOR_TOKEN_MIN_LENGTH, "Sessão de verificação inválida")
-  twoFactorToken!: string;
-
-  @ApiProperty({ type: String, example: "123456" })
-  @Required()
-  @TotpCodeRules()
-  code!: string;
-
-  @ApiPropertyOptional({ type: String, description: "Token do Cloudflare Turnstile" })
-  @CaptchaTokenField()
-  captchaToken?: string;
-}
+export type VerifyTwoFactorRequestDTO = z.infer<typeof verifyTwoFactorRequestSchema>;

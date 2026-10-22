@@ -14,13 +14,22 @@ import { strictRouteRateLimit } from "../../../lib/http/rate-limit.js";
 import { JwtAuthGuard } from "../../../nest/auth/guards.js";
 import { UserId } from "../../../nest/auth/request-params.js";
 import { ApiExceptionFilter } from "../../../nest/http/api-exception.filter.js";
-import { ClassValidatorPipe } from "../../../nest/http/class-validator.pipe.js";
+import { ZodValidationPipe } from "../../../nest/http/zod-validation.pipe.js";
 import { RateLimit } from "../../../nest/http/rate-limit.interceptor.js";
 import { AuthApi, RequestMeta } from "../auth-api.decorators.js";
 import type { AuthMeta } from "../session/session.types.js";
-import { DisableTwoFactorRequestDTO } from "./dtos/disable-two-factor.request.dto.js";
-import { EnableTwoFactorRequestDTO } from "./dtos/enable-two-factor.request.dto.js";
-import { VerifyTwoFactorRequestDTO } from "./dtos/verify-two-factor.request.dto.js";
+import {
+  disableTwoFactorRequestSchema,
+  type DisableTwoFactorRequestDTO,
+} from "./dtos/disable-two-factor.request.dto.js";
+import {
+  enableTwoFactorRequestSchema,
+  type EnableTwoFactorRequestDTO,
+} from "./dtos/enable-two-factor.request.dto.js";
+import {
+  verifyTwoFactorRequestSchema,
+  type VerifyTwoFactorRequestDTO,
+} from "./dtos/verify-two-factor.request.dto.js";
 import { DisableTwoFactorUseCase } from "./use-cases/disable-two-factor.usecase.js";
 import { EnableTwoFactorUseCase } from "./use-cases/enable-two-factor.usecase.js";
 import { GetTwoFactorStatusUseCase } from "./use-cases/get-two-factor-status.usecase.js";
@@ -60,7 +69,7 @@ export class TwoFactorController {
   @RateLimit(strictRouteRateLimit(10, "15 minutes"))
   @HttpCode(HTTP_OK)
   async verifyLogin(
-    @Body(new ClassValidatorPipe(VerifyTwoFactorRequestDTO)) body: VerifyTwoFactorRequestDTO,
+    @Body(new ZodValidationPipe(verifyTwoFactorRequestSchema)) body: VerifyTwoFactorRequestDTO,
     @RequestMeta() meta: AuthMeta,
   ) {
     await verifyTurnstileToken(body.captchaToken);
@@ -90,7 +99,7 @@ export class TwoFactorController {
   @HttpCode(HTTP_OK)
   enable(
     @UserId() userId: string,
-    @Body(new ClassValidatorPipe(EnableTwoFactorRequestDTO)) body: EnableTwoFactorRequestDTO,
+    @Body(new ZodValidationPipe(enableTwoFactorRequestSchema)) body: EnableTwoFactorRequestDTO,
   ) {
     return this.enableTwoFactor.execute(userId, body.code);
   }
@@ -101,7 +110,7 @@ export class TwoFactorController {
   @HttpCode(HTTP_OK)
   disable(
     @UserId() userId: string,
-    @Body(new ClassValidatorPipe(DisableTwoFactorRequestDTO)) body: DisableTwoFactorRequestDTO,
+    @Body(new ZodValidationPipe(disableTwoFactorRequestSchema)) body: DisableTwoFactorRequestDTO,
   ) {
     return this.disableTwoFactor.execute(userId, body.password, body.code);
   }

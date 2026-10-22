@@ -1,13 +1,7 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { Required } from "../../../../nest/http/class-validator.pipe.js";
-import { IsText, TextMinLength } from "../../../../nest/http/text.validators.js";
+import { z } from "zod";
 
-export const REFRESH_TOKEN_MIN_LENGTH = 20;
+export const refreshRequestSchema = z.object({
+  refreshToken: z.string().min(20, "Refresh token inválido"),
+});
 
-export class RefreshRequestDTO {
-  @ApiProperty({ type: String })
-  @Required()
-  @IsText()
-  @TextMinLength(REFRESH_TOKEN_MIN_LENGTH, "Refresh token inválido")
-  refreshToken!: string;
-}
+export type RefreshRequestDTO = z.infer<typeof refreshRequestSchema>;

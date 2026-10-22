@@ -4,10 +4,9 @@ import type { FastifyBaseLogger } from "fastify";
 import { describe, expect, it, vi } from "vitest";
 import { ApiExceptionFilter } from "../../http/api-exception.filter.js";
 import { BusinessException } from "../../http/business.exception.js";
-import { ClassValidatorPipe } from "../../http/class-validator.pipe.js";
 import { BaseRepository } from "../base.repository.js";
 import { BaseService } from "../base.service.js";
-import { MAX_PAGE_SIZE, PaginationQueryDTO, toPaginationParams } from "../pagination.js";
+import { MAX_PAGE_SIZE, paginationQuerySchema, toPaginationParams } from "../pagination.js";
 import { TenantIdEntity } from "../tenant-id.entity.js";
 
 class BrandEntity extends TenantIdEntity {
@@ -129,8 +128,8 @@ describe("BusinessException", () => {
   });
 });
 
-describe("PaginationQueryDTO", () => {
-  const pipe = new ClassValidatorPipe(PaginationQueryDTO);
+describe("paginationQuerySchema", () => {
+  const pipe = { transform: (value: unknown) => paginationQuerySchema.parse(value) };
 
   it("should default to page 1 and 10 items", () => {
     expect(toPaginationParams(pipe.transform({}))).toEqual({ page: 1, perPage: 10 });

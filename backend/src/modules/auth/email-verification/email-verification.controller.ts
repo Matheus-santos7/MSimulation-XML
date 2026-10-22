@@ -3,10 +3,13 @@ import { ApiTags } from "@nestjs/swagger";
 import { strictRouteRateLimit } from "../../../lib/http/rate-limit.js";
 import { JwtAuthGuard } from "../../../nest/auth/guards.js";
 import { UserId } from "../../../nest/auth/request-params.js";
-import { ClassValidatorPipe } from "../../../nest/http/class-validator.pipe.js";
+import { ZodValidationPipe } from "../../../nest/http/zod-validation.pipe.js";
 import { RateLimit } from "../../../nest/http/rate-limit.interceptor.js";
 import { AuthApi } from "../auth-api.decorators.js";
-import { VerifyEmailRequestDTO } from "./dtos/verify-email.request.dto.js";
+import {
+  verifyEmailRequestSchema,
+  type VerifyEmailRequestDTO,
+} from "./dtos/verify-email.request.dto.js";
 import { ResendVerificationEmailUseCase } from "./use-cases/resend-verification-email.usecase.js";
 import { VerifyEmailUseCase } from "./use-cases/verify-email.usecase.js";
 
@@ -33,7 +36,7 @@ export class EmailVerificationController {
   @Post("verify-email")
   @RateLimit(strictRouteRateLimit(10, "15 minutes"))
   @HttpCode(HTTP_OK)
-  verifyEmail(@Body(new ClassValidatorPipe(VerifyEmailRequestDTO)) body: VerifyEmailRequestDTO) {
+  verifyEmail(@Body(new ZodValidationPipe(verifyEmailRequestSchema)) body: VerifyEmailRequestDTO) {
     return this.verifyEmailUseCase.execute(body.token);
   }
 

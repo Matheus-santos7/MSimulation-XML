@@ -1,10 +1,8 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { Required } from "../../../../nest/http/class-validator.pipe.js";
-import { TotpCodeRules } from "../../rules/credential.validators.js";
+import { z } from "zod";
+import { totpCodeField } from "../../rules/credential.schemas.js";
 
-export class EnableTwoFactorRequestDTO {
-  @ApiProperty({ type: String, example: "123456" })
-  @Required()
-  @TotpCodeRules()
-  code!: string;
-}
+export const enableTwoFactorRequestSchema = z.object({
+  code: totpCodeField,
+});
+
+export type EnableTwoFactorRequestDTO = z.infer<typeof enableTwoFactorRequestSchema>;

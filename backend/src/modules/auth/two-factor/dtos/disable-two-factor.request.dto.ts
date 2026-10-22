@@ -1,14 +1,9 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { Required } from "../../../../nest/http/class-validator.pipe.js";
-import { CurrentPasswordField, TotpCodeRules } from "../../rules/credential.validators.js";
+import { z } from "zod";
+import { currentPasswordField, totpCodeField } from "../../rules/credential.schemas.js";
 
-export class DisableTwoFactorRequestDTO {
-  @ApiProperty({ type: String })
-  @CurrentPasswordField()
-  password!: string;
+export const disableTwoFactorRequestSchema = z.object({
+  password: currentPasswordField,
+  code: totpCodeField,
+});
 
-  @ApiProperty({ type: String, example: "123456" })
-  @Required()
-  @TotpCodeRules()
-  code!: string;
-}
+export type DisableTwoFactorRequestDTO = z.infer<typeof disableTwoFactorRequestSchema>;

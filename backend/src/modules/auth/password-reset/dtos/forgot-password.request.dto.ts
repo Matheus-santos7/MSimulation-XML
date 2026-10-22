@@ -1,12 +1,9 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { CaptchaTokenField, EmailField } from "../../rules/credential.validators.js";
+import { z } from "zod";
+import { captchaTokenField, emailField } from "../../rules/credential.schemas.js";
 
-export class ForgotPasswordRequestDTO {
-  @ApiProperty({ type: String })
-  @EmailField()
-  email!: string;
+export const forgotPasswordRequestSchema = z.object({
+  email: emailField,
+  captchaToken: captchaTokenField,
+});
 
-  @ApiPropertyOptional({ type: String, description: "Token do Cloudflare Turnstile" })
-  @CaptchaTokenField()
-  captchaToken?: string;
-}
+export type ForgotPasswordRequestDTO = z.infer<typeof forgotPasswordRequestSchema>;

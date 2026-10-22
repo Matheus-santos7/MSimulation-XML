@@ -5,17 +5,13 @@
  */
 
 import {
-  ML_INF_RESP_TEC,
   simulationNProt,
   simulationProtDigVal,
   xTextoFromNfe,
-  VENDA_ML_INF_RESP_TEC,
+  type MarketplaceIntermediador,
+  type NfeInfRespTec,
 } from "@msimulation-xml/fiscal-core";
 import type { XmlObject } from "../../core/xml-serializer.js";
-import {
-  REMESSA_ML_INTERMED_CNPJ,
-  REMESSA_ML_INTERMED_ID,
-} from "../../constants.js";
 import { resolveIdCadIntTran } from "../../fiscal/fiscal-xml.util.js";
 import type { resolveEmitterFromPayload } from "../../resolve-emitter.js";
 import type { NFeXmlInput } from "../../types.js";
@@ -30,10 +26,8 @@ export function buildAutXmlNodes(cpfs: readonly string[]): XmlObject[] {
 
 /** Monta `<protNFe>` de simulação. */
 export function buildProtNFeNode(nfe: NFeXmlInput, dhEmi: string): XmlObject {
-  const cStat =
-    nfe.status === "AUTORIZADA" ? 100 : nfe.status === "REJEITADA" ? 539 : 103;
-  const xMotivo =
-    nfe.status === "AUTORIZADA" ? "Autorizado o uso da NF-e (SIMULAÇÃO)" : nfe.status;
+  const cStat = nfe.status === "AUTORIZADA" ? 100 : nfe.status === "REJEITADA" ? 539 : 103;
+  const xMotivo = nfe.status === "AUTORIZADA" ? "Autorizado o uso da NF-e (SIMULAÇÃO)" : nfe.status;
 
   return {
     protNFe: {
@@ -83,22 +77,31 @@ export function buildInfAdicNode(input: InfAdicNodeInput): XmlObject | null {
   return { infAdic };
 }
 
-/** Monta `<infIntermed>` (marketplace). Prefer `fiscal.infIntermed` (NT 2023.004). */
-export function buildInfIntermedNode(fiscal: Record<string, unknown>): XmlObject {
-  const idCadIntTran = resolveIdCadIntTran(fiscal, REMESSA_ML_INTERMED_ID);
+/**
+ * Monta `<infIntermed>` (NT 2023.004). Prefere `fiscal.infIntermed`; completa com o intermediador
+ * do marketplace. Sem intermediador no perfil, a nota não leva o bloco.
+ */
+export function buildInfIntermedNode(
+  fiscal: Record<string, unknown>,
+  intermediador: MarketplaceIntermediador | null,
+): XmlObject | null {
+  if (!intermediador) return null;
+
+  const idCadIntTran = resolveIdCadIntTran(fiscal, intermediador.idCadIntTranPadrao);
   const raw = fiscal.infIntermed as Record<string, unknown> | undefined;
   const cnpjFromPayload = digitsOnly(String(raw?.CNPJ ?? ""));
   return {
     infIntermed: {
-      CNPJ: cnpjFromPayload.length === 14 ? cnpjFromPayload : REMESSA_ML_INTERMED_CNPJ,
+      CNPJ: cnpjFromPayload.length === 14 ? cnpjFromPayload : intermediador.cnpj,
       idCadIntTran,
     },
   };
 }
 
-/** Monta `<infRespTec>` para venda ML. */
-export function buildVendaInfRespTecNode(): XmlObject {
-  const opts = VENDA_ML_INF_RESP_TEC;
+/** Monta `<infRespTec>` da venda (com CSRT quando o marketplace informa). */
+export function buildVendaInfRespTecNode(opts: NfeInfRespTec | null): XmlObject | null {
+  if (!opts) return null;
+
   const node: XmlObject = {
     CNPJ: digitsOnly(opts.cnpj),
     xContato: opts.xContato,
@@ -112,9 +115,10 @@ export function buildVendaInfRespTecNode(): XmlObject {
   return { infRespTec: node };
 }
 
-/** Monta `<infRespTec>` para remessa ML fulfillment. */
-export function buildRemessaInfRespTecNode(): XmlObject {
-  const opts = ML_INF_RESP_TEC;
+/** Monta `<infRespTec>` de remessa, retorno e transferência (sem CSRT). */
+export function buildRemessaInfRespTecNode(opts: NfeInfRespTec | null): XmlObject | null {
+  if (!opts) return null;
+
   return {
     infRespTec: {
       CNPJ: digitsOnly(opts.cnpj),

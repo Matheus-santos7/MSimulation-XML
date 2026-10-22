@@ -4,7 +4,6 @@
  * @module builders/nodes/ide.node
  */
 
-import { ML_NFE_VER_PROC } from "@msimulation-xml/fiscal-core";
 import type { XmlObject } from "../../core/xml-serializer.js";
 import type { NFeXmlInput } from "../../types.js";
 import { ufToCodigo } from "../../constants.js";
@@ -62,9 +61,7 @@ export function buildIdeNode(input: IdeNodeInput): XmlObject {
 }
 
 /** Normaliza chave(s) de NF-e referenciada(s) para lista de 44 dígitos, sem duplicar. */
-export function normalizeNfeReferenciaChaves(
-  raw: string | string[] | undefined | null,
-): string[] {
+export function normalizeNfeReferenciaChaves(raw: string | string[] | undefined | null): string[] {
   if (raw == null) return [];
   const list = Array.isArray(raw) ? raw : [raw];
   const out: string[] = [];
@@ -79,8 +76,15 @@ export function normalizeNfeReferenciaChaves(
   return out;
 }
 
-/** Defaults de ide para NF-e de venda ML. */
-export function vendaIdeOptions(stockUf: string, destUf: string): IdeBuildOptions {
+/** `verProc` das notas que o marketplace não define (remessa, retorno). */
+export const SIMULATION_VER_PROC = "invoice-SIMULATION";
+
+/** Defaults de ide para NF-e de venda; `verProc` vem do perfil do marketplace. */
+export function vendaIdeOptions(
+  stockUf: string,
+  destUf: string,
+  verProc: string | null,
+): IdeBuildOptions {
   return {
     stockUf,
     idDest: stockUf.toUpperCase() === destUf.toUpperCase() ? 1 : 2,
@@ -88,14 +92,18 @@ export function vendaIdeOptions(stockUf: string, destUf: string): IdeBuildOption
     indFinal: 1,
     indPres: 2,
     indIntermed: 1,
-    verProc: ML_NFE_VER_PROC,
+    verProc: verProc ?? SIMULATION_VER_PROC,
     tpNF: 1,
     includeNfRef: true,
   };
 }
 
 /** Defaults de ide para remessa física / simbólica ML. */
-export function remessaIdeOptions(emitUf: string, destUf: string, tipo: NFeXmlInput["tipo"]): IdeBuildOptions {
+export function remessaIdeOptions(
+  emitUf: string,
+  destUf: string,
+  tipo: NFeXmlInput["tipo"],
+): IdeBuildOptions {
   return {
     stockUf: emitUf,
     idDest: emitUf.toUpperCase() === destUf.toUpperCase() ? 1 : 2,
@@ -103,7 +111,7 @@ export function remessaIdeOptions(emitUf: string, destUf: string, tipo: NFeXmlIn
     indFinal: 0,
     indPres: 2,
     indIntermed: 1,
-    verProc: "invoice-SIMULATION",
+    verProc: SIMULATION_VER_PROC,
     tpNF: 1,
     includeNfRef: tipo !== "REMESSA",
   };
@@ -118,16 +126,20 @@ export function retornoIdeOptions(emitUf: string, destUf: string): IdeBuildOptio
     indFinal: 0,
     indPres: 2,
     indIntermed: 1,
-    verProc: "invoice-SIMULATION",
+    verProc: SIMULATION_VER_PROC,
     tpNF: 0,
     includeNfRef: true,
   };
 }
 
 /** Defaults de ide para devolução (`tpNF=0`, `finNFe=4`). `<NFref>` fica proibido. */
-export function devolucaoIdeOptions(stockUf: string, destUf: string): IdeBuildOptions {
+export function devolucaoIdeOptions(
+  stockUf: string,
+  destUf: string,
+  verProc: string | null,
+): IdeBuildOptions {
   return {
-    ...vendaIdeOptions(stockUf, destUf),
+    ...vendaIdeOptions(stockUf, destUf, verProc),
     tpNF: 0,
     finNFe: 4,
     includeNfRef: false,

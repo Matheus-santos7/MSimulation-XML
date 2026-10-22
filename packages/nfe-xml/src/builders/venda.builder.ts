@@ -205,7 +205,9 @@ export class VendaNFeStrategyBuilder extends BaseNFeBuilder {
         vNF,
         vTotTrib,
         vFCPUFDest: interstate ? asNum(difalFiscal.vFCPUFDest, 0) : undefined,
-        vICMSUFDest: interstate ? asNum(difalFiscal.vICMSUFDest, this.ctx.emitter.difal.vDifal) : undefined,
+        vICMSUFDest: interstate
+          ? asNum(difalFiscal.vICMSUFDest, this.ctx.emitter.difal.vDifal)
+          : undefined,
         vICMSUFRemet: interstate ? asNum(difalFiscal.vICMSUFRemet, 0) : undefined,
       };
     }
@@ -218,16 +220,17 @@ export class VendaNFeStrategyBuilder extends BaseNFeBuilder {
       const prod = this.resolveProductAt(i);
       const engineItem = this.ctx.engine?.itens[i];
       const qCom =
-        dtoItem?.quantidade ??
-        engineItem?.quantidade ??
-        (itemCount === 1 ? nfe.quantidade : 1);
+        dtoItem?.quantidade ?? engineItem?.quantidade ?? (itemCount === 1 ? nfe.quantidade : 1);
       const vUnComOut =
         engineItem?.valorUnitario ??
         (dtoItem?.valor != null && qCom ? dtoItem.valor / qCom : productUnitPriceForNfe(prod, nfe));
       const vProdOut = engineItem?.vProd ?? dtoItem?.valor ?? (itemCount === 1 ? nfe.valor : 0);
       const vFreteOut = engineItem?.vFrete ?? (i === 0 ? vFrete : 0);
       const vDescOut = engineItem?.vDesc ?? (itemCount === 1 ? vDescPayload : 0);
-      const vBcIcmsItem = asNum(engineItem?.icms.vBC, asNum(icms.vBc, this.ctx.emitter.bases.vBcIcms));
+      const vBcIcmsItem = asNum(
+        engineItem?.icms.vBC,
+        asNum(icms.vBc, this.ctx.emitter.bases.vBcIcms),
+      );
       const valorIcmsItem = asNum(engineItem?.icms.vICMS, asNum(icms.valorIcms, nfe.valorICMS));
       const ibsCbsBcInput = engineItem
         ? ibsCbsBcInputFromEngineItem(engineItem)
@@ -251,11 +254,7 @@ export class VendaNFeStrategyBuilder extends BaseNFeBuilder {
         cest: prod?.cest ?? dtoItem?.product?.cest,
         exTipi: prod?.exTipi ?? dtoItem?.product?.exTipi,
         nfci: i === 0 ? nfciRaw : undefined,
-        xPed:
-          optionalText(dtoItem?.xPed) ||
-          xPedsFiscal?.[i] ||
-          packXPed ||
-          undefined,
+        xPed: optionalText(dtoItem?.xPed) || xPedsFiscal?.[i] || packXPed || undefined,
         infAdProd: i === 0 ? infAdProd : undefined,
         vBcIcms: vBcIcmsItem,
         valorIcms: valorIcmsItem,
@@ -264,8 +263,7 @@ export class VendaNFeStrategyBuilder extends BaseNFeBuilder {
       });
     }
 
-    const hasIbsCbsPayload =
-      ibsCbs.st != null || ibsCbs.cst != null || ibsCbs.cClassTrib != null;
+    const hasIbsCbsPayload = ibsCbs.st != null || ibsCbs.cst != null || ibsCbs.cClassTrib != null;
 
     return {
       stockUf,
@@ -294,14 +292,17 @@ export class VendaNFeStrategyBuilder extends BaseNFeBuilder {
     const ideFields = resolveVendaIdeFields({
       emitUf: this.ctx.emit.endereco.uf,
       emitCMun: this.ctx.emit.endereco.cMun,
-      ufSaidaFisica:
-        typeof fiscal.ufSaidaFisica === "string" ? fiscal.ufSaidaFisica : undefined,
+      ufSaidaFisica: typeof fiscal.ufSaidaFisica === "string" ? fiscal.ufSaidaFisica : undefined,
       cMunSaidaFisica:
         typeof fiscal.cMunSaidaFisica === "string" ? fiscal.cMunSaidaFisica : undefined,
     });
 
     return {
-      ...vendaIdeOptions(this.vendaCtx.stockUf, d.endereco.uf),
+      ...vendaIdeOptions(
+        this.vendaCtx.stockUf,
+        d.endereco.uf,
+        this.ctx.marketplace.ide.verProcVenda,
+      ),
       idDest: this.vendaCtx.idDest,
       cUfIde: ideFields.cUf,
       cMunFGIde: ideFields.cMunFG,
@@ -326,9 +327,10 @@ export class VendaNFeStrategyBuilder extends BaseNFeBuilder {
         },
         ibsCbsMode: "venda",
         ibsCbsVBc: item.ibsCbsVBc,
-        vTotTrib: item.index === 0 && this.vendaCtx.taxes.vTotTrib > 0
-          ? this.vendaCtx.taxes.vTotTrib
-          : undefined,
+        vTotTrib:
+          item.index === 0 && this.vendaCtx.taxes.vTotTrib > 0
+            ? this.vendaCtx.taxes.vTotTrib
+            : undefined,
       });
 
       const prod: XmlObject = {
@@ -374,6 +376,9 @@ export class VendaNFeStrategyBuilder extends BaseNFeBuilder {
       this.ctx.emitter,
       this.ctx.fiscal,
       this.vendaCtx.totalQty,
+      // O transportador da venda já vem no fiscalPayload (enrichVendaPayload); a reserva
+      // é a mesma das remessas, como nas devoluções, que reaproveitam este builder.
+      this.ctx.marketplace.transportador.remessa,
     );
   }
 
@@ -400,8 +405,8 @@ export class VendaNFeStrategyBuilder extends BaseNFeBuilder {
     });
   }
 
-  protected buildInfRespTec(): XmlObject {
-    return buildVendaInfRespTecNode();
+  protected buildInfRespTec(): XmlObject | null {
+    return buildVendaInfRespTecNode(this.ctx.marketplace.responsavelTecnico.venda);
   }
 
   protected shouldIncludeInfIntermed(): boolean {

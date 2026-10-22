@@ -148,9 +148,7 @@ export class RemessaNFeStrategyBuilder extends BaseNFeBuilder {
       const prod = this.resolveProductAt(i);
       const engineItem = this.ctx.engine?.itens[i];
       const qCom =
-        dtoItem?.quantidade ??
-        engineItem?.quantidade ??
-        (itemCount === 1 ? nfe.quantidade : 1);
+        dtoItem?.quantidade ?? engineItem?.quantidade ?? (itemCount === 1 ? nfe.quantidade : 1);
       const cProd = prod?.sku ?? dtoItem?.product?.sku ?? `SKU-${nfe.numero}-${i + 1}`;
       const cEAN = formatEanForXml(prod?.ean ?? dtoItem?.product?.ean);
       const xProd = prod?.nome ?? dtoItem?.product?.nome ?? nfe.natOp;
@@ -159,9 +157,7 @@ export class RemessaNFeStrategyBuilder extends BaseNFeBuilder {
       const uCom = prod?.unidade ?? dtoItem?.product?.unidade ?? "UNID";
       const vUnComOut =
         engineItem?.valorUnitario ??
-        (dtoItem?.valor != null && qCom
-          ? dtoItem.valor / qCom
-          : productUnitPriceForNfe(prod, nfe));
+        (dtoItem?.valor != null && qCom ? dtoItem.valor / qCom : productUnitPriceForNfe(prod, nfe));
       const vProdOut = engineItem?.vProd ?? dtoItem?.valor ?? nfe.valor;
       const orig = prod?.origem ?? dtoItem?.product?.origem ?? 1;
       const exTipi =
@@ -171,19 +167,14 @@ export class RemessaNFeStrategyBuilder extends BaseNFeBuilder {
       const nfciRaw =
         optionalText(typeof fiscal.nfci === "string" ? fiscal.nfci : undefined) ||
         optionalText(prod?.nfci);
-      const infAdProd =
-        i === 0 && nfe.pedidoML ? `xPed:${nfe.pedidoML}` : undefined;
+      const infAdProd = i === 0 && nfe.pedidoML ? `xPed:${nfe.pedidoML}` : undefined;
 
       const vBcIcmsItem = asNum(icms.vBc, this.ctx.emitter.bases.vBcIcms);
       const valorIcmsItem = asNum(icms.valorIcms, nfe.valorICMS);
       const ibsCbsBcInput = engineItem
         ? ibsCbsBcInputFromEngineItem(engineItem)
         : ibsCbsBcInputFromSnapshot(vProdOut, fiscal, valorIcmsItem);
-      const itemVBcIbsCbs = resolveIbsCbsItemVBc(
-        ibsCbs,
-        ibsCbsBcInput,
-        REMESSA_IBS_CBS_DEFAULTS,
-      );
+      const itemVBcIbsCbs = resolveIbsCbsItemVBc(ibsCbs, ibsCbsBcInput, REMESSA_IBS_CBS_DEFAULTS);
       if (itemVBcIbsCbs != null) ibsCbsVBcValues.push(itemVBcIbsCbs);
 
       items.push({
@@ -287,6 +278,7 @@ export class RemessaNFeStrategyBuilder extends BaseNFeBuilder {
       this.ctx.emitter,
       this.ctx.fiscal,
       this.remessaCtx.totalQty,
+      this.ctx.marketplace.transportador.remessa,
     );
   }
 
@@ -312,9 +304,7 @@ export class RemessaNFeStrategyBuilder extends BaseNFeBuilder {
 
   private resolveRemessaInfCpl(): string {
     const fiscal = this.ctx.fiscal;
-    const posDevolucao = fiscal.remessaSimbolicaPosDevolucao as
-      | Record<string, unknown>
-      | undefined;
+    const posDevolucao = fiscal.remessaSimbolicaPosDevolucao as Record<string, unknown> | undefined;
     const nfe = this.ctx.nfe;
     const operation = this.resolveInfCplOperation();
     const ieMiddle = buildRemessaIeMiddle(this.remessaCtx.destIe);
@@ -358,7 +348,7 @@ export class RemessaNFeStrategyBuilder extends BaseNFeBuilder {
 
   protected buildInfRespTec(): XmlObject | null {
     return hasMlFulfillmentPayload(this.ctx.fiscal)
-      ? buildRemessaInfRespTecNode()
+      ? buildRemessaInfRespTecNode(this.ctx.marketplace.responsavelTecnico.remessa)
       : null;
   }
 

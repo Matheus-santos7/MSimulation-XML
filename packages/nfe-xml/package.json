@@ -13,7 +13,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "pnpm run build && node --import tsx --test src/build-remessa.test.ts src/build-venda.test.ts src/fiscal-engine-xml.test.ts src/taxes/taxes.resolver.test.ts src/builders/nfe-factory.test.ts src/golden/golden.test.ts"
+    "test": "pnpm run build && node --import tsx --test src/build-remessa.test.ts src/build-venda.test.ts src/fiscal-engine-xml.test.ts src/taxes/taxes.resolver.test.ts src/builders/nfe-factory.test.ts src/golden/golden.test.ts src/golden/marketplace-profile.test.ts"
   },
   "dependencies": {
     "@msimulation-xml/fiscal-core": "workspace:*"

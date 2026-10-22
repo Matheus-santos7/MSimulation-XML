@@ -29,14 +29,17 @@ export class DevolucaoNFeStrategyBuilder extends VendaNFeStrategyBuilder {
     const ideFields = resolveVendaIdeFields({
       emitUf: this.ctx.emit.endereco.uf,
       emitCMun: this.ctx.emit.endereco.cMun,
-      ufSaidaFisica:
-        typeof fiscal.ufSaidaFisica === "string" ? fiscal.ufSaidaFisica : undefined,
+      ufSaidaFisica: typeof fiscal.ufSaidaFisica === "string" ? fiscal.ufSaidaFisica : undefined,
       cMunSaidaFisica:
         typeof fiscal.cMunSaidaFisica === "string" ? fiscal.cMunSaidaFisica : undefined,
     });
 
     return {
-      ...devolucaoIdeOptions(this.vendaCtx.stockUf, d.endereco.uf),
+      ...devolucaoIdeOptions(
+        this.vendaCtx.stockUf,
+        d.endereco.uf,
+        this.ctx.marketplace.ide.verProcVenda,
+      ),
       idDest: this.vendaCtx.idDest,
       cUfIde: ideFields.cUf,
       cMunFGIde: ideFields.cMunFG,
@@ -76,9 +79,7 @@ export class DevolucaoNFeStrategyBuilder extends VendaNFeStrategyBuilder {
   }
 
   protected resolveInfCplOperation(): FulfillmentInfCplOperation {
-    return this.ctx.nfe.tipo === "INSULCESSO_DE_ENTREGA"
-      ? "INSULCESSO_DE_ENTREGA"
-      : "DEVOLUCAO";
+    return this.ctx.nfe.tipo === "INSULCESSO_DE_ENTREGA" ? "INSULCESSO_DE_ENTREGA" : "DEVOLUCAO";
   }
 
   private resolveDevolucaoInfCpl(): string {
@@ -105,8 +106,7 @@ export class DevolucaoNFeStrategyBuilder extends VendaNFeStrategyBuilder {
       emitidaEm: String(rawOrigem.emitidaEm),
     };
 
-    const ufFilial =
-      typeof fiscal.ufFilialInfCpl === "string" ? fiscal.ufFilialInfCpl.trim() : "";
+    const ufFilial = typeof fiscal.ufFilialInfCpl === "string" ? fiscal.ufFilialInfCpl.trim() : "";
     const cnpjFilial =
       typeof fiscal.cnpjFilialInfCpl === "string" ? fiscal.cnpjFilialInfCpl.trim() : "";
 

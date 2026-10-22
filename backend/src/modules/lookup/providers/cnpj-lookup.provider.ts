@@ -1,8 +1,7 @@
-import type { CnpjLookupResult } from "../../domain/entities/cnpj-lookup-result.entity.js";
-import { LookupNotFoundError } from "../../domain/errors/lookup-not-found.error.js";
-import { LookupValidationError } from "../../domain/errors/lookup-validation.error.js";
-import type { CepLookupPort } from "../../domain/ports/cep-lookup.port.js";
-import type { CnpjLookupPort } from "../../domain/ports/cnpj-lookup.port.js";
+import { Inject, Injectable } from "@nestjs/common";
+import type { CnpjLookupResponseDTO } from "../dtos/cnpj-lookup.response.dto.js";
+import { LookupError } from "../errors/lookup.errors.js";
+import { CepLookupProvider } from "./cep-lookup.provider.js";
 
 const BRASIL_API = "https://brasilapi.com.br/api";
 const OPEN_CNPJ_API = "https://api.opencnpj.org";
@@ -54,33 +53,34 @@ type OpenCnpjResponse = {
  * Ordem de resolução:
  * 1. **BrasilAPI** (`/cnpj/v1/{cnpj}`) — preferencial
  * 2. Em **403/429** ou erro transitório, tenta **OpenCNPJ** sem falhar imediatamente
- * 3. Na resposta OpenCNPJ, enriquece IBGE/município via {@link CepLookupPort} quando há CEP
+ * 3. Na resposta OpenCNPJ, enriquece IBGE/município via {@link CepLookupProvider} quando há CEP
  *
  * CRT inferido: `1` (Simples/MEI) ou `3` (regime normal).
  *
- * @implements {CnpjLookupPort}
+ *
  */
-export class HttpCnpjLookupGateway implements CnpjLookupPort {
-  constructor(private readonly cepLookup: CepLookupPort) {}
+@Injectable()
+export class CnpjLookupProvider {
+  constructor(@Inject(CepLookupProvider) private readonly cepLookup: CepLookupProvider) {}
 
   /**
    * @param rawValue - CNPJ bruto da rota ou formulário
    * @returns Cadastro normalizado para pré-preenchimento de tenant
-   * @throws {LookupValidationError} Formato inválido ou CNPJ fictício (BrasilAPI 400)
-   * @throws {LookupNotFoundError} Não encontrado em BrasilAPI nem OpenCNPJ
+   * @throws {LookupError.Invalid} Formato inválido ou CNPJ fictício (BrasilAPI 400)
+   * @throws {LookupError.NotFound} Não encontrado em BrasilAPI nem OpenCNPJ
    * @throws {Error} OpenCNPJ indisponível após fallback
    */
-  async lookup(rawValue: string): Promise<CnpjLookupResult> {
+  async lookup(rawValue: string): Promise<CnpjLookupResponseDTO> {
     const taxId = rawValue.replace(/\D/g, "");
     if (taxId.length !== 14) {
-      throw new LookupValidationError("CNPJ deve ter 14 dígitos");
+      throw new LookupError.Invalid("CNPJ deve ter 14 dígitos");
     }
 
     try {
       const fromBrasilApi = await this.fetchFromBrasilApi(taxId);
       if (fromBrasilApi) return fromBrasilApi;
     } catch (error) {
-      if (error instanceof LookupNotFoundError || error instanceof LookupValidationError) {
+      if (error instanceof LookupError.NotFound || error instanceof LookupError.Invalid) {
         throw error;
       }
     }
@@ -92,15 +92,15 @@ export class HttpCnpjLookupGateway implements CnpjLookupPort {
    * Consulta BrasilAPI. Retorna `null` em rate limit (429) ou bloqueio (403)
    * para permitir fallback sem expor erro ao cliente.
    */
-  private async fetchFromBrasilApi(taxId: string): Promise<CnpjLookupResult | null> {
+  private async fetchFromBrasilApi(taxId: string): Promise<CnpjLookupResponseDTO | null> {
     const response = await fetch(`${BRASIL_API}/cnpj/v1/${taxId}`, { headers: FETCH_HEADERS });
 
     if (response.status === 404) {
-      throw new LookupNotFoundError("CNPJ não encontrado na base pública");
+      throw new LookupError.NotFound("CNPJ não encontrado na base pública");
     }
 
     if (response.status === 400) {
-      throw new LookupValidationError(
+      throw new LookupError.Invalid(
         "CNPJ inválido ou fictício. Use um CNPJ real da Receita ou preencha os campos manualmente.",
       );
     }
@@ -117,11 +117,11 @@ export class HttpCnpjLookupGateway implements CnpjLookupPort {
   }
 
   /** Segunda fonte quando BrasilAPI está limitada ou indisponível. */
-  private async fetchFromOpenCnpj(taxId: string): Promise<CnpjLookupResult> {
+  private async fetchFromOpenCnpj(taxId: string): Promise<CnpjLookupResponseDTO> {
     const response = await fetch(`${OPEN_CNPJ_API}/${taxId}`, { headers: FETCH_HEADERS });
 
     if (response.status === 404) {
-      throw new LookupNotFoundError("CNPJ não encontrado na base pública");
+      throw new LookupError.NotFound("CNPJ não encontrado na base pública");
     }
 
     if (!response.ok) {
@@ -132,7 +132,7 @@ export class HttpCnpjLookupGateway implements CnpjLookupPort {
     return this.mapOpenCnpjResponse(data, taxId);
   }
 
-  private mapBrasilApiResponse(data: BrasilApiCnpjResponse, taxId: string): CnpjLookupResult {
+  private mapBrasilApiResponse(data: BrasilApiCnpjResponse, taxId: string): CnpjLookupResponseDTO {
     return {
       razaoSocial: data.razao_social ?? "",
       nomeFantasia: data.nome_fantasia?.trim() || data.razao_social || "",
@@ -153,7 +153,7 @@ export class HttpCnpjLookupGateway implements CnpjLookupPort {
   private async mapOpenCnpjResponse(
     data: OpenCnpjResponse,
     taxId: string,
-  ): Promise<CnpjLookupResult> {
+  ): Promise<CnpjLookupResponseDTO> {
     const phone = data.telefones?.[0];
     const postalCode = (data.cep ?? "").replace(/\D/g, "");
 

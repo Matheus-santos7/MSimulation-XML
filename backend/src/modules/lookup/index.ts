@@ -1,20 +1,17 @@
-import { createLookupModule } from "./infrastructure/factory/lookup-module.factory.js";
+/** API pública do módulo lookup para outros módulos. */
+import { CepLookupProvider } from "./providers/cep-lookup.provider.js";
 
-export type { CepLookupResult } from "./domain/entities/cep-lookup-result.entity.js";
-export type { CnpjLookupResult } from "./domain/entities/cnpj-lookup-result.entity.js";
-export { LookupNotFoundError } from "./domain/errors/lookup-not-found.error.js";
-export { LookupValidationError } from "./domain/errors/lookup-validation.error.js";
-export { LookupCepUseCase } from "./application/use-cases/lookup-cep.use-case.js";
-export { LookupCnpjUseCase } from "./application/use-cases/lookup-cnpj.use-case.js";
-export { createLookupModule };
-export { LookupController } from "./presentation/controllers/lookup.controller.js";
+export { CepLookupResponseDTO } from "./dtos/cep-lookup.response.dto.js";
+export { CnpjLookupResponseDTO } from "./dtos/cnpj-lookup.response.dto.js";
+export { LookupError } from "./errors/lookup.errors.js";
 export { LookupModule } from "./lookup.module.js";
-export { cepParamSchema, cnpjParamSchema } from "./presentation/schemas/lookup.schemas.js";
+export { LookupService } from "./lookup.service.js";
+export { CepLookupProvider } from "./providers/cep-lookup.provider.js";
 
+/**
+ * @deprecated Consulta de CEP fora do container Nest, usada pelo módulo logistics até ele injetar
+ * `CepLookupProvider`. Sai na conversão do logistics.
+ */
 export async function lookupCep(rawValue: string) {
-  return createLookupModule().lookupCep.execute(rawValue);
-}
-
-export async function lookupCnpj(rawValue: string) {
-  return createLookupModule().lookupCnpj.execute(rawValue);
+  return new CepLookupProvider().lookup(rawValue);
 }

@@ -28,4 +28,11 @@ export default [
       ],
     },
   },
+  {
+    // Erros nomeados do módulo: `export namespace <Feature>Error { ... }` (.claude/rules/error-handling.md).
+    files: ["src/**/errors/*.errors.ts"],
+    rules: {
+      "@typescript-eslint/no-namespace": "off",
+    },
+  },
 ];

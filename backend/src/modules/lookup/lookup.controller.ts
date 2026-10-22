@@ -1,80 +1,36 @@
-import { Controller, Get, Inject, Param, Req, UseInterceptors } from "@nestjs/common";
-import type { FastifyBaseLogger, FastifyRequest } from "fastify";
-import { ZodError } from "zod";
-import { HttpError } from "../../../../lib/http/http-error.js";
-import { AuthenticatedApi } from "../../../../nest/api-access.decorators.js";
-import { RateLimit, RateLimitInterceptor } from "../../../../nest/http/rate-limit.interceptor.js";
-import { LookupNotFoundError } from "../../domain/errors/lookup-not-found.error.js";
-import { LookupValidationError } from "../../domain/errors/lookup-validation.error.js";
-import { lookupRouteRateLimit } from "../../infrastructure/http/lookup-rate-limit.js";
-import { LOOKUP, type LookupContext } from "../../lookup.tokens.js";
-import { cepParamSchema, cnpjParamSchema } from "../schemas/lookup.schemas.js";
+import { Controller, Get, Inject, Param, UseInterceptors } from "@nestjs/common";
+import { ApiResponse, ApiTags } from "@nestjs/swagger";
+import { strictRouteRateLimit } from "../../lib/http/rate-limit.js";
+import { AuthenticatedApi } from "../../nest/api-access.decorators.js";
+import { RateLimit, RateLimitInterceptor } from "../../nest/http/rate-limit.interceptor.js";
+import { CepLookupResponseDTO } from "./dtos/cep-lookup.response.dto.js";
+import { CnpjLookupResponseDTO } from "./dtos/cnpj-lookup.response.dto.js";
+import { LookupService } from "./lookup.service.js";
 
-const HTTP_BAD_REQUEST = 400;
-const HTTP_NOT_FOUND = 404;
-const HTTP_BAD_GATEWAY = 502;
-
-/** Traduz falhas do lookup; erro de API externa vira 502 com a mensagem original. */
-function toLookupHttpError(
-  error: unknown,
-  messages: { invalid: string; fallback: string },
-  log: FastifyBaseLogger,
-): HttpError {
-  if (error instanceof LookupNotFoundError) return new HttpError(HTTP_NOT_FOUND, error.message);
-  if (error instanceof LookupValidationError) return new HttpError(HTTP_BAD_REQUEST, error.message);
-  if (error instanceof ZodError) return new HttpError(HTTP_BAD_REQUEST, messages.invalid);
-
-  log.error(error);
-
-  return new HttpError(
-    HTTP_BAD_GATEWAY,
-    error instanceof Error ? error.message : messages.fallback,
-  );
-}
+/** Anti-abuso do proxy para APIs públicas: 30 consultas/min por rota e por IP (403 ao estourar). */
+export const LOOKUP_RATE_LIMIT = strictRouteRateLimit(30, "1 minute");
 
 /**
  * Lookup CNPJ/CEP: só JWT, sem tenant (onboarding) e sem transação.
- * Limite de 30 consultas/min por rota e por IP, contado depois do JWT.
- *
- * | Método | Rota | Use case |
- * |--------|------|----------|
- * | GET | `/lookup/cnpj/:cnpj` | LookupCnpjUseCase |
- * | GET | `/lookup/cep/:cep` | LookupCepUseCase |
+ * O limite é contado depois do JWT.
  */
 @Controller("lookup")
+@ApiTags("lookup")
 @AuthenticatedApi()
 @UseInterceptors(RateLimitInterceptor)
-@RateLimit(lookupRouteRateLimit)
+@RateLimit(LOOKUP_RATE_LIMIT)
 export class LookupController {
-  constructor(@Inject(LOOKUP) private readonly lookup: LookupContext) {}
+  constructor(@Inject(LookupService) private readonly lookupService: LookupService) {}
 
   @Get("cnpj/:cnpj")
-  async cnpj(@Param() params: unknown, @Req() request: FastifyRequest) {
-    try {
-      const { cnpj } = cnpjParamSchema.parse(params);
-
-      return await this.lookup.lookupCnpj.execute(cnpj);
-    } catch (error) {
-      throw toLookupHttpError(
-        error,
-        { invalid: "CNPJ inválido", fallback: "Falha ao consultar CNPJ" },
-        request.log,
-      );
-    }
+  @ApiResponse({ status: 200, type: CnpjLookupResponseDTO })
+  cnpj(@Param("cnpj") cnpj: string): Promise<CnpjLookupResponseDTO> {
+    return this.lookupService.lookupCnpj(cnpj);
   }
 
   @Get("cep/:cep")
-  async cep(@Param() params: unknown, @Req() request: FastifyRequest) {
-    try {
-      const { cep } = cepParamSchema.parse(params);
-
-      return await this.lookup.lookupCep.execute(cep);
-    } catch (error) {
-      throw toLookupHttpError(
-        error,
-        { invalid: "CEP inválido", fallback: "Falha ao consultar CEP" },
-        request.log,
-      );
-    }
+  @ApiResponse({ status: 200, type: CepLookupResponseDTO })
+  cep(@Param("cep") cep: string): Promise<CepLookupResponseDTO> {
+    return this.lookupService.lookupCep(cep);
   }
 }

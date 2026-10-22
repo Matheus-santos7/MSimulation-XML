@@ -1,10 +1,12 @@
 import { Module } from "@nestjs/common";
-import { createLookupModule } from "./infrastructure/factory/lookup-module.factory.js";
-import { LOOKUP } from "./lookup.tokens.js";
-import { LookupController } from "./presentation/controllers/lookup.controller.js";
+import { LookupController } from "./lookup.controller.js";
+import { LookupService } from "./lookup.service.js";
+import { CepLookupProvider } from "./providers/cep-lookup.provider.js";
+import { CnpjLookupProvider } from "./providers/cnpj-lookup.provider.js";
 
 @Module({
   controllers: [LookupController],
-  providers: [{ provide: LOOKUP, useFactory: createLookupModule }],
+  providers: [LookupService, CepLookupProvider, CnpjLookupProvider],
+  exports: [LookupService, CepLookupProvider],
 })
 export class LookupModule {}

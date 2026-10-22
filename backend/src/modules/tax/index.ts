@@ -4,9 +4,7 @@
  * `TaxModule` (o `app.module.ts` importa pelo caminho dele).
  */
 import type { PrismaTx } from "../../lib/db/prisma-tx.js";
-import { TaxRuleRepository } from "./tax-rule/tax-rule.repository.js";
 import { resolveTaxRuleFromDb } from "./tax-rule/tax-rule-resolution.js";
-import { TaxRuleService } from "./tax-rule/tax-rule.service.js";
 import type { ResolveTaxRuleParams } from "./tax-rule/types/tax-rule-query.types.js";
 
 export { TaxRuleCatalogError, TaxRuleError } from "./errors/tax.errors.js";
@@ -72,12 +70,4 @@ export async function resolveTaxRule(
   params: ResolveTaxRuleParams,
 ) {
   return resolveTaxRuleFromDb(prisma, tenantId, params);
-}
-
-/**
- * @deprecated `TaxRuleService` fora do container Nest, para o catalog até ele receber o service
- * por injeção. Sai na conversão do catalog.
- */
-export function legacyTaxRuleService(): TaxRuleService {
-  return new TaxRuleService(new TaxRuleRepository());
 }

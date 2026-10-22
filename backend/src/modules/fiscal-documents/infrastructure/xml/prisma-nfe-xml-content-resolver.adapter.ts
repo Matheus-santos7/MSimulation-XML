@@ -1,12 +1,15 @@
 import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import type {
   NfeRowForXmlResolution,
-  NfeXmlContentResolverPort,
-} from "../../../fiscal-validation/domain/ports/nfe-xml-content-resolver.port.js";
-import { resolveNfeXmlStringFromLoadedRow, type NfeRowForXmlResolution as LoadedRow } from "./nfe-xml-service.js";
+  NfeXmlContentResolver,
+} from "../../../fiscal-validation/index.js";
+import {
+  resolveNfeXmlStringFromLoadedRow,
+  type NfeRowForXmlResolution as LoadedRow,
+} from "./nfe-xml-service.js";
 
 /** Resolves NF-e XML for MCP backfill via fiscal-documents infrastructure. */
-export class PrismaNfeXmlContentResolverAdapter implements NfeXmlContentResolverPort {
+export class PrismaNfeXmlContentResolverAdapter implements NfeXmlContentResolver {
   async resolveXml(
     db: DbClient,
     tenantId: string,

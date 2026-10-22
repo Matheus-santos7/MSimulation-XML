@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+  <NFe>
+    <infNFe Id="NFe41260678242849000169550050000000071423282896" versao="4.00">
+      <ide>
+        <cUF>41</cUF>
+        <cNF>42328289</cNF>
+        <natOp>Venda de mercadoria</natOp>
+        <mod>55</mod>
+        <serie>5</serie>
+        <nNF>7</nNF>
+        <dhEmi>2026-06-13T15:57:40-03:00</dhEmi>
+        <dhSaiEnt>2026-06-13T15:57:40-03:00</dhSaiEnt>
+        <tpNF>1</tpNF>
+        <idDest>1</idDest>
+        <cMunFG>4118501</cMunFG>
+        <tpImp>1</tpImp>
+        <tpEmis>1</tpEmis>
+        <cDV>6</cDV>
+        <tpAmb>2</tpAmb>
+        <finNFe>1</finNFe>
+        <indFinal>1</indFinal>
+        <indPres>2</indPres>
+        <indIntermed>1</indIntermed>
+        <procEmi>0</procEmi>
+        <verProc>mercadolivre.invoice</verProc>
+        <NFref>
+          <refNFe>41260678242849000169550050000000011000000012</refNFe>
+        </NFref>
+      </ide>
+      <emit>
+        <CNPJ>78242849000169</CNPJ>
+        <xNome>ATLAS INDUSTRIA DE ELETRODOMESTICOS LTDA.</xNome>
+        <enderEmit>
+          <xLgr>BR-158</xLgr>
+          <nro>SN</nro>
+          <xBairro>INDUSTRIAL</xBairro>
+          <cMun>4118501</cMun>
+          <xMun>PATO BRANCO</xMun>
+          <UF>PR</UF>
+          <CEP>85504670</CEP>
+          <cPais>1058</cPais>
+          <xPais>Brasil</xPais>
+          <xCpl>KM: 508;</xCpl>
+          <fone>4637711500</fone>
+        </enderEmit>
+        <IE>3160442394</IE>
+        <CRT>3</CRT>
+        <xFant>ATLAS ELETRODOMESTICOS</xFant>
+      </emit>
+      <dest>
+        <CPF>07629167962</CPF>
+        <xNome>Consumidor Teste</xNome>
+        <enderDest>
+          <xLgr>Rua Elizario Castanha</xLgr>
+          <nro>61</nro>
+          <xBairro>Centro</xBairro>
+          <cMun>4107207</cMun>
+          <xMun>Dois Vizinhos</xMun>
+          <UF>PR</UF>
+          <CEP>85660000</CEP>
+          <cPais>1058</cPais>
+          <xPais>Brasil</xPais>
+          <xCpl>Nao consta</xCpl>
+        </enderDest>
+        <indIEDest>9</indIEDest>
+      </dest>
+      <autXML>
+        <CPF>87659808915</CPF>
+      </autXML>
+      <autXML>
+        <CPF>72556455772</CPF>
+      </autXML>
+      <det nItem="1">
+        <prod>
+          <cProd>300002137</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>Fogao 4 Bocas</xProd>
+          <NCM>73211100</NCM>
+          <CFOP>5106</CFOP>
+          <uCom>UNID</uCom>
+          <qCom>1.0000</qCom>
+          <vUnCom>815.86000000</vUnCom>
+          <vProd>815.86</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UNID</uTrib>
+          <qTrib>1.0000</qTrib>
+          <vUnTrib>815.86000000</vUnTrib>
+          <indTot>1</indTot>
+          <CEST>2100100</CEST>
+          <EXTIPI>01</EXTIPI>
+          <xPed>200001579233992</xPed>
+          <nFCI>A7B816FF-59CC-41D9-97C1-B39BCED07B17</nFCI>
+        </prod>
+        <imposto>
+          <vTotTrib>289.96</vTotTrib>
+          <ICMS>
+            <ICMS00>
+              <orig>5</orig>
+              <CST>00</CST>
+              <modBC>3</modBC>
+              <vBC>815.86</vBC>
+              <pICMS>19.5000</pICMS>
+              <vICMS>159.09</vICMS>
+            </ICMS00>
+          </ICMS>
+          <IPI>
+            <cEnq>103</cEnq>
+            <IPINT>
+              <CST>55</CST>
+            </IPINT>
+          </IPI>
+          <PIS>
+            <PISNT>
+              <CST>09</CST>
+            </PISNT>
+          </PIS>
+          <COFINS>
+            <COFINSNT>
+              <CST>09</CST>
+            </COFINSNT>
+          </COFINS>
+          <IBSCBS>
+            <CST>000</CST>
+            <cClassTrib>000001</cClassTrib>
+            <gIBSCBS>
+              <vBC>656.77</vBC>
+              <gIBSUF>
+                <pIBSUF>0.10</pIBSUF>
+                <vIBSUF>0.66</vIBSUF>
+              </gIBSUF>
+              <gIBSMun>
+                <pIBSMun>0.00</pIBSMun>
+                <vIBSMun>0.00</vIBSMun>
+              </gIBSMun>
+              <vIBS>0.66</vIBS>
+              <gCBS>
+                <pCBS>0.90</pCBS>
+                <vCBS>5.91</vCBS>
+              </gCBS>
+            </gIBSCBS>
+          </IBSCBS>
+        </imposto>
+        <vItem>815.86</vItem>
+        <infAdProd>xPed:200001579233992 Total aproximado de tributos federais, estaduais e municipais: R$289,96</infAdProd>
+      </det>
+      <total>
+        <ICMSTot>
+          <vBC>815.86</vBC>
+          <vICMS>159.09</vICMS>
+          <vICMSDeson>0.00</vICMSDeson>
+          <vFCP>0.00</vFCP>
+          <vBCST>0.00</vBCST>
+          <vST>0.00</vST>
+          <vFCPST>0.00</vFCPST>
+          <vFCPSTRet>0.00</vFCPSTRet>
+          <vProd>815.86</vProd>
+          <vFrete>0.00</vFrete>
+          <vSeg>0.00</vSeg>
+          <vDesc>0.00</vDesc>
+          <vII>0.00</vII>
+          <vIPI>0.00</vIPI>
+          <vIPIDevol>0.00</vIPIDevol>
+          <vPIS>0.00</vPIS>
+          <vCOFINS>0.00</vCOFINS>
+          <vOutro>0.00</vOutro>
+          <vNF>815.86</vNF>
+          <vTotTrib>289.96</vTotTrib>
+        </ICMSTot>
+        <IBSCBSTot>
+          <vBCIBSCBS>656.77</vBCIBSCBS>
+          <gIBS>
+            <gIBSUF>
+              <vDif>0.00</vDif>
+              <vDevTrib>0.00</vDevTrib>
+              <vIBSUF>0.66</vIBSUF>
+            </gIBSUF>
+            <gIBSMun>
+              <vDif>0.00</vDif>
+              <vDevTrib>0.00</vDevTrib>
+              <vIBSMun>0.00</vIBSMun>
+            </gIBSMun>
+            <vIBS>0.66</vIBS>
+            <vCredPres>0.00</vCredPres>
+            <vCredPresCondSus>0.00</vCredPresCondSus>
+          </gIBS>
+          <gCBS>
+            <vDif>0.00</vDif>
+            <vDevTrib>0.00</vDevTrib>
+            <vCBS>5.91</vCBS>
+            <vCredPres>0.00</vCredPres>
+            <vCredPresCondSus>0.00</vCredPresCondSus>
+          </gCBS>
+        </IBSCBSTot>
+        <vNFTot>815.86</vNFTot>
+      </total>
+      <transp>
+        <modFrete>0</modFrete>
+        <transporta>
+          <CNPJ>03007331012239</CNPJ>
+          <xNome>EBAZAR.COM.BR LTDA</xNome>
+          <IE>120519234116</IE>
+          <xEnder>AVENIDA DAS NACOES UNIDAS 3000 3003</xEnder>
+          <xMun>OSASCO</xMun>
+          <UF>SP</UF>
+        </transporta>
+        <vol>
+          <qVol>1</qVol>
+          <pesoL>22.900</pesoL>
+          <pesoB>24.700</pesoB>
+        </vol>
+      </transp>
+      <pag>
+        <detPag>
+          <indPag>0</indPag>
+          <tPag>03</tPag>
+          <vPag>815.86</vPag>
+          <card>
+            <tpIntegra>1</tpIntegra>
+            <CNPJ>03007331000141</CNPJ>
+            <tBand>01</tBand>
+            <cAut>837812</cAut>
+          </card>
+        </detPag>
+      </pag>
+      <infIntermed>
+        <CNPJ>03007331000141</CNPJ>
+        <idCadIntTran>279642028</idCadIntTran>
+      </infIntermed>
+      <infAdic>
+        <infCpl>Venda de mercadoria armazenada em fulfillment. Enviado diretamente do deposito temporario - operador logistico: EBAZAR.COM.BR LTDA, Cnpj: 03007331012077, Inscricao Estadual: 261755994, saindo do endereco: Av. Papenborg, Numero: S/N, Complemento: , Bairro: Guaporanga, Cidade: Governador Celso Ramos, Cep: 88195900, Estado: SC, Pais: BR. Valor aproximado dos tributos (IBPT) R$289,96. Valores totais do ICMS Interestadual: DIFAL da UF destino R$0,00 + FCP R$0,00; DIFAL da UF Origem R$0,00. N/A 289.96 0,00 Regime Especial SC - TTD SC n 225000004034256.</infCpl>
+        <obsCont xCampo="external_id">
+          <xTexto>SALE-sale-46766952868-5-OLSS-279642028</xTexto>
+        </obsCont>
+      </infAdic>
+      <infRespTec>
+        <CNPJ>03007331000141</CNPJ>
+        <xContato>EBAZAR.COM.BR. LTDA</xContato>
+        <email>fiscal@mercadolivre.com</email>
+        <fone>1125434155</fone>
+        <idCSRT>01</idCSRT>
+        <hashCSRT>+TuKUMc7ueWv9UiYNVaTD+ym1a4=</hashCSRT>
+      </infRespTec>
+    </infNFe>
+    <Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/><Reference URI="#NFe41260678242849000169550050000000071423282896"><Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/><Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/></Transforms><DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/><DigestValue>n2pfeqlyrDReEpCzJCNbpxAfjyA=</DigestValue></Reference></SignedInfo><SignatureValue>KXDiI/rQBTiQQLdesummQusYrk/cSQCbmp6v7NcDt79VE1991VwTjuOlETks2vYNSQOQQyXiAV0MrNfMIiTgouGc2OKqaxxXGHUD3WE2nSj5RGj4vWwii3AA923TgDHaCWZIGod8x1oci814lmTOIZMwhxlzd0HBPKeNT2+LwYM4Ir2WrMjgg3eux+bUDam7CKkDcJ/Lyuz/sXO7KCQY03Hduc+yGeQ7ZD6hJkj3eh29qloxa4IMEjUdEWnGBjMiJm9k0BuybfeRXPBrlW+Sq1pkJ2Gn8RcUkeYo1nQyF5gfYw4FvPGRJqcsvJ8YXirJtxNfCoQQxUz58gYnhVhI0g==</SignatureValue><KeyInfo><X509Data><X509Certificate>MIIDczCCAlugAwIBAgIUJdxbHeG0EbtydfsK1xYCltbaJk4wDQYJKoZIhvcNAQELBQAwSTEkMCIGA1UEAwwbU0lNVUxBQ0FPIEZJU0NBTCBQTEFUQUZPUk1BMRQwEgYDVQQKDAtNU0lNVUxBVElPTjELMAkGA1UEBhMCQlIwHhcNMjYwNjA5MTExMTU3WhcNMzYwNjA2MTExMTU3WjBJMSQwIgYDVQQDDBtTSU1VTEFDQU8gRklTQ0FMIFBMQVRBRk9STUExFDASBgNVBAoMC01TSU1VTEFUSU9OMQswCQYDVQQGEwJCUjCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAMHLWnhMGk+If6P561DauazaY6W2ABvBkG0TqAxIbq4UC30yGsvMyoJH4jmcAQGB7VH40JwvKQ7+ZtaiPx2aMj+1S5GakL630FrNt5kzyXah0Gi+/dHio3rufKzR50sw3zjJd2a9u0J2SSpbAd4nrMu6YGM5h0z2epxDoJDB52OmXPP6zPHnH9eN7Fd5eWEE+FIBjTAqRRWXUI7g7W/liDTrFExUxNNp/gir+IKBrIQ4EDkd+/piyLgH1WbrsoMD0NAI1+Nx4/FNEQp+BLhfWA17fndJwZ25TSbDG+vVv/uqSa32P2Uv+2FdiGI9JpKO8AIscuyInDZDjXv2L9fUphUCAwEAAaNTMFEwHQYDVR0OBBYEFHsM4No/XzBIPALrNkySZRb95xU0MB8GA1UdIwQYMBaAFHsM4No/XzBIPALrNkySZRb95xU0MA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBAES5wnAKpl1t0ChnyV2A5a5UXeDskWiUjStcDgHvCI5pcOkPIZdOLcOK0aD/CccpgGI5Hz5Ix/9aN0LmPveVMrQfBxdLzpUxJN8ecGgfUpvFsv/mwOQW3OTMEX57DGKhlc+MzPb8+yk539sb+8fQNj+hnu5j1DGYzkxrbbDXiGXnhJDNWjAVj2X9czFNvD6BulI0gILpYQ5Ra2ikZDSHHDAUDgieH3tErprfT3L+CYFNXmg8DRHR9keg6aQ0+7+ysnG7OeKUzrOPxCkpHAGIodS6OVYNSS7DPj68Bh/PRLA0gql5atncIkgp1yYM+WEV2p/0/h5Rd0GNooXyZo+OWHU=</X509Certificate></X509Data></KeyInfo></Signature>
+  </NFe>
+  <protNFe versao="4.00">
+    <infProt>
+      <tpAmb>2</tpAmb>
+      <verAplic>SIMULATION-3.2</verAplic>
+      <chNFe>41260678242849000169550050000000071423282896</chNFe>
+      <dhRecbto>2026-06-13T15:57:40-03:00</dhRecbto>
+      <nProt>NPROT</nProt>
+      <digVal>4VEK9ScsPQyAU2RBDZ9MvzkHNoY=</digVal>
+      <cStat>100</cStat>
+      <xMotivo>Autorizado o uso da NF-e (SIMULAÇÃO)</xMotivo>
+    </infProt>
+  </protNFe>
+</nfeProc>

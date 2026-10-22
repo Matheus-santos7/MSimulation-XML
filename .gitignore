@@ -82,6 +82,8 @@ playwright/.cache/
 XMLs/
 *.xlsx
 *.xml
+# XMLs de referência sintéticos (golden files) dos geradores de NF-e
+!packages/nfe-xml/src/golden/fixtures/*.xml
 
 # Scripts temporários de desenvolvimento
 tmp-*

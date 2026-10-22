@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Geração de XML NF-e (simulação) — fonte única para API e UI",
+  "description": "Gera\u00e7\u00e3o de XML NF-e (simula\u00e7\u00e3o) \u2014 fonte \u00fanica para API e UI",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
@@ -13,7 +13,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "pnpm run build && node --import tsx --test src/build-remessa.test.ts src/build-venda.test.ts src/fiscal-engine-xml.test.ts src/taxes/taxes.resolver.test.ts src/builders/nfe-factory.test.ts"
+    "test": "pnpm run build && node --import tsx --test src/build-remessa.test.ts src/build-venda.test.ts src/fiscal-engine-xml.test.ts src/taxes/taxes.resolver.test.ts src/builders/nfe-factory.test.ts src/golden/golden.test.ts"
   },
   "dependencies": {
     "@msimulation-xml/fiscal-core": "workspace:*"

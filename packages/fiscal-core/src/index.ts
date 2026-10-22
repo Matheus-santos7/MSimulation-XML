@@ -273,3 +273,6 @@ export {
   type XmlPrimitive,
   type XmlSerializerOptions,
 } from "./xml-serializer.js";
+
+// Marketplaces: perfil fiscal por marketplace (`marketplaces/<marketplace>/`).
+export * from "./marketplaces/index.js";

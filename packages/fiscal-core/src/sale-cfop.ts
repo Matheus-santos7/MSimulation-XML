@@ -10,11 +10,11 @@ import type { FiscalEmitterSettingsData } from "./fiscal-emitter-settings-types.
 
 export type SaleCustomerType = "taxpayer" | "non_taxpayer";
 
-/** Natureza da operação nas NF-es de venda ML Full. */
-export const VENDA_ML_NAT_OP = "Venda de mercadorias";
-
-/** `verProc` nos XMLs autorizados pelo emissor ML. */
-export const ML_NFE_VER_PROC = "mercadolivre.invoice";
+/** @deprecated Use `getMarketplaceProfile(...).ide` (`marketplaces/mercado-livre/ide.ts`). */
+export {
+  ML_NAT_OP_VENDA as VENDA_ML_NAT_OP,
+  ML_VER_PROC_VENDA as ML_NFE_VER_PROC,
+} from "./marketplaces/mercado-livre/ide.js";
 
 /** Venda Full (armazém geral) comércio — intraestadual. */
 export const CFOP_VENDA_NAO_CONTRIB_INTRA = "5106";

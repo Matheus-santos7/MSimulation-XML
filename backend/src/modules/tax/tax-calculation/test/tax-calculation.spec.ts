@@ -6,7 +6,7 @@ import {
   calculateInboundInvoice,
   orderLineFromProduct,
 } from "../tax-calculation.js";
-import { DEFAULT_FISCAL_EMITTER_SETTINGS } from "../../../fiscal-settings/domain/services/fiscal-emitter-settings-defaults.js";
+import { DEFAULT_FISCAL_EMITTER_SETTINGS } from "../../../fiscal-settings/index.js";
 import { calcularNotaFiscal, round2 } from "../tax-engine.js";
 
 const product = {

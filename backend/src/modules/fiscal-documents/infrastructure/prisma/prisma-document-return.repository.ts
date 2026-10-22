@@ -32,7 +32,7 @@ import {
 import { mapNfe, num } from "../../presentation/mappers/fiscal-mappers.js";
 import { buildChaveNFe } from "../../domain/services/nfe-chave.js";
 import { proximoNumeroNfe } from "../../domain/services/nfe-sequencia.js";
-import { enrichTaxSnapshot, loadEmitterSettings } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
+import { enrichTaxSnapshot, loadEmitterSettings } from "../../../fiscal-settings/index.js";
 import { enrichFiscalPayloadWithXTexto, resolveNumeroInicialNfe } from "@msimulation-xml/fiscal-core";
 import { taxSnapshotFromRule } from "../../../tax/index.js";
 import {

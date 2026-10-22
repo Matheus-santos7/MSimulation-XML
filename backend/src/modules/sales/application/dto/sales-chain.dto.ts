@@ -1,5 +1,5 @@
 import type { VendaMlReturnNoteDestinatario } from "@msimulation-xml/fiscal-core";
-import type { FiscalEmitterSettingsData } from "../../../fiscal-settings/domain/services/fiscal-emitter-settings-defaults.js";
+import type { FiscalEmitterSettingsData } from "../../../fiscal-settings/index.js";
 import type { CustomerType, ResolvedTaxRule } from "../../../tax/index.js";
 
 /**

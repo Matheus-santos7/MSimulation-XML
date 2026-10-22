@@ -28,7 +28,7 @@ import { REMESSA_NAT_OP } from "../helpers/remessa-dest.js";
 import {
   enrichTaxSnapshot,
   loadEmitterSettings,
-} from "../../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
+} from "../../../../fiscal-settings/index.js";
 import { taxSnapshotFromRule } from "../../../../tax/index.js";
 import {
   enrichFiscalPayloadMlFulfillment,

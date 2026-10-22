@@ -20,14 +20,39 @@ import type {
 import { DEFAULT_NFE_NUMERACAO } from "@msimulation-xml/fiscal-core";
 
 const BR_UFS = [
-  "AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS", "MT",
-  "PA", "PB", "PE", "PI", "PR", "RJ", "RN", "RO", "RR", "RS", "SC", "SE", "SP", "TO",
+  "AC",
+  "AL",
+  "AM",
+  "AP",
+  "BA",
+  "CE",
+  "DF",
+  "ES",
+  "GO",
+  "MA",
+  "MG",
+  "MS",
+  "MT",
+  "PA",
+  "PB",
+  "PE",
+  "PI",
+  "PR",
+  "RJ",
+  "RN",
+  "RO",
+  "RR",
+  "RS",
+  "SC",
+  "SE",
+  "SP",
+  "TO",
 ];
 
-const linha = (
-  venda: BaseCalcAction,
-  remessa: BaseCalcAction,
-): ComposicaoLinha => ({ venda, remessa });
+const linha = (venda: BaseCalcAction, remessa: BaseCalcAction): ComposicaoLinha => ({
+  venda,
+  remessa,
+});
 
 const composicaoPisCofins = (): ComposicaoTributo => ({
   frete: linha("INCLUIR_NA_BASE", "INCLUIR_NA_BASE"),
@@ -87,7 +112,9 @@ export const DEFAULT_PIS_COFINS_RATES = {
 } as const;
 
 function defaultDifalPorUf(): Record<string, DifalCalculo> {
-  return Object.fromEntries(BR_UFS.map((uf) => [uf, uf === "PB" ? "BASE_DUPLA_COM_ICMS" : "PADRAO"]));
+  return Object.fromEntries(
+    BR_UFS.map((uf) => [uf, uf === "PB" ? "BASE_DUPLA_COM_ICMS" : "PADRAO"]),
+  );
 }
 
 export const DEFAULT_FISCAL_EMITTER_SETTINGS: FiscalEmitterSettingsData = {
@@ -182,6 +209,8 @@ function mergeComposicaoTributo(
   return out;
 }
 
+const LEGACY_FORMA_FATURAMENTO_ML = "EMISSOR_ML";
+
 export function mergeFiscalEmitterSettings(partial: unknown): FiscalEmitterSettingsData {
   const base = structuredClone(DEFAULT_FISCAL_EMITTER_SETTINGS);
   if (!partial || typeof partial !== "object") return base;
@@ -190,6 +219,10 @@ export function mergeFiscalEmitterSettings(partial: unknown): FiscalEmitterSetti
   return {
     basic: (() => {
       const basic = { ...base.basic, ...p.basic };
+      // Configurações gravadas antes do suporte a vários marketplaces usam `EMISSOR_ML`.
+      if ((basic.formaFaturamento as string) === LEGACY_FORMA_FATURAMENTO_ML) {
+        basic.formaFaturamento = "EMISSOR_MARKETPLACE";
+      }
       if (
         basic.retornoSimbolicoNatureza == null ||
         (basic.retornoSimbolicoNatureza as string) === ""

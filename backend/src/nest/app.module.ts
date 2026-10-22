@@ -7,16 +7,18 @@ import { FiscalValidationModule } from "../modules/fiscal-validation/fiscal-vali
 import { HealthModule } from "../modules/health/health.module.js";
 import { LogisticsModule } from "../modules/logistics/logistics.module.js";
 import { LookupModule } from "../modules/lookup/lookup.module.js";
+import { MarketplaceModule } from "../modules/marketplace/marketplace.module.js";
 import { OrgModule } from "../modules/org/org.module.js";
 import { SalesModule } from "../modules/sales/sales.module.js";
 import { TaxModule } from "../modules/tax/tax.module.js";
 import { CoreModule, type CoreDependencies } from "./core.module.js";
 
-/** Módulos de feature já migrados para o Nest (cada fase acrescenta um). */
+/** Módulos de feature (um por contexto). */
 const FEATURE_MODULES: Type[] = [
   HealthModule,
   LookupModule,
   FiscalSettingsModule,
+  MarketplaceModule,
   TaxModule,
   CatalogModule,
   LogisticsModule,

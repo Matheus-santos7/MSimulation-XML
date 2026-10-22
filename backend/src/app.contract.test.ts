@@ -45,6 +45,7 @@ const ADMIN_ROUTES = [
   "POST /api/nfes/:chave/cancelamento",
   "DELETE /api/nfes/:chave",
   "PATCH /api/fiscal-settings",
+  "PUT /api/fiscal-settings/marketplaces/:marketplace",
   "POST /api/fiscal-validation/backfill",
   "POST /api/unidades-logisticas/bulk-import",
   "POST /api/movimentacoes/remessa",
@@ -397,6 +398,43 @@ describe("contrato HTTP — respostas por módulo (banco vazio)", () => {
 
     assert.equal(res.statusCode, 404);
     assert.deepEqual(res.json(), { error: "Empresa não encontrada" });
+  });
+
+  it("GET /api/marketplaces lista os marketplaces e se já podem faturar", async () => {
+    const res = await app.inject({ method: "GET", url: "/api/marketplaces", headers: bearer(token) });
+
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual(
+      res.json().map((m: { code: string; faturamentoDisponivel: boolean }) => [m.code, m.faturamentoDisponivel]),
+      [
+        ["MERCADO_LIVRE", true],
+        ["SHOPEE", false],
+        ["AMAZON", false],
+        ["MAGALU", false],
+      ],
+    );
+  });
+
+  it("GET /api/fiscal-settings/marketplaces/:marketplace sem empresa no banco devolve 404", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/fiscal-settings/marketplaces/SHOPEE",
+      headers: bearer(token),
+    });
+
+    assert.equal(res.statusCode, 404);
+    assert.deepEqual(res.json(), { error: "Empresa não encontrada" });
+  });
+
+  it("GET /api/fiscal-settings/marketplaces/:marketplace recusa marketplace desconhecido", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/fiscal-settings/marketplaces/ALIEXPRESS",
+      headers: bearer(token),
+    });
+
+    assert.equal(res.statusCode, 400);
+    assert.equal(res.json().error, "Marketplace inválido");
   });
 
   it("POST /api/pedidos com corpo inválido devolve 400 no formato { error, details }", async () => {

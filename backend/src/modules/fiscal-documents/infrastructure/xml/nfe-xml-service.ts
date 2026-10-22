@@ -26,7 +26,7 @@ import type { DbClient, PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { mapNfe } from "../../presentation/mappers/fiscal-mappers.js";
 import { mapProduct, type ProductDto } from "../../../catalog/index.js";
 import { mapEmitente } from "../../../org/index.js";
-import { loadEmitterSettings } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
+import { loadEmitterSettings } from "../../../fiscal-settings/index.js";
 
 export type NfeXmlPersistTx = PrismaTx;
 

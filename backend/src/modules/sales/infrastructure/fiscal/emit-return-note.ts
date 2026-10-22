@@ -6,7 +6,7 @@ import {
 } from "@msimulation-xml/fiscal-core";
 import { FiscalStatus, NFeTipo, Prisma, type Product, type Tenant } from "../../../../generated/prisma/client.js";
 import { buildChaveNFe } from "../../../fiscal-documents/domain/services/nfe-chave.js";
-import { enrichTaxSnapshot } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
+import { enrichTaxSnapshot } from "../../../fiscal-settings/index.js";
 import { proximoNumeroNfe } from "../../../fiscal-documents/domain/services/nfe-sequencia.js";
 import {
   destIeRetornoFromRemessa,

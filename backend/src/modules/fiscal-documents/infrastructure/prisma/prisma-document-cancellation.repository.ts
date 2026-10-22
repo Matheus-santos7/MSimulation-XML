@@ -11,7 +11,7 @@
 import { FiscalStatus, NFeTipo } from "../../../../generated/prisma/client.js";
 import { runFiscalTransaction,  type PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { mapNfe } from "../../presentation/mappers/fiscal-mappers.js";
-import { loadEmitterSettings } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
+import { loadEmitterSettings } from "../../../fiscal-settings/index.js";
 import { gerarProtocoloSefaz } from "../../domain/services/sefaz-protocol.js";
 import { fiscalNotDeleted } from "../../domain/constants/fiscal-not-deleted.js";
 import { reverseRemessaFifoConsumptions } from "../../../remessas/infrastructure/fifo/remessa-fifo.js";

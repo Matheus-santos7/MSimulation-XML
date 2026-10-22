@@ -8,7 +8,7 @@ import type { FiscalEmitterSettingsData } from "@msimulation-xml/fiscal-core";
 import {
   DEFAULT_ICMS_FALLBACK_RATES,
   DEFAULT_PIS_COFINS_RATES,
-} from "../../fiscal-settings/domain/services/fiscal-emitter-settings-defaults.js";
+} from "../../fiscal-settings/index.js";
 
 export type IcmsFallbackOperation = "sale" | "inbound";
 

@@ -1,29 +1,33 @@
-import { runInTransaction } from "../../../../lib/db/prisma-tx.js";
+import { Injectable } from "@nestjs/common";
+import { runInTransaction } from "../../../lib/db/prisma-tx.js";
 import { computeProximoNumeroNfe } from "@msimulation-xml/fiscal-core";
-import { mergeFiscalEmitterSettings } from "../../domain/services/fiscal-emitter-settings-defaults.js";
-import type { EmitterSettingsView, NfeNumeracaoView } from "../../domain/entities/emitter-settings-view.entity.js";
+import { mergeFiscalEmitterSettings } from "./rules/fiscal-emitter-settings-defaults.js";
 import type {
-  EmitterSettingsRepository,
+  EmitterSettingsView,
+  NfeNumeracaoView,
   UpdateEmitterSettingsInput,
-} from "../../domain/ports/emitter-settings.repository.js";
-import { getDbClient } from "../../../../lib/db/tenant-rls.js";
+} from "./emitter-settings.types.js";
+import { getDbClient } from "../../../lib/db/tenant-rls.js";
 import {
   DEFAULT_FISCAL_EMITTER_SETTINGS,
   mergeEmitterSettingsPatch,
-} from "../../application/services/merge-emitter-settings-patch.service.js";
-import { ultimoNumeroNfe, listInutilizacoesSerie } from "../../../fiscal-documents/domain/services/nfe-sequencia.js";
+} from "./rules/merge-emitter-settings-patch.js";
+import {
+  ultimoNumeroNfe,
+  listInutilizacoesSerie,
+} from "../../fiscal-documents/domain/services/nfe-sequencia.js";
 
 /**
- * Implementação Prisma do port {@link EmitterSettingsRepository}.
- *
- * Persiste JSON em `fiscal_emitter_settings.settings`; séries em `tenant`.
+ * Configuração padrão do emissor da empresa: JSON em `fiscal_emitter_settings.settings`,
+ * séries em `tenant`.
  */
-export class PrismaEmitterSettingsRepository implements EmitterSettingsRepository {
+@Injectable()
+export class EmitterSettingsRepository {
   private get db() {
     return getDbClient();
   }
 
-  /** @inheritdoc */
+  /** Vista agregada; defaults quando a empresa ainda não personalizou. `null` sem empresa. */
   async getByTenantId(tenantId: string): Promise<EmitterSettingsView | null> {
     const tenant = await this.db.tenant.findUnique({
       where: { id: tenantId },
@@ -34,7 +38,7 @@ export class PrismaEmitterSettingsRepository implements EmitterSettingsRepositor
     return this.buildView(tenantId, tenant);
   }
 
-  /** @inheritdoc */
+  /** Aplica o patch em transação (`tenant` + `fiscal_emitter_settings`). `null` sem empresa. */
   async update(
     tenantId: string,
     input: UpdateEmitterSettingsInput,
@@ -112,9 +116,7 @@ export class PrismaEmitterSettingsRepository implements EmitterSettingsRepositor
       where: { tenantId },
       select: { nome: true },
     });
-    return new Set(
-      ruleRows.map((row) => row.nome.replace(/\s*\([^)]*\)\s*$/i, "").trim()),
-    ).size;
+    return new Set(ruleRows.map((row) => row.nome.replace(/\s*\([^)]*\)\s*$/i, "").trim())).size;
   }
 
   /** Monta contadores de numeração NF-e para exibição e edição na UI. */
@@ -123,7 +125,10 @@ export class PrismaEmitterSettingsRepository implements EmitterSettingsRepositor
     tenant: { serieRemessa: number; serieTransferencia: number },
     settings: EmitterSettingsView["settings"],
   ): Promise<EmitterSettingsView["numeracaoNfe"]> {
-    const build = async (serie: number, kind: "remessa" | "transferencia"): Promise<NfeNumeracaoView> => {
+    const build = async (
+      serie: number,
+      kind: "remessa" | "transferencia",
+    ): Promise<NfeNumeracaoView> => {
       const [ultimoEmitido, inutilizacoes] = await Promise.all([
         ultimoNumeroNfe(this.db, tenantId, serie),
         listInutilizacoesSerie(this.db, tenantId, serie),
@@ -142,7 +147,7 @@ export class PrismaEmitterSettingsRepository implements EmitterSettingsRepositor
     };
   }
 
-  /** @inheritdoc */
+  /** Última NF-e emitida e próximo número de uma série. `null` sem empresa. */
   async getNumeracaoForSerie(
     tenantId: string,
     serie: number,

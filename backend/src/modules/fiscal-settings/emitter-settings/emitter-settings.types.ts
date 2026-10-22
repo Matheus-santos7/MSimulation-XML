@@ -1,4 +1,4 @@
-import type { FiscalEmitterSettingsData } from "../../domain/services/fiscal-emitter-settings-defaults.js";
+import type { FiscalEmitterSettingsData } from "./rules/fiscal-emitter-settings-defaults.js";
 
 /** Resumo de numeração de NF-e por série lógica (leitura na UI). */
 export type NfeNumeracaoView = {
@@ -30,4 +30,19 @@ export interface EmitterSettingsView {
   };
   /** Configuração fiscal completa: `basic`, `taxes`, `nfe`. */
   settings: FiscalEmitterSettingsData;
+}
+
+/**
+ * Patch parcial das configurações do emissor (body do `PATCH /fiscal-settings`).
+ *
+ * Seções `basic`, `taxes` e `nfe` são mescladas em profundidade. `serieRemessa`,
+ * `serieTransferencia` e `serieCte` atualizam colunas do `tenant`, não o JSON.
+ */
+export interface UpdateEmitterSettingsInput {
+  basic?: Record<string, unknown>;
+  taxes?: Record<string, unknown>;
+  nfe?: Record<string, unknown>;
+  serieRemessa?: number;
+  serieTransferencia?: number;
+  serieCte?: number;
 }

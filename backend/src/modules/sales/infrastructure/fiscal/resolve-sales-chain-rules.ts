@@ -1,4 +1,4 @@
-import { loadEmitterSettings } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
+import { loadEmitterSettings } from "../../../fiscal-settings/index.js";
 import { resolveTaxRule } from "../../../tax/index.js";
 import type { EmissionContext } from "../../domain/entities/emission-context.entity.js";
 import type { OrderForEmit } from "../../domain/entities/order-for-emit.entity.js";

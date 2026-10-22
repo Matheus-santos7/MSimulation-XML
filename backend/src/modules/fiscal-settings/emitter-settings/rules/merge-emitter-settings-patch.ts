@@ -2,8 +2,8 @@ import {
   DEFAULT_FISCAL_EMITTER_SETTINGS,
   mergeFiscalEmitterSettings,
   type FiscalEmitterSettingsData,
-} from "../../domain/services/fiscal-emitter-settings-defaults.js";
-import type { UpdateEmitterSettingsInput } from "../../domain/ports/emitter-settings.repository.js";
+} from "./fiscal-emitter-settings-defaults.js";
+import type { UpdateEmitterSettingsInput } from "../emitter-settings.types.js";
 
 /**
  * Funde patch HTTP no snapshot atual de configurações do emissor.

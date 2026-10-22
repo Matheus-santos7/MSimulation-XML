@@ -18,12 +18,14 @@ GET /api/filiais
 GET /api/fiscal-events
 GET /api/fiscal-events/:id/xml
 GET /api/fiscal-settings
+GET /api/fiscal-settings/marketplaces/:marketplace
 GET /api/fiscal-settings/nfe-numeracao
 GET /api/fiscal-validation/insights
 GET /api/fiscal-validation/status
 GET /api/health
 GET /api/lookup/cep/:cep
 GET /api/lookup/cnpj/:cnpj
+GET /api/marketplaces
 GET /api/movimentacoes-produto
 GET /api/movimentacoes/saldo-cd
 GET /api/nfes
@@ -94,3 +96,4 @@ POST /api/tenants
 POST /api/unidades-logisticas/bulk-import
 POST /api/users
 PUT /api/empresas/filiais/:id
+PUT /api/fiscal-settings/marketplaces/:marketplace

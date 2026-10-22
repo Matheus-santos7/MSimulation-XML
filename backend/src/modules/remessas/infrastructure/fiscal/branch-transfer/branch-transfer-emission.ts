@@ -14,7 +14,7 @@ import { proximoNumeroNfe } from "../../../../fiscal-documents/domain/services/n
 import {
   enrichTaxSnapshot,
   loadEmitterSettings,
-} from "../../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
+} from "../../../../fiscal-settings/index.js";
 import { taxSnapshotFromRule } from "../../../../tax/index.js";
 import {
   enrichFiscalPayloadMlFulfillment,

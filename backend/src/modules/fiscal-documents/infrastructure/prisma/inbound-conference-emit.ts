@@ -27,7 +27,7 @@ import { buildChaveNFe } from "../../domain/services/nfe-chave.js";
 import { proximoNumeroNfe } from "../../domain/services/nfe-sequencia.js";
 import { DocumentReturnError } from "../../domain/errors/document-return.error.js";
 import { mapNfe, num } from "../../presentation/mappers/fiscal-mappers.js";
-import { enrichTaxSnapshot } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
+import { enrichTaxSnapshot } from "../../../fiscal-settings/index.js";
 import { taxSnapshotFromRule } from "../../../tax/index.js";
 import { calcularNotaFiscal } from "../../../tax/index.js";
 import {

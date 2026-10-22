@@ -9,7 +9,7 @@ import {
   resolveInterstateIcmsFallback,
   resolvePisCofinsFallbackRates,
 } from "../tax-fallback-resolver.js";
-import { DEFAULT_FISCAL_EMITTER_SETTINGS } from "../../../fiscal-settings/domain/services/fiscal-emitter-settings-defaults.js";
+import { DEFAULT_FISCAL_EMITTER_SETTINGS } from "../../../fiscal-settings/index.js";
 
 describe("resolveInterstateIcmsFallback — tabela Senado", () => {
   it("produto importado (origem 2) SP→BA retorna 4%", () => {

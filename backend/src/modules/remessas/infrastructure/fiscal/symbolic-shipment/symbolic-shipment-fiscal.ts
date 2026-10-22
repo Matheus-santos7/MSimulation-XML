@@ -5,7 +5,7 @@ import { NFeTipo } from "../../../../../generated/prisma/client.js";
 import type { PrismaTx } from "../../../../../lib/db/prisma-tx.js";
 import { resolveRemessaCfop } from "../helpers/remessa-dest.js";
 import { REMESSA_SIMBOLICA_NAT_OP } from "../helpers/remessa-simbolica-dest.js";
-import { enrichTaxSnapshot, loadEmitterSettings } from "../../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
+import { enrichTaxSnapshot, loadEmitterSettings } from "../../../../fiscal-settings/index.js";
 import {
   enrichFiscalPayloadMlFulfillment,
   enrichFiscalPayloadWithXTexto,

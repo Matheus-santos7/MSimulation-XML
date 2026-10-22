@@ -6,7 +6,7 @@ import {
 } from "@msimulation-xml/fiscal-core";
 import { NFeTipo, PrismaClient } from "../../../../generated/prisma/client.js";
 import { buildChaveNFe } from "../../../fiscal-documents/domain/services/nfe-chave.js";
-import { enrichTaxSnapshot, loadEmitterSettings } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
+import { enrichTaxSnapshot, loadEmitterSettings } from "../../../fiscal-settings/index.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import {
   destIeRetornoFromRemessa,

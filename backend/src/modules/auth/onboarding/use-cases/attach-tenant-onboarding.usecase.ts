@@ -10,7 +10,7 @@ import { OnboardingRepository, type TenantOnboardingData } from "../onboarding.r
  * quando a verificação está ligada. Devolve sessão nova, já com `tenantId`.
  *
  * @throws {AuthError.State} Empresa já vinculada, e-mail não confirmado ou usuário inexistente
- * @throws {TenantConflictError} CNPJ duplicado (do repository)
+ * @throws {OrgError.TenantConflict} CNPJ duplicado (do repository, 409)
  */
 @Injectable()
 export class AttachTenantOnboardingUseCase {

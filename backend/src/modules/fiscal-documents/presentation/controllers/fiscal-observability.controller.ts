@@ -8,7 +8,7 @@ import { TenantId } from "../../../../nest/auth/request-params.js";
 import { sendFile, XLSX_CONTENT_TYPE } from "../../../../nest/http/file-download.js";
 import { orNotFound } from "../../../../nest/http/not-found.js";
 import { ZodValidationPipe } from "../../../../nest/http/zod-validation.pipe.js";
-import { mapEmitente } from "../../../org/infrastructure/fiscal/tenant-emitente.mapper.js";
+import { mapEmitente } from "../../../org/index.js";
 import { buildProcInutNFeXML, infInutId } from "../../domain/services/inutilizacao-xml.js";
 import { ufToCodigo } from "../../domain/services/nfe-chave.js";
 import { listTimelineChains } from "../../infrastructure/observability/timeline-service.js";

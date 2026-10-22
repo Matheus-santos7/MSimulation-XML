@@ -7,7 +7,7 @@ import { AdminOnly, ProtectedApi } from "../../../../nest/api-access.decorators.
 import { TenantId } from "../../../../nest/auth/request-params.js";
 import { orNotFound } from "../../../../nest/http/not-found.js";
 import { ZodValidationPipe } from "../../../../nest/http/zod-validation.pipe.js";
-import { mapEmitente } from "../../../org/infrastructure/fiscal/tenant-emitente.mapper.js";
+import { mapEmitente } from "../../../org/index.js";
 import { FISCAL_DOCUMENTS, type FiscalDocumentsContext } from "../../fiscal-documents.tokens.js";
 import { isDownloadRequested, sendFiscalXml } from "../helpers/fiscal-xml-response.js";
 import { nfeAccessKeyParamSchema } from "../schemas/fiscal-document.schemas.js";

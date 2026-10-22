@@ -9,10 +9,8 @@ import {
 } from "../../../lib/http/error-handler.js";
 import { HttpError, type ErrorResponse } from "../../../lib/http/http-error.js";
 import { ApiExceptionFilter } from "../../../nest/http/api-exception.filter.js";
-import { TenantConflictError } from "../../org/index.js";
 
 const HTTP_BAD_REQUEST = 400;
-const HTTP_CONFLICT = 409;
 const HTTP_INTERNAL_SERVER_ERROR = 500;
 const HTTP_SERVICE_UNAVAILABLE = 503;
 
@@ -29,7 +27,7 @@ function carriesHttpStatus(exception: unknown): boolean {
 
 /**
  * Filtro das rotas de auth. Difere do global em três pontos do contrato:
- * - captcha recusado (lib) responde 400 e CNPJ duplicado no onboarding (org) responde 409;
+ * - captcha recusado (lib) responde 400;
  * - schema Zod do onboarding (org) responde 400 `{ error, details }`;
  * - erro inesperado responde 500 com mensagem orientativa, não a genérica.
  */
@@ -40,9 +38,6 @@ export class AuthErrorFilter extends ApiExceptionFilter {
     if (exception instanceof ZodError) return zodValidationErrorResponse(exception);
     if (exception instanceof CaptchaVerificationError) {
       return { status: HTTP_BAD_REQUEST, body: { error: exception.message } };
-    }
-    if (exception instanceof TenantConflictError) {
-      return { status: HTTP_CONFLICT, body: { error: exception.message } };
     }
     if (isDatabaseUnavailableError(exception)) {
       log.error({ err: exception }, "Banco de dados indisponível (auth)");

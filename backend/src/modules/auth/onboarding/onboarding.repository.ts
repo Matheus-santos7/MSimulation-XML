@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import type { Prisma } from "../../../generated/prisma/client.js";
 import { isPrismaUniqueError } from "../../../lib/db/prisma-errors.js";
 import { getDbClient } from "../../../lib/db/tenant-rls.js";
-import { TenantConflictError } from "../../org/index.js";
+import { OrgError } from "../../org/index.js";
 import { mapAuthUser } from "../user/user.mapper.js";
 import type { AuthUser } from "../user/user.types.js";
 
@@ -27,7 +27,7 @@ export class OnboardingRepository {
 
   /**
    * Cria empresa e associa ao utilizador.
-   * @throws {TenantConflictError} CNPJ duplicado
+   * @throws {OrgError.TenantConflict} CNPJ duplicado
    */
   async createTenantAndAttachUser(userId: string, tenantData: TenantOnboardingData): Promise<void> {
     try {
@@ -39,9 +39,9 @@ export class OnboardingRepository {
         data: { tenantId: tenantRow.id, role: "ADMIN" },
       });
     } catch (error) {
-      if (error instanceof TenantConflictError) throw error;
+      if (error instanceof OrgError.TenantConflict) throw error;
       if (isPrismaUniqueError(error)) {
-        throw new TenantConflictError("CNPJ já cadastrado");
+        throw new OrgError.TenantConflict("CNPJ já cadastrado");
       }
       throw error;
     }

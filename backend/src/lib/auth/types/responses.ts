@@ -1,4 +1,4 @@
-import type { Tenant } from "../../../modules/org/domain/entities/tenant.entity.js";
+import type { Tenant } from "../../../modules/org/tenant/tenant.types.js";
 
 export type AuthTokens = {
   accessToken: string;

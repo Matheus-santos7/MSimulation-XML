@@ -1,5 +1,5 @@
 import { isEmailVerified } from "./config.js";
-import type { Tenant } from "../../modules/org/domain/entities/tenant.entity.js";
+import type { Tenant } from "../../modules/org/tenant/tenant.types.js";
 import type {
   AccessTokenPayload,
   AuthSessionResponse,

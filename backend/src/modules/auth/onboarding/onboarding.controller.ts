@@ -3,7 +3,7 @@ import { ApiTags } from "@nestjs/swagger";
 import type { AuthenticatedUser } from "../../../lib/auth/access-control.js";
 import { JwtAuthGuard } from "../../../nest/auth/guards.js";
 import { CurrentUser } from "../../../nest/auth/request-params.js";
-import { tenantCreateBody } from "../../org/index.js";
+import { createTenantRequestSchema } from "../../org/index.js";
 import { AuthApi, RequestMeta } from "../auth-api.decorators.js";
 import { AuthError } from "../errors/auth.errors.js";
 import type { AuthMeta } from "../session/session.types.js";
@@ -39,7 +39,7 @@ export class OnboardingController {
     }
 
     // Corpo validado depois da checagem de empresa (schema de tenant do org).
-    const tenantData = tenantCreateBody.parse(rawBody);
+    const tenantData = createTenantRequestSchema.parse(rawBody);
 
     return this.attachTenantOnboarding.execute({ userId: user.userId, tenantData }, meta);
   }

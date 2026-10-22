@@ -30,7 +30,7 @@ import {
 } from "../../../../tax/index.js";
 import { createLogisticsModule } from "../../../../logistics/index.js";
 import { persistNfeXmlAutorizado } from "../../../../fiscal-documents/infrastructure/xml/nfe-xml-service.js";
-import { mapEmitenteFromFilial } from "../../../../org/infrastructure/fiscal/tenant-emitente.mapper.js";
+import { mapEmitenteFromFilial } from "../../../../org/index.js";
 import {
   chaveEmissaoFromOverride,
   type EmitenteEmissaoOverride,

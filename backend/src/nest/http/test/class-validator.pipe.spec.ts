@@ -3,7 +3,7 @@ import { Type } from "class-transformer";
 import { IsInt, IsOptional, IsString, Min, MinLength, ValidateNested } from "class-validator";
 import { describe, expect, it } from "vitest";
 import { HttpError } from "../../../lib/http/http-error.js";
-import { ClassValidatorPipe } from "../class-validator.pipe.js";
+import { ClassValidatorPipe, Required } from "../class-validator.pipe.js";
 
 class AddressDTO {
   @IsString({ message: "Informe a cidade" })
@@ -14,11 +14,13 @@ class CreateItemDTO {
   // O decorator mais perto do campo é checado primeiro.
   @MinLength(3, { message: "O nome precisa de 3 letras ou mais" })
   @IsString({ message: "Informe o nome" })
+  @Required()
   name!: string;
 
   @Type(() => Number)
   @Min(1, { message: "A quantidade mínima é 1" })
   @IsInt({ message: "A quantidade precisa ser um número inteiro" })
+  @Required("Informe a quantidade")
   quantity!: number;
 
   @IsOptional()
@@ -81,7 +83,7 @@ describe("ClassValidatorPipe", () => {
     expect(error.body?.details).toEqual({ address: ["Informe a cidade"] });
   });
 
-  it("should treat a missing body as an empty object", () => {
+  it("should treat a missing body as an empty object and report only Required for absent fields", () => {
     // Arrange
     const pipe = new ClassValidatorPipe(CreateItemDTO);
 
@@ -89,7 +91,34 @@ describe("ClassValidatorPipe", () => {
     const error = captureError(() => pipe.transform(undefined));
 
     // Assert
-    expect(error.body?.error).toBe("Informe o nome");
+    expect(error.body).toEqual({
+      error: "Required",
+      details: { name: ["Required"], quantity: ["Informe a quantidade"] },
+    });
+  });
+
+  it("should skip the rules of an optional field that is absent", () => {
+    // Arrange
+    const pipe = new ClassValidatorPipe(CreateItemDTO);
+
+    // Act
+    const result = pipe.transform({ name: "Caneta", quantity: 1 });
+
+    // Assert
+    expect(result.address).toBeUndefined();
+  });
+
+  it("should run every rule of a present field, like Zod", () => {
+    // Arrange
+    const pipe = new ClassValidatorPipe(CreateItemDTO);
+
+    // Act
+    const error = captureError(() => pipe.transform({ name: 10, quantity: 1 }));
+
+    // Assert
+    expect(error.body?.details).toEqual({
+      name: ["Informe o nome", "O nome precisa de 3 letras ou mais"],
+    });
   });
 
   it("should use the fixed message and the formErrors/fieldErrors shape when invalidMessage is set", () => {

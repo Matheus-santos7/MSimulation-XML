@@ -1,10 +1,21 @@
 import type { PipeTransform } from "@nestjs/common";
 import { plainToInstance, type ClassConstructor } from "class-transformer";
-import { validateSync, type ValidationError } from "class-validator";
+import { IsDefined, validateSync, type ValidationError } from "class-validator";
 import { HttpError } from "../../lib/http/http-error.js";
 
 const HTTP_BAD_REQUEST = 400;
 const DEFAULT_INVALID_MESSAGE = "Dados inválidos";
+
+/** Mensagem do Zod para campo ausente; mantida nos DTOs que substituíram schemas Zod. */
+export const ZOD_REQUIRED_MESSAGE = "Required";
+
+/**
+ * Campo obrigatório. Ausente (`undefined`), responde só esta mensagem: as demais regras do
+ * campo não rodam (o pipe usa `skipUndefinedProperties`), como no Zod.
+ */
+export function Required(message: string = ZOD_REQUIRED_MESSAGE): PropertyDecorator {
+  return IsDefined({ message });
+}
 
 export type ClassValidatorPipeOptions = {
   /**
@@ -35,7 +46,8 @@ function toFieldErrors(errors: readonly ValidationError[]): FieldErrors {
  *
  * O DTO é passado no construtor (`new ClassValidatorPipe(CreateBrandDTO)`): o projeto não
  * depende de `emitDecoratorMetadata`. Conversão de tipo é explícita no DTO (`@Type(() => Number)`).
- * Campos fora do DTO são descartados, como no `z.object()`.
+ * Campos fora do DTO são descartados, como no `z.object()`. Campo ausente só é erro quando
+ * declara `@Required()`; as outras regras rodam apenas para valores presentes.
  *
  * Falha: 400 `{ error: <primeira mensagem>, details: { campo: [mensagens] } }`, o mesmo formato
  * que o frontend já lê dos schemas Zod.
@@ -48,7 +60,7 @@ export class ClassValidatorPipe<TDto extends object> implements PipeTransform<un
 
   transform(value: unknown): TDto {
     const instance = plainToInstance(this.dto, value ?? {});
-    const errors = validateSync(instance, { whitelist: true });
+    const errors = validateSync(instance, { whitelist: true, skipUndefinedProperties: true });
     if (errors.length === 0) return instance;
 
     const fieldErrors = toFieldErrors(errors);

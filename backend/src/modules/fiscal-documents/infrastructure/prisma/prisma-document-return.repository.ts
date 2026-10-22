@@ -34,17 +34,17 @@ import { buildChaveNFe } from "../../domain/services/nfe-chave.js";
 import { proximoNumeroNfe } from "../../domain/services/nfe-sequencia.js";
 import { enrichTaxSnapshot, loadEmitterSettings } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
 import { enrichFiscalPayloadWithXTexto, resolveNumeroInicialNfe } from "@msimulation-xml/fiscal-core";
-import { taxSnapshotFromRule } from "../../../tax/domain/services/tax-snapshot.js";
+import { taxSnapshotFromRule } from "../../../tax/index.js";
 import {
   calcularNotaFiscal,
   type ItemFiscalResult,
   type NotaFiscalResult,
-} from "../../../tax/domain/services/tax-engine.js";
-import { applyCstDevolucaoMap } from "../../../tax/domain/services/apply-cst-devolucao-map.js";
+} from "../../../tax/index.js";
+import { applyCstDevolucaoMap } from "../../../tax/index.js";
 import {
   mirrorOriginForDevolucao,
   parseOriginEngine,
-} from "../../../tax/domain/services/mirror-origin-for-devolucao.js";
+} from "../../../tax/index.js";
 import { buildFiscalItem, resolveTaxRule, resolveIcmsFallbackRate, type CustomerType } from "../../../tax/index.js";
 import { persistNfeXmlFromEmission } from "../xml/nfe-xml-service.js";
 import {

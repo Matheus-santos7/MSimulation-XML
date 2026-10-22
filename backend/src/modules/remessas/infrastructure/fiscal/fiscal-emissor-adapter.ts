@@ -15,7 +15,7 @@ import {
   RETORNO_SIMBOLICO_NAT_OP,
 } from "../../domain/services/retorno-simbolico-dest.js";
 import { unidadeParaDestinoFiscal } from "../../../logistics/domain/services/meli-unidade.js";
-import { taxSnapshotFromRule } from "../../../tax/domain/services/tax-snapshot.js";
+import { taxSnapshotFromRule } from "../../../tax/index.js";
 import { proximoNumeroNfe } from "../../../fiscal-documents/domain/services/nfe-sequencia.js";
 import { loadRemessaForReturnDestination } from "../fifo/remessa-fifo.js";
 import {

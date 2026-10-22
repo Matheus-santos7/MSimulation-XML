@@ -1,6 +1,6 @@
 import { gerarPedidoMl } from "../../../fiscal-documents/domain/services/nfe-chave.js";
-import type { ResolvedTaxRule } from "../../../tax/domain/entities/resolved-tax-rule.entity.js";
-import type { CustomerType } from "../../../tax/domain/entities/tax-types.entity.js";
+import type { ResolvedTaxRule } from "../../../tax/index.js";
+import type { CustomerType } from "../../../tax/index.js";
 import { resolveIcmsFallbackRate } from "../../../tax/index.js";
 import type { FiscalEmitterSettingsData } from "@msimulation-xml/fiscal-core";
 import type { EmissionContext } from "../entities/emission-context.entity.js";

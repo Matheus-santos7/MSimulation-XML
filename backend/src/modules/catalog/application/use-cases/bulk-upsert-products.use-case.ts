@@ -4,7 +4,7 @@ import type { ProductRepository } from "../../domain/ports/product.repository.js
 import type { TaxRuleValidatorPort } from "../../domain/ports/tax-rule-validator.port.js";
 import { resolveProductNfci } from "../../domain/services/product-nfci.js";
 import { dedupeBulkRowsBySku } from "../../domain/services/dedupe-bulk-rows-by-sku.service.js";
-import { resolveTaxRuleRefFromCatalog } from "../../../tax/domain/services/resolve-tax-rule-ref-from-catalog.js";
+import { resolveTaxRuleRefFromCatalog } from "../../../tax/index.js";
 import type {
   BulkUpsertProductsCommand,
   BulkUpsertProductsResult,

@@ -7,7 +7,7 @@
  * contam como tal.
  */
 
-import type { DevolucaoItemPedido } from "../../../tax/domain/services/mirror-origin-for-devolucao.js";
+import type { DevolucaoItemPedido } from "../../../tax/index.js";
 
 /** Linha (`<det>`) da NF-e de venda. */
 export type SaleReturnLine = {

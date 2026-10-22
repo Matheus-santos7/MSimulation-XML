@@ -15,14 +15,14 @@ import {
   RETORNO_SIMBOLICO_NAT_OP,
   type CamposDestinoRetorno,
 } from "../../../remessas/domain/services/retorno-simbolico-dest.js";
-import { taxSnapshotFromRule } from "../../../tax/domain/services/tax-snapshot.js";
+import { taxSnapshotFromRule } from "../../../tax/index.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import {
   buildFiscalItem,
   orderLineFromProduct,
   resolveIcmsFallbackRate,
 } from "../../../tax/index.js";
-import { calcularNotaFiscal } from "../../../tax/domain/services/tax-engine.js";
+import { calcularNotaFiscal } from "../../../tax/index.js";
 import {
   consumeRemessaFifoBalanceForSale,
   loadRemessaForReturnDestination,

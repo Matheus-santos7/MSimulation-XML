@@ -15,7 +15,7 @@ import {
   enrichTaxSnapshot,
   loadEmitterSettings,
 } from "../../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
-import { taxSnapshotFromRule } from "../../../../tax/domain/services/tax-snapshot.js";
+import { taxSnapshotFromRule } from "../../../../tax/index.js";
 import {
   enrichFiscalPayloadMlFulfillment,
   enrichFiscalPayloadWithXTexto,

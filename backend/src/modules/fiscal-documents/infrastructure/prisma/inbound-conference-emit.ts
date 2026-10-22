@@ -28,8 +28,8 @@ import { proximoNumeroNfe } from "../../domain/services/nfe-sequencia.js";
 import { DocumentReturnError } from "../../domain/errors/document-return.error.js";
 import { mapNfe, num } from "../../presentation/mappers/fiscal-mappers.js";
 import { enrichTaxSnapshot } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
-import { taxSnapshotFromRule } from "../../../tax/domain/services/tax-snapshot.js";
-import { calcularNotaFiscal } from "../../../tax/domain/services/tax-engine.js";
+import { taxSnapshotFromRule } from "../../../tax/index.js";
+import { calcularNotaFiscal } from "../../../tax/index.js";
 import {
   buildFiscalItem,
   resolveIcmsFallbackRate,

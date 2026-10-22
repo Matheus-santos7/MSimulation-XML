@@ -15,8 +15,8 @@ import { FiscalStatus, NFeTipo, Prisma, type Product, type Tenant } from "../../
 import { buildChaveNFe } from "../../../fiscal-documents/domain/services/nfe-chave.js";
 import { enrichTaxSnapshot } from "../../../fiscal-settings/application/services/fiscal-emitter-runtime.js";
 import { proximoNumeroNfe } from "../../../fiscal-documents/domain/services/nfe-sequencia.js";
-import { taxSnapshotFromRule } from "../../../tax/domain/services/tax-snapshot.js";
-import { calcularNotaFiscal } from "../../../tax/domain/services/tax-engine.js";
+import { taxSnapshotFromRule } from "../../../tax/index.js";
+import { calcularNotaFiscal } from "../../../tax/index.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { buildFiscalItem, resolveTaxRule } from "../../../tax/index.js";
 import { persistNfeXmlFromEmission } from "../../../fiscal-documents/infrastructure/xml/nfe-xml-service.js";

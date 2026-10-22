@@ -11,8 +11,8 @@ import {
   enrichFiscalPayloadWithXTexto,
   productUnitPrice,
 } from "@msimulation-xml/fiscal-core";
-import { taxSnapshotFromRule } from "../../../../tax/domain/services/tax-snapshot.js";
-import { calcularNotaFiscal } from "../../../../tax/domain/services/tax-engine.js";
+import { taxSnapshotFromRule } from "../../../../tax/index.js";
+import { calcularNotaFiscal } from "../../../../tax/index.js";
 import {
   buildFiscalItem,
   inferIcmsRateForShipment,

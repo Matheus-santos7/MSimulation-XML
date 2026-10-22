@@ -1,4 +1,4 @@
-import type { TaxRuleCatalogEntry } from "../../../tax/domain/entities/tax-rule-catalog-entry.entity.js";
+import type { TaxRuleCatalogEntry } from "../../../tax/index.js";
 
 /**
  * Port para validar vínculo produto ↔ regra fiscal antes de persistir.

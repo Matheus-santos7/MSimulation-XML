@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { passwordField } from "../../../auth/presentation/schemas/auth.schemas.js";
+import { passwordField } from "../../../auth/rules/password.zod.js";
 
 const emailField = z
   .string()

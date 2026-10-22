@@ -27,9 +27,21 @@ export type ClassValidatorPipeOptions = {
 
 type FieldErrors = Record<string, string[]>;
 
-/** Mensagens de um campo e dos campos aninhados dele (`flatten()` do Zod agrupa no campo raiz). */
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Nome da regra do `@Required()` (é um `@IsDefined`). */
+const REQUIRED_CONSTRAINT = "isDefined";
+
+/**
+ * Mensagens de um campo e dos campos aninhados dele (`flatten()` do Zod agrupa no campo raiz).
+ * `@IsDefined` também recusa `null`; como no Zod, `null` só gera o erro de tipo do campo.
+ */
 function collectMessages(error: ValidationError): string[] {
-  const own = Object.values(error.constraints ?? {});
+  const own = Object.entries(error.constraints ?? {})
+    .filter(([name]) => name !== REQUIRED_CONSTRAINT || error.value === undefined)
+    .map(([, message]) => message);
   const nested = (error.children ?? []).flatMap(collectMessages);
 
   return [...own, ...nested];
@@ -59,7 +71,15 @@ export class ClassValidatorPipe<TDto extends object> implements PipeTransform<un
   ) {}
 
   transform(value: unknown): TDto {
-    const instance = plainToInstance(this.dto, value ?? {});
+    // `z.object()` com corpo ausente ou que não é objeto: erro na raiz, sem campos.
+    if (!isPlainObject(value)) {
+      throw new HttpError(HTTP_BAD_REQUEST, DEFAULT_INVALID_MESSAGE, {
+        error: DEFAULT_INVALID_MESSAGE,
+        details: {},
+      });
+    }
+
+    const instance = plainToInstance(this.dto, value);
     const errors = validateSync(instance, { whitelist: true, skipUndefinedProperties: true });
     if (errors.length === 0) return instance;
 

@@ -83,12 +83,12 @@ describe("ClassValidatorPipe", () => {
     expect(error.body?.details).toEqual({ address: ["Informe a cidade"] });
   });
 
-  it("should treat a missing body as an empty object and report only Required for absent fields", () => {
+  it("should report only Required for absent required fields", () => {
     // Arrange
     const pipe = new ClassValidatorPipe(CreateItemDTO);
 
     // Act
-    const error = captureError(() => pipe.transform(undefined));
+    const error = captureError(() => pipe.transform({}));
 
     // Assert
     expect(error.body).toEqual({
@@ -96,6 +96,20 @@ describe("ClassValidatorPipe", () => {
       details: { name: ["Required"], quantity: ["Informe a quantidade"] },
     });
   });
+
+  it.each([undefined, null, "texto", [1]])(
+    "should answer Dados inválidos without fields when the body is %j (Zod root error)",
+    (body) => {
+      // Arrange
+      const pipe = new ClassValidatorPipe(CreateItemDTO);
+
+      // Act
+      const error = captureError(() => pipe.transform(body));
+
+      // Assert
+      expect(error.body).toEqual({ error: "Dados inválidos", details: {} });
+    },
+  );
 
   it("should skip the rules of an optional field that is absent", () => {
     // Arrange

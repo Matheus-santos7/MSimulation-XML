@@ -1,25 +1,20 @@
 /**
- * Bounded Context: Auth (authentication, sessions, MFA, onboarding).
+ * API pública do contexto de auth para outros módulos. Não reexporta o `AuthModule` (o
+ * `app.module.ts` importa pelo caminho dele), para o barrel não criar ciclo com o org.
  */
-export type { AuthUser, AuthUserWithTenant, TenantSummary } from "./domain/entities/user.entity.js";
+export { AuthError } from "./errors/auth.errors.js";
+export {
+  CurrentPasswordField,
+  EmailField,
+  StrongPasswordField,
+  StrongPasswordRules,
+} from "./rules/credential.validators.js";
+export { passwordField } from "./rules/password.zod.js";
 export type {
   AccessTokenPayload,
+  AuthMeta,
   AuthSessionResponse,
   LoginResponse,
   TwoFactorPendingPayload,
-} from "./domain/entities/auth-session.entity.js";
-export { AuthConflictError } from "./domain/errors/auth-conflict.error.js";
-export { AuthStateError } from "./domain/errors/auth-state.error.js";
-export { AuthUnauthorizedError, AUTH_GENERIC_LOGIN_ERROR } from "./domain/errors/auth-unauthorized.error.js";
-export { AuthTooManyRequestsError } from "./domain/errors/auth-too-many-requests.error.js";
-export { EmailDeliveryError } from "./domain/errors/email-delivery.error.js";
-export { EmailVerificationInvalidError } from "./domain/errors/email-verification-invalid.error.js";
-export { PasswordResetInvalidError } from "./domain/errors/password-reset-invalid.error.js";
-export { TwoFactorRequiredError } from "./domain/errors/two-factor-required.error.js";
-export type { AuthMeta } from "./domain/ports/session-response.port.js";
-export { createAuthModule } from "./infrastructure/factory/auth-module.factory.js";
-export { AuthController } from "./presentation/controllers/auth.controller.js";
-export { OnboardingController } from "./presentation/controllers/onboarding.controller.js";
-export { resolveAuthError } from "./presentation/mappers/auth-error.handler.js";
-export { AuthErrorFilter } from "./presentation/filters/auth-error.filter.js";
-export { buildAuthMeta, signAccessToken } from "./presentation/helpers/auth-request.helper.js";
+} from "./session/session.types.js";
+export type { AuthUser, AuthUserWithTenant, TenantSummary } from "./user/user.types.js";

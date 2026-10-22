@@ -143,7 +143,7 @@ Cada fase fecha com: suíte completa, contrato HTTP, golden XMLs, `tsc` de `src`
 
 ### Fase 0 — fundação (sem mudança de comportamento)
 
-1. SWC no dev (`nest start --watch` ou `swc-node`) e nos testes; `emitDecoratorMetadata`.
+1. ~~SWC no dev e nos testes~~ — descartado: injeção por `@Inject` explícito e `ClassValidatorPipe(Dto)` dispensam `emitDecoratorMetadata`, e dev, testes e build ficam com o mesmo comportamento.
 2. Vitest + `unplugin-swc`, rodando junto com o `node:test` no `run-tests.sh` e no CI.
 3. `class-validator`, `class-transformer`, `@nestjs/swagger`; `ClassValidatorPipe` com `details` no formato do Zod.
 4. `BaseService`, `BaseRepository` (sobre `getDbClient()`), `BusinessException`, `SuccessResponse`, `ResponseWithPagination` em `src/nest/`.

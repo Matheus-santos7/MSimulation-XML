@@ -36,7 +36,7 @@ export type NfeNumeracaoSettings = {
 
 export type FiscalEmitterSettingsData = {
   basic: {
-    formaFaturamento: "EMISSOR_PROPRIO" | "EMISSOR_ML";
+    formaFaturamento: "EMISSOR_PROPRIO" | "EMISSOR_MARKETPLACE";
     dadosFiscaisAnunciosOk: boolean;
     dadosFiscaisAnunciosNota?: string;
     perfilVendedor?: "industria" | "comercio";

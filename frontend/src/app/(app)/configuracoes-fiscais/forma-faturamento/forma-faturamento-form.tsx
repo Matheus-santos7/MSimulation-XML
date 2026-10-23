@@ -43,7 +43,7 @@ export function FormaFaturamentoForm({ initial }: { initial: BasicSettings }) {
             className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
           >
             <option value="EMISSOR_PROPRIO">Emissor próprio</option>
-            <option value="EMISSOR_ML">Emissor do Mercado Livre</option>
+            <option value="EMISSOR_MARKETPLACE">Emissor do marketplace</option>
           </select>
         </div>
 

@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { getBillableMarketplaceProfile } from "@msimulation-xml/fiscal-core";
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
-import { gerarPedidoMl } from "../../../fiscal-documents/domain/services/nfe-chave.js";
+import { gerarPedidoMl } from "../../../fiscal-documents/index.js";
 import {
   findProductInTenant,
   LogisticsUnitService,

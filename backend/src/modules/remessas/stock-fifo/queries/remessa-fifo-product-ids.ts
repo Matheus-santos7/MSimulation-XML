@@ -1,6 +1,6 @@
 import type { MarketplaceCode } from "@msimulation-xml/fiscal-core";
 import type { Prisma, PrismaClient } from "../../../../generated/prisma/client.js";
-import { fiscalNotDeleted } from "../../../fiscal-documents/domain/constants/fiscal-not-deleted.js";
+import { fiscalNotDeleted } from "../../../fiscal-documents/index.js";
 import { REMESSA_FIFO_TIPOS, buildRemessaFifoNfeWhere } from "./remessa-fifo.constants.js";
 import type { RemessaFifoPrisma } from "../types/remessa-fifo.types.js";
 

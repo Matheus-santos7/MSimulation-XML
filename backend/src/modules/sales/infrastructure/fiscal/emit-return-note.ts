@@ -4,10 +4,16 @@ import {
   resolveNumeroInicialNfe,
   type VendaMlReturnNoteDestinatario,
 } from "@msimulation-xml/fiscal-core";
-import { FiscalStatus, NFeTipo, Prisma, type Product, type Tenant } from "../../../../generated/prisma/client.js";
-import { buildChaveNFe } from "../../../fiscal-documents/domain/services/nfe-chave.js";
+import {
+  FiscalStatus,
+  NFeTipo,
+  Prisma,
+  type Product,
+  type Tenant,
+} from "../../../../generated/prisma/client.js";
+import { buildChaveNFe } from "../../../fiscal-documents/index.js";
 import { enrichTaxSnapshot } from "../../../fiscal-settings/index.js";
-import { proximoNumeroNfe } from "../../../fiscal-documents/domain/services/nfe-sequencia.js";
+import { proximoNumeroNfe } from "../../../fiscal-documents/index.js";
 import {
   destIeRetornoFromRemessa,
   destinoRetornoFromRemessa,
@@ -28,9 +34,12 @@ import {
   loadRemessaForReturnDestination,
   type PreviewRemessaFifoVenda,
 } from "../../../remessas/index.js";
-import { persistNfeXmlFromEmission } from "../../../fiscal-documents/infrastructure/xml/nfe-xml-service.js";
+import { persistNfeXmlFromEmission } from "../../../fiscal-documents/index.js";
 import type { EmissionContext } from "../../domain/entities/emission-context.entity.js";
-import type { OrderForEmit, OrderItemForEmit } from "../../domain/entities/order-for-emit.entity.js";
+import type {
+  OrderForEmit,
+  OrderItemForEmit,
+} from "../../domain/entities/order-for-emit.entity.js";
 import type { ReturnNoteCreated, SalesChainRules } from "../../application/dto/sales-chain.dto.js";
 import { requirePrimaryOrderItem } from "../../domain/services/order-for-emit.helpers.js";
 import { sumOrderQuantidade } from "../../domain/services/sales-chain.service.js";
@@ -108,7 +117,12 @@ export async function emitConsolidatedReturnNote(
 
   const inboundFiscalItems = lines.map((line, index) => {
     const { inboundTaxRule } = line.rules;
-    const lineFallback = resolveIcmsFallbackRate(tenant.uf, destUf, "inbound", line.rules.emitterSettings);
+    const lineFallback = resolveIcmsFallbackRate(
+      tenant.uf,
+      destUf,
+      "inbound",
+      line.rules.emitterSettings,
+    );
     return buildFiscalItem(
       {
         ...orderLineFromProduct(line.item.product, {
@@ -256,8 +270,7 @@ export async function persistConsolidatedReturnXml(
   const fromConsumos = distinctRemessaChaves(
     consumos.map((c) => ({ remessaChave: c.remessaNfe.chave })),
   );
-  const remessaChaves =
-    fromConsumos.length > 0 ? fromConsumos : returnNote.remessaChaves;
+  const remessaChaves = fromConsumos.length > 0 ? fromConsumos : returnNote.remessaChaves;
 
   await persistNfeXmlFromEmission(tx, {
     nfeId: returnNote.id,

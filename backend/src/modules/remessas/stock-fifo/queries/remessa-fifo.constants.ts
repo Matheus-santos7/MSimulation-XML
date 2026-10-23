@@ -1,5 +1,5 @@
 import { NFeTipo } from "../../../../generated/prisma/client.js";
-import { fiscalNotDeleted } from "../../../fiscal-documents/domain/constants/fiscal-not-deleted.js";
+import { fiscalNotDeleted } from "../../../fiscal-documents/index.js";
 
 /** Saldo FIFO: remessa física + remessa avanço entre CDs. */
 export const REMESSA_FIFO_TIPOS: NFeTipo[] = [NFeTipo.REMESSA, NFeTipo.REMESSA_AVANCO];

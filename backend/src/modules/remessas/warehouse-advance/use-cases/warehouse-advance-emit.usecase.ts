@@ -2,7 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { OperacaoFiscalTipo, type Product } from "../../../../generated/prisma/client.js";
 import { runFiscalTransaction, type PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { getDbClient } from "../../../../lib/db/tenant-rls.js";
-import { gerarPedidoMl } from "../../../fiscal-documents/domain/services/nfe-chave.js";
+import { gerarPedidoMl } from "../../../fiscal-documents/index.js";
 import { LogisticsUnitService, ProductMovementService } from "../../../logistics/index.js";
 import { RemessaDomainError } from "../../errors/remessas.errors.js";
 import { FiscalChainNoteRepository } from "../../fiscal-chain/fiscal-chain-note.repository.js";

@@ -1,8 +1,5 @@
 import { lineTotal } from "@msimulation-xml/fiscal-core";
-import type {
-  OrderForEmit,
-  OrderItemForEmit,
-} from "../entities/order-for-emit.entity.js";
+import type { OrderForEmit, OrderItemForEmit } from "../entities/order-for-emit.entity.js";
 import { SalesChainError } from "../errors/sales-chain.error.js";
 
 /**
@@ -19,10 +16,7 @@ export function requirePrimaryOrderItem(order: OrderForEmit): OrderItemForEmit {
 /**
  * Builds a single-item snapshot used by legacy emission steps (FIFO / retorno).
  */
-export function sliceOrderForEmitItem(
-  order: OrderForEmit,
-  item: OrderItemForEmit,
-): OrderForEmit {
+export function sliceOrderForEmitItem(order: OrderForEmit, item: OrderItemForEmit): OrderForEmit {
   return {
     ...order,
     items: [item],

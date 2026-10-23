@@ -1,5 +1,5 @@
 import type { DbClient } from "../../../lib/db/prisma-tx.js";
-import { mapNfe } from "../../fiscal-documents/presentation/mappers/fiscal-mappers.js";
+import { mapNfe } from "../../fiscal-documents/index.js";
 import type { WarehouseAdvanceResult } from "./warehouse-advance.types.js";
 
 /** Mantém contrato legado da API POST /movimentacoes/avanco-cd. */

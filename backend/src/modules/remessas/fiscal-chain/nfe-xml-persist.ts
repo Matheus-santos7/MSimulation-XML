@@ -1,5 +1,5 @@
 import type { DbClient } from "../../../lib/db/prisma-tx.js";
-import { persistNfeXmlFromEmission } from "../../fiscal-documents/infrastructure/xml/nfe-xml-service.js";
+import { persistNfeXmlFromEmission } from "../../fiscal-documents/index.js";
 import { loadEmitterSettings } from "../../fiscal-settings/index.js";
 import type { PersistXmlFromEmissionInput } from "./types/fiscal-chain-note.types.js";
 

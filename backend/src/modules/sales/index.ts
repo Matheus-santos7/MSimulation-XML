@@ -26,7 +26,10 @@ export {
   digitsOnly,
 } from "./presentation/schemas/order.schemas.js";
 export { SaldoRemessaInsuficienteError } from "../remessas/index.js";
-export { emitSaleCte, emitSaleCte as emitirCteVenda } from "./infrastructure/fiscal/cte-sale.adapter.js";
+export {
+  emitSaleCte,
+  emitSaleCte as emitirCteVenda,
+} from "./infrastructure/fiscal/cte-sale.adapter.js";
 
 export type PedidoForEmit = OrderForEmit;
 export type PedidoCheckoutInput = OrderCheckoutInput;

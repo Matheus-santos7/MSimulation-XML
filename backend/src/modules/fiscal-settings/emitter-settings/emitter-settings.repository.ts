@@ -12,10 +12,12 @@ import {
   DEFAULT_FISCAL_EMITTER_SETTINGS,
   mergeEmitterSettingsPatch,
 } from "./rules/merge-emitter-settings-patch.js";
+// Import direto da regra (e não do index): o index do fiscal-documents carrega o XML, que
+// depende do fiscal-settings e fecharia um ciclo.
 import {
   ultimoNumeroNfe,
   listInutilizacoesSerie,
-} from "../../fiscal-documents/domain/services/nfe-sequencia.js";
+} from "../../fiscal-documents/nfe/rules/nfe-sequencia.js";
 
 /**
  * Configuração padrão do emissor da empresa: JSON em `fiscal_emitter_settings.settings`,

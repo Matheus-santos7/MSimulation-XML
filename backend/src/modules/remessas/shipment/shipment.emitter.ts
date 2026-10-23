@@ -19,10 +19,10 @@ import {
 } from "../../../generated/prisma/client.js";
 import type { DbClient } from "../../../lib/db/prisma-tx.js";
 import { runFiscalTransaction } from "../../../lib/db/prisma-tx.js";
-import { buildChaveNFe, gerarPedidoMl } from "../../fiscal-documents/domain/services/nfe-chave.js";
-import { proximoNumeroNfe } from "../../fiscal-documents/domain/services/nfe-sequencia.js";
-import { persistNfeXmlAutorizado } from "../../fiscal-documents/infrastructure/xml/nfe-xml-service.js";
-import { mapNfe } from "../../fiscal-documents/presentation/mappers/fiscal-mappers.js";
+import { buildChaveNFe, gerarPedidoMl } from "../../fiscal-documents/index.js";
+import { proximoNumeroNfe } from "../../fiscal-documents/index.js";
+import { persistNfeXmlAutorizado } from "../../fiscal-documents/index.js";
+import { mapNfe } from "../../fiscal-documents/index.js";
 import { enrichTaxSnapshot, loadEmitterSettings } from "../../fiscal-settings/index.js";
 import { LogisticsUnitService, ProductMovementService } from "../../logistics/index.js";
 import { chaveEmissaoFromOverride, resolveEmitenteFiscal } from "../../org/index.js";

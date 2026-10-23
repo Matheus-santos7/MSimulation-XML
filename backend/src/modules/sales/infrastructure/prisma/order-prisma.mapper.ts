@@ -1,10 +1,10 @@
 import type { PedidoStatus, Product } from "../../../../generated/prisma/client.js";
 import type { Buyer } from "../../domain/entities/buyer.entity.js";
-import type { Order, } from "../../domain/entities/order.entity.js";
+import type { Order } from "../../domain/entities/order.entity.js";
 import type { OrderForEmit } from "../../domain/entities/order-for-emit.entity.js";
 import { mapOrderItemFromRow } from "./order-item-prisma.mapper.js";
 import { normalizeOrderFreight } from "../../domain/services/order-freight.validation.js";
-import { num } from "../../../fiscal-documents/presentation/mappers/fiscal-mappers.js";
+import { num } from "../../../fiscal-documents/index.js";
 
 export type PedidoItemRow = {
   id: string;
@@ -59,7 +59,8 @@ export function mapOrderFromPrisma(row: OrderRow): Order {
     freteConsumidor: num(row.freteConsumidor),
     freteSeller: num(row.freteSeller),
   });
-  const itemsSubtotal = Math.round(items.reduce((acc, item) => acc + item.valorTotalLinha, 0) * 100) / 100;
+  const itemsSubtotal =
+    Math.round(items.reduce((acc, item) => acc + item.valorTotalLinha, 0) * 100) / 100;
   const valorTotal = Math.round((itemsSubtotal + freteConsumidor) * 100) / 100;
 
   return {

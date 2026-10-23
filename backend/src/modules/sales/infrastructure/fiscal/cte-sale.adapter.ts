@@ -1,9 +1,9 @@
 import type { NFe, Tenant } from "../../../../generated/prisma/client.js";
-import { dadosCteToPrismaCreate, montarDadosCteFromNfe } from "../../../fiscal-documents/domain/services/cte-emissao.js";
-import { proximoNumeroCte } from "../../../fiscal-documents/domain/services/cte-sequencia.js";
-import { mapCte } from "../../../fiscal-documents/presentation/mappers/fiscal-mappers.js";
+import { dadosCteToPrismaCreate, montarDadosCteFromNfe } from "../../../fiscal-documents/index.js";
+import { proximoNumeroCte } from "../../../fiscal-documents/index.js";
+import { mapCte } from "../../../fiscal-documents/index.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
-import { buildCteXmlAutorizado } from "../../../fiscal-documents/infrastructure/xml/cte-xml-service.js";
+import { buildCteXmlAutorizado } from "../../../fiscal-documents/index.js";
 import { SalesChainError } from "../../domain/errors/sales-chain.error.js";
 
 /**

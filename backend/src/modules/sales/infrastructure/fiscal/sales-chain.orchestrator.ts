@@ -1,7 +1,7 @@
 import type { Tenant } from "../../../../generated/prisma/client.js";
 import type { DbClient } from "../../../../lib/db/prisma-tx.js";
 import { runFiscalTransaction } from "../../../../lib/db/prisma-tx.js";
-import { mapNfe } from "../../../fiscal-documents/presentation/mappers/fiscal-mappers.js";
+import { mapNfe } from "../../../fiscal-documents/index.js";
 import { previewRemessaPrincipalFifoParaVenda } from "../../../remessas/index.js";
 import type { SalesChainResult } from "../../application/dto/sales-chain.dto.js";
 import type { OrderForEmit } from "../../domain/entities/order-for-emit.entity.js";
@@ -74,12 +74,7 @@ export class SalesChainOrchestrator implements SalesChainPort {
       const returnNote = await emitConsolidatedReturnNote(tx, order, ctx, returnLines);
 
       for (const line of returnLines) {
-        const itemAllocations = await consumeShipmentForReturn(
-          tx,
-          order,
-          line.item,
-          returnNote.id,
-        );
+        const itemAllocations = await consumeShipmentForReturn(tx, order, line.item, returnNote.id);
         allocations.push(...itemAllocations);
       }
 
@@ -94,7 +89,12 @@ export class SalesChainOrchestrator implements SalesChainPort {
         fifoPreview!.destUf,
         fifoPreview!.destCodigoMunicipio,
       );
-      const saleCte = await emitSaleCte(tx, order.tenant as Tenant, saleRow, sumOrderFreteCteFromOrder(order));
+      const saleCte = await emitSaleCte(
+        tx,
+        order.tenant as Tenant,
+        saleRow,
+        sumOrderFreteCteFromOrder(order),
+      );
 
       const returnWithRef = await tx.nFe.findUniqueOrThrow({
         where: { id: returnNote.id },

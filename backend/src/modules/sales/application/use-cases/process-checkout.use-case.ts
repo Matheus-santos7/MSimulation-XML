@@ -3,7 +3,10 @@ import type { OrderCheckoutInput } from "../../domain/entities/order-checkout-in
 import type { OrderForEmit } from "../../domain/entities/order-for-emit.entity.js";
 import type { OrderRepository } from "../../domain/ports/order.repository.js";
 import type { SalesChainPort } from "../../domain/ports/sales-chain.port.js";
-import { assertOrderFreightFilled, normalizeOrderFreight } from "../../domain/services/order-freight.validation.js";
+import {
+  assertOrderFreightFilled,
+  normalizeOrderFreight,
+} from "../../domain/services/order-freight.validation.js";
 
 /**
  * Checkout direto: emite a Sales Chain sem criar rascunho de pedido.
@@ -26,7 +29,10 @@ export class ProcessCheckoutUseCase {
 
   async execute(tenantId: string, input: OrderCheckoutInput) {
     const productIds = input.items.map((item) => item.productId);
-    const { products, tenant } = await this.orderRepository.loadCheckoutContext(tenantId, productIds);
+    const { products, tenant } = await this.orderRepository.loadCheckoutContext(
+      tenantId,
+      productIds,
+    );
     const productById = new Map(products.map((product) => [product.id, product]));
     const c = input.comprador;
 

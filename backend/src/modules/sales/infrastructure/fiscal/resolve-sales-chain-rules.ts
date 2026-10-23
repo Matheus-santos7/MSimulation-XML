@@ -2,10 +2,7 @@ import { loadEmitterSettings } from "../../../fiscal-settings/index.js";
 import { resolveTaxRule } from "../../../tax/index.js";
 import type { EmissionContext } from "../../domain/entities/emission-context.entity.js";
 import type { OrderForEmit } from "../../domain/entities/order-for-emit.entity.js";
-import {
-  requireTaxRule,
-  resolveCustomerType,
-} from "../../domain/services/sales-chain.service.js";
+import { requireTaxRule, resolveCustomerType } from "../../domain/services/sales-chain.service.js";
 import type { SalesChainRules } from "../../application/dto/sales-chain.dto.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 

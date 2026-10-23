@@ -1,5 +1,5 @@
 import type { PrismaClient } from "../../../../generated/prisma/client.js";
-import { fiscalNotDeleted } from "../../../fiscal-documents/domain/constants/fiscal-not-deleted.js";
+import { fiscalNotDeleted } from "../../../fiscal-documents/index.js";
 import { REMESSA_FIFO_TIPOS, buildRemessaFifoNfeWhere } from "./remessa-fifo.constants.js";
 import {
   collectRemessaSaldoProductIds,

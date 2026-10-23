@@ -426,6 +426,19 @@ describe("contrato HTTP — respostas por módulo (banco vazio)", () => {
     assert.ok(res.json().details.marketplace);
   });
 
+  for (const url of ["/api/nfes", "/api/timeline"]) {
+    it(`GET ${url} recusa marketplace desconhecido no filtro`, async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: `${url}?marketplace=ALIEXPRESS`,
+        headers: bearer(token),
+      });
+
+      assert.equal(res.statusCode, 400);
+      assert.equal(res.json().details.marketplace[0], "Marketplace inválido");
+    });
+  }
+
   it("GET /api/fiscal-settings/marketplaces/:marketplace sem empresa no banco devolve 404", async () => {
     const res = await app.inject({
       method: "GET",

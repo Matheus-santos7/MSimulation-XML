@@ -11,15 +11,21 @@ import {
   saleRoutingFromEmitterSettings,
   VENDA_ML_NAT_OP,
 } from "@msimulation-xml/fiscal-core";
-import { FiscalStatus, NFeTipo, Prisma, type Product, type Tenant } from "../../../../generated/prisma/client.js";
-import { buildChaveNFe } from "../../../fiscal-documents/domain/services/nfe-chave.js";
+import {
+  FiscalStatus,
+  NFeTipo,
+  Prisma,
+  type Product,
+  type Tenant,
+} from "../../../../generated/prisma/client.js";
+import { buildChaveNFe } from "../../../fiscal-documents/index.js";
 import { enrichTaxSnapshot } from "../../../fiscal-settings/index.js";
-import { proximoNumeroNfe } from "../../../fiscal-documents/domain/services/nfe-sequencia.js";
+import { proximoNumeroNfe } from "../../../fiscal-documents/index.js";
 import { taxSnapshotFromRule } from "../../../tax/index.js";
 import { calcularNotaFiscal } from "../../../tax/index.js";
 import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
 import { buildFiscalItem, resolveTaxRule } from "../../../tax/index.js";
-import { persistNfeXmlFromEmission } from "../../../fiscal-documents/infrastructure/xml/nfe-xml-service.js";
+import { persistNfeXmlFromEmission } from "../../../fiscal-documents/index.js";
 import type { EmissionContext } from "../../domain/entities/emission-context.entity.js";
 import type { OrderForEmit } from "../../domain/entities/order-for-emit.entity.js";
 import type { ReturnNoteCreated, SalesChainRules } from "../../application/dto/sales-chain.dto.js";

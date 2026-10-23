@@ -2,9 +2,7 @@
  * Chaves de remessa distintas (44 dígitos), na ordem de primeira aparição.
  * Usado no retorno simbólico/físico multi-remessa → N blocos `<NFref>`.
  */
-export function distinctRemessaChaves(
-  lines: ReadonlyArray<{ remessaChave: string }>,
-): string[] {
+export function distinctRemessaChaves(lines: ReadonlyArray<{ remessaChave: string }>): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
   for (const line of lines) {

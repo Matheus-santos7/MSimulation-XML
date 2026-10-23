@@ -8,9 +8,9 @@ import {
 } from "../../../generated/prisma/client.js";
 import type { DbClient } from "../../../lib/db/prisma-tx.js";
 import { runFiscalTransaction } from "../../../lib/db/prisma-tx.js";
-import { mapNfe } from "../../fiscal-documents/presentation/mappers/fiscal-mappers.js";
-import { buildChaveNFe } from "../../fiscal-documents/domain/services/nfe-chave.js";
-import { proximoNumeroNfe } from "../../fiscal-documents/domain/services/nfe-sequencia.js";
+import { mapNfe } from "../../fiscal-documents/index.js";
+import { buildChaveNFe } from "../../fiscal-documents/index.js";
+import { proximoNumeroNfe } from "../../fiscal-documents/index.js";
 import { enrichTaxSnapshot, loadEmitterSettings } from "../../fiscal-settings/index.js";
 import { taxSnapshotFromRule } from "../../tax/index.js";
 import {
@@ -27,7 +27,7 @@ import {
   resolveTaxRule,
 } from "../../tax/index.js";
 import type { ProductMovementService } from "../../logistics/index.js";
-import { persistNfeXmlAutorizado } from "../../fiscal-documents/infrastructure/xml/nfe-xml-service.js";
+import { persistNfeXmlAutorizado } from "../../fiscal-documents/index.js";
 import { mapEmitenteFromFilial } from "../../org/index.js";
 import { chaveEmissaoFromOverride, type EmitenteEmissaoOverride } from "../../org/index.js";
 import {

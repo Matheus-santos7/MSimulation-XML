@@ -6,7 +6,7 @@ import {
   resolveNumeroInicialNfe,
 } from "@msimulation-xml/fiscal-core";
 import { NFeTipo, PrismaClient } from "../../../generated/prisma/client.js";
-import { buildChaveNFe } from "../../fiscal-documents/domain/services/nfe-chave.js";
+import { buildChaveNFe } from "../../fiscal-documents/index.js";
 import { enrichTaxSnapshot, loadEmitterSettings } from "../../fiscal-settings/index.js";
 import type { PrismaTx } from "../../../lib/db/prisma-tx.js";
 import {
@@ -17,7 +17,7 @@ import {
 } from "../symbolic-shipment/rules/retorno-simbolico-dest.js";
 import { unidadeParaDestinoFiscal } from "../../logistics/index.js";
 import { taxSnapshotFromRule } from "../../tax/index.js";
-import { proximoNumeroNfe } from "../../fiscal-documents/domain/services/nfe-sequencia.js";
+import { proximoNumeroNfe } from "../../fiscal-documents/index.js";
 import { loadRemessaForReturnDestination } from "../stock-fifo/remessa-fifo.js";
 import {
   calculateInboundInvoice,

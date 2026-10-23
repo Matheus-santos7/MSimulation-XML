@@ -1,4 +1,4 @@
-import { gerarPedidoMl } from "../../../fiscal-documents/domain/services/nfe-chave.js";
+import { gerarPedidoMl } from "../../../fiscal-documents/index.js";
 
 /**
  * Garante orderId (`xPed`) por item — gera via `gerarPedidoMl` quando vazio.

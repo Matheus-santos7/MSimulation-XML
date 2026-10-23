@@ -1,4 +1,4 @@
-import { gerarPedidoMl } from "../../../fiscal-documents/domain/services/nfe-chave.js";
+import { gerarPedidoMl } from "../../../fiscal-documents/index.js";
 import type { ResolvedTaxRule } from "../../../tax/index.js";
 import type { CustomerType } from "../../../tax/index.js";
 import { resolveIcmsFallbackRate } from "../../../tax/index.js";
@@ -6,10 +6,7 @@ import type { FiscalEmitterSettingsData } from "@msimulation-xml/fiscal-core";
 import type { EmissionContext } from "../entities/emission-context.entity.js";
 import type { OrderForEmit } from "../entities/order-for-emit.entity.js";
 import { SalesChainError } from "../errors/sales-chain.error.js";
-import {
-  requirePrimaryOrderItem,
-  sumOrderEmitTotals,
-} from "./order-for-emit.helpers.js";
+import { requirePrimaryOrderItem, sumOrderEmitTotals } from "./order-for-emit.helpers.js";
 
 /**
  * Valida que todos os produtos possuem `taxRuleBaseId` antes de iniciar a cadeia fiscal.

@@ -2,7 +2,7 @@ import { Inject, Module, type OnModuleInit } from "@nestjs/common";
 import type { FastifyBaseLogger } from "fastify";
 import { registerFiscalTransactionCommitHook } from "../../lib/db/prisma-tx.js";
 import { LOGGER } from "../../nest/tokens.js";
-import { PrismaNfeXmlContentResolverAdapter } from "../fiscal-documents/infrastructure/xml/prisma-nfe-xml-content-resolver.adapter.js";
+import { PrismaNfeXmlContentResolverAdapter } from "../fiscal-documents/index.js";
 import { ValidationInsightsUseCase } from "./insights/use-cases/validation-insights.usecase.js";
 import { ValidationInsightsController } from "./insights/validation-insights.controller.js";
 import { ValidationInsightsRepository } from "./insights/validation-insights.repository.js";

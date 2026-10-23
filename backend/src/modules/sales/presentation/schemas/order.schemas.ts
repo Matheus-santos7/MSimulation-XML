@@ -31,35 +31,37 @@ const optionalTrimmed = z.preprocess(
   z.string().trim().optional(),
 );
 
-export const buyerCheckoutBody = z.object({
-  cpf: cpfField,
-  nome: z.string().trim().min(1, "Nome obrigatório").max(120),
-  logradouro: z.string().trim().min(1, "Logradouro obrigatório").max(200),
-  numero: z.string().trim().min(1, "Número obrigatório").max(20).default("SN"),
-  complemento: optionalTrimmed,
-  bairro: z.string().trim().min(1, "Bairro obrigatório").max(100),
-  codigoMunicipio: codigoMunicipioField,
-  municipio: z.string().trim().min(1, "Município obrigatório").max(100),
-  uf: ufField,
-  cep: cepField,
-  telefone: optionalTrimmed,
-  codigoPais: z.coerce.number().int().default(1058),
-  nomePais: z.string().trim().default("Brasil"),
-  indIEDest: z.coerce
-    .number()
-    .int()
-    .refine((v) => [1, 2, 9].includes(v), "indIEDest deve ser 1, 2 ou 9")
-    .default(9),
-  ie: optionalTrimmed,
-}).superRefine((data, ctx) => {
-  if (data.indIEDest === 1 && !digitsOnly(data.ie ?? "")) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "IE do destinatário é obrigatória para contribuinte ICMS (indIEDest=1)",
-      path: ["ie"],
-    });
-  }
-});
+export const buyerCheckoutBody = z
+  .object({
+    cpf: cpfField,
+    nome: z.string().trim().min(1, "Nome obrigatório").max(120),
+    logradouro: z.string().trim().min(1, "Logradouro obrigatório").max(200),
+    numero: z.string().trim().min(1, "Número obrigatório").max(20).default("SN"),
+    complemento: optionalTrimmed,
+    bairro: z.string().trim().min(1, "Bairro obrigatório").max(100),
+    codigoMunicipio: codigoMunicipioField,
+    municipio: z.string().trim().min(1, "Município obrigatório").max(100),
+    uf: ufField,
+    cep: cepField,
+    telefone: optionalTrimmed,
+    codigoPais: z.coerce.number().int().default(1058),
+    nomePais: z.string().trim().default("Brasil"),
+    indIEDest: z.coerce
+      .number()
+      .int()
+      .refine((v) => [1, 2, 9].includes(v), "indIEDest deve ser 1, 2 ou 9")
+      .default(9),
+    ie: optionalTrimmed,
+  })
+  .superRefine((data, ctx) => {
+    if (data.indIEDest === 1 && !digitsOnly(data.ie ?? "")) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "IE do destinatário é obrigatória para contribuinte ICMS (indIEDest=1)",
+        path: ["ie"],
+      });
+    }
+  });
 
 /**
  * Valor monetário em R$ não negativo com até 2 casas decimais (centavos).
@@ -83,22 +85,24 @@ const orderItemBody = z.object({
   xPed: optionalTrimmed,
 });
 
-export const orderCheckoutBody = z.object({
-  items: z.array(orderItemBody).min(1, "Pedido deve ter ao menos um item"),
-  comprador: buyerCheckoutBody,
-  /** PackId ML (`Pedido.pedidoMl`). */
-  pedidoMl: optionalTrimmed,
-  freteConsumidor: monetaryValueField.default(0),
-  freteSeller: monetaryValueField.default(0),
-}).superRefine((data, ctx) => {
-  if (data.freteConsumidor <= 0 && data.freteSeller <= 0) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Informe frete consumidor e/ou frete seller — ao menos um deve ser maior que zero",
-      path: ["freteConsumidor"],
-    });
-  }
-});
+export const orderCheckoutBody = z
+  .object({
+    items: z.array(orderItemBody).min(1, "Pedido deve ter ao menos um item"),
+    comprador: buyerCheckoutBody,
+    /** PackId ML (`Pedido.pedidoMl`). */
+    pedidoMl: optionalTrimmed,
+    freteConsumidor: monetaryValueField.default(0),
+    freteSeller: monetaryValueField.default(0),
+  })
+  .superRefine((data, ctx) => {
+    if (data.freteConsumidor <= 0 && data.freteSeller <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Informe frete consumidor e/ou frete seller — ao menos um deve ser maior que zero",
+        path: ["freteConsumidor"],
+      });
+    }
+  });
 
 export const orderIdParam = z.object({
   id: z.string().uuid(),

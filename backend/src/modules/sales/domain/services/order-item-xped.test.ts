@@ -1,9 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import {
-  withEnsuredItemXPeds,
-  withEnsuredPackId,
-} from "./order-item-xped.js";
+import { withEnsuredItemXPeds, withEnsuredPackId } from "./order-item-xped.js";
 
 describe("order-item-xped", () => {
   it("gera xPed distinto por item quando ausente", () => {
@@ -20,7 +17,13 @@ describe("order-item-xped", () => {
   });
 
   it("gera packId quando pedidoMl ausente", () => {
-    assert.equal(withEnsuredPackId(undefined, () => "PACK-1"), "PACK-1");
-    assert.equal(withEnsuredPackId("  PACK-OK  ", () => "PACK-1"), "PACK-OK");
+    assert.equal(
+      withEnsuredPackId(undefined, () => "PACK-1"),
+      "PACK-1",
+    );
+    assert.equal(
+      withEnsuredPackId("  PACK-OK  ", () => "PACK-1"),
+      "PACK-OK",
+    );
   });
 });

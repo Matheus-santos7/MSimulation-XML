@@ -25,8 +25,5 @@ test("assertOrderFreightFilled aceita apenas seller", () => {
 });
 
 test("sumOrderFreteCte soma consumidor e seller", () => {
-  assert.equal(
-    sumOrderFreteCte({ freteConsumidor: 10, freteSeller: 5.5 }),
-    15.5,
-  );
+  assert.equal(sumOrderFreteCte({ freteConsumidor: 10, freteSeller: 5.5 }), 15.5);
 });

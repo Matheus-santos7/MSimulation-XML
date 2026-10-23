@@ -35,19 +35,6 @@ export {
   type XTextoInput,
 } from "./nfe-xtexto.js";
 export {
-  REMESSA_AUT_XML_CPFS,
-  REMESSA_IBS_CBS_DEFAULT,
-  REMESSA_ML_INTERMED_CNPJ,
-  REMESSA_ML_INTERMED_ID_DEFAULT,
-  ML_INF_RESP_TEC,
-  REMESSA_ML_TRANSPORTA_DEFAULT,
-  enrichFiscalPayloadMlFulfillment,
-  estimateRemessaPesoVol,
-  type EnrichMlFulfillmentPayloadInput,
-  type RemessaMlTransporta,
-  type RemessaTranspVol,
-} from "./remessa-ml-payload.js";
-export {
   lineTotal,
   productUnitPrice,
   productUnitPriceForNfe,
@@ -87,7 +74,6 @@ export {
   CFOP_VENDA_CONTRIB_INTER,
   CFOP_VENDA_NAO_CONTRIB_INTRA,
   CFOP_VENDA_NAO_CONTRIB_INTER,
-  ML_NFE_VER_PROC,
   assertTaxRuleCfopMatchesTree,
   assertCestRequiredForStCfop,
   CFOP_VENDA_ST,
@@ -95,7 +81,6 @@ export {
   resolveUniformProdutoSt,
   SaleCfopConsistencyError,
   saleRoutingFromEmitterSettings,
-  VENDA_ML_NAT_OP,
   type ResolveSaleCfopRouting,
   type SaleCustomerType,
 } from "./sale-cfop.js";
@@ -162,20 +147,6 @@ export {
   type ConferenceBalanceSource,
   type ConferenceDebitAllocation,
 } from "./inbound-conference-balance.js";
-export {
-  VENDA_ML_CD_DEPOSITO,
-  VENDA_ML_IBS_CBS_DEFAULT,
-  VENDA_ML_INF_RESP_TEC,
-  VENDA_ML_TRANSPORTA,
-  buildVendaInfAdProdText,
-  buildVendaInfCplMiddle,
-  buildVendaInfCplText,
-  enrichFiscalPayloadMlVenda,
-  estimateVendaVTotTrib,
-  type EnrichMlVendaPayloadInput,
-  type VendaMlReturnNoteDestinatario,
-  type VendaMlReturnNoteRef,
-} from "./venda-ml-payload.js";
 export {
   EBAZAR_REGIME_ESPECIAL_BY_UF_CNPJ,
   normalizeCnpjDigits,

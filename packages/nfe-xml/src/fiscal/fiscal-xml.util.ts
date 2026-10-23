@@ -5,7 +5,7 @@
 
 import {
   estimateRemessaPesoVol,
-  REMESSA_IBS_CBS_DEFAULT,
+  mercadoLivre,
   type NfeTransporta,
 } from "@msimulation-xml/fiscal-core";
 import type { IcmsTotInput } from "../fiscal-engine-xml.js";
@@ -26,8 +26,8 @@ export type IbsCbsDefaults = {
 };
 
 export const REMESSA_IBS_CBS_DEFAULTS: IbsCbsDefaults = {
-  cst: REMESSA_IBS_CBS_DEFAULT.st,
-  cClassTrib: REMESSA_IBS_CBS_DEFAULT.cClassTrib,
+  cst: mercadoLivre.ML_IBS_CBS_REMESSA.st,
+  cClassTrib: mercadoLivre.ML_IBS_CBS_REMESSA.cClassTrib,
 };
 
 export const VENDA_IBS_CBS_DEFAULTS: IbsCbsDefaults = {
@@ -242,7 +242,7 @@ export function nfePagXmlVenda(vNF: number, pagamento?: Record<string, unknown> 
       </pag>`;
 }
 
-/** Remessa: sempre emite IBSCBS (padrão ML reforma tributária). */
+/** Remessa: sempre emite IBSCBS; sem `ibsCbs` no payload vale o padrão do ML (o perfil já preenche). */
 export function ibsCbsImpostoXmlRemessa(
   ibsCbs?: Record<string, unknown> | null,
   vBC?: number | null,

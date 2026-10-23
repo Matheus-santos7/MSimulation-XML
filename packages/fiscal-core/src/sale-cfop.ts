@@ -10,12 +10,6 @@ import type { FiscalEmitterSettingsData } from "./fiscal-emitter-settings-types.
 
 export type SaleCustomerType = "taxpayer" | "non_taxpayer";
 
-/** @deprecated Use `getMarketplaceProfile(...).ide` (`marketplaces/mercado-livre/ide.ts`). */
-export {
-  ML_NAT_OP_VENDA as VENDA_ML_NAT_OP,
-  ML_VER_PROC_VENDA as ML_NFE_VER_PROC,
-} from "./marketplaces/mercado-livre/ide.js";
-
 /** Venda Full (armazém geral) comércio — intraestadual. */
 export const CFOP_VENDA_NAO_CONTRIB_INTRA = "5106";
 

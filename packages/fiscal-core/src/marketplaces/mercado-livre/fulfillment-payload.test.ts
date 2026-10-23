@@ -1,12 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import {
-  enrichFiscalPayloadMlFulfillment,
-  estimateRemessaPesoVol,
-  REMESSA_ML_INTERMED_ID_DEFAULT,
-} from "./remessa-ml-payload.js";
+import { estimateRemessaPesoVol } from "../fulfillment-payload.js";
+import { enrichMercadoLivreFulfillmentPayload } from "./fulfillment-payload.js";
+import { ML_ID_CAD_INT_TRAN_PADRAO } from "./intermediador.js";
 
-describe("fiscal-core / remessa-ml-payload", () => {
+describe("Mercado Livre — payload de fulfillment", () => {
   it("estimateRemessaPesoVol — 3 unidades como XML ML", () => {
     const vol = estimateRemessaPesoVol(3);
     assert.equal(vol.qVol, 3);
@@ -14,8 +12,8 @@ describe("fiscal-core / remessa-ml-payload", () => {
     assert.equal(vol.pesoB, 2.13);
   });
 
-  it("enrichFiscalPayloadMlFulfillment preenche logística e intermediário", () => {
-    const out = enrichFiscalPayloadMlFulfillment(
+  it("enrichMercadoLivreFulfillmentPayload preenche logística e intermediário", () => {
+    const out = enrichMercadoLivreFulfillmentPayload(
       { engine: { itens: [] }, obsContXTexto: "INBOUND-inbound-ORDER-1-1-OLSS-279642028" },
       {
         quantidadeTotal: 3,
@@ -36,7 +34,7 @@ describe("fiscal-core / remessa-ml-payload", () => {
   });
 
   it("não sobrescreve transporta/transp já definidos", () => {
-    const out = enrichFiscalPayloadMlFulfillment(
+    const out = enrichMercadoLivreFulfillmentPayload(
       {
         transporta: { cnpj: "11111111000111" },
         transp: { qVol: 2, pesoL: 9, pesoB: 10 },
@@ -48,10 +46,10 @@ describe("fiscal-core / remessa-ml-payload", () => {
   });
 
   it("usa id padrão quando unidade não informa idCadIntTran", () => {
-    const out = enrichFiscalPayloadMlFulfillment({}, { quantidadeTotal: 1 });
+    const out = enrichMercadoLivreFulfillmentPayload({}, { quantidadeTotal: 1 });
     assert.equal(
       (out.infIntermed as { idCadIntTran: string }).idCadIntTran,
-      REMESSA_ML_INTERMED_ID_DEFAULT,
+      ML_ID_CAD_INT_TRAN_PADRAO,
     );
   });
 });

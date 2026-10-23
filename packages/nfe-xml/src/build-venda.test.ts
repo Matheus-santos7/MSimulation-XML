@@ -1,14 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import {
-  buildNFeXmlFromBuilder,
-} from "./core/nfe-factory.js";
+import { buildNFeXmlFromBuilder } from "./core/nfe-factory.js";
 import type { EmitenteXml, NFeXmlInput, ProductXmlInput } from "./types.js";
-import {
-  enrichFiscalPayloadMlVenda,
-  ML_NFE_VER_PROC,
-  VENDA_ML_NAT_OP,
-} from "@msimulation-xml/fiscal-core";
+import { mercadoLivre, mercadoLivreProfile } from "@msimulation-xml/fiscal-core";
 import { verifySimulationXmlSignature } from "@msimulation-xml/fiscal-core";
 import type { FiscalEmitterSettingsData } from "@msimulation-xml/fiscal-core";
 
@@ -63,7 +57,7 @@ describe("buildNFeXmlFromBuilder — VENDA", () => {
       chave: "41260678242849000169550050000000051423282896",
       numero: 5,
       serie: 5,
-      natOp: VENDA_ML_NAT_OP,
+      natOp: mercadoLivre.ML_NAT_OP_VENDA,
       cfop: "5105",
       ncm: "73211100",
       destinatario: {
@@ -93,7 +87,7 @@ describe("buildNFeXmlFromBuilder — VENDA", () => {
       quantidade: 1,
       tipo: "VENDA",
       nfeReferenciaChave: "41260678242849000169550050000000041410852632",
-      fiscalPayload: enrichFiscalPayloadMlVenda(
+      fiscalPayload: mercadoLivreProfile.enrichVendaPayload(
         {
           autXmlCpfs: ["07116024921", "05168151990"],
           xPed: "200001579233992",
@@ -135,7 +129,7 @@ describe("buildNFeXmlFromBuilder — VENDA", () => {
 
     const xml = buildNFeXML(nfe, emit, product);
     assert.match(xml, /<natOp>Venda de mercadorias<\/natOp>/);
-    assert.match(xml, new RegExp(`<verProc>${ML_NFE_VER_PROC}<\\/verProc>`));
+    assert.match(xml, new RegExp(`<verProc>${mercadoLivre.ML_VER_PROC_VENDA}<\\/verProc>`));
     assert.match(xml, /<autXML>\s*<CPF>07116024921<\/CPF>\s*<\/autXML>/);
     assert.match(xml, /<CFOP>5106<\/CFOP>/);
     assert.match(xml, /<vFrete>55\.99<\/vFrete>/);
@@ -153,7 +147,10 @@ describe("buildNFeXmlFromBuilder — VENDA", () => {
     assert.match(xml, /<tPag>03<\/tPag>/);
     assert.match(xml, /<vPag>894\.52<\/vPag>/);
     assert.match(xml, /<card>\s*<tpIntegra>1<\/tpIntegra>/);
-    assert.match(xml, /<infCpl>Venda de mercadoria armazenada em fulfillment\. Enviado diretamente do deposito temporario/);
+    assert.match(
+      xml,
+      /<infCpl>Venda de mercadoria armazenada em fulfillment\. Enviado diretamente do deposito temporario/,
+    );
     assert.match(xml, /Regime Especial SC - TTD SC n 225000004034256\./);
     assert.match(xml, /<infRespTec>/);
     assert.match(xml, /<hashCSRT>\+TuKUMc7ueWv9UiYNVaTD\+ym1a4=<\/hashCSRT>/);
@@ -166,7 +163,7 @@ describe("buildNFeXmlFromBuilder — VENDA", () => {
       chave: "41260678242849000169550050000000051423282896",
       numero: 5,
       serie: 5,
-      natOp: VENDA_ML_NAT_OP,
+      natOp: mercadoLivre.ML_NAT_OP_VENDA,
       cfop: "",
       ncm: "73211100",
       destinatario: {
@@ -220,7 +217,7 @@ describe("buildNFeXmlFromBuilder — VENDA", () => {
       chave: "42260678242849000169550050000000061423282897",
       numero: 6,
       serie: 5,
-      natOp: VENDA_ML_NAT_OP,
+      natOp: mercadoLivre.ML_NAT_OP_VENDA,
       cfop: "6105",
       ncm: "85094010",
       destinatario: {
@@ -249,7 +246,7 @@ describe("buildNFeXmlFromBuilder — VENDA", () => {
       pedidoML: "46766952869",
       quantidade: 1,
       tipo: "VENDA",
-      fiscalPayload: enrichFiscalPayloadMlVenda(
+      fiscalPayload: mercadoLivreProfile.enrichVendaPayload(
         {
           ufSaidaFisica: "SC",
           engine: {
@@ -330,7 +327,7 @@ describe("buildNFeXmlFromBuilder — VENDA", () => {
       chave: "35260601490698006689550580000000311306171272",
       numero: 31,
       serie: 58,
-      natOp: VENDA_ML_NAT_OP,
+      natOp: mercadoLivre.ML_NAT_OP_VENDA,
       cfop: "5105",
       ncm: "85094010",
       destinatario: {
@@ -359,7 +356,7 @@ describe("buildNFeXmlFromBuilder — VENDA", () => {
       pedidoML: "ML-781892298163",
       quantidade: 1,
       tipo: "VENDA",
-      fiscalPayload: enrichFiscalPayloadMlVenda(
+      fiscalPayload: mercadoLivreProfile.enrichVendaPayload(
         {
           ufSaidaFisica: "SC",
           cMunSaidaFisica: "4204509",
@@ -402,7 +399,7 @@ describe("buildNFeXmlFromBuilder — VENDA", () => {
       chave: "41260678242849000169550050000000071423282898",
       numero: 7,
       serie: 5,
-      natOp: VENDA_ML_NAT_OP,
+      natOp: mercadoLivre.ML_NAT_OP_VENDA,
       cfop: "5105",
       ncm: "73211100",
       destinatario: {
@@ -476,7 +473,7 @@ describe("buildNFeXmlFromBuilder — VENDA", () => {
       chave: "41260678242849000169550050000000061423282897",
       numero: 6,
       serie: 5,
-      natOp: VENDA_ML_NAT_OP,
+      natOp: mercadoLivre.ML_NAT_OP_VENDA,
       cfop: "6102",
       ncm: "73211100",
       destinatario: {
@@ -556,7 +553,7 @@ describe("buildNFeXmlFromBuilder — VENDA", () => {
       chave: "35260701490698006689550580000001611534107437",
       numero: 161,
       serie: 58,
-      natOp: VENDA_ML_NAT_OP,
+      natOp: mercadoLivre.ML_NAT_OP_VENDA,
       cfop: "6106",
       ncm: "85167990",
       destinatario: {
@@ -748,10 +745,7 @@ describe("buildNFeXmlFromBuilder — DEVOLUCAO / INSULCESSO", () => {
     const nfe = baseDevolucao("DEVOLUCAO");
     const { nfeOrigem: _omit, ...fiscal } = nfe.fiscalPayload as Record<string, unknown>;
     nfe.fiscalPayload = fiscal;
-    assert.throws(
-      () => buildNFeXML(nfe, emit, product),
-      /nfeOrigem/,
-    );
+    assert.throws(() => buildNFeXML(nfe, emit, product), /nfeOrigem/);
   });
 
   it("DEVOLUCAO emite impostoDevol, vIPIDevol, entrega OL e FCP só em UFDest", () => {
@@ -817,13 +811,19 @@ describe("buildNFeXmlFromBuilder — DEVOLUCAO / INSULCESSO", () => {
     assert.match(xml, /<finNFe>4<\/finNFe>/);
     assert.match(xml, /<orig>2<\/orig>/);
     assert.match(xml, /<CST>00<\/CST>/);
-    assert.match(xml, /<impostoDevol>[\s\S]*<pDevol>100\.00<\/pDevol>[\s\S]*<vIPIDevol>50\.00<\/vIPIDevol>[\s\S]*<\/impostoDevol>/);
+    assert.match(
+      xml,
+      /<impostoDevol>[\s\S]*<pDevol>100\.00<\/pDevol>[\s\S]*<vIPIDevol>50\.00<\/vIPIDevol>[\s\S]*<\/impostoDevol>/,
+    );
     assert.match(xml, /<ICMSTot>[\s\S]*<vIPIDevol>50\.00<\/vIPIDevol>/);
     assert.match(xml, /<entrega>[\s\S]*<CNPJ>03007331012077<\/CNPJ>/);
     assert.match(xml, /<vFCPUFDest>21\.00<\/vFCPUFDest>/);
     assert.match(xml, /<vICMSUFDest>63\.00<\/vICMSUFDest>/);
     assert.match(xml, /<vFCP>0\.00<\/vFCP>/);
-    assert.match(xml, /<infIntermed>[\s\S]*<CNPJ>10573521000191<\/CNPJ>[\s\S]*<idCadIntTran>12345678901<\/idCadIntTran>/);
+    assert.match(
+      xml,
+      /<infIntermed>[\s\S]*<CNPJ>10573521000191<\/CNPJ>[\s\S]*<idCadIntTran>12345678901<\/idCadIntTran>/,
+    );
   });
 
   it("DEVOLUCAO parcial multi-item usa o produto de cada linha (nfe.itens) e pDevol proporcional", () => {
@@ -838,7 +838,14 @@ describe("buildNFeXmlFromBuilder — DEVOLUCAO / INSULCESSO", () => {
     nfe.valor = 350;
     nfe.itens = [
       { numeroItem: 1, quantidade: 1, valor: 100, ncm: product.ncm, cfop: "1202", product },
-      { numeroItem: 2, quantidade: 1, valor: 250, ncm: productB.ncm, cfop: "1202", product: productB },
+      {
+        numeroItem: 2,
+        quantidade: 1,
+        valor: 250,
+        ncm: productB.ncm,
+        cfop: "1202",
+        product: productB,
+      },
     ];
     nfe.fiscalPayload = {
       ...nfe.fiscalPayload,
@@ -880,11 +887,20 @@ describe("buildNFeXmlFromBuilder — DEVOLUCAO / INSULCESSO", () => {
     const dets = xml.match(/<det nItem="\d+">[\s\S]*?<\/det>/g) ?? [];
     assert.equal(dets.length, 2);
     assert.match(dets[0]!, /<cProd>300002137<\/cProd>[\s\S]*<qCom>1\.0000<\/qCom>/);
-    assert.match(dets[1]!, /<cProd>300009999<\/cProd>[\s\S]*<xProd>Cooktop 2 Bocas<\/xProd>[\s\S]*<NCM>73211200<\/NCM>/);
-    assert.match(dets[1]!, /<impostoDevol>[\s\S]*<pDevol>50\.00<\/pDevol>[\s\S]*<vIPIDevol>12\.50<\/vIPIDevol>/);
+    assert.match(
+      dets[1]!,
+      /<cProd>300009999<\/cProd>[\s\S]*<xProd>Cooktop 2 Bocas<\/xProd>[\s\S]*<NCM>73211200<\/NCM>/,
+    );
+    assert.match(
+      dets[1]!,
+      /<impostoDevol>[\s\S]*<pDevol>50\.00<\/pDevol>[\s\S]*<vIPIDevol>12\.50<\/vIPIDevol>/,
+    );
     assert.doesNotMatch(dets[0]!, /<impostoDevol>/);
     assert.doesNotMatch(xml, /SKU-9-2/);
-    assert.match(xml, /<ICMSTot>[\s\S]*<vProd>350\.00<\/vProd>[\s\S]*<vIPIDevol>12\.50<\/vIPIDevol>[\s\S]*<vNF>362\.50<\/vNF>/);
+    assert.match(
+      xml,
+      /<ICMSTot>[\s\S]*<vProd>350\.00<\/vProd>[\s\S]*<vIPIDevol>12\.50<\/vIPIDevol>[\s\S]*<vNF>362\.50<\/vNF>/,
+    );
   });
 
   it("VENDA multi-item emite xPed distinto por nItem (fiscal.xPeds)", () => {
@@ -894,7 +910,7 @@ describe("buildNFeXmlFromBuilder — DEVOLUCAO / INSULCESSO", () => {
       chave: "41260678242849000169550050000000051423282896",
       numero: 5,
       serie: 5,
-      natOp: VENDA_ML_NAT_OP,
+      natOp: mercadoLivre.ML_NAT_OP_VENDA,
       cfop: "5105",
       ncm: "73211100",
       destinatario: {
@@ -924,7 +940,7 @@ describe("buildNFeXmlFromBuilder — DEVOLUCAO / INSULCESSO", () => {
       quantidade: 2,
       tipo: "VENDA",
       nfeReferenciaChave: "41260678242849000169550050000000041410852632",
-      fiscalPayload: enrichFiscalPayloadMlVenda(
+      fiscalPayload: mercadoLivreProfile.enrichVendaPayload(
         {
           xPeds: [xPedA, xPedB],
           engine: {

@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { DOMParser } from "@xmldom/xmldom";
 import {
-  enrichFiscalPayloadMlFulfillment,
   enrichFiscalPayloadWithXTexto,
+  mercadoLivreProfile,
   verifySimulationXmlSignature,
 } from "@msimulation-xml/fiscal-core";
 import { buildNFeXmlFromBuilder } from "./core/nfe-factory.js";
@@ -225,7 +225,7 @@ describe("buildNFeXML — REMESSA", () => {
 
   it("alinha estrutura ML: IBSCBS, vItem, transporta, autXML e reforma nos totais", () => {
     const nfe = baseNfe();
-    nfe.fiscalPayload = enrichFiscalPayloadMlFulfillment(nfe.fiscalPayload ?? {}, {
+    nfe.fiscalPayload = mercadoLivreProfile.enrichFulfillmentPayload(nfe.fiscalPayload ?? {}, {
       quantidadeTotal: nfe.quantidade,
       destIe: "261755994",
     });
@@ -235,7 +235,10 @@ describe("buildNFeXML — REMESSA", () => {
     assert.match(xml, /<vItem>100\.00<\/vItem>/);
     assert.match(xml, /<IBSCBSTot>\s*<vBCIBSCBS>0\.00<\/vBCIBSCBS>\s*<\/IBSCBSTot>/);
     assert.match(xml, /<vNFTot>100\.00<\/vNFTot>/);
-    assert.match(xml, /<transporta>\s*<xNome>Transgoss Transporte e Logistica<\/xNome>\s*<\/transporta>/);
+    assert.match(
+      xml,
+      /<transporta>\s*<xNome>Transgoss Transporte e Logistica<\/xNome>\s*<\/transporta>/,
+    );
     assert.match(xml, /<infRespTec>/);
     assert.match(xml, /<autXML>\s*<CPF>87659808915<\/CPF>\s*<\/autXML>/);
     assert.match(xml, /<cEnq>103<\/cEnq>/);
@@ -251,10 +254,7 @@ describe("buildNFeXML — REMESSA", () => {
 
   it("obsCont external_id segue padrão INBOUND ML", () => {
     const xml = buildNFeXML(baseNfe(), emit);
-    assert.match(
-      xml,
-      /<xTexto>INBOUND-inbound-ORDER-1-1-1-OLSS-279642028<\/xTexto>/,
-    );
+    assert.match(xml, /<xTexto>INBOUND-inbound-ORDER-1-1-1-OLSS-279642028<\/xTexto>/);
   });
 
   it("emite gIBSCBS/vBC e soma vBCIBSCBS quando CST exige o grupo", () => {
@@ -340,7 +340,11 @@ describe("buildNFeXML — REMESSA", () => {
       preco: 999,
       precoCusto: 609,
     };
-    const xml = buildNFeXML(nfe, { ...emit, uf: "PR", endereco: { ...emit.endereco, uf: "PR" } }, product);
+    const xml = buildNFeXML(
+      nfe,
+      { ...emit, uf: "PR", endereco: { ...emit.endereco, uf: "PR" } },
+      product,
+    );
     assert.match(xml, /<vUnCom>609\.00000000<\/vUnCom>/);
     assert.match(xml, /<vProd>609\.00<\/vProd>/);
     assert.match(xml, /<vItem>609\.00<\/vItem>/);
@@ -510,7 +514,7 @@ describe("buildNFeXML — REMESSA", () => {
       tipo: "REMESSA_SIMBOLICA" as const,
       nfeReferenciaChave: "35260612345678000199550010000000021000000023",
       emitidaEm: "2026-06-17T12:00:00-03:00",
-      fiscalPayload: enrichFiscalPayloadMlFulfillment(
+      fiscalPayload: mercadoLivreProfile.enrichFulfillmentPayload(
         enrichFiscalPayloadWithXTexto(
           {
             remessaSimbolicaPosDevolucao: {
@@ -625,7 +629,7 @@ describe("buildNFeXML — REMESSA", () => {
 
   it("usa idCadIntTran e pesos do fiscalPayload enriquecido (emissão real)", () => {
     const nfe = baseNfe();
-    nfe.fiscalPayload = enrichFiscalPayloadMlFulfillment(
+    nfe.fiscalPayload = mercadoLivreProfile.enrichFulfillmentPayload(
       enrichFiscalPayloadWithXTexto(nfe.fiscalPayload ?? {}, {
         tipo: "REMESSA",
         cfop: nfe.cfop,
@@ -648,7 +652,7 @@ describe("buildNFeXML — REMESSA", () => {
 
   it("inclui nFCI no produto da remessa quando cadastrado", () => {
     const nfe = baseNfe();
-    nfe.fiscalPayload = enrichFiscalPayloadMlFulfillment(nfe.fiscalPayload ?? {}, {
+    nfe.fiscalPayload = mercadoLivreProfile.enrichFulfillmentPayload(nfe.fiscalPayload ?? {}, {
       quantidadeTotal: nfe.quantidade,
     });
     const product = {
@@ -676,7 +680,7 @@ describe("buildNFeXML — REMESSA", () => {
       natOp: "Outras Entradas - Retorno Simbolico de Deposito Temporario",
       cfop: "1949",
       nfeReferenciaChave: [remessa1, remessa2],
-      fiscalPayload: enrichFiscalPayloadMlFulfillment(
+      fiscalPayload: mercadoLivreProfile.enrichFulfillmentPayload(
         {
           engine: {
             itens: [

@@ -3,11 +3,7 @@
  * Um cenário por tipo de NF-e. Mudar uma entrada aqui exige regravar os arquivos
  * (`UPDATE_GOLDEN=1`) e revisar o diff do XML.
  */
-import {
-  enrichFiscalPayloadMlFulfillment,
-  enrichFiscalPayloadMlVenda,
-  type NFeTipoValue,
-} from "@msimulation-xml/fiscal-core";
+import { mercadoLivreProfile, type NFeTipoValue } from "@msimulation-xml/fiscal-core";
 import type { EmitenteXml, NFeXmlInput, ProductXmlInput } from "../types.js";
 
 export const goldenEmit: EmitenteXml = {
@@ -126,7 +122,7 @@ function fulfillmentNote(
     pedidoML: "ML-781050649173",
     quantidade: 1,
     tipo,
-    fiscalPayload: enrichFiscalPayloadMlFulfillment(
+    fiscalPayload: mercadoLivreProfile.enrichFulfillmentPayload(
       { engine: engine(609, 12) },
       { quantidadeTotal: 1, destIe: "261755994", withLogistics: true },
     ),
@@ -205,7 +201,7 @@ export const goldenScenarios: readonly GoldenScenario[] = [
       quantidade: 1,
       tipo: "VENDA",
       nfeReferenciaChave: CHAVE_REMESSA,
-      fiscalPayload: enrichFiscalPayloadMlVenda(
+      fiscalPayload: mercadoLivreProfile.enrichVendaPayload(
         { engine: engine(815.86, 19.5) },
         { quantidade: 1, valorFrete: 55.99, xPed: "200001579233992", vTotTrib: 289.96 },
       ),

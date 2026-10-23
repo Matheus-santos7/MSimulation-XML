@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { ZodError, z } from "zod";
-import { resolveRouteError } from "./domain-errors.js";
+import { resolveRouteError } from "../domain-errors.js";
 
 class SampleStatusError extends Error {
   constructor(

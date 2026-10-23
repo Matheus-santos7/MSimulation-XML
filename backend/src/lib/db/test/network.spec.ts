@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import net from "node:net";
-import { afterEach, describe, it } from "node:test";
-import { DB_CONNECT_ATTEMPT_TIMEOUT_MS, applyDbNetworkDefaults } from "./network.js";
+import { afterEach, describe, it } from "vitest";
+import { DB_CONNECT_ATTEMPT_TIMEOUT_MS, applyDbNetworkDefaults } from "../network.js";
 
 const originalAttemptTimeout = net.getDefaultAutoSelectFamilyAttemptTimeout();
 

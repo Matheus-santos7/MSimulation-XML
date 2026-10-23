@@ -1,20 +1,20 @@
 import assert from "node:assert/strict";
-import { afterEach, beforeEach, describe, it, mock } from "node:test";
-import { CaptchaVerificationError, verifyTurnstileToken } from "./turnstile.js";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { CaptchaVerificationError, verifyTurnstileToken } from "../turnstile.js";
 
 describe("verifyTurnstileToken", () => {
   const originalEnv = { ...process.env };
-  let fetchMock: ReturnType<typeof mock.fn>;
+  let fetchMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     process.env.TURNSTILE_SECRET_KEY = "test-secret";
-    fetchMock = mock.fn();
+    fetchMock = vi.fn();
     globalThis.fetch = fetchMock as unknown as typeof fetch;
   });
 
   afterEach(() => {
     process.env = { ...originalEnv };
-    mock.restoreAll();
+    vi.restoreAllMocks();
   });
 
   it("aceita ausência de token em desenvolvimento sem secret", async () => {
@@ -22,26 +22,26 @@ describe("verifyTurnstileToken", () => {
     delete process.env.TURNSTILE_SECRET_KEY;
 
     await verifyTurnstileToken(undefined);
-    assert.equal(fetchMock.mock.callCount(), 0);
+    assert.equal(fetchMock.mock.calls.length, 0);
   });
 
   it("rejeita token ausente quando secret está configurado", async () => {
     process.env.NODE_ENV = "production";
 
     await assert.rejects(() => verifyTurnstileToken(""), CaptchaVerificationError);
-    assert.equal(fetchMock.mock.callCount(), 0);
+    assert.equal(fetchMock.mock.calls.length, 0);
   });
 
   it("valida token sem enviar remoteip ao Cloudflare", async () => {
     process.env.NODE_ENV = "production";
-    fetchMock.mock.mockImplementation(async () =>
+    fetchMock.mockImplementation(async () =>
       new Response(JSON.stringify({ success: true }), { status: 200 }),
     );
 
     await verifyTurnstileToken("0123456789abcdef");
 
-    assert.equal(fetchMock.mock.callCount(), 1);
-    const [url, init] = fetchMock.mock.calls[0]?.arguments as [string, RequestInit];
+    assert.equal(fetchMock.mock.calls.length, 1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     assert.equal(url, "https://challenges.cloudflare.com/turnstile/v0/siteverify");
     assert.equal(init.method, "POST");
 
@@ -53,7 +53,7 @@ describe("verifyTurnstileToken", () => {
 
   it("rejeita quando Cloudflare retorna success=false", async () => {
     process.env.NODE_ENV = "production";
-    fetchMock.mock.mockImplementation(async () =>
+    fetchMock.mockImplementation(async () =>
       new Response(JSON.stringify({ success: false, "error-codes": ["invalid-input-response"] }), {
         status: 200,
       }),

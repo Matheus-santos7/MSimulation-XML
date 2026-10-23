@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
-import { afterEach, describe, it } from "node:test";
-import { dbTransactionContext } from "./tenant-rls.js";
+import { afterEach, describe, it } from "vitest";
+import { dbTransactionContext } from "../tenant-rls.js";
 import {
   registerFiscalTransactionCommitHook,
   resetFiscalTransactionCommitHookForTests,
   runFiscalTransaction,
-} from "./prisma-tx.js";
+} from "../prisma-tx.js";
 
 function createFakeDb() {
   const tx = { $executeRaw: async (..._args: unknown[]) => 0 };

@@ -9,12 +9,12 @@
  */
 import assert from "node:assert/strict";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { after, before, describe, it } from "node:test";
+import { afterAll, beforeAll, describe, it } from "vitest";
 import type { FastifyInstance, InjectOptions, RouteOptions } from "fastify";
 
 process.env.JWT_SECRET ??= "contract-test-secret-0123456789";
 
-const { buildApp } = await import("./app.js");
+const { buildApp } = await import("../app.js");
 
 const ROUTES_SNAPSHOT_PATH = new URL("./app.contract.routes.txt", import.meta.url);
 const SAMPLE_ID = "00000000-0000-4000-8000-000000000000";
@@ -212,10 +212,10 @@ describe("contrato HTTP — snapshot de rotas", () => {
 describe("contrato HTTP — autenticação", () => {
   let app: FastifyInstance;
 
-  before(async () => {
+  beforeAll(async () => {
     app = await startApp();
   });
-  after(() => app.close());
+  afterAll(() => app.close());
 
   it("responde 401 sem token em toda rota protegida", async () => {
     const protectedRoutes = businessRoutes(registeredRoutes).filter(
@@ -331,11 +331,11 @@ describe("contrato HTTP — respostas por módulo (banco vazio)", () => {
   let app: FastifyInstance;
   let token: string;
 
-  before(async () => {
+  beforeAll(async () => {
     app = await startApp();
     token = accessToken(app);
   });
-  after(() => app.close());
+  afterAll(() => app.close());
 
   const EMPTY_LIST_ROUTES = [
     "/api/pedidos",
@@ -535,11 +535,11 @@ describe("contrato HTTP — uploads de planilha (ADMIN)", () => {
   let app: FastifyInstance;
   let headers: Record<string, string>;
 
-  before(async () => {
+  beforeAll(async () => {
     app = await startApp({ user: { role: "ADMIN" } });
     headers = bearer(accessToken(app));
   });
-  after(() => app.close());
+  afterAll(() => app.close());
 
   const NOT_MULTIPART = "Envie a planilha como multipart/form-data (campo file)";
 
@@ -748,11 +748,11 @@ describe("contrato HTTP — documentos fiscais", () => {
   let app: FastifyInstance;
   let headers: Record<string, string>;
 
-  before(async () => {
+  beforeAll(async () => {
     app = await startApp({ user: { role: "ADMIN" } });
     headers = bearer(accessToken(app));
   });
-  after(() => app.close());
+  afterAll(() => app.close());
 
   const NOT_FOUND_CASES = [
     { url: `/api/nfes/${ACCESS_KEY}/xml`, error: "NF-e não encontrada" },
@@ -822,11 +822,11 @@ describe("contrato HTTP — pedidos (ADMIN)", () => {
   let app: FastifyInstance;
   let headers: Record<string, string>;
 
-  before(async () => {
+  beforeAll(async () => {
     app = await startApp({ user: { role: "ADMIN" } });
     headers = bearer(accessToken(app));
   });
-  after(() => app.close());
+  afterAll(() => app.close());
 
   const NOT_FOUND_CASES = [
     { method: "GET", url: `/api/pedidos/${SAMPLE_ID}/integracao` },
@@ -872,11 +872,11 @@ describe("contrato HTTP — auth", () => {
   let app: FastifyInstance;
   let headers: Record<string, string>;
 
-  before(async () => {
+  beforeAll(async () => {
     app = await startApp();
     headers = bearer(accessToken(app));
   });
-  after(() => app.close());
+  afterAll(() => app.close());
 
   const VALIDATION_CASES = [
     { url: "/api/auth/register", details: { email: ["Required"], password: ["Required"] } },
@@ -1037,11 +1037,11 @@ describe("contrato HTTP — tenant e usuários (org)", () => {
   let app: FastifyInstance;
   let headers: Record<string, string>;
 
-  before(async () => {
+  beforeAll(async () => {
     app = await startApp({ user: { tenantId: OWN_TENANT_ID } });
     headers = bearer(accessToken(app));
   });
-  after(() => app.close());
+  afterAll(() => app.close());
 
   it("GET /api/tenants/:id de outra empresa devolve 404", async () => {
     const res = await app.inject({ method: "GET", url: `/api/tenants/${SAMPLE_ID}`, headers });

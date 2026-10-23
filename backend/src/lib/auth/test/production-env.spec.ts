@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { afterEach, describe, it } from "node:test";
-import { assertProductionSecurityConfig } from "./production-env.js";
+import { afterEach, describe, it } from "vitest";
+import { assertProductionSecurityConfig } from "../production-env.js";
 
 const ENV_KEYS = [
   "NODE_ENV",

@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import assert from "node:assert/strict";
-import { after, before, beforeEach, describe, it } from "node:test";
+import { afterAll, beforeAll, beforeEach, describe, it } from "vitest";
 import fastifyJwt from "@fastify/jwt";
 import {
   Body,
@@ -16,20 +16,20 @@ import { NestFactory } from "@nestjs/core";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
 import Fastify, { type FastifyInstance } from "fastify";
 import { z } from "zod";
-import { ACCESS_MESSAGES } from "../lib/auth/access-control.js";
-import { getDbClient, getDbRequestContext } from "../lib/db/tenant-rls.js";
-import { HttpError } from "../lib/http/http-error.js";
+import { ACCESS_MESSAGES } from "../../lib/auth/access-control.js";
+import { getDbClient, getDbRequestContext } from "../../lib/db/tenant-rls.js";
+import { HttpError } from "../../lib/http/http-error.js";
 import {
   createRateLimitHandler,
   registerRootRateLimit,
   strictRouteRateLimit,
-} from "../lib/http/rate-limit.js";
-import { AdminOnly, ProtectedApi } from "./api-access.decorators.js";
-import { TenantId } from "./auth/request-params.js";
-import { CoreModule } from "./core.module.js";
-import { ApiExceptionFilter, RouteErrorFilter } from "./http/api-exception.filter.js";
-import { RateLimit, RateLimitInterceptor } from "./http/rate-limit.interceptor.js";
-import { ZodValidationPipe } from "./http/zod-validation.pipe.js";
+} from "../../lib/http/rate-limit.js";
+import { AdminOnly, ProtectedApi } from "../api-access.decorators.js";
+import { TenantId } from "../auth/request-params.js";
+import { CoreModule } from "../core.module.js";
+import { ApiExceptionFilter, RouteErrorFilter } from "../http/api-exception.filter.js";
+import { RateLimit, RateLimitInterceptor } from "../http/rate-limit.interceptor.js";
+import { ZodValidationPipe } from "../http/zod-validation.pipe.js";
 
 const JWT_SECRET = "nest-core-test-secret-0123456789";
 const TENANT_ID = "tenant-1";
@@ -192,11 +192,11 @@ describe("Nest core — guards, RLS, filtros e rate limit", () => {
   let fastify: FastifyInstance;
   let headers: Record<string, string>;
 
-  before(async () => {
+  beforeAll(async () => {
     ({ nest, fastify } = await buildTestApp());
     headers = { authorization: `Bearer ${accessToken(fastify)}` };
   });
-  after(() => nest.close());
+  afterAll(() => nest.close());
 
   beforeEach(() => {
     db.user = VERIFIED_MEMBER;

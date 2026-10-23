@@ -1,11 +1,8 @@
 import { defineConfig } from "vitest/config";
 
-/**
- * Specs no padrão novo (`*.spec.ts`). Os testes `*.test.ts` continuam no `node:test`
- * até cada módulo ser convertido (ver `.claude/ARCHITECTURE.md`, seção 12).
- */
+/** Suíte do backend: specs `*.spec.ts` em `test/` ao lado do que testam. */
 export default defineConfig({
-  // O tsconfig.json exclui os specs; os decorators legados (Nest, class-validator) vêm daqui.
+  // O tsconfig.json exclui os specs; os decorators legados do Nest vêm daqui.
   oxc: { decorator: { legacy: true } },
   test: {
     include: ["src/**/*.spec.ts"],
@@ -19,7 +16,6 @@ export default defineConfig({
         "src/**/*.module.ts",
         "src/**/index.ts",
         "src/**/*.spec.ts",
-        "src/**/*.test.ts",
         "src/generated/**",
       ],
     },

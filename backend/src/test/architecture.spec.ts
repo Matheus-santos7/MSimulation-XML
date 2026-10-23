@@ -6,10 +6,10 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { fileURLToPath } from "node:url";
 
-const SRC_DIR = fileURLToPath(new URL(".", import.meta.url));
+const SRC_DIR = fileURLToPath(new URL("..", import.meta.url));
 const MODULES_DIR = join(SRC_DIR, "modules");
 const PURE_FOLDERS = new Set(["rules", "types"]);
 const FRAMEWORK_IMPORT = /from\s+["'](@nestjs\/[^"']+|fastify|@fastify\/[^"']+)["']/;

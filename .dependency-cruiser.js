@@ -9,12 +9,12 @@ module.exports = {
       },
     },
     {
-      name: "core-no-nest-layer",
+      name: "rules-no-nest-layer",
       comment:
-        "domain/ e application/ ficam sem framework: não importam a camada Nest (backend/src/nest). " +
+        "rules/ e types/ das features ficam sem framework: não importam a camada Nest (backend/src/nest). " +
         "Imports de @nestjs/* e fastify nessas pastas são barrados por backend/src/architecture.test.ts.",
       severity: "error",
-      from: { path: "^backend/src/modules/[^/]+/(domain|application)/" },
+      from: { path: "^backend/src/modules/.+/(rules|types)/" },
       to: { path: "^backend/src/nest/" },
     },
   ],

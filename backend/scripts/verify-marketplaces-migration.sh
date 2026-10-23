@@ -117,6 +117,14 @@ if psql_check -c "INSERT INTO unidades_logisticas (id, codigo, nome, cnpj, logra
 fi
 pass "unidades: marketplace obrigatório"
 
+if psql_check -c "INSERT INTO pedidos (id, tenant_id, dest_cpf, dest_nome, dest_logradouro, dest_bairro, dest_codigo_municipio, dest_municipio, dest_uf, dest_cep, updated_at) VALUES ('pedido-2', '${TENANT_A}', '00000000191', 'Consumidor', 'Rua C', 'Centro', '3550308', 'São Paulo', 'SP', '01001000', now());" >/dev/null 2>&1; then
+  fail "pedido sem marketplace foi aceito"
+fi
+if psql_check -c "INSERT INTO nfes (id, tenant_id, chave, numero, serie, nat_op, cfop, ncm, dest_nome, dest_doc, dest_uf, valor, valor_icms, aliq_icms, status, emitida_em, marketplace_order_id, updated_at) VALUES ('nfe-2', '${TENANT_A}', '35260611111111000111550010000000021000000021', 2, 1, 'Venda', '5102', '61091000', 'Consumidor', '00000000191', 'SP', 100, 18, 18, 'AUTORIZADA', now(), 'PACK-124', now());" >/dev/null 2>&1; then
+  fail "nota sem marketplace foi aceita"
+fi
+pass "pedidos e notas: marketplace obrigatório (sem default)"
+
 # 3. Drift entre banco e schema.prisma ----------------------------------------------------
 if ! prisma_local migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code >/dev/null; then
   prisma_local migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script >&2 || true

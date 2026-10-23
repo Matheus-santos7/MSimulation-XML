@@ -3,6 +3,7 @@ export * from "./aut-xml.js";
 export * from "./fulfillment-payload.js";
 export * from "./ide.js";
 export * from "./intermediador.js";
+export * from "./pedido.js";
 export * from "./profile.js";
 export * from "./responsavel-tecnico.js";
 export * from "./textos.js";

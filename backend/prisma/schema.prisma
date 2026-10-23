@@ -392,10 +392,10 @@ model Pedido {
   tenantId           String       @map("tenant_id")
   tenant             Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   status             PedidoStatus @default(RASCUNHO)
-  /// Marketplace que fatura o pedido. O default some quando o módulo sales exigir o campo.
-  marketplace        Marketplace  @default(MERCADO_LIVRE)
-  /// Id do pedido no marketplace (pack id no ML). Campo Prisma renomeado no módulo sales.
-  pedidoMl           String?      @map("marketplace_order_id")
+  /// Marketplace que fatura o pedido (escolhido na criação; sem default).
+  marketplace        Marketplace
+  /// Id do pedido no marketplace (pack id no ML), validado pelo perfil do marketplace.
+  marketplaceOrderId String?      @map("marketplace_order_id")
   nfeId              String?      @unique @map("nfe_id")
   nfe                NFe?         @relation(fields: [nfeId], references: [id], onDelete: SetNull)
   destCpf            String       @map("dest_cpf")
@@ -479,8 +479,8 @@ model NFe {
   emitidaEm          DateTime      @map("emitida_em")
   /// Id do pedido no marketplace. Campo Prisma renomeado no módulo fiscal-documents.
   pedidoMl           String        @map("marketplace_order_id")
-  /// Marketplace que intermedeia a nota. O default some quando fiscal-documents exigir o campo.
-  marketplace        Marketplace   @default(MERCADO_LIVRE)
+  /// Marketplace que intermedeia a nota (o do CD ou o do pedido; sem default).
+  marketplace        Marketplace
   quantidade         Int           @default(1) @map("quantidade")
   tipo               NFeTipo       @default(VENDA) @map("tipo")
   saldoDisponivel    Int?          @map("saldo_disponivel")

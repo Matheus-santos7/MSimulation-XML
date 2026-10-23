@@ -1,4 +1,5 @@
 import type { MarketplaceCode } from "./marketplace.js";
+import type { MarketplaceOrderIdRules } from "./order-id.js";
 
 /**
  * Perfil fiscal de um marketplace: tudo que muda no XML da NF-e de acordo com o marketplace
@@ -24,6 +25,8 @@ export interface MarketplaceFiscalProfile {
   ibsCbsPadrao: { remessa: Record<string, unknown> | null; venda: Record<string, unknown> | null };
   /** Campos do `<ide>` que o marketplace define. */
   ide: { verProcVenda: string | null; natOpVenda: string | null };
+  /** Formato e geração do id do pedido no marketplace. */
+  pedido: MarketplaceOrderIdRules;
   /** Monta os blocos do marketplace no `fiscalPayload` de remessa, retorno e transferência. */
   enrichFulfillmentPayload(
     payload: Record<string, unknown>,

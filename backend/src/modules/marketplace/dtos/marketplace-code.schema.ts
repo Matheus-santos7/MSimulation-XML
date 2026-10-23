@@ -4,5 +4,9 @@ import { z } from "zod";
 /** Código de marketplace aceito em params, query e body (`MERCADO_LIVRE`, `SHOPEE`...). */
 export const marketplaceCodeSchema = z.enum(
   MARKETPLACE_CODES as [MarketplaceCode, ...MarketplaceCode[]],
-  { errorMap: () => ({ message: "Marketplace inválido" }) },
+  {
+    errorMap: (issue) => ({
+      message: issue.code === "invalid_type" ? "Informe o marketplace" : "Marketplace inválido",
+    }),
+  },
 );

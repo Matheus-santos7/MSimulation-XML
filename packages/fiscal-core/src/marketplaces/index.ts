@@ -2,6 +2,7 @@ export * from "./fulfillment-payload.js";
 export * from "./marketplace.js";
 export * from "./marketplace-fiscal-profile.js";
 export * from "./marketplace-not-configured.error.js";
+export * from "./order-id.js";
 export * from "./registry.js";
 export * as mercadoLivre from "./mercado-livre/index.js";
 export { mercadoLivreProfile } from "./mercado-livre/index.js";

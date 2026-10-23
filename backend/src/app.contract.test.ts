@@ -401,11 +401,20 @@ describe("contrato HTTP — respostas por módulo (banco vazio)", () => {
   });
 
   it("GET /api/marketplaces lista os marketplaces e se já podem faturar", async () => {
-    const res = await app.inject({ method: "GET", url: "/api/marketplaces", headers: bearer(token) });
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/marketplaces",
+      headers: bearer(token),
+    });
 
     assert.equal(res.statusCode, 200);
     assert.deepEqual(
-      res.json().map((m: { code: string; faturamentoDisponivel: boolean }) => [m.code, m.faturamentoDisponivel]),
+      res
+        .json()
+        .map((m: { code: string; faturamentoDisponivel: boolean }) => [
+          m.code,
+          m.faturamentoDisponivel,
+        ]),
       [
         ["MERCADO_LIVRE", true],
         ["SHOPEE", false],
@@ -471,8 +480,12 @@ describe("contrato HTTP — respostas por módulo (banco vazio)", () => {
 
     assert.equal(res.statusCode, 400);
     assert.deepEqual(res.json(), {
-      error: "Required",
-      details: { items: ["Required"], comprador: ["Required"] },
+      error: "Informe o marketplace",
+      details: {
+        marketplace: ["Informe o marketplace"],
+        items: ["Required"],
+        comprador: ["Required"],
+      },
     });
   });
 
@@ -844,8 +857,12 @@ describe("contrato HTTP — pedidos (ADMIN)", () => {
 
       assert.equal(res.statusCode, 400);
       assert.deepEqual(res.json(), {
-        error: "Required",
-        details: { items: ["Required"], comprador: ["Required"] },
+        error: "Informe o marketplace",
+        details: {
+          marketplace: ["Informe o marketplace"],
+          items: ["Required"],
+          comprador: ["Required"],
+        },
       });
     });
   }

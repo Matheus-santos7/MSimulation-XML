@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { PedidoDto, ProductDto } from "@/lib/fiscal-types";
+import type { MarketplaceCode, MarketplaceDto } from "@/lib/marketplaces";
 import { brl } from "@/lib/format";
 import { BRAZILIAN_UFS } from "@/lib/brazilian-states";
 import { PEDIDO_WIZARD_LAST_STEP, PEDIDO_WIZARD_STEPS, usePedidoWizard } from "@/hooks/use-pedido-wizard";
@@ -35,6 +36,7 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   products: ProductDto[];
+  marketplaces: MarketplaceDto[];
   pedido?: PedidoDto;
 };
 
@@ -46,7 +48,7 @@ const STEP_HINTS = [
   "Confira tudo antes de faturar.",
 ] as const;
 
-export function PedidoWizardDialog({ open, onOpenChange, products, pedido }: Props) {
+export function PedidoWizardDialog({ open, onOpenChange, products, marketplaces, pedido }: Props) {
   const {
     step,
     setStep,
@@ -74,6 +76,8 @@ export function PedidoWizardDialog({ open, onOpenChange, products, pedido }: Pro
   if (products.length === 0) return null;
 
   const locked = isEdit && pedido?.editavel === false;
+  const selectedMarketplace = marketplaces.find((m) => m.code === form.marketplace);
+  const billingBlocked = selectedMarketplace?.faturamentoDisponivel === false;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -85,7 +89,7 @@ export function PedidoWizardDialog({ open, onOpenChange, products, pedido }: Pro
                 Etapa {step + 1} de {PEDIDO_WIZARD_STEPS.length}
               </p>
               <DialogTitle className="mt-1 text-lg sm:text-xl">
-                {isEdit ? "Editar pedido" : "Novo pedido ML"}
+                {isEdit ? "Editar pedido" : "Novo pedido"}
               </DialogTitle>
               <DialogDescription className="mt-1.5 text-[13px] leading-snug max-w-2xl">
                 {locked
@@ -111,8 +115,28 @@ export function PedidoWizardDialog({ open, onOpenChange, products, pedido }: Pro
 
           {step === 0 && (
             <div className="space-y-4">
+              <div className={`${PEDIDO_WIZARD_PANEL_CLASS} p-4`}>
+                <WizardSelect
+                  id="marketplace"
+                  label="Marketplace que vai faturar"
+                  value={form.marketplace}
+                  onChange={(v) => set("marketplace", v as MarketplaceCode)}
+                  hint={
+                    billingBlocked
+                      ? `${selectedMarketplace?.nome} ainda não está configurado para faturamento: dá para salvar o rascunho, mas não faturar.`
+                      : "Define o perfil fiscal da NF-e, a configuração do faturador e o estoque FIFO usado."
+                  }
+                >
+                  {marketplaces.map((m) => (
+                    <option key={m.code} value={m.code}>
+                      {m.nome}
+                      {m.faturamentoDisponivel ? "" : " (faturamento indisponível)"}
+                    </option>
+                  ))}
+                </WizardSelect>
+              </div>
               <div className={`${PEDIDO_WIZARD_PANEL_CLASS} p-4 space-y-1.5`}>
-                <Label className="text-[12px] text-muted-foreground">PackId (pedido ML)</Label>
+                <Label className="text-[12px] text-muted-foreground">Id do pedido no marketplace</Label>
                 <Input
                   value={form.pedidoMl}
                   onChange={(e) => set("pedidoMl", e.target.value)}
@@ -327,7 +351,13 @@ export function PedidoWizardDialog({ open, onOpenChange, products, pedido }: Pro
               Salvar rascunho
             </Button>
             {step === PEDIDO_WIZARD_LAST_STEP && (
-              <Button type="button" size="sm" disabled={pending || locked} onClick={() => submit(false)}>
+              <Button
+                type="button"
+                size="sm"
+                disabled={pending || locked || billingBlocked}
+                title={billingBlocked ? "Marketplace ainda não configurado para faturamento" : undefined}
+                onClick={() => submit(false)}
+              >
                 {pending ? "Faturando…" : "Faturar NF-e"}
               </Button>
             )}

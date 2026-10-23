@@ -1,4 +1,5 @@
 import type { CompradorCheckoutInput, PedidoCheckoutInput, PedidoDto } from "@/lib/fiscal-types";
+import { DEFAULT_MARKETPLACE, type MarketplaceCode } from "./marketplaces";
 import type { PedidoFormValues } from "./pedido-form-types";
 export type { PedidoFormValues, PedidoItemFormValues } from "./pedido-form-types";
 export { PEDIDO_FORM_EMPTY, PEDIDO_ITEM_EMPTY } from "./pedido-form-types";
@@ -30,6 +31,7 @@ function brValueToInput(value: number | null | undefined): string {
 export function pedidoToFormValues(p: PedidoDto): PedidoFormValues {
   const c = p.comprador;
   return {
+    marketplace: p.marketplace ?? DEFAULT_MARKETPLACE,
     items: p.items.map((item) => ({
       productId: item.productId,
       quantidade: String(item.quantidade),
@@ -105,8 +107,11 @@ export function parsePedidoForm(formData: FormData): PedidoCheckoutInput {
   }).filter((item) => item.productId);
 
   const pedidoMl = String(formData.get("pedidoMl") ?? "").trim();
+  const marketplace = String(formData.get("marketplace") ?? "");
 
   return {
+    // Valor desconhecido segue para a API, que responde "Marketplace inválido".
+    marketplace: (marketplace || DEFAULT_MARKETPLACE) as MarketplaceCode,
     items,
     comprador,
     ...(pedidoMl ? { pedidoMl } : {}),
@@ -117,6 +122,7 @@ export function parsePedidoForm(formData: FormData): PedidoCheckoutInput {
 
 export function formValuesToFormData(v: PedidoFormValues): FormData {
   const fd = new FormData();
+  fd.set("marketplace", v.marketplace);
   fd.set("itemCount", String(v.items.length));
   v.items.forEach((item, index) => {
     fd.set(`items[${index}].productId`, item.productId);

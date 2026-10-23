@@ -1,6 +1,7 @@
 import type {
   NFeDto,
 } from "../fiscal-types";
+import type { MarketplaceCode } from "../marketplaces";
 import {
   authHeaders,
   buildApiUrl,
@@ -9,8 +10,8 @@ import {
   readApiError,
 } from "./client";
 
-export async function listNfes(): Promise<NFeDto[]> {
-  return getJson<NFeDto[]>(buildApiUrl("/api/nfes"));
+export async function listNfes(opts?: { marketplace?: MarketplaceCode }): Promise<NFeDto[]> {
+  return getJson<NFeDto[]>(buildApiUrl("/api/nfes", { marketplace: opts?.marketplace }));
 }
 
 export async function getNfeByChave(chave: string): Promise<NFeDto | null> {

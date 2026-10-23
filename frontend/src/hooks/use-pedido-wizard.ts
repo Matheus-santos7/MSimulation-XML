@@ -11,6 +11,7 @@ import {
   PEDIDO_FORM_EMPTY,
   PEDIDO_ITEM_EMPTY,
   findPedidoFormExample,
+  formValuesToFormData,
   pedidoToFormValues,
   type PedidoFormValues,
   type PedidoItemFormValues,
@@ -28,7 +29,7 @@ type UsePedidoWizardOptions = {
 };
 
 /**
- * Estado e handlers do wizard de pedido ML (rascunho + faturamento).
+ * Estado e handlers do wizard de pedido (rascunho + faturamento no marketplace escolhido).
  */
 export function usePedidoWizard({ open, onOpenChange, products, pedido }: UsePedidoWizardOptions) {
   const router = useRouter();
@@ -130,30 +131,7 @@ export function usePedidoWizard({ open, onOpenChange, products, pedido }: UsePed
       return;
     }
 
-    const fd = new FormData();
-    fd.set("itemCount", String(form.items.length));
-    form.items.forEach((item, index) => {
-      fd.set(`items[${index}].productId`, item.productId);
-      fd.set(`items[${index}].quantidade`, item.quantidade);
-      fd.set(`items[${index}].desconto`, item.desconto);
-      fd.set(`items[${index}].xPed`, item.xPed);
-    });
-    fd.set("pedidoMl", form.pedidoMl);
-    fd.set("freteConsumidor", form.freteConsumidor);
-    fd.set("freteSeller", form.freteSeller);
-    fd.set("cpf", form.cpf);
-    fd.set("nome", form.nome);
-    fd.set("logradouro", form.logradouro);
-    fd.set("numero", form.numero);
-    fd.set("complemento", form.complemento);
-    fd.set("bairro", form.bairro);
-    fd.set("codigoMunicipio", form.codigoMunicipio);
-    fd.set("municipio", form.municipio);
-    fd.set("uf", form.uf);
-    fd.set("cep", form.cep);
-    fd.set("telefone", form.telefone);
-    fd.set("indIEDest", form.indIEDest);
-    fd.set("ie", form.ie);
+    const fd = formValuesToFormData(form);
     if (pedido?.id) fd.set("pedidoId", pedido.id);
 
     startTransition(async () => {

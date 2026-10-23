@@ -7,18 +7,21 @@ import { useState, useTransition } from "react";
 import { faturarPedidoAction } from "@/app/(app)/pedidos/actions";
 import { PageHeader } from "@/components/fiscal-ui";
 import { DeleteConfirmButton } from "@/components/delete-confirm-button";
+import { MarketplaceBadge } from "@/components/marketplace-badge";
 import { PedidoWizardDialog } from "@/components/pedido-wizard";
 import { Button } from "@/components/ui/button";
 import type { PedidoDto, ProductDto } from "@/lib/fiscal-types";
 import { brl } from "@/lib/format";
+import type { MarketplaceDto } from "@/lib/marketplaces";
 import { formValuesToFormData, pedidoToFormValues } from "@/lib/pedido-form";
 
 type Props = {
   pedidos: PedidoDto[];
   products: ProductDto[];
+  marketplaces: MarketplaceDto[];
 };
 
-export function PedidosView({ pedidos, products }: Props) {
+export function PedidosView({ pedidos, products, marketplaces }: Props) {
   const router = useRouter();
   const [wizardOpen, setWizardOpen] = useState(false);
   const [editing, setEditing] = useState<PedidoDto | undefined>();
@@ -48,8 +51,8 @@ export function PedidosView({ pedidos, products }: Props) {
   return (
     <div className="p-6 space-y-4">
       <PageHeader
-        title="Pedidos Mercado Livre"
-        subtitle="Rascunhos editáveis · faturamento gera NF-e com numeração sequencial"
+        title="Pedidos"
+        subtitle="Rascunhos editáveis · o faturamento usa o perfil fiscal do marketplace do pedido"
         actions={
           <Button onClick={openNew} disabled={products.length === 0}>
             <Plus className="size-4 mr-2" />
@@ -82,6 +85,7 @@ export function PedidosView({ pedidos, products }: Props) {
                 <thead>
                   <tr className="text-[12px] text-muted-foreground uppercase tracking-tighter border-b border-border">
                     <th className="px-4 py-3 font-medium">Pedido</th>
+                    <th className="px-4 py-3 font-medium">Marketplace</th>
                     <th className="px-4 py-3 font-medium">Status</th>
                     <th className="px-4 py-3 font-medium">Comprador</th>
                     <th className="px-4 py-3 font-medium">Valor</th>
@@ -94,6 +98,9 @@ export function PedidosView({ pedidos, products }: Props) {
                     <tr key={p.id} className="hover:bg-foreground/[0.02]">
                       <td className="px-4 py-3 font-mono text-[13px] text-accent">
                         {p.pedidoMl ?? `RASC-${p.id.slice(0, 8)}`}
+                      </td>
+                      <td className="px-4 py-3">
+                        <MarketplaceBadge code={p.marketplace} />
                       </td>
                       <td className="px-4 py-3">
                         <StatusBadge status={p.status} />
@@ -165,6 +172,7 @@ export function PedidosView({ pedidos, products }: Props) {
         open={wizardOpen}
         onOpenChange={setWizardOpen}
         products={products}
+        marketplaces={marketplaces}
         pedido={editing}
       />
 

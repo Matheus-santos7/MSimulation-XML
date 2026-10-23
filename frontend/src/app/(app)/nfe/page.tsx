@@ -1,20 +1,32 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { NfeInutXmlActions, NfeXmlActions } from "@/components/fiscal-xml-actions";
+import { MarketplaceFilterSelect } from "@/components/marketplace-filter-select";
 import { NfeRowActionsMenu } from "@/components/nfe-row-actions-menu";
 import { NfeTipoBadge } from "@/components/nfe-tipo-badge";
 import { InutilizadaStatusBadge, PageHeader, StatusBadge } from "@/components/fiscal-ui";
 import { resolveActiveTenantId } from "@/lib/active-tenant";
-import { listFiscalEvents, listNfes } from "@/lib/fiscal-api";
+import { listFiscalEvents, listMarketplaces, listNfes } from "@/lib/fiscal-api";
 import type { FiscalEventDto } from "@/lib/fiscal-types";
 import { brl } from "@/lib/format";
+import { isMarketplaceCode, marketplaceLabel } from "@/lib/marketplaces";
 import { buildNfeTableRows, formatNumeroSerie } from "@/lib/nfe-table-rows";
 
 export const metadata: Metadata = { title: "NF-e Emitidas" };
 
-export default async function NFeListPage() {
+type Props = {
+  searchParams: Promise<{ marketplace?: string }>;
+};
+
+export default async function NFeListPage({ searchParams }: Props) {
   await resolveActiveTenantId();
-  const [nfesRaw, eventos] = await Promise.all([listNfes(), listFiscalEvents()]);
+  const { marketplace } = await searchParams;
+  const marketplaceFilter = isMarketplaceCode(marketplace) ? marketplace : undefined;
+  const [nfesRaw, eventos, marketplaces] = await Promise.all([
+    listNfes({ marketplace: marketplaceFilter }),
+    listFiscalEvents(),
+    listMarketplaces(),
+  ]);
   const rows = buildNfeTableRows(nfesRaw, eventos);
 
   const cancelamentoPorChave = new Map<string, FiscalEventDto>();
@@ -47,6 +59,15 @@ export default async function NFeListPage() {
           title="NF-e Emitidas"
           subtitle="Sequência fiscal por série e número — inclui faixas inutilizadas"
         />
+        <form className="mt-4 flex flex-wrap items-end gap-2">
+          <MarketplaceFilterSelect marketplaces={marketplaces} value={marketplaceFilter} />
+          <button
+            type="submit"
+            className="rounded border border-border px-3 py-1.5 text-sm hover:bg-muted"
+          >
+            Filtrar
+          </button>
+        </form>
       </div>
 
       <div className="flex-1 min-h-0 border border-border rounded-lg bg-card overflow-hidden flex flex-col">
@@ -136,6 +157,9 @@ export default async function NFeListPage() {
                       </td>
                       <td className="px-4 py-3">
                         <NfeTipoBadge tipo={nfe.tipo} />
+                        <span className="mt-1 block truncate text-[11px] text-muted-foreground">
+                          {marketplaceLabel(nfe.marketplace)}
+                        </span>
                       </td>
                       <td className="px-4 py-3 font-mono">{nfe.cfop}</td>
                       <td className="px-4 py-3 font-mono text-muted-foreground">

@@ -14,6 +14,7 @@ describe("mergePedidoBuyerExample", () => {
       items: [{ ...PEDIDO_ITEM_EMPTY, productId: "prod-1", quantidade: "2" }],
       freteConsumidor: "15.90",
       freteSeller: "8.50",
+      marketplace: "SHOPEE" as const,
     };
 
     const merged = mergePedidoBuyerExample(current, example.values);
@@ -24,5 +25,6 @@ describe("mergePedidoBuyerExample", () => {
     assert.equal(merged.nome, example.values.nome);
     assert.equal(merged.uf, example.values.uf);
     assert.deepEqual(merged.items, current.items);
+    assert.equal(merged.marketplace, "SHOPEE");
   });
 });

@@ -1,14 +1,18 @@
+import { DEFAULT_MARKETPLACE, type MarketplaceCode } from "./marketplaces";
+
 export type PedidoItemFormValues = {
   productId: string;
   quantidade: string;
   desconto: string;
-  /** OrderId ML por produto (`xPed`). */
+  /** Id do pedido no marketplace por produto (`xPed`). */
   xPed: string;
 };
 
 export type PedidoFormValues = {
+  /** Marketplace que vai faturar o pedido. */
+  marketplace: MarketplaceCode;
   items: PedidoItemFormValues[];
-  /** PackId ML (`pedidoMl`). */
+  /** Id do pedido no marketplace (pack id no ML, `pedidoMl`). */
   pedidoMl: string;
   freteConsumidor: string;
   freteSeller: string;
@@ -35,6 +39,7 @@ export const PEDIDO_ITEM_EMPTY: PedidoItemFormValues = {
 };
 
 export const PEDIDO_FORM_EMPTY: PedidoFormValues = {
+  marketplace: DEFAULT_MARKETPLACE,
   items: [{ ...PEDIDO_ITEM_EMPTY }],
   pedidoMl: "",
   freteConsumidor: "0",

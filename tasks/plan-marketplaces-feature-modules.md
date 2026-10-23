@@ -198,6 +198,37 @@ As mudanças de contrato desta fase são intencionais e vão listadas no commit 
 | Estoque de um marketplace consumido por outro | FIFO por marketplace + teste dedicado |
 | Tamanho da mudança | Um commit por módulo, contrato e suíte verdes em cada um; nada é publicado sem você pedir |
 
+## Resultado (2026-10-23)
+
+Todas as fases concluídas na branch `refactor/feature-modules-marketplaces`, um commit por item. Nada foi publicado: sem push, sem deploy e sem migration no Neon.
+
+| Fase | Itens | Commits |
+|---|---|---|
+| 0 — fundação | Vitest, bases Nest, ConfigService, OpenAPI, golden XMLs | d99be75 … 7d1af9a |
+| 1 — perfis | perfil fiscal por marketplace; builders do nfe-xml lendo o perfil | 7d54820, 63b29f3 |
+| 2 — dados | migrations `20261022120000_marketplaces` e `20261022130000_unidades_logisticas_por_marketplace` | 9c6862c, ffb376e |
+| 3 — módulos pequenos | health, lookup, auth, org, catalog, tax; DTOs em Zod | aa2525b … 82d748e |
+| 4 — módulos com marketplace | fiscal-settings, logistics, remessas, fiscal-validation, fiscal-documents, sales; migration `20261023100000_marketplace_obrigatorio` | 355e623 … 99b17ab |
+| 5 — frontend | marketplace no pedido e nas listagens; abas de configuração por marketplace; CDs filtrados | 6e9557f, e82c65d, b20ada6 |
+| 6 — limpeza | aliases do ML removidos do fiscal-core; backend inteiro em Vitest; docs | 10f856f, db5be68 e o commit de docs |
+
+Verificação no fim:
+- **Testes:** backend 459 (Vitest), fiscal-core 150, nfe-xml 76 (golden XMLs do ML idênticos), frontend 27.
+- **Checagens:** `tsc` (src, testes, frontend), lint, depcheck, build do backend e do Next, boot do servidor compilado contra o Postgres local.
+- **Migrations:** só no Postgres local (`backend/scripts/verify-marketplaces-migration.sh`).
+
+### Antes de produção
+
+1. Validar localmente o fluxo completo pelo frontend (pedido ML → faturar; aba de marketplace; filtro de CDs).
+2. As três migrations novas rodam no deploy (o `CMD` do Dockerfile chama `db:migrate:deploy`): renomeiam `pedido_ml` para `marketplace_order_id`, `meli_unidades_logisticas` para `unidades_logisticas` e tiram o default do marketplace. A versão antiga da API para de funcionar no mesmo instante.
+3. Os campos da API continuam `pedidoMl` / `pedidoML`. Renomear para `marketplaceOrderId` na API é uma mudança de contrato à parte.
+
+### Fora do escopo, registrado
+
+- O campo Prisma `NFe.pedidoMl` (coluna já `marketplace_order_id`) não foi renomeado no código: o nome `pedidoMl` aparece em 60 pontos de 29 arquivos (campo Prisma, variáveis de contexto, entrada do xTexto e a chave `pedidoML` da API).
+- O xPed tem até 15 caracteres no layout da NF-e; os ids de 16 dígitos do ML já eram usados assim antes desta mudança.
+- `findActiveByCode` dos CDs não filtra por marketplace (código só é único dentro do marketplace); é usado só no fallback de origem do avanço.
+
 ## O que preciso de você (antes de ativar Shopee, Amazon e Magalu)
 
 Para cada marketplace, a partir de XMLs reais ou da documentação dele:

@@ -1,6 +1,6 @@
 # Backend — MSimulation XML
 
-API REST em **NestJS (sobre Fastify) + TypeScript + Prisma + PostgreSQL** que sustenta o simulador fiscal de fulfillment (Mercado Livre Full).
+API REST em **NestJS (sobre Fastify) + TypeScript + Prisma + PostgreSQL** que sustenta o simulador fiscal de fulfillment multi-marketplace (Mercado Livre ativo; Shopee, Amazon e Magalu preparados).
 
 > **Contexto do produto:** simulador educacional. XMLs usam homologação (`tpAmb=2`), assinaturas fictícias e **não têm validade** perante a SEFAZ.
 
@@ -10,20 +10,21 @@ API REST em **NestJS (sobre Fastify) + TypeScript + Prisma + PostgreSQL** que su
 
 1. [Stack e execução local](#stack-e-execução-local)
 2. [Visão geral da arquitetura](#visão-geral-da-arquitetura)
-3. [Camadas (Clean Architecture)](#camadas-clean-architecture)
-4. [Bounded contexts (`src/modules/`)](#bounded-contexts-srcmodules)
-5. [Diagrama de arquitetura](#diagrama-de-arquitetura)
-6. [Bootstrap e registo de rotas](#bootstrap-e-registo-de-rotas)
-7. [Estrutura de pastas](#estrutura-de-pastas)
-8. [Comunicação entre módulos](#comunicação-entre-módulos)
-9. [Padrões e convenções](#padrões-e-convenções)
-10. [Packages compartilhados](#packages-compartilhados)
-11. [Fluxos de negócio](#fluxos-de-negócio)
-12. [Fluxo HTTP](#fluxo-http)
-13. [Validador MCP](#validador-mcp)
-14. [Problemas comuns](#problemas-comuns)
-15. [Testes e scripts](#testes-e-scripts)
-16. [Documentação por módulo](#documentação-por-módulo)
+3. [Feature modules](#feature-modules)
+4. [Marketplaces](#marketplaces)
+5. [Bounded contexts (`src/modules/`)](#bounded-contexts-srcmodules)
+6. [Diagrama de arquitetura](#diagrama-de-arquitetura)
+7. [Bootstrap e registo de rotas](#bootstrap-e-registo-de-rotas)
+8. [Estrutura de pastas](#estrutura-de-pastas)
+9. [Comunicação entre módulos](#comunicação-entre-módulos)
+10. [Padrões e convenções](#padrões-e-convenções)
+11. [Packages compartilhados](#packages-compartilhados)
+12. [Fluxos de negócio](#fluxos-de-negócio)
+13. [Fluxo HTTP](#fluxo-http)
+14. [Validador MCP](#validador-mcp)
+15. [Problemas comuns](#problemas-comuns)
+16. [Testes e scripts](#testes-e-scripts)
+17. [Documentação por módulo](#documentação-por-módulo)
 
 ---
 
@@ -34,7 +35,7 @@ API REST em **NestJS (sobre Fastify) + TypeScript + Prisma + PostgreSQL** que su
 | **NestJS 11** | Controllers, guards, interceptors, filtros e DI (`@nestjs/platform-fastify`) |
 | **Fastify 5** | Servidor HTTP por baixo do Nest; plugins de borda (helmet, CORS, rate limit, multipart) |
 | **TypeScript** | Tipagem estrita; decorators experimentais, sem metadata emitida (DI com `@Inject` explícito) |
-| **Zod** | Validação HTTP (presentation), via `ZodValidationPipe` |
+| **Zod** | Validação HTTP (`<feature>/dtos/`), via `ZodValidationPipe` |
 | **Prisma 7** | ORM + migrations PostgreSQL |
 | **@fastify/jwt** | Access / refresh tokens (injetado no Nest pelo token `JWT`) |
 | **Brevo** | E-mails transacionais |
@@ -60,22 +61,25 @@ Variáveis obrigatórias: `DATABASE_URL`, `JWT_SECRET`, `PASSWORD_PEPPER`, `CORS
 
 ## Visão geral da arquitetura
 
-O backend é um **monolito modular** organizado por **Bounded Contexts** (DDD), cada um em `src/modules/<nome>/`. A organização interna segue **Clean Architecture** em quatro camadas concêntricas:
+O backend é um **monolito modular NestJS**. Cada contexto de negócio é um `@Module` em `src/modules/<contexto>/`, dividido em **features** (uma pasta por agregado ou fluxo). Não há mais as camadas `domain/`, `application/`, `infrastructure/` e `presentation/`: a pasta da feature junta controller, service, use cases, repository, DTOs e regras.
 
-| Camada | Responsabilidade | Depende de |
-|--------|------------------|------------|
-| **Domain** | Entidades, erros, ports (contratos), regras puras | Nada externo |
-| **Application** | Casos de uso, DTOs, orquestração | Domain |
-| **Infrastructure** | Prisma, APIs externas, adapters, factories | Application + Domain |
-| **Presentation** | Controllers Nest, schemas Zod | Application (+ Infrastructure via factory) |
+| Peça | Responsabilidade |
+|------|------------------|
+| `<feature>.controller.ts` | Traduz HTTP: valida com `ZodValidationPipe`, lê `@TenantId()`, chama service ou use case |
+| `<feature>.service.ts` | Operações simples do agregado (listar, buscar, criar rascunho) |
+| `use-cases/<feature>-<ação>.usecase.ts` | Fluxo que cruza services, providers ou regras; um método `execute` |
+| `<feature>.repository.ts` | Único acesso ao Prisma, via `getDbClient()` (transação com RLS) |
+| `dtos/<x>.request.dto.ts` | Schema Zod + tipo inferido |
+| `rules/` | Regra pura do app (sem Nest); verificado pelo [`src/test/architecture.spec.ts`](./src/test/architecture.spec.ts) e pela regra `rules-no-nest-layer` do `.dependency-cruiser.js` |
+| `types/` | Tipos da feature |
+| `adapters/<marketplace>/` | O que muda por marketplace dentro da feature (ex.: planilha de CDs do ML) |
+| `test/` | Specs Vitest ao lado do que testam |
 
-**Regra de ouro das dependências:** o domínio nunca importa Nest, Fastify, Prisma ou HTTP. Os controladores são *burros*: validam entrada, chamam um caso de uso e devolvem a resposta. `domain/` e `application/` sem `@nestjs/*` nem `fastify` é verificado pelo [`src/architecture.test.ts`](./src/architecture.test.ts) e pela regra `core-no-nest-layer` do `.dependency-cruiser.js`.
-
-O wiring HTTP vive em `src/app.ts` (instância Fastify + Nest), `src/nest/` (núcleo Nest) e `src/modules/<ctx>/<ctx>.module.ts` (um `@Module` por bounded context).
+A injeção é sempre `@Inject(Classe)` explícito: o build não emite metadata de decorators.
 
 ---
 
-## Camadas (Clean Architecture)
+## Feature modules
 
 Fluxo típico de uma requisição autenticada:
 
@@ -89,169 +93,110 @@ Fastify (helmet, CORS, parser de corpo, multipart)
 Nest: guards (JWT, empresa, e-mail, ADMIN) → RateLimitInterceptor → DbContextInterceptor (transação + RLS)
     │
     ▼
-presentation/controllers/   ← @Controller: ZodValidationPipe, @TenantId(), status HTTP
+<feature>.controller.ts     ← ZodValidationPipe, @TenantId(), status HTTP
     │
     ▼
-application/use-cases/    ← um caso de uso = uma ação de negócio
+service / use case          ← regra de negócio; perfil do marketplace quando a nota depende dele
     │
     ▼
-domain/ports/             ← interface (contrato)
-    │
-    ▼
-infrastructure/           ← Prisma repository, gateway HTTP, adapter
+<feature>.repository.ts     ← getDbClient().<model>
     │
     ▼
 PostgreSQL (+ RLS por tenant)
 ```
 
-Cada módulo expõe um **composition root** em `infrastructure/factory/*-module.factory.ts` que instancia repositórios e injeta nos casos de uso. O `<ctx>.module.ts` do Nest registra esse composition root como provider (`{ provide: <TOKEN>, useFactory: create<Ctx>Module }`, token em `<ctx>.tokens.ts`) e os controllers o recebem com `@Inject(<TOKEN>)`. Assim os casos de uso continuam classes simples, sem decorators.
+Exemplo (`sales`):
 
-Código transversal (motor de impostos, geração de chaves NF-e, mappers, RLS) permanece em `src/lib/` — bibliotecas internas sem regra de negócio de um único contexto.
+```
+modules/sales/
+├── sales.module.ts
+├── index.ts                       # API pública: erros de domínio
+├── errors/                        # sales.errors.ts + filtro das rotas
+├── order/                         # /pedidos (rascunho, edição, integração)
+│   ├── order.controller.ts
+│   ├── order.service.ts
+│   ├── order.repository.ts
+│   ├── dtos/order.request.dto.ts
+│   ├── rules/                     # id do pedido pelo perfil do marketplace, frete
+│   └── test/
+└── invoicing/                     # /pedidos/:id/faturar, /pedidos/checkout
+    ├── invoicing.controller.ts
+    ├── use-cases/
+    ├── sales-chain/               # retorno simbólico → venda → CT-e
+    ├── rules/
+    └── test/
+```
+
+---
+
+## Marketplaces
+
+O sistema fatura para **Mercado Livre, Shopee, Amazon e Magalu**. O que muda por marketplace no XML fica no `fiscal-core`, uma pasta por marketplace em [`packages/fiscal-core/src/marketplaces/`](../packages/fiscal-core/src/marketplaces/): intermediador, responsável técnico, autXML padrão, transportador, IBS/CBS padrão, campos do `<ide>`, formato do id do pedido e os blocos do `fiscalPayload` de remessa e venda.
+
+- O backend nunca compara o código do marketplace: pede o perfil ao registry (`getMarketplaceProfile` / `getBillableMarketplaceProfile`) e usa os campos dele.
+- Perfil com status `PENDENTE_CONFIGURACAO` (Shopee, Amazon e Magalu hoje): o pedido pode ser criado como rascunho, mas faturar responde **422 "Marketplace ainda não configurado para faturamento"**.
+- **De onde vem o marketplace de cada nota:**
+  - remessa, avanço e transferência: do CD de destino (`unidades_logisticas.marketplace`);
+  - venda e retorno simbólico: do pedido;
+  - devolução, retorno físico e conferência: da nota de origem.
+- **Configuração do faturador:** `loadEmitterSettings(db, tenantId, marketplace)` junta o padrão da empresa (`fiscal_emitter_settings`) com a sobrescrita do marketplace (`marketplace_billing_settings`). Na API: `GET/PUT /api/fiscal-settings/marketplaces/:marketplace`.
+- **Estoque FIFO:** a venda consome só remessas do marketplace do pedido.
+- **Id do pedido:** `MarketplaceFiscalProfile.pedido` valida e gera (ML: só dígitos).
+
+Para ativar um marketplace:
+1. Coloque XMLs reais em `XMLs/marketplaces/<marketplace>/` (pasta fora do git).
+2. Preencha a pasta do marketplace no `fiscal-core`, seguindo o checklist do `README.md` dela.
+3. Mude o status do perfil para `ATIVO` e adicione o cenário golden no `nfe-xml`.
 
 ---
 
 ## Bounded contexts (`src/modules/`)
 
-| Módulo | Responsabilidade de negócio |
-|--------|----------------------------|
-| [**auth**](./src/modules/auth/) | Autenticação (login, refresh, logout), registo, verificação de e-mail, reset de senha, 2FA TOTP e onboarding inicial (vínculo empresa + utilizador). |
-| [**org**](./src/modules/org/) | Gestão de **tenants** (empresas emitentes) e **utilizadores** do tenant (CRUD, papéis ADMIN/MEMBER). |
-| [**catalog**](./src/modules/catalog/) | Catálogo de **produtos** (SKU, NCM, preços, vínculo com regra fiscal `taxRuleBaseId`), importação em massa. |
-| [**tax**](./src/modules/tax/) | **Regras tributárias** (catálogo, resolução origem×destino, cálculo de impostos para venda/remessa/inbound). |
-| [**logistics**](./src/modules/logistics/) | **Unidades logísticas** Meli Full, movimentações de stock, avanço entre CDs e resolução de destino fiscal. |
-| [**remessas**](./src/modules/remessas/) | Emissão de **NF-e de remessa** (física e simbólica), **FIFO** de saldo por `nfe_itens`, CT-e de remessa e avanço de mercadoria na cadeia fulfillment. |
-| [**sales**](./src/modules/sales/) | **Pedidos** (rascunho, checkout, faturamento) e orquestração da **cadeia de venda** (retorno simbólico → venda → CT-e). |
-| [**fiscal-documents**](./src/modules/fiscal-documents/) | Consulta e ciclo de vida de **NF-e** e **CT-e** (listagem, XML, soft-delete, cancelamento, devolução, inutilização), timeline e eventos fiscais. |
-| [**fiscal-settings**](./src/modules/fiscal-settings/) | **Configurações do emissor** ML (séries, prazos, composição de base, CST de devolução, etc.). |
-| [**lookup**](./src/modules/lookup/) | Consultas externas **CNPJ** (BrasilAPI / OpenCNPJ) e **CEP** (BrasilAPI / ViaCEP) para onboarding e cadastros. |
-| [**health**](./src/modules/health/) | Endpoint `/api/health` (liveness + verificação de conexão à base de dados). |
+| Módulo | Features | Responsabilidade |
+|--------|----------|------------------|
+| [**auth**](./src/modules/auth/) | session, registration, two-factor, password-reset, email-verification, onboarding, user | Login, refresh, registro, 2FA TOTP, verificação de e-mail, onboarding |
+| [**org**](./src/modules/org/) | tenant, filial, member, emitente-fiscal | Empresas, filiais, membros e papéis do emitente |
+| [**catalog**](./src/modules/catalog/) | product, product-import | Produtos e importação por planilha |
+| [**tax**](./src/modules/tax/) | tax-rule, tax-calculation | Regras tributárias e motor de cálculo |
+| [**marketplace**](./src/modules/marketplace/) | — | `GET /api/marketplaces` e o schema Zod do código de marketplace |
+| [**fiscal-settings**](./src/modules/fiscal-settings/) | emitter-settings, marketplace-billing-settings, billing-settings | Padrão do faturador, sobrescrita por marketplace e configuração efetiva |
+| [**logistics**](./src/modules/logistics/) | logistics-unit, product-movement | CDs por marketplace (planilha do ML em `adapters/mercado-livre/`) e histórico de movimentações |
+| [**remessas**](./src/modules/remessas/) | shipment, branch-transfer, warehouse-advance, stock-fifo, symbolic-shipment, fiscal-chain | Remessa física, transferência entre filiais, avanço entre CDs, saldo FIFO |
+| [**sales**](./src/modules/sales/) | order, invoicing | Pedidos com marketplace e cadeia de venda |
+| [**fiscal-documents**](./src/modules/fiscal-documents/) | nfe, cte, cancellation, document-return, inbound-conference, number-inutilization, observability | Consulta e XML de NF-e/CT-e, ciclo de vida da NF-e, timeline |
+| [**fiscal-validation**](./src/modules/fiscal-validation/) | nfe-validation, insights, validator-status | Validação MCP das NF-es (pós-commit e backfill) |
+| [**lookup**](./src/modules/lookup/) | — | CNPJ e CEP (BrasilAPI / OpenCNPJ / ViaCEP), com rate limit |
+| [**health**](./src/modules/health/) | — | `/api/health` |
 
 ---
 
 ## Diagrama de arquitetura
 
-### Camadas e fluxo HTTP
-
-```mermaid
-graph TD
-  Client[Cliente HTTP / Frontend]
-
-  subgraph Bootstrap["Bootstrap (src/app.ts)"]
-    IDX[buildApp]
-    FAST[Fastify + plugins de borda]
-    APPM[AppModule]
-  end
-
-  subgraph Nest["Núcleo Nest (src/nest/)"]
-    GUARDS[Guards JWT / tenant / e-mail / ADMIN]
-    RL[RateLimitInterceptor]
-    RLS[DbContextInterceptor RLS]
-    FILTER[ApiExceptionFilter / RouteErrorFilter]
-  end
-
-  subgraph Presentation["Presentation"]
-    CTRL[Controllers Nest]
-    ZOD[Schemas Zod + ZodValidationPipe]
-  end
-
-  subgraph Application["Application"]
-    UC[Use Cases]
-    DTO[DTOs / Commands]
-  end
-
-  subgraph Domain["Domain"]
-    ENT[Entities / VOs]
-    PORT[Ports]
-    ERR[Domain Errors]
-  end
-
-  subgraph Infrastructure["Infrastructure"]
-    REPO[Prisma Repositories]
-    GW[External Gateways]
-    FACT[Module Factories]
-  end
-
-  subgraph Shared["Shared (src/lib/)"]
-    TAX[tax-engine / chaves / mappers]
-    DB[tenant-rls / prisma-tx]
-  end
-
-  DB_PG[(PostgreSQL)]
-
-  Client --> FAST
-  IDX --> FAST
-  IDX --> APPM
-  FAST --> GUARDS
-  APPM --> CTRL
-  GUARDS --> RL
-  RL --> RLS
-  RLS --> CTRL
-  CTRL -.->|erros| FILTER
-  CTRL --> ZOD
-  CTRL --> UC
-  UC --> PORT
-  UC --> ENT
-  FACT --> REPO
-  FACT --> GW
-  REPO -.->|implementa| PORT
-  GW -.->|implementa| PORT
-  REPO --> DB_PG
-  UC --> TAX
-  REPO --> DB
-```
-
 ### Módulos e dependências de negócio
 
 ```mermaid
 graph TD
-  Auth[auth]
-  Org[org]
-  Lookup[lookup]
-  Catalog[catalog]
-  Tax[tax]
-  Logistics[logistics]
-  Remessas[remessas]
-  Sales[sales]
-  FiscalDocs[fiscal-documents]
-  FiscalSettings[fiscal-settings]
-  Health[health]
-
-  Auth -->|onboarding| Org
-  Auth --> Lookup
-  Logistics --> Remessas
-  Logistics --> Catalog
-  Logistics --> Lookup
-  Remessas --> Tax
-  Remessas --> Logistics
-  Remessas --> FiscalDocs
+  Auth[auth] -->|onboarding| Org[org]
+  Auth --> Lookup[lookup]
+  Logistics[logistics] --> Lookup
+  Remessas[remessas] --> Logistics
+  Remessas --> Tax[tax]
+  Remessas --> FiscalDocs[fiscal-documents]
+  Remessas --> FiscalSettings[fiscal-settings]
+  Sales[sales] --> Remessas
   Sales --> Tax
-  Sales --> Remessas
   Sales --> FiscalDocs
+  Sales --> FiscalSettings
   FiscalDocs --> Remessas
-  FiscalDocs --> Tax
-  Catalog --> Tax
-  FiscalSettings --> Tax
-
-  subgraph Fiscal["Domínio fiscal"]
-    FiscalDocs
-    FiscalSettings
-    Sales
-    Remessas
-    Tax
-  end
-
-  subgraph Platform["Plataforma"]
-    Auth
-    Org
-    Lookup
-    Health
-  end
-
-  subgraph Operations["Operação ML"]
-    Catalog
-    Logistics
-  end
+  FiscalValidation[fiscal-validation] --> FiscalDocs
+  Catalog[catalog] --> Tax
+  FiscalSettings --> Marketplace[marketplace]
+  Remessas -.->|perfil| Core[(fiscal-core marketplaces)]
+  Sales -.->|perfil| Core
+  FiscalDocs -.->|XML| NfeXml[(nfe-xml)]
 ```
+
+`remessas` e `fiscal-documents` se usam pelos `index.ts` de cada um. O `index.ts` do remessas exporta só funções, tipos e erros (nenhuma classe Nest), para não fechar ciclo com o logistics.
 
 ---
 
@@ -268,9 +213,9 @@ O acesso é declarado no controller ([`src/nest/api-access.decorators.ts`](./src
 | `/api/lookup/*` | `@AuthenticatedApi()` + `@RateLimit(lookupRouteRateLimit)` | JWT, **sem** tenant; 30 req/min por rota e por IP (403 ao estourar) |
 | `/api/*` (negócio) | `@ProtectedApi()` (+ `@AdminOnly()` por rota) | JWT + tenant + e-mail verificado; 300 req/min por IP compartilhadas |
 
-Os módulos Nest ficam em `modules/<ctx>/<ctx>.module.ts` e estão listados em `FEATURE_MODULES` (`src/nest/app.module.ts`). O `remessas` não tem rotas: o `RemessasModule` só exporta o provider usado pelas movimentações.
+Os módulos ficam listados em `FEATURE_MODULES` (`src/nest/app.module.ts`). As rotas de emissão `/movimentacoes/*` são do `remessas`; o `logistics` só tem `/unidades-logisticas` e `/movimentacoes-produto`.
 
-Erros: o `ApiExceptionFilter` (global) mantém o contrato `{ error }` (400 Zod com `details`, 503 banco indisponível, P2002 409, P2025 404, 5xx genérico). Mapeamentos de domínio por rota usam `@UseFilters(new RouteErrorFilter({ mappings, statusErrors }))`; o auth usa `AuthErrorFilter`.
+Erros: o `ApiExceptionFilter` (global) mantém o contrato `{ error }` (400 Zod com `details`, 422 marketplace sem perfil fiscal, 503 banco indisponível, P2002 409, P2025 404, 5xx genérico). Mapeamentos de domínio por rota usam `@UseFilters(...)` com `RouteErrorFilter` (`mappings` ou `statusErrors`); auth e remessas têm filtros próprios.
 
 ---
 
@@ -279,57 +224,33 @@ Erros: o `ApiExceptionFilter` (global) mantém o contrato `{ error }` (400 Zod c
 ```
 backend/
 ├── prisma/                    # Schema e migrations
+├── scripts/                   # verify-marketplaces-migration.sh (só Postgres local)
 ├── src/
 │   ├── index.ts               # Escuta a porta
 │   ├── app.ts                 # buildApp(): Fastify + Nest
-│   ├── app.contract.test.ts   # Contrato HTTP (status e corpo) + snapshot de rotas
-│   ├── nest/                  # Núcleo Nest: CoreModule, guards, interceptors, filtros, pipes
-│   ├── modules/               # Bounded contexts (Clean Architecture)
-│   │   └── <context>/
-│   │       ├── domain/
-│   │       ├── application/
-│   │       ├── infrastructure/
-│   │       ├── presentation/
-│   │       ├── <context>.module.ts  # @Module do Nest
-│   │       ├── <context>.tokens.ts  # token de DI do composition root
-│   │       └── index.ts
+│   ├── config/                # ConfigService: único leitor de process.env
+│   ├── nest/                  # Núcleo Nest: CoreModule, guards, interceptors, filtros, pipes, bases
+│   ├── modules/
+│   │   └── <contexto>/
+│   │       ├── <contexto>.module.ts
+│   │       ├── index.ts       # API pública para outros módulos
+│   │       ├── errors/
+│   │       └── <feature>/     # controller, service, repository, use-cases/, dtos/, rules/, types/, test/
+│   ├── test/                  # Contrato HTTP (+ snapshot de rotas) e teste de arquitetura
 │   ├── plugins/               # Plugins Fastify de borda: Prisma e @fastify/jwt
-│   ├── lib/                   # Utilitários transversais (fiscal, db, http)
+│   ├── lib/                   # Infraestrutura compartilhada sem Nest (db, auth, http)
 │   └── generated/prisma/      # Client gerado
 └── package.json
-```
-
-Estrutura interna de cada módulo (obrigatória):
-
-```
-modules/<context>/
-├── domain/
-│   ├── entities/
-│   ├── errors/
-│   ├── ports/              # Interfaces de repositório / gateway
-│   └── value-objects/      # Quando aplicável
-├── application/
-│   ├── use-cases/
-│   ├── dto/
-│   └── services/           # Orquestração pura sem I/O
-├── infrastructure/
-│   ├── prisma/
-│   ├── external/           # APIs de terceiros
-│   └── factory/            # Composition root
-└── presentation/
-    ├── controllers/
-    └── schemas/
 ```
 
 ---
 
 ## Comunicação entre módulos
 
-- **Preferência:** um módulo consome outro via **caso de uso público** ou função exportada no `index.ts` do módulo alvo — nunca importando Prisma de outro contexto diretamente no controller.
-- **Adapters:** quando um contexto precisa de capacidade externa (ex.: logistics → lookup CEP), usa-se um adapter em `infrastructure/external/` que implementa um **port** do próprio módulo.
-- **lib/fiscal:** motor de cálculo (`tax-engine`), snapshots e chaves são bibliotecas compartilhadas; a resolução de regras fica no módulo **tax**.
-- **remessas** é o núcleo FIFO e emissão de remessa; **sales** e **fiscal-documents** delegam consumo/estorno de saldo a ele.
-- Imports cross-module devem apontar para o `index.ts` do módulo alvo (ex.: `modules/remessas`), não para pastas legadas em `src/services/`.
+- **Pelo Nest:** o módulo que precisa importa o `@Module` do outro e injeta o provider exportado (ex.: `RemessasModule` importa `LogisticsModule` e recebe `LogisticsUnitService`).
+- **Pelo `index.ts`:** funções, tipos e erros públicos de cada contexto. Imports entre módulos apontam para o `index.ts`, nunca para pastas internas. A exceção documentada no código é o `fiscal-settings`, que importa a regra de numeração direto, porque o index do `fiscal-documents` carrega o XML e fecharia um ciclo.
+- **Ciclos de import:** barrados pela regra `no-circular` do dependency-cruiser (`pnpm depcheck`).
+- **Inversão pontual:** o `fiscal-validation` define o tipo `NfeXmlContentResolver` (token `NFE_XML_CONTENT_RESOLVER`) e o `fiscal-documents` fornece a implementação.
 
 ---
 
@@ -337,15 +258,16 @@ modules/<context>/
 
 | Tópico | Convenção |
 |--------|-----------|
-| Ficheiros / pastas | `kebab-case` |
-| Casos de uso | `verb-noun.use-case.ts` + classe `PascalCase` |
-| Controllers | `*.controller.ts`, classe `@Controller` com `@Inject(<TOKEN>)` explícito (o build não emite metadata de decorators) |
-| Status HTTP | Declarar `@HttpCode` em todo `POST` que não responde 201; 404 com `orNotFound(valor, mensagem)` |
-| Erros de domínio | Mapear em `RouteErrorFilter` (`mappings` ou `statusErrors` para classes com `.status`) |
-| Validação HTTP | Zod em `presentation/schemas/`, aplicado com `ZodValidationPipe` |
+| Ficheiros / pastas | `kebab-case`; feature no singular |
+| Use cases | `use-cases/<feature>-<ação>.usecase.ts`, classe `<Feature><Ação>UseCase`, método `execute` |
+| Controllers | `<feature>.controller.ts` com `@Inject(Classe)` explícito |
+| Status HTTP | `@HttpCode` em todo `POST` que não responde 201; 404 com `orNotFound(valor, mensagem)` |
+| Erros de domínio | Classes em `errors/`, mapeadas por filtro de rota; marketplace pendente sobe como `MarketplaceNotConfiguredError` (422 global) |
+| Validação HTTP | Zod em `<feature>/dtos/`, aplicado com `ZodValidationPipe`; marketplace com `marketplaceCodeSchema` |
+| Marketplace | Nunca `if (marketplace === "...")`: use o perfil do `fiscal-core` |
 | IDs multi-tenant | Sempre filtrar por `tenantId` do JWT (`@TenantId()`); RLS ativo via `@ProtectedApi()` |
 | Mensagens de erro | Em português: o frontend mostra o texto direto |
-| Transações | Dentro de infrastructure (repositório), não no controller |
+| Transações | `runFiscalTransaction` / `runInTransaction` no use case ou emissor, nunca no controller |
 
 Pacotes internos do monorepo: `@msimulation-xml/fiscal-core`, `@msimulation-xml/nfe-xml` — detalhe na secção [Packages compartilhados](#packages-compartilhados).
 
@@ -360,7 +282,7 @@ Pacotes TypeScript puros (sem DB), consumidos pelo backend e testáveis isoladam
 | Responsabilidade | Exemplos |
 | ---------------- | -------- |
 | Assinatura XML simulada | `buildSimulationXmlSignature`, `injectSimulationSignature` |
-| Enrichment payload ML | `enrichFiscalPayloadMlFulfillment`, `enrichFiscalPayloadMlVenda` |
+| Perfil fiscal por marketplace | `getMarketplaceProfile`, `getBillableMarketplaceProfile`, `profile.enrichFulfillmentPayload` / `enrichVendaPayload` |
 | CT-e | `buildCteFiscalPayload`, `buildCTeXML` |
 | Runtime do emissor | `buildEmitterSnapshot`, `calcTributoBase`, `resolveDifalMode` |
 | ICMS interestadual | `resolveInterstateIcmsRateForProductOrigin` |
@@ -391,7 +313,7 @@ pnpm --filter @msimulation-xml/nfe-xml test
 flowchart LR
   subgraph Backend
     TE[tax-engine]
-    RS[remessa-service]
+    RS[emissores remessas/sales]
     BUILD[buildNfeXmlAutorizado]
     VAL[resolveNfeValidationUpdate]
     PERSIST[persistNfeXmlAutorizado]
@@ -447,17 +369,17 @@ flowchart LR
 ```mermaid
 sequenceDiagram
   participant UI as Frontend /operacoes
-  participant R as remessas
+  participant R as remessas (shipment)
   participant L as logistics
   participant T as tax
   participant F as fiscal-documents
   participant P as packages
   UI->>R: POST remessa
-  R->>L: resolve destino fiscal
+  R->>L: resolve CD de destino (marketplace)
   loop Por item
     R->>T: resolveTaxRule + calculateInvoiceTaxes
   end
-  R->>P: enrich + buildNFeXML
+  R->>P: perfil do marketplace + buildNFeXML
   R->>F: persiste NF-e + FIFO + CT-e
   F-->>UI: NF-e + CT-e (simulado)
 ```
@@ -466,7 +388,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-  A[Produto + CD origem + destino] --> B[Valida saldo FIFO]
+  A[Produto + CD origem + destino do mesmo marketplace] --> B[Valida saldo FIFO]
   B --> C[Consome FIFO]
   C --> D[Nova NF-e REMESSA referenciando anterior]
   D --> E[Novo saldo no destino]
@@ -477,8 +399,9 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  P1[Pedido rascunho] --> P2[Checkout FIFO]
-  P2 --> P3[Faturar]
+  P1[Pedido rascunho com marketplace] --> P2{Perfil ATIVO?}
+  P2 -->|Não| X[422 Marketplace ainda não configurado]
+  P2 -->|Sim| P3[Faturar: FIFO do marketplace]
   P3 --> R1[Retorno simbólico NF-e]
   R1 --> R2[Venda NF-e]
   R2 --> R3[CT-e frete]
@@ -491,8 +414,7 @@ flowchart TD
 graph TD
   Auth[auth] --> Org[org]
   Auth --> Lookup[lookup]
-  Logistics[logistics] --> Remessas[remessas]
-  Logistics --> Catalog[catalog]
+  Remessas[remessas] --> Logistics[logistics]
   Remessas --> Tax[tax]
   Remessas --> FiscalDocs[fiscal-documents]
   Sales[sales] --> Tax
@@ -542,7 +464,7 @@ Auditoria de XML NF-e **após** geração e **antes** de persistir — **não bl
 | `FISCAL_VALIDATOR_ENABLED=false` | `PENDING` | Não |
 | MCP offline / timeout | `PENDING` | Não |
 
-Choke point: `src/modules/fiscal-documents/infrastructure/xml/nfe-xml-validation.ts` via `persistNfeXmlAutorizado`.
+Choke point: `persistNfeXmlAutorizado` (`src/modules/fiscal-documents/nfe/xml/nfe-xml.service.ts`) grava `PENDING`; a validação roda depois do commit pelo `NfeValidationBackfillUseCase`.
 
 ### Env (placeholders — ver [`.env.example`](./.env.example))
 
@@ -580,7 +502,7 @@ flowchart TB
   UC[Use cases emissão] --> PERSIST[persistNfeXmlAutorizado]
   PERSIST --> BUILD[buildNfeXmlAutorizado]
   BUILD --> RESOLVE[resolveNfeValidationUpdate]
-  RESOLVE --> HTTP[HttpFiscalValidatorAdapter]
+  RESOLVE --> HTTP[FiscalValidatorProvider]
   HTTP -->|POST /api/v1/validate-nfe| PROXY[FastAPI :8080]
   PROXY --> MCP[mcp-fiscal-brasil]
   RESOLVE --> DB[(nfes + auditoria)]
@@ -605,7 +527,7 @@ flowchart TB
 ## Testes e scripts
 
 ```bash
-# Testes (node:test + tsx; compila pacotes fiscais antes). Inclui o contrato HTTP.
+# Testes (Vitest, *.spec.ts; compila pacotes fiscais antes). Inclui o contrato HTTP em src/test/.
 pnpm --filter @msimulation-xml/backend test
 
 # Mudança intencional de rota: regravar o snapshot do contrato
@@ -613,6 +535,9 @@ UPDATE_CONTRACT_SNAPSHOT=1 pnpm --filter @msimulation-xml/backend test
 
 # Typecheck
 pnpm --filter @msimulation-xml/backend exec tsc --noEmit
+
+# Migrations: valide sempre num Postgres local antes de produção
+POSTGRES_PORT=5433 bash backend/scripts/verify-marketplaces-migration.sh   # na raiz
 
 # Prisma
 pnpm --filter @msimulation-xml/backend exec prisma migrate dev
@@ -634,7 +559,7 @@ Cada bounded context deve ter o seu `README.md` com overview, diagrama de sequê
 | logistics | `src/modules/logistics/README.md` |
 | remessas | `src/modules/remessas/README.md` |
 | sales | `src/modules/sales/README.md` |
-| fiscal-documents | `src/modules/fiscal-documents/README.md` (há nota em `infrastructure/observability/`) |
+| fiscal-documents | `src/modules/fiscal-documents/README.md` (há nota em `observability/README.md`) |
 | fiscal-settings | `src/modules/fiscal-settings/README.md` |
 | lookup | `src/modules/lookup/README.md` |
 | health | `src/modules/health/README.md` |

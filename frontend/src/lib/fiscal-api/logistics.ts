@@ -1,3 +1,4 @@
+import type { MarketplaceCode } from "../marketplaces";
 import type {
   NFeDto,
   CTeDto,
@@ -13,6 +14,7 @@ import {
 export type UnidadeLogisticaDto = {
   id: string;
   tenantId: string;
+  marketplace: MarketplaceCode;
   codigo: string;
   nome: string;
   destNomeFiscal: string;
@@ -84,11 +86,13 @@ export async function listLogisticUnits(opts?: {
   q?: string;
   cnpj?: string;
   ativa?: boolean;
+  marketplace?: MarketplaceCode;
 }): Promise<UnidadeLogisticaDto[]> {
   return getJson<UnidadeLogisticaDto[]>(
     buildApiUrl("/api/unidades-logisticas", {
       q: opts?.q,
       cnpj: opts?.cnpj,
+      marketplace: opts?.marketplace,
       ativa: opts?.ativa === false ? "false" : opts?.ativa === true ? "true" : undefined,
     }),
   );

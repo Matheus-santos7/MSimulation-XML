@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { definirUnidadePadraoAction } from "@/app/(app)/unidades-logisticas/actions";
+import { MarketplaceBadge } from "@/components/marketplace-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { UnidadeLogisticaDto } from "@/lib/fiscal-api";
@@ -47,6 +48,7 @@ export function UnidadesLogisticasTable({ unidades }: Props) {
           <thead>
             <tr className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
               <th className="px-3 py-2">Nome</th>
+              <th className="px-3 py-2">Marketplace</th>
               <th className="px-3 py-2">CNPJ</th>
               <th className="px-3 py-2">UF</th>
               <th className="px-3 py-2">Município</th>
@@ -71,6 +73,9 @@ export function UnidadesLogisticasTable({ unidades }: Props) {
                       </Badge>
                     )}
                   </span>
+                </td>
+                <td className="px-3 py-2">
+                  <MarketplaceBadge code={u.marketplace} />
                 </td>
                 <td className="px-3 py-2 font-mono text-xs">{u.cnpj}</td>
                 <td className="px-3 py-2">{u.endereco.uf}</td>

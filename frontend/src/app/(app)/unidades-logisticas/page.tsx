@@ -1,35 +1,39 @@
 import type { Metadata } from "next";
 // import { AvancoCdForm } from "@/components/avanco-cd-form";
 import { PageHeader } from "@/components/fiscal-ui";
+import { MarketplaceFilterSelect } from "@/components/marketplace-filter-select";
 // import { UnidadesLogisticasImportForm } from "@/components/unidades-logisticas-import-form";
 import { UnidadesLogisticasTable } from "@/components/unidades-logisticas-table";
 import { isAdminRole } from "@/lib/auth/roles";
 import { getAuthMe } from "@/lib/auth/session";
-import { listProducts, listLogisticUnits } from "@/lib/fiscal-api";
+import { listLogisticUnits, listMarketplaces } from "@/lib/fiscal-api";
+import { isMarketplaceCode } from "@/lib/marketplaces";
 
 // Define a tag <title> do HTML gerado pelo Next.js para SEO e aba do navegador
 export const metadata: Metadata = { title: "Unidades Logísticas" };
 
 // A partir do Next.js 15, os searchParams (query string da URL) são Assíncronos (Promises)
 type Props = {
-  searchParams: Promise<{ q?: string; cnpj?: string }>;
+  searchParams: Promise<{ q?: string; cnpj?: string; marketplace?: string }>;
 };
 
 // Como é um Server Component, a função pode ser 'async' para buscar dados diretamente
 export default async function UnidadesLogisticasPage({ searchParams }: Props) {
   // Aguarda a resolução dos parâmetros da URL.
-  // 'q' é o texto de busca (nome/código) e 'cnpj' é a busca específica por empresa
-  const { q, cnpj } = await searchParams;
+  // 'q' é o texto de busca (nome/código), 'cnpj' a busca por empresa e 'marketplace' o dono do CD
+  const { q, cnpj, marketplace } = await searchParams;
+  const marketplaceFilter = isMarketplaceCode(marketplace) ? marketplace : undefined;
 
   // Promise.all executa as três buscas ao mesmo tempo. 
   // Isso reduz o tempo de resposta pela métrica da requisição mais demorada, em vez da soma de todas.
-  const [unidades, products, me] = await Promise.all([
+  const [unidades, marketplaces, me] = await Promise.all([
     listLogisticUnits({
       q: q?.trim() || undefined,
       cnpj: cnpj?.trim() || undefined,
+      marketplace: marketplaceFilter,
       ativa: true, // Traz apenas unidades em funcionamento
     }),
-    listProducts(),
+    listMarketplaces(),
     getAuthMe(), // Pega os dados do usuário autenticado no cookie/sessão atual
   ]);
 
@@ -45,7 +49,7 @@ export default async function UnidadesLogisticasPage({ searchParams }: Props) {
       {/* Cabeçalho padrão da UI */}
       <PageHeader
         title="Unidades Logísticas"
-        subtitle="Catálogo global Meli Full — cada empresa define o CD padrão para remessas"
+        subtitle="CDs de fulfillment por marketplace — cada empresa define o CD padrão para remessas"
       />
 
       {/* Banner de aviso (Alerta). 
@@ -106,6 +110,7 @@ export default async function UnidadesLogisticasPage({ searchParams }: Props) {
               className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm font-mono"
             />
           </label>
+          <MarketplaceFilterSelect marketplaces={marketplaces} value={marketplaceFilter} />
           <button
             type="submit"
             className="rounded border border-border px-3 py-1.5 text-sm hover:bg-muted"

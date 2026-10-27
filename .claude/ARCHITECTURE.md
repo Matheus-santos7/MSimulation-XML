@@ -298,7 +298,7 @@ No backend (`pnpm --filter @msimulation-xml/backend <script>`):
 
 ## 12. Situação atual
 
-A conversão dos módulos vindos da migração Fastify → NestJS terminou (plano em `tasks/plan-marketplaces-feature-modules.md`). Todos os contextos (`auth`, `catalog`, `fiscal-documents`, `fiscal-settings`, `fiscal-validation`, `health`, `logistics`, `lookup`, `marketplace`, `org`, `remessas`, `sales`, `tax`) seguem este documento:
+A conversão dos módulos vindos da migração Fastify → NestJS terminou (plano em `docs/history/plan-marketplaces-feature-modules.md`). Todos os contextos (`auth`, `catalog`, `fiscal-documents`, `fiscal-settings`, `fiscal-validation`, `health`, `logistics`, `lookup`, `marketplace`, `org`, `remessas`, `sales`, `tax`) seguem este documento:
 
 - pastas por feature dentro do contexto, sem `domain/`, `application/`, `infrastructure/`, `presentation/`;
 - services, use cases e repositories `@Injectable` com `@Inject(Classe)` explícito, sem `create<Ctx>Module()` nem tokens de composition root;

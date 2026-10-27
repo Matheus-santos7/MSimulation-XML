@@ -2,8 +2,8 @@
 # Importa planilha Meli Full de unidades logísticas via API local.
 #
 # Uso:
-#   API_EMAIL=seu@email.com API_PASSWORD=sua-senha ./scripts/import-unidades-logisticas.sh
-#   API_EMAIL=... API_PASSWORD=... ./scripts/import-unidades-logisticas.sh /caminho/planilha.xlsx
+#   API_EMAIL=seu@email.com API_PASSWORD=sua-senha ./backend/scripts/import-unidades-logisticas.sh
+#   API_EMAIL=... API_PASSWORD=... ./backend/scripts/import-unidades-logisticas.sh /caminho/planilha.xlsx
 #
 # Variáveis opcionais:
 #   API_URL     — base da API (padrão: http://localhost:3001/api)
@@ -12,7 +12,7 @@
 
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 API_URL="${API_URL:-http://localhost:3001/api}"
 ENRICH_CEP="${ENRICH_CEP:-true}"
 

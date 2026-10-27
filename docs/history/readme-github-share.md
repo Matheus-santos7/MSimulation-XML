@@ -42,7 +42,7 @@ CONTRIBUTING.md           → onboarding + PR + secrets
 backend/README.md         → API, CA/DDD, fluxos, validador MCP, packages
 frontend/README.md        → thin client, rotas, padrões, setup
 docs/specs/               → esta SPEC
-backend/docs/fiscal/      → regras CAT 31 / MOC (já existentes)
+docs/fiscal/      → regras CAT 31 / MOC (já existentes)
 .env.example              → já existem (raiz, backend, frontend) — só validar
 ```
 
@@ -79,7 +79,7 @@ Não há testes automatizados de Markdown. Verificar manualmente:
 | Fluxos de negócio + fluxo HTTP | **backend/README.md** |
 | Validador MCP (secção 5 completa) | **backend/README.md** |
 | Frontend rotas, padrões, thin client, diagramas FE | **frontend/README.md** |
-| Docs fiscais CAT31/MOC | Manter links → `backend/docs/fiscal/` |
+| Docs fiscais CAT31/MOC | Manter links → `docs/fiscal/` |
 
 ## Success Criteria
 

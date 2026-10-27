@@ -2,7 +2,7 @@
 
 > **STATUS: APPROVED** (2026-07-23)  
 > Fonte de verdade para plan → tasks → implement.  
-> Substitui o escopo da spec cancelada `docs/specs/infcpl-regimes-uf.md` (histórico).
+> Substitui o escopo da spec cancelada `docs/history/infcpl-regimes-uf.md` (histórico).
 
 ---
 
@@ -44,7 +44,7 @@
 
 ### Decisão I (miolo remessa/retorno) — por quê
 
-Conforme `backend/docs/fiscal/regras-fulfillment-cat31.md` §1, a remessa inbound deve informar a **IE do Operador Logístico** no `<infCpl>`. Já §§ 2.2 e 3 (retornos) **não** exigem IE no complemento — a IE já vai no destinatário da própria NF-e.
+Conforme `docs/fiscal/regras-fulfillment-cat31.md` §1, a remessa inbound deve informar a **IE do Operador Logístico** no `<infCpl>`. Já §§ 2.2 e 3 (retornos) **não** exigem IE no complemento — a IE já vai no destinatário da própria NF-e.
 
 **Regra I:**
 

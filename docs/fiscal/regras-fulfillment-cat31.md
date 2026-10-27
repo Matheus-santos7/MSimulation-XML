@@ -3,7 +3,7 @@
 Esta documentação detalha as regras de emissão de Nota Fiscal Eletrônica (NF-e) para operações logísticas de armazenamento e despacho por terceiros (Fulfillment — Mercado Envios Full, Amazon Fulfillment, etc.) no estado de São Paulo, regidas pela **Portaria CAT 31/2019**.
 
 > **`<infCpl>` (texto gerado):** a composição canônica (ASCII, head + miolo + regime EBazar) está em
-> [`docs/specs/infcpl-fulfillment-ebazar.md`](../../../docs/specs/infcpl-fulfillment-ebazar.md)
+> [`docs/specs/infcpl-fulfillment-ebazar.md`](../specs/infcpl-fulfillment-ebazar.md)
 > e no composer `buildFulfillmentInfCplText` (`@msimulation-xml/fiscal-core`).
 > Os blocos abaixo descrevem a obrigação fiscal; o texto literal emitido segue a spec.
 

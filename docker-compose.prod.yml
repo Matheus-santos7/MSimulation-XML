@@ -20,7 +20,7 @@
 # Uso:
 #   cp .env.prod.example .env.prod
 #   # editar backend/.env e frontend/.env.local com os segredos de produção
-#   docker login ghcr.io -u <usuario-github>   # uma vez (ver docs/deploy-docker-aws.md)
+#   docker login ghcr.io -u <usuario-github>   # uma vez (ver docs/deploy/docker-aws.md)
 #   docker compose --env-file .env.prod -f docker-compose.prod.yml pull
 #   docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --remove-orphans
 

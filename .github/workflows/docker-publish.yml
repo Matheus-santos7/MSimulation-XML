@@ -9,7 +9,7 @@
 #   ghcr.io/matheus-santos7/msimulation-xml-frontend:latest + :<sha curto>
 #
 # Pré-requisito (uma vez, no servidor): autenticar no ghcr.io para poder puxar
-# as imagens (ver docs/deploy-docker-aws.md).
+# as imagens (ver docs/deploy/docker-aws.md).
 #
 # Variável de repositório (Settings → Secrets and variables → Actions → Variables):
 #   NEXT_PUBLIC_TURNSTILE_SITE_KEY (opcional — chave pública do Turnstile, embutida

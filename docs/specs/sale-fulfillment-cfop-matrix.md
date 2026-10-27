@@ -4,7 +4,7 @@
 > Decisões: retorno simbólico cobre **os 6 CFOPs** da allowlist; smoke + plan em `tasks/`.  
 > Escopo: 1ª fatia do simulador de processos Fulfillment ML.  
 > Fonte de processo: `Tabela_Processos_Fulfillment_ML.xlsx` + [obtendo-nota-fiscal](https://developers.mercadolivre.com.br/pt_br/obtendo-nota-fiscal) (Tabela de processos Fulfillment).  
-> Specs relacionadas: `docs/specs/infcpl-fulfillment-ebazar.md`, `backend/docs/fiscal/regras-fulfillment-cat31.md`.
+> Specs relacionadas: `docs/specs/infcpl-fulfillment-ebazar.md`, `docs/fiscal/regras-fulfillment-cat31.md`.
 
 ---
 
@@ -70,7 +70,7 @@ Sales Chain Full: `emit-sale-note` usa `logistica: "armazem_geral"` + `perfilVen
 
 **Nota:** o dicionário MCP `consultar_cfop` ainda descreve 6107/6108 como ZFM/exportação — **desatualizado**. A tabela RF/Confaz vigente e a prática e-commerce alinham com **não contribuinte** (ZFM = 6109/6110).
 
-**Tensão CAT 31:** `backend/docs/fiscal/regras-fulfillment-cat31.md` cita remessa com **5949** e venda com exemplos `5102`/`6102`. Para Full, a árvore (e a descrição “não deve transitar”) privilegia **5105/6105–5106/6106** na venda e **5905/6905** na remessa de armazenagem. Allowlist ML SALE ainda lista 5949/6949 — tratar como processos/planilha ML, não como default da árvore de venda Full.
+**Tensão CAT 31:** `docs/fiscal/regras-fulfillment-cat31.md` cita remessa com **5949** e venda com exemplos `5102`/`6102`. Para Full, a árvore (e a descrição “não deve transitar”) privilegia **5105/6105–5106/6106** na venda e **5905/6905** na remessa de armazenagem. Allowlist ML SALE ainda lista 5949/6949 — tratar como processos/planilha ML, não como default da árvore de venda Full.
 
 ### Análise TaxRule / configuração — o que falta
 

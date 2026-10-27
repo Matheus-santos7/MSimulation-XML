@@ -1,6 +1,6 @@
 # Spec: Convenções do monorepo (baseline)
 
-> **STATUS: APPROVED** (2026-07-25)  
+> **STATUS: SUBSTITUÍDA** (2026-10-27) por [`.claude/ARCHITECTURE.md`](../../.claude/ARCHITECTURE.md). Mantida como histórico; a árvore de pastas abaixo é a anterior ao NestJS.  
 > Tipo: SPEC de **convenções / baseline** (não é feature fiscal).  
 > Fonte: layout e scripts atuais do repo (`package.json`, `CONTRIBUTING.md`, packages).  
 > Specs de feature continuam em `docs/specs/<feature>.md` e prevalecem no escopo delas.
@@ -11,7 +11,7 @@
 
 1. Escopo = documentar/alinhar a estrutura e convenções **como devem permanecer**, sem redesign do monorepo.
 2. As seis áreas do template `spec-driven-development` estão cobertas (objective, commands, structure, style, testing, boundaries).
-3. Artefato em `docs/specs/monorepo-conventions.md`; zero código nesta fase.
+3. Artefato em `.claude/ARCHITECTURE.md`; zero código nesta fase.
 4. Commands/Structure espelham o monorepo atual (`pnpm`, `frontend/`, `backend/`, `packages/*`).
 5. Features fiscais novas **não** entram aqui — usam SPEC própria + `docs/intent/` quando necessário.
 
@@ -146,7 +146,7 @@ msimulation-xml/
 
 | Tipo de mudança | Onde |
 |-----------------|------|
-| Regra tributária / CFOP / CST / arredondamento | `packages/fiscal-core` e/ou `backend/.../tax` (+ doc em `backend/docs/fiscal/`) |
+| Regra tributária / CFOP / CST / arredondamento | `packages/fiscal-core` e/ou `backend/.../tax` (+ doc em `docs/fiscal/`) |
 | Forma do XML (`<det>`, `<NFref>`, tags) | `packages/nfe-xml` |
 | Orquestração HTTP / persistência / cadeia ML | `backend/src/modules/<bc>` |
 | UI / wizard / lista NF-e | `frontend/src` (chama API; não recalcula imposto) |
@@ -225,7 +225,7 @@ export function calcIcms(vProd: number) {
 
 - Rodar o verify mínimo relevante ao pacote tocado antes de pedir commit.
 - Seguir thin client + Clean Architecture.
-- Consultar `backend/docs/fiscal/` (e regra especialista-fiscal) em mudanças tributárias/XML.
+- Consultar `docs/fiscal/` (e regra especialista-fiscal) em mudanças tributárias/XML.
 - Surface ASSUMPTIONS; gated workflow (SPEC → plan → tasks → implement).
 - Atualizar SPEC de feature quando decisões mudarem.
 

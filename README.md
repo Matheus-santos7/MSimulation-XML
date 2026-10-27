@@ -10,7 +10,7 @@ Monorepo · pnpm workspaces · Fastify · Next.js · `@msimulation-xml/fiscal-co
 
 **Diferencial:** motor tributário + geração de XML NF-e/CT-e em packages testáveis, orquestrados por um backend em Clean Architecture / DDD (bounded contexts).
 
-[Licença MIT](./LICENSE) · [Contribuir](./CONTRIBUTING.md) · [Convenções do monorepo](./docs/specs/monorepo-conventions.md) · [Backend](./backend/README.md) · [Frontend](./frontend/README.md)
+[Licença MIT](./LICENSE) · [Contribuir](./CONTRIBUTING.md) · [Convenções do monorepo](./.claude/ARCHITECTURE.md) · [Backend](./backend/README.md) · [Frontend](./frontend/README.md)
 
 ---
 
@@ -156,10 +156,10 @@ Prisma Studio (opcional): `pnpm --filter @msimulation-xml/backend exec prisma st
 | [backend/README.md](./backend/README.md)                                                             | Clean Architecture, módulos, fluxos, MCP |
 | [frontend/README.md](./frontend/README.md)                                                           | Thin client, rotas, padrões              |
 | [CONTRIBUTING.md](./CONTRIBUTING.md)                                                                 | Onboarding e PRs                         |
-| [backend/docs/fiscal/regras-fulfillment-cat31.md](./backend/docs/fiscal/regras-fulfillment-cat31.md) | CAT 31 / ML Full                         |
-| [backend/docs/fiscal/manual-nfe-moc.md](./backend/docs/fiscal/manual-nfe-moc.md)                     | MOC NF-e                                 |
-| [docs/specs/readme-github-share.md](./docs/specs/readme-github-share.md)                             | SPEC desta documentação                  |
-| [docs/deploy-docker-aws.md](./docs/deploy-docker-aws.md)                                             | Deploy Docker (backend+frontend+TLS) na AWS |
+| [docs/fiscal/regras-fulfillment-cat31.md](./docs/fiscal/regras-fulfillment-cat31.md) | CAT 31 / ML Full                         |
+| [docs/fiscal/manual-nfe-moc.md](./docs/fiscal/manual-nfe-moc.md)                     | MOC NF-e                                 |
+| [docs/history/readme-github-share.md](./docs/history/readme-github-share.md)                             | SPEC desta documentação                  |
+| [docs/deploy/docker-aws.md](./docs/deploy/docker-aws.md)                                             | Deploy Docker (backend+frontend+TLS) na AWS |
 
 
 ---

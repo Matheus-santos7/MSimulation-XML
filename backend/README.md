@@ -570,6 +570,6 @@ Documentação complementar:
 | --------- | -------- |
 | [`../README.md`](../README.md) | Portal do monorepo |
 | [`../CONTRIBUTING.md`](../CONTRIBUTING.md) | Como contribuir |
-| [`docs/fiscal/regras-fulfillment-cat31.md`](./docs/fiscal/regras-fulfillment-cat31.md) | Portaria CAT 31 / ML Full |
-| [`docs/fiscal/manual-nfe-moc.md`](./docs/fiscal/manual-nfe-moc.md) | Referência estrutural NF-e (MOC) |
+| [`docs/fiscal/regras-fulfillment-cat31.md`](../docs/fiscal/regras-fulfillment-cat31.md) | Portaria CAT 31 / ML Full |
+| [`docs/fiscal/manual-nfe-moc.md`](../docs/fiscal/manual-nfe-moc.md) | Referência estrutural NF-e (MOC) |
 | [`../frontend/README.md`](../frontend/README.md) | Thin client Next.js |

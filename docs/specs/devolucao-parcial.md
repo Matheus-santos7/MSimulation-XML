@@ -1,8 +1,7 @@
 # Spec: Devolução parcial de venda (por item e por quantidade)
 
 > **STATUS: IMPLEMENTING** (2026-09-16) — spec escrita em sessão autônoma; ASSUMPTIONS abaixo aguardam confirmação humana.  
-> Plan: [`tasks/plan-devolucao-parcial.md`](../../tasks/plan-devolucao-parcial.md) · Todo: [`tasks/todo-devolucao-parcial.md`](../../tasks/todo-devolucao-parcial.md)  
-> Specs relacionadas: `docs/specs/multi-remessa-nfref-xped.md` (decisão 8 deixava devolução por item fora de escopo), `backend/docs/fiscal/regras-fulfillment-cat31.md` §4.  
+> Specs relacionadas: `docs/specs/multi-remessa-nfref-xped.md` (decisão 8 deixava devolução por item fora de escopo), `docs/fiscal/regras-fulfillment-cat31.md` §4.  
 > **Governança:** sem commit/push sem autorização humana explícita.
 
 ---

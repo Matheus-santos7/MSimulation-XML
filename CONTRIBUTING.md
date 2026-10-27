@@ -40,7 +40,7 @@ pnpm --filter @msimulation-xml/backend exec tsc --noEmit
 - **Secrets:** só placeholders em `.env.example`. Sem chaves reais, dumps ou CNPJs de produção no git.
 - **Idioma do código:** inglês (exceto termos fiscais BR: NFe, CTe, CFOP, CST…).
 
-Convenções completas (commands, estrutura, estilo, testes, boundaries): [`docs/specs/monorepo-conventions.md`](./docs/specs/monorepo-conventions.md).
+Convenções completas (commands, estrutura, estilo, testes, boundaries): [`.claude/ARCHITECTURE.md`](./.claude/ARCHITECTURE.md).
 
 ## Por onde começar (onboarding)
 
@@ -51,7 +51,7 @@ Sugestão de exploração (1–2 semanas):
 | **1** | Ambiente + mapa | `pnpm db:setup && pnpm dev`; ler README + `backend/README.md`; Prisma Studio |
 | **1** | Frontend | Fluxo `produtos` → `actions.ts` → `fiscal-api` → controller |
 | **2** | Backend | CRUD em `catalog` ou `org`: controller → use case → repository |
-| **2** | Fiscal | Ler [`backend/docs/fiscal/regras-fulfillment-cat31.md`](./backend/docs/fiscal/regras-fulfillment-cat31.md); emitir uma remessa e rastrear o código |
+| **2** | Fiscal | Ler [`docs/fiscal/regras-fulfillment-cat31.md`](./docs/fiscal/regras-fulfillment-cat31.md); emitir uma remessa e rastrear o código |
 | **3+** | Domínio | Aprofundar `tax`, `remessas` ou `sales` |
 
 ### Checklist antes do primeiro PR

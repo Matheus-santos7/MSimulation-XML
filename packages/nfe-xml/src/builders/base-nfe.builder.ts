@@ -1,3 +1,7 @@
+import {
+  getBillableMarketplaceProfile,
+  LEGACY_DEFAULT_MARKETPLACE,
+} from "@msimulation-xml/fiscal-core";
 /**
  * Classe base abstrata para builders de NF-e (Strategy Pattern).
  *
@@ -27,7 +31,6 @@ import { serializeXmlDocument } from "../core/xml-serializer.js";
 import type { NfeProcDocument } from "../core/nfe-ast.types.js";
 import { parseEngineFromFiscalPayload } from "../fiscal-engine-xml.js";
 import { resolveAutXmlCpfs } from "../fiscal/fiscal-xml.util.js";
-import { REMESSA_AUT_XML_CPFS } from "../constants.js";
 import { resolveEmitterFromPayload } from "../resolve-emitter.js";
 import type {
   BaseNFeBuildContext,
@@ -89,6 +92,9 @@ export abstract class BaseNFeBuilder {
   /** Resolve contexto compartilhado (fiscal, engine, emitter, datas). */
   protected resolveBaseContext(input: NFeBuilderInput): BaseNFeBuildContext {
     const fiscal = (input.nfe.fiscalPayload ?? {}) as Record<string, unknown>;
+    const marketplace = getBillableMarketplaceProfile(
+      input.nfe.marketplace ?? LEGACY_DEFAULT_MARKETPLACE,
+    );
     return {
       nfe: input.nfe,
       emit: input.emit,
@@ -105,7 +111,8 @@ export abstract class BaseNFeBuilder {
         input.nfe.valorICMS,
       ),
       dhEmi: formatNfeDateTime(input.nfe.emitidaEm),
-      autXmlCpfs: resolveAutXmlCpfs(fiscal, REMESSA_AUT_XML_CPFS),
+      autXmlCpfs: resolveAutXmlCpfs(fiscal, marketplace.autXmlCpfsPadrao),
+      marketplace,
     };
   }
 
@@ -182,11 +189,7 @@ export abstract class BaseNFeBuilder {
   build(): NFeBuilderResult {
     const id = `NFe${this.ctx.nfe.chave}` as const;
 
-    const infNFeChildren: XmlObject[] = [
-      this.buildIde(),
-      this.buildEmit(),
-      this.buildDest(),
-    ];
+    const infNFeChildren: XmlObject[] = [this.buildIde(), this.buildEmit(), this.buildDest()];
 
     const entrega = this.buildEntrega();
     if (entrega) infNFeChildren.push(entrega);
@@ -205,9 +208,10 @@ export abstract class BaseNFeBuilder {
     const pag = this.buildPag();
     if (pag) infNFeChildren.push(pag);
 
-    if (this.shouldIncludeInfIntermed()) {
-      infNFeChildren.push(buildInfIntermedNode(this.ctx.fiscal));
-    }
+    const infIntermed = this.shouldIncludeInfIntermed()
+      ? buildInfIntermedNode(this.ctx.fiscal, this.ctx.marketplace.intermediador)
+      : null;
+    if (infIntermed) infNFeChildren.push(infIntermed);
 
     const infAdic = this.buildInfAdic();
     if (infAdic) infNFeChildren.push(infAdic);

@@ -1,15 +1,23 @@
 import fp from "fastify-plugin";
-import { prisma } from "../lib/db/prisma.js";
+import type { PrismaClient } from "../generated/prisma/client.js";
 
-export const prismaPlugin = fp(async (fastify) => {
-  fastify.decorate("prisma", prisma);
+export type PrismaPluginOptions = {
+  /** Client injetado (testes). Sem ele, usa o singleton de `lib/db/prisma.ts`. */
+  client?: PrismaClient;
+};
+
+export const prismaPlugin = fp<PrismaPluginOptions>(async (fastify, opts) => {
+  // Import tardio: o singleton exige DATABASE_URL e não deve ser criado quando há client injetado.
+  const client = opts.client ?? (await import("../lib/db/prisma.js")).prisma;
+
+  fastify.decorate("prisma", client);
   fastify.addHook("onClose", async () => {
-    await prisma.$disconnect();
+    await client.$disconnect();
   });
 });
 
 declare module "fastify" {
   interface FastifyInstance {
-    prisma: typeof prisma;
+    prisma: PrismaClient;
   }
 }

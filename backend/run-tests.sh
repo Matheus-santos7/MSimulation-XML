@@ -1,5 +1,5 @@
 #!/bin/bash
-# Script para rodar todos os testes .test.ts com glob pattern
+# Roda a suíte do backend (Vitest, *.spec.ts) depois de compilar os pacotes fiscais.
 # Chamado por: pnpm test
 
 set -e
@@ -13,5 +13,5 @@ pnpm --filter @msimulation-xml/nfe-xml build
 echo "Generating Prisma client..."
 pnpm exec prisma generate
 
-echo "Running tests ($(find src -name '*.test.ts' | wc -l) files)..."
-pnpm exec node --import tsx --test $(find src -name '*.test.ts' | sort)
+echo "Running Vitest ($(find src -name '*.spec.ts' | wc -l) files)..."
+pnpm exec vitest run

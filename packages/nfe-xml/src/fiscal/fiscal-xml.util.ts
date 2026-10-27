@@ -5,15 +5,14 @@
 
 import {
   estimateRemessaPesoVol,
-  REMESSA_AUT_XML_CPFS,
-  REMESSA_IBS_CBS_DEFAULT,
-  type RemessaMlTransporta,
+  mercadoLivre,
+  type NfeTransporta,
 } from "@msimulation-xml/fiscal-core";
 import type { IcmsTotInput } from "../fiscal-engine-xml.js";
 
 export type IcmsTotValues = IcmsTotInput;
 
-export type NfeTransportaInput = RemessaMlTransporta;
+export type NfeTransportaInput = NfeTransporta;
 
 export type NfeTranspVolInput = {
   qVol?: number;
@@ -27,8 +26,8 @@ export type IbsCbsDefaults = {
 };
 
 export const REMESSA_IBS_CBS_DEFAULTS: IbsCbsDefaults = {
-  cst: REMESSA_IBS_CBS_DEFAULT.st,
-  cClassTrib: REMESSA_IBS_CBS_DEFAULT.cClassTrib,
+  cst: mercadoLivre.ML_IBS_CBS_REMESSA.st,
+  cClassTrib: mercadoLivre.ML_IBS_CBS_REMESSA.cClassTrib,
 };
 
 export const VENDA_IBS_CBS_DEFAULTS: IbsCbsDefaults = {
@@ -99,7 +98,10 @@ export function cstRequiresGIbscbs(cst: string): boolean {
   return code < 400 || code >= 620;
 }
 
-function resolveEmitGIbscbs(ibsCbs: Record<string, unknown> | null | undefined, cst: string): boolean {
+function resolveEmitGIbscbs(
+  ibsCbs: Record<string, unknown> | null | undefined,
+  cst: string,
+): boolean {
   const flag = ibsCbs?.emitGIBSCBS ?? ibsCbs?.indGIbscbs;
   if (flag === true || flag === 1 || flag === "1") return true;
   if (flag === false || flag === 0 || flag === "0") return false;
@@ -108,24 +110,27 @@ function resolveEmitGIbscbs(ibsCbs: Record<string, unknown> | null | undefined, 
 
 /** BC do item: vProd (+ encargos) − tributos que compõem a base (UB16-10). */
 export function calcIbsCbsItemVBc(input: IbsCbsVBcInput): number {
-  return Math.max(0, roundMoney(
-    (input.vProd ?? 0) +
-      (input.vServ ?? 0) +
-      (input.vFrete ?? 0) +
-      (input.vSeg ?? 0) +
-      (input.vOutro ?? 0) +
-      (input.vII ?? 0) -
-      (input.vDesc ?? 0) -
-      (input.vPIS ?? 0) -
-      (input.vCOFINS ?? 0) -
-      (input.vICMS ?? 0) -
-      (input.vICMSUFDest ?? 0) -
-      (input.vFCP ?? 0) -
-      (input.vFCPUFDest ?? 0) -
-      (input.vICMSMono ?? 0) -
-      (input.vISSQN ?? 0) +
-      (input.vIS ?? 0),
-  ));
+  return Math.max(
+    0,
+    roundMoney(
+      (input.vProd ?? 0) +
+        (input.vServ ?? 0) +
+        (input.vFrete ?? 0) +
+        (input.vSeg ?? 0) +
+        (input.vOutro ?? 0) +
+        (input.vII ?? 0) -
+        (input.vDesc ?? 0) -
+        (input.vPIS ?? 0) -
+        (input.vCOFINS ?? 0) -
+        (input.vICMS ?? 0) -
+        (input.vICMSUFDest ?? 0) -
+        (input.vFCP ?? 0) -
+        (input.vFCPUFDest ?? 0) -
+        (input.vICMSMono ?? 0) -
+        (input.vISSQN ?? 0) +
+        (input.vIS ?? 0),
+    ),
+  );
 }
 
 /** Soma das BC já arredondadas por item — evita rejeição 1076. */
@@ -158,9 +163,7 @@ function ibsCbsImpostoXml(
   const cst = String(ibsCbs?.st ?? ibsCbs?.cst ?? defaults.cst).slice(0, 3);
   const cClassTrib = String(ibsCbs?.cClassTrib ?? defaults.cClassTrib).slice(0, 6);
   const gIbscbsXml =
-    vBC != null && Number.isFinite(vBC)
-      ? `<gIBSCBS><vBC>${vBC.toFixed(2)}</vBC></gIBSCBS>`
-      : "";
+    vBC != null && Number.isFinite(vBC) ? `<gIBSCBS><vBC>${vBC.toFixed(2)}</vBC></gIBSCBS>` : "";
   return `<IBSCBS><CST>${cst}</CST><cClassTrib>${cClassTrib}</cClassTrib>${gIbscbsXml}</IBSCBS>`;
 }
 
@@ -239,7 +242,7 @@ export function nfePagXmlVenda(vNF: number, pagamento?: Record<string, unknown> 
       </pag>`;
 }
 
-/** Remessa: sempre emite IBSCBS (padrão ML reforma tributária). */
+/** Remessa: sempre emite IBSCBS; sem `ibsCbs` no payload vale o padrão do ML (o perfil já preenche). */
 export function ibsCbsImpostoXmlRemessa(
   ibsCbs?: Record<string, unknown> | null,
   vBC?: number | null,
@@ -256,10 +259,10 @@ export function icmsTotXml(t: IcmsTotValues, opts?: { includeDifalFields?: boole
   const hasDifalValues =
     (t.vFCPUFDest ?? 0) !== 0 || (t.vICMSUFDest ?? 0) !== 0 || (t.vICMSUFRemet ?? 0) !== 0;
   const difal = hasDifalValues
-      ? `<vFCPUFDest>${(t.vFCPUFDest ?? 0).toFixed(2)}</vFCPUFDest>
+    ? `<vFCPUFDest>${(t.vFCPUFDest ?? 0).toFixed(2)}</vFCPUFDest>
           <vICMSUFDest>${(t.vICMSUFDest ?? 0).toFixed(2)}</vICMSUFDest>
           <vICMSUFRemet>${(t.vICMSUFRemet ?? 0).toFixed(2)}</vICMSUFRemet>`
-      : "";
+    : "";
   return `<ICMSTot>
           <vBC>${t.vBC.toFixed(2)}</vBC>
           <vICMS>${t.vICMS.toFixed(2)}</vICMS>
@@ -298,7 +301,11 @@ export function vNFTotXml(vNF: number): string {
 export function nfeTotalXml(
   icmsTot: string,
   vNF: number,
-  opts?: { includeReformaTributaria?: boolean; vBCIBSCBS?: number; ibsCbs?: Record<string, unknown> | null },
+  opts?: {
+    includeReformaTributaria?: boolean;
+    vBCIBSCBS?: number;
+    ibsCbs?: Record<string, unknown> | null;
+  },
 ): string {
   const reforma =
     opts?.includeReformaTributaria !== false && opts?.vBCIBSCBS != null && opts?.ibsCbs
@@ -380,7 +387,9 @@ export function resolveTransportaFromFiscal(
     ...(fallback.cnpj || raw.cnpj ? { cnpj: String(raw.cnpj ?? fallback.cnpj ?? "") } : {}),
     xNome: String(raw.xNome ?? fallback.xNome),
     ...(fallback.ie || raw.ie ? { ie: String(raw.ie ?? fallback.ie ?? "") } : {}),
-    ...(fallback.xEnder || raw.xEnder ? { xEnder: String(raw.xEnder ?? fallback.xEnder ?? "") } : {}),
+    ...(fallback.xEnder || raw.xEnder
+      ? { xEnder: String(raw.xEnder ?? fallback.xEnder ?? "") }
+      : {}),
     ...(fallback.xMun || raw.xMun ? { xMun: String(raw.xMun ?? fallback.xMun ?? "") } : {}),
     ...(fallback.uf || raw.uf ? { uf: String(raw.uf ?? fallback.uf ?? "") } : {}),
   };
@@ -388,10 +397,14 @@ export function resolveTransportaFromFiscal(
 
 export function resolveAutXmlCpfs(
   fiscal: Record<string, unknown> | undefined,
-  fallback: readonly string[] = REMESSA_AUT_XML_CPFS,
+  fallback: readonly string[],
 ): readonly string[] {
   const fromPayload = fiscal?.autXmlCpfs;
-  if (Array.isArray(fromPayload) && fromPayload.length > 0 && fromPayload.every((c) => typeof c === "string")) {
+  if (
+    Array.isArray(fromPayload) &&
+    fromPayload.length > 0 &&
+    fromPayload.every((c) => typeof c === "string")
+  ) {
     return fromPayload as string[];
   }
   return fallback;

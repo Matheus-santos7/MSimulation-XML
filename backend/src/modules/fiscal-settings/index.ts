@@ -1,17 +1,33 @@
 /**
- * Módulo Fiscal Settings — configurações do emissor fiscal por tenant.
- *
- * @see ./README.md — gestão de Emitter Settings e uso na emissão
+ * API pública da configuração do faturador. A emissão lê a configuração efetiva só por
+ * `loadEmitterSettings(db, tenantId, marketplace)`. Não reexporta o `FiscalSettingsModule`.
  */
-import { createFiscalSettingsModule } from "./infrastructure/factory/fiscal-settings-module.factory.js";
-
-export type { EmitterSettingsView } from "./domain/entities/emitter-settings-view.entity.js";
-export type { UpdateEmitterSettingsInput } from "./domain/ports/emitter-settings.repository.js";
-
-export { GetEmitterSettingsUseCase } from "./application/use-cases/get-emitter-settings.use-case.js";
-export { UpdateEmitterSettingsUseCase } from "./application/use-cases/update-emitter-settings.use-case.js";
-export { mergeEmitterSettingsPatch } from "./application/services/merge-emitter-settings-patch.service.js";
-
-export { createFiscalSettingsModule };
-export { emitterSettingsController } from "./presentation/controllers/emitter-settings.controller.js";
-export { updateEmitterSettingsBodySchema } from "./presentation/schemas/emitter-settings.schemas.js";
+export {
+  calcTributoBase,
+  composicaoChannel,
+  enrichTaxSnapshot,
+  loadEmitterSettings,
+  mapCstDevolucao,
+  resolveDifalMode,
+  resolveModFrete,
+  type EmitterSnapshot,
+  type EnrichTaxContext,
+  type FiscalEmitterSettingsData,
+  type TaxSnapshot,
+} from "./billing-settings/effective-billing-settings.js";
+export {
+  DEFAULT_FISCAL_EMITTER_SETTINGS,
+  DEFAULT_ICMS_FALLBACK_RATES,
+  DEFAULT_PIS_COFINS_RATES,
+  mergeFiscalEmitterSettings,
+} from "./emitter-settings/rules/fiscal-emitter-settings-defaults.js";
+export { mergeEmitterSettingsPatch } from "./emitter-settings/rules/merge-emitter-settings-patch.js";
+export type {
+  EmitterSettingsView,
+  UpdateEmitterSettingsInput,
+} from "./emitter-settings/emitter-settings.types.js";
+export { MarketplaceBillingSettingsService } from "./marketplace-billing-settings/marketplace-billing-settings.service.js";
+export type {
+  MarketplaceBillingOverrides,
+  MarketplaceBillingSettingsView,
+} from "./marketplace-billing-settings/marketplace-billing-settings.types.js";

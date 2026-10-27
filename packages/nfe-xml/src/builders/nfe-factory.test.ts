@@ -1,9 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  ML_NFE_VER_PROC,
-  VENDA_ML_NAT_OP,
-  enrichFiscalPayloadMlVenda,
+  mercadoLivre,
+  mercadoLivreProfile,
   verifySimulationXmlSignature,
 } from "@msimulation-xml/fiscal-core";
 import {
@@ -57,7 +56,7 @@ function sampleVendaNfe(): NFeXmlInput {
     chave: "41260678242849000169550050000000051423282896",
     numero: 5,
     serie: 5,
-    natOp: VENDA_ML_NAT_OP,
+    natOp: mercadoLivre.ML_NAT_OP_VENDA,
     cfop: "5105",
     ncm: "73211100",
     destinatario: {
@@ -87,7 +86,7 @@ function sampleVendaNfe(): NFeXmlInput {
     quantidade: 1,
     tipo: "VENDA",
     nfeReferenciaChave: "41260678242849000169550050000000041410852632",
-    fiscalPayload: enrichFiscalPayloadMlVenda(
+    fiscalPayload: mercadoLivreProfile.enrichVendaPayload(
       {
         autXmlCpfs: ["07116024921", "05168151990"],
         xPed: "200001579233992",
@@ -162,7 +161,7 @@ describe("nfe-factory — Strategy builders", () => {
   it("buildNFeProcDocument retorna estrutura nfeProc com ide, det e pag", () => {
     const doc = buildNFeProcDocument({ nfe: sampleVendaNfe(), emit, product });
     const infNFe = doc.root.nfeProc.NFe.infNFe;
-    assert.equal(infNFe.ide.verProc, ML_NFE_VER_PROC);
+    assert.equal(infNFe.ide.verProc, mercadoLivre.ML_VER_PROC_VENDA);
     assert.equal(infNFe.ide.indFinal, 1);
     assert.ok(infNFe.det);
     assert.ok(infNFe.pag);
@@ -172,7 +171,7 @@ describe("nfe-factory — Strategy builders", () => {
   it("buildNFeXmlFromBuilder gera XML assinável equivalente ao legado para venda ML", () => {
     const xml = buildNFeXmlFromBuilder({ nfe: sampleVendaNfe(), emit, product });
     assert.match(xml, /<natOp>Venda de mercadorias<\/natOp>/);
-    assert.match(xml, new RegExp(`<verProc>${ML_NFE_VER_PROC}<\\/verProc>`));
+    assert.match(xml, new RegExp(`<verProc>${mercadoLivre.ML_VER_PROC_VENDA}<\\/verProc>`));
     assert.match(xml, /<vFrete>55\.99<\/vFrete>/);
     assert.match(xml, /<vPag>894\.52<\/vPag>/);
     assert.match(xml, /<infRespTec>/);

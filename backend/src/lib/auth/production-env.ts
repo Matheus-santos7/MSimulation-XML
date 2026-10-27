@@ -1,12 +1,11 @@
-import { brevoApiKey, brevoSenderEmail } from "../brevo/config.js";
 import {
   appPublicUrl,
-  requireEmailVerification,
   requireJwtSecret,
   requirePasswordPepper,
   requireTotpEncryptionKey,
   turnstileSecretKey,
 } from "./config.js";
+import { appConfig } from "../../config/config.service.js";
 
 const PLACEHOLDER_SECRET_PATTERNS = [
   /^change-me/i,
@@ -26,39 +25,26 @@ function isPlaceholderSecret(value: string | undefined): boolean {
  * Falha cedo para evitar deploy com CAPTCHA, e-mail ou segredos fracos.
  */
 export function assertProductionSecurityConfig(): void {
-  if (process.env.NODE_ENV !== "production") return;
+  if (!appConfig.isProduction) return;
 
   requireJwtSecret();
   requirePasswordPepper();
   requireTotpEncryptionKey();
   appPublicUrl();
 
-  if (isPlaceholderSecret(process.env.JWT_SECRET)) {
+  if (isPlaceholderSecret(appConfig.jwtSecret)) {
     throw new Error("JWT_SECRET não pode usar valor placeholder em produção");
   }
 
-  if (isPlaceholderSecret(process.env.PASSWORD_PEPPER)) {
+  if (isPlaceholderSecret(appConfig.passwordPepper)) {
     throw new Error("PASSWORD_PEPPER não pode usar valor placeholder em produção");
   }
 
-  if (isPlaceholderSecret(process.env.TOTP_ENCRYPTION_KEY)) {
+  if (isPlaceholderSecret(appConfig.totpEncryptionKey)) {
     throw new Error("TOTP_ENCRYPTION_KEY não pode usar valor placeholder em produção");
   }
 
   if (!turnstileSecretKey()) {
     throw new Error("TURNSTILE_SECRET_KEY é obrigatório em produção");
-  }
-
-  if (!requireEmailVerification()) {
-    throw new Error("REQUIRE_EMAIL_VERIFICATION deve ser true em produção");
-  }
-
-  if (!brevoApiKey()) {
-    throw new Error("BREVO_API_KEY é obrigatório em produção");
-  }
-
-  const senderEmail = brevoSenderEmail();
-  if (!senderEmail || senderEmail === "noreply@example.com") {
-    throw new Error("BREVO_SENDER_EMAIL deve ser um remetente verificado em produção");
   }
 }

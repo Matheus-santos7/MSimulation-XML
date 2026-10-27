@@ -14,12 +14,12 @@ Sem inutilizar esses números, a sequência fiscal fica irregular e pode gerar p
 
 ### Inutilização × cancelamento
 
-| Aspecto | Inutilização | Cancelamento |
-|--------|--------------|--------------|
-| Alvo | Números **nunca emitidos** | NF-e **já autorizada** |
-| Documento | `procInutNFe` | Evento `110111` (`procEventoNFe`) |
-| Altera registro de NF-e? | Não | Sim (status `CANCELADA`) |
-| Justificativa (`xJust`) | Obrigatória na SEFAZ (mín. 15 caracteres) | Obrigatória (mín. 15 caracteres) |
+| Aspecto                    | Inutilização                              | Cancelamento                            |
+| -------------------------- | ----------------------------------------- | --------------------------------------- |
+| Alvo                       | Números **nunca emitidos**                | NF-e **já autorizada**                  |
+| Documento                  | `procInutNFe`                             | Evento `110111` (`procEventoNFe`)       |
+| Altera registro de NF-e?   | Não                                       | Sim (status `CANCELADA`)                |
+| Justificativa (`xJust`)    | Obrigatória na SEFAZ (mín. 15 caracteres) | Obrigatória (mín. 15 caracteres)        |
 | Resposta de sucesso típica | `cStat` **102** — Inutilização homologada | `cStat` **135/155** — Evento registrado |
 
 ### Regras gerais (produção real)
@@ -68,17 +68,17 @@ A inutilização **não cria** registro na tabela `nfes`. É um evento administr
 
 ## Camadas do módulo (Clean Architecture)
 
-| Camada | Arquivo | Responsabilidade |
-|--------|---------|------------------|
-| **Domain — serviço XML** | `domain/services/inutilizacao-xml.ts` | Monta `procInutNFe` v4.00 e calcula o `Id` de `infInut` |
-| **Domain — port** | `domain/ports/fiscal-document-lifecycle.port.ts` | Contrato `NumberInutilizationPort` e DTO `InutilizeNumberInput` |
-| **Domain — entidade** | `domain/entities/lifecycle-result.entity.ts` | `InutilizationResult` |
-| **Domain — erro** | `domain/errors/number-inutilization.error.ts` | `NumberInutilizationError` com HTTP status |
-| **Application** | `application/use-cases/inutilize-number.use-case.ts` | Orquestra o caso de uso (delega ao port) |
-| **Infrastructure** | `infrastructure/prisma/prisma-number-inutilization.repository.ts` | Validações de negócio + persistência Prisma |
-| **Presentation** | `presentation/controllers/nfe-lifecycle.controller.ts` | Rota `POST /nfes/inutilizar` |
-| **Presentation** | `presentation/controllers/fiscal-observability.controller.ts` | Listagem em `/fiscal-events` e XML em `/fiscal-events/:id/xml` |
-| **Presentation** | `presentation/schemas/fiscal-document.schemas.ts` | Validação Zod do body |
+| Camada                   | Arquivo                                                           | Responsabilidade                                                |
+| ------------------------ | ----------------------------------------------------------------- | --------------------------------------------------------------- |
+| **Domain — serviço XML** | `domain/services/inutilizacao-xml.ts`                             | Monta `procInutNFe` v4.00 e calcula o `Id` de `infInut`         |
+| **Domain — port**        | `domain/ports/fiscal-document-lifecycle.port.ts`                  | Contrato `NumberInutilizationPort` e DTO `InutilizeNumberInput` |
+| **Domain — entidade**    | `domain/entities/lifecycle-result.entity.ts`                      | `InutilizationResult`                                           |
+| **Domain — erro**        | `domain/errors/number-inutilization.error.ts`                     | `NumberInutilizationError` com HTTP status                      |
+| **Application**          | `application/use-cases/inutilize-number.use-case.ts`              | Orquestra o caso de uso (delega ao port)                        |
+| **Infrastructure**       | `infrastructure/prisma/prisma-number-inutilization.repository.ts` | Validações de negócio + persistência Prisma                     |
+| **Presentation**         | `presentation/controllers/nfe-lifecycle.controller.ts`            | Rota `POST /nfes/inutilizar`                                    |
+| **Presentation**         | `presentation/controllers/fiscal-observability.controller.ts`     | Listagem em `/fiscal-events` e XML em `/fiscal-events/:id/xml`  |
+| **Presentation**         | `presentation/schemas/fiscal-document.schemas.ts`                 | Validação Zod do body                                           |
 
 ---
 
@@ -101,12 +101,12 @@ POST /api/nfes/inutilizar
 }
 ```
 
-| Campo | Tipo | Regras |
-|-------|------|--------|
-| `serie` | `number` | Inteiro positivo |
-| `numeroIni` | `number` | Inteiro positivo, ≤ `numeroFim` |
-| `numeroFim` | `number` | Inteiro positivo, ≥ `numeroIni` |
-| `xJust` | `string` | Opcional na API; se omitida ou &lt; 15 chars, usa texto padrão |
+| Campo       | Tipo     | Regras                                                         |
+| ----------- | -------- | -------------------------------------------------------------- |
+| `serie`     | `number` | Inteiro positivo                                               |
+| `numeroIni` | `number` | Inteiro positivo, ≤ `numeroFim`                                |
+| `numeroFim` | `number` | Inteiro positivo, ≥ `numeroIni`                                |
+| `xJust`     | `string` | Opcional na API; se omitida ou &lt; 15 chars, usa texto padrão |
 
 **Resposta `201`:**
 
@@ -174,16 +174,16 @@ Após as validações, o sistema:
 
 Tabela Prisma: `NfeInutilizacao` → `nfe_inutilizacoes`
 
-| Coluna | Descrição |
-|--------|-----------|
-| `id` | UUID do evento (usado na URL do XML) |
-| `tenant_id` | Empresa emitente (RLS por tenant) |
-| `serie` | Série da numeração |
-| `numero_ini` / `numero_fim` | Faixa inutilizada (inclusive) |
-| `x_just` | Justificativa |
-| `protocolo` | Protocolo SEFAZ simulado |
-| `ocorrido_em` | Data/hora do registro |
-| `created_at` | Timestamp de criação no banco |
+| Coluna                      | Descrição                            |
+| --------------------------- | ------------------------------------ |
+| `id`                        | UUID do evento (usado na URL do XML) |
+| `tenant_id`                 | Empresa emitente (RLS por tenant)    |
+| `serie`                     | Série da numeração                   |
+| `numero_ini` / `numero_fim` | Faixa inutilizada (inclusive)        |
+| `x_just`                    | Justificativa                        |
+| `protocolo`                 | Protocolo SEFAZ simulado             |
+| `ocorrido_em`               | Data/hora do registro                |
+| `created_at`                | Timestamp de criação no banco        |
 
 Índices: `(tenant_id)` e `(tenant_id, serie)` para checagem rápida de sobreposição.
 
@@ -221,14 +221,14 @@ O ambiente no XML simulado usa `tpAmb=1` (produção). Em integração real, ess
 
 ## Frontend
 
-| Peça | Local |
-|------|-------|
-| Formulário de inutilização | `frontend/src/components/nfe-inutilizar-form.tsx` |
-| Página de eventos | `frontend/src/app/(app)/eventos/page.tsx` |
-| Server Action | `frontend/src/app/(app)/eventos/actions.ts` → `inutilizarNumeracao` |
-| Cliente API | `frontend/src/lib/fiscal-api.ts` → `POST /api/nfes/inutilizar` |
-| Listagem unificada NF-e + inutilizações | `frontend/src/lib/nfe-table-rows.ts` (`buildNfeTableRows`) |
-| Download XML | `getFiscalEventXml` → `/api/fiscal-events/:id/xml` |
+| Peça                                    | Local                                                               |
+| --------------------------------------- | ------------------------------------------------------------------- |
+| Formulário de inutilização              | `frontend/src/components/nfe-inutilizar-form.tsx`                   |
+| Página de eventos                       | `frontend/src/app/(app)/eventos/page.tsx`                           |
+| Server Action                           | `frontend/src/app/(app)/eventos/actions.ts` → `inutilizarNumeracao` |
+| Cliente API                             | `frontend/src/lib/fiscal-api.ts` → `POST /api/nfes/inutilizar`      |
+| Listagem unificada NF-e + inutilizações | `frontend/src/lib/nfe-table-rows.ts` (`buildNfeTableRows`)          |
+| Download XML                            | `getFiscalEventXml` → `/api/fiscal-events/:id/xml`                  |
 
 Na listagem de NF-e (`/nfe`), faixas inutilizadas aparecem como linhas `INUTILIZACAO` com badge de status **INUTILIZADA**, ordenadas por série e número junto às notas emitidas.
 
@@ -259,12 +259,12 @@ await inutilizeNumber.execute({ ... });
 
 ## Erros HTTP
 
-| Status | Situação |
-|--------|----------|
-| **404** | Tenant não encontrado |
+| Status  | Situação                                                            |
+| ------- | ------------------------------------------------------------------- |
+| **404** | Tenant não encontrado                                               |
 | **409** | NF-e já emitida na faixa, ou sobreposição com inutilização anterior |
-| **422** | Faixa inválida (`numeroIni` &gt; `numeroFim` ou valores &lt; 1) |
-| **400** | Body inválido (falha Zod no controller) |
+| **422** | Faixa inválida (`numeroIni` &gt; `numeroFim` ou valores &lt; 1)     |
+| **400** | Body inválido (falha Zod no controller)                             |
 
 Classe de erro: `NumberInutilizationError` (alias legado: `InutilizacaoError`).
 

@@ -1,0 +1,39 @@
+import type { NFe, Tenant } from "../../../../generated/prisma/client.js";
+import { dadosCteToPrismaCreate, montarDadosCteFromNfe } from "../../../fiscal-documents/index.js";
+import { proximoNumeroCte } from "../../../fiscal-documents/index.js";
+import { mapCte } from "../../../fiscal-documents/index.js";
+import type { PrismaTx } from "../../../../lib/db/prisma-tx.js";
+import { buildCteXmlAutorizado } from "../../../fiscal-documents/index.js";
+import { SalesChainError } from "../../errors/sales.errors.js";
+
+/**
+ * Emite **CT-e de venda** (transporte CD → consumidor) referenciando a NF-e VENDA.
+ *
+ * @param saleNfe - NF-e de venda persistida na etapa anterior da cadeia
+ */
+export async function emitSaleCte(
+  prisma: PrismaTx,
+  tenant: Tenant,
+  saleNfe: NFe,
+  valorFrete?: number,
+) {
+  if (valorFrete == null || valorFrete <= 0) {
+    throw new SalesChainError(
+      "Informe frete consumidor e/ou frete seller — ao menos um deve ser maior que zero para emitir CT-e de venda",
+    );
+  }
+  const serie = tenant.serieCte;
+  const numero = await proximoNumeroCte(prisma, tenant.id, serie);
+  const data = await montarDadosCteFromNfe(prisma, tenant, saleNfe, "venda", {
+    serie,
+    numero,
+    valorFrete,
+  });
+  const authorizedXml = buildCteXmlAutorizado(data, tenant);
+
+  const row = await prisma.cTe.create({
+    data: dadosCteToPrismaCreate(tenant.id, data, authorizedXml),
+  });
+
+  return mapCte(row);
+}

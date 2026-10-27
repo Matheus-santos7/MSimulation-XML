@@ -13,10 +13,18 @@ export const metadata: Metadata = {
 };
 
 export default async function DashboardPage() {
-  const [nfes, timeline] = await Promise.all([listNfes(), listTimeline()]);
+  const [nfesResult, timelineResult] = await Promise.allSettled([listNfes(), listTimeline()]);
+  const nfes = nfesResult.status === "fulfilled" ? nfesResult.value : [];
+  const timeline = timelineResult.status === "fulfilled" ? timelineResult.value : [];
+  const unavailable = nfesResult.status === "rejected" || timelineResult.status === "rejected";
 
   return (
     <div className="flex flex-1 min-h-0 flex-col gap-3 overflow-hidden p-4 lg:p-5">
+      {unavailable && (
+        <div className="shrink-0 rounded-md border border-yellow-300 bg-yellow-50 dark:bg-yellow-950/30 dark:border-yellow-800 px-4 py-3 text-sm text-yellow-800 dark:text-yellow-300">
+          Serviço temporariamente indisponível. Os dados podem estar desatualizados — recarregue a página em instantes.
+        </div>
+      )}
       <header className="shrink-0 flex items-baseline justify-between gap-3">
         <div>
           <h1 className="text-base font-semibold tracking-tight">Dashboard</h1>

@@ -5,13 +5,12 @@ import {
   assertTaxRuleCfopMatchesTree,
   CFOP_VENDA_NAO_CONTRIB_INTRA,
   CFOP_VENDA_NAO_CONTRIB_INTER,
-  ML_NFE_VER_PROC,
   resolveSaleCfop,
   resolveUniformProdutoSt,
   SaleCfopConsistencyError,
   saleRoutingFromEmitterSettings,
-  VENDA_ML_NAT_OP,
 } from "./sale-cfop.js";
+import { ML_NAT_OP_VENDA, ML_VER_PROC_VENDA } from "./marketplaces/mercado-livre/ide.js";
 
 describe("normalizeTaxPercent", () => {
   it("converte alíquotas ML sem decimal (260 → 2,6)", () => {
@@ -162,7 +161,7 @@ describe("assertTaxRuleCfopMatchesTree", () => {
 
 describe("constantes ML venda", () => {
   it("natOp e verProc alinhados ao emissor ML", () => {
-    assert.equal(VENDA_ML_NAT_OP, "Venda de mercadorias");
-    assert.equal(ML_NFE_VER_PROC, "mercadolivre.invoice");
+    assert.equal(ML_NAT_OP_VENDA, "Venda de mercadorias");
+    assert.equal(ML_VER_PROC_VENDA, "mercadolivre.invoice");
   });
 });

@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { resolveAccessToken } from "@/lib/auth/session";
 import { apiBase } from "@/lib/api-base";
 import { toUserFacingError } from "../user-facing-error";
@@ -75,6 +76,7 @@ export async function getJson<T>(href: string): Promise<T> {
           : "Falha ao conectar na API";
     throw new Error(msg);
   }
+  if (res.status === 401) redirect("/login?session=expired");
   if (!res.ok) {
     throw new Error(await readApiError(res));
   }
@@ -84,6 +86,7 @@ export async function getJson<T>(href: string): Promise<T> {
 export async function getJsonOrNull<T>(href: string): Promise<T | null> {
   const res = await fetch(href, { cache: "no-store", headers: await authHeaders() });
   if (res.status === 404) return null;
+  if (res.status === 401) redirect("/login?session=expired");
   if (!res.ok) {
     throw new Error(await readApiError(res));
   }
@@ -118,6 +121,7 @@ export async function mutateJson<T>(
     );
   }
   if (res.status === 204) return;
+  if (res.status === 401) redirect("/login?session=expired");
   if (!res.ok) {
     const payload = await readApiErrorPayload(res);
     if (payload.details) {
@@ -149,6 +153,7 @@ export async function fetchTextDocument(
   fallbackFilename: string,
 ): Promise<{ xml: string; filename: string }> {
   const res = await fetch(href, { cache: "no-store", headers: await authHeaders() });
+  if (res.status === 401) redirect("/login?session=expired");
   if (!res.ok) {
     throw new Error(await readApiError(res));
   }

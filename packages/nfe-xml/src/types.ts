@@ -1,3 +1,4 @@
+import type { MarketplaceCode } from "@msimulation-xml/fiscal-core";
 /** Tipos mínimos para geração de XML — alinhados aos DTOs da API. */
 
 export type FiscalStatusXml = "AUTORIZADA" | "REJEITADA" | "CANCELADA" | "DENEGADA" | string;
@@ -64,6 +65,8 @@ export type NFeXmlInput = {
   pedidoML: string;
   quantidade: number;
   tipo: NFeTipoXml;
+  /** Marketplace que intermedeia a operação; define os blocos do perfil no XML. Default: Mercado Livre. */
+  marketplace?: MarketplaceCode;
   /** Uma chave ou várias (retorno multi-remessa → N blocos `<NFref>`). */
   nfeReferenciaChave?: string | string[];
   fiscalPayload?: Record<string, unknown>;

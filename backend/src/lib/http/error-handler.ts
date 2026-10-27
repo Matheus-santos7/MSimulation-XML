@@ -1,60 +1,70 @@
-import type { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyBaseLogger, FastifyError } from "fastify";
 import { ZodError } from "zod";
 import { Prisma } from "../../generated/prisma/client.js";
-import { sendZodValidationError } from "./domain-errors.js";
+import { zodValidationErrorResponse } from "./domain-errors.js";
+import type { ErrorResponse } from "./http-error.js";
 
 const GENERIC_INTERNAL_ERROR = "Erro interno do servidor";
 
 export const DATABASE_UNAVAILABLE_MESSAGE = "Banco de dados indisponível";
 
-/** Indisponibilidade do Postgres (daemon parado, rede, credenciais). */
+/** Indisponibilidade do Postgres (daemon parado, rede, credenciais, timeout Neon). */
 export function isDatabaseUnavailableError(e: unknown): boolean {
   if (e instanceof Prisma.PrismaClientKnownRequestError) {
-    return e.code === "P1001" || e.code === "P1000" || e.code === "ECONNREFUSED";
+    return (
+      e.code === "P1001" ||
+      e.code === "P1000" ||
+      e.code === "ECONNREFUSED" ||
+      e.code === "ETIMEDOUT" ||
+      /ETIMEDOUT|timeout/i.test(e.message)
+    );
   }
   if (e instanceof Prisma.PrismaClientInitializationError) {
     return true;
   }
-  if (e instanceof Error && /ECONNREFUSED|Can't reach database|P1001/i.test(e.message)) {
+  if (e instanceof Error && /ECONNREFUSED|ETIMEDOUT|Can't reach database|P1001/i.test(e.message)) {
     return true;
   }
   return false;
 }
 
-export function registerGlobalErrorHandler(app: FastifyInstance): void {
-  app.setErrorHandler((error: FastifyError, _req: FastifyRequest, reply: FastifyReply) => {
-    if (error instanceof ZodError) {
-      return sendZodValidationError(reply, error);
-    }
+/**
+ * Traduz qualquer erro não tratado em status + `{ error }`.
+ * Usado pelo `ApiExceptionFilter` (rotas Nest e erros do Fastify fora do pipeline).
+ */
+export function resolveErrorResponse(error: unknown, log: FastifyBaseLogger): ErrorResponse {
+  if (error instanceof ZodError) {
+    return zodValidationErrorResponse(error);
+  }
 
-    if (isDatabaseUnavailableError(error)) {
-      return reply.status(503).send({ error: DATABASE_UNAVAILABLE_MESSAGE });
-    }
+  if (isDatabaseUnavailableError(error)) {
+    log.error({ err: error }, "Banco de dados indisponível");
+    return { status: 503, body: { error: DATABASE_UNAVAILABLE_MESSAGE } };
+  }
 
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      app.log.error({ err: error, code: error.code }, "Erro Prisma");
-      if (error.code === "P2002") {
-        return reply.status(409).send({ error: "Registro duplicado" });
-      }
-      if (error.code === "P2025") {
-        return reply.status(404).send({ error: "Registro não encontrado" });
-      }
-      return reply.status(500).send({ error: GENERIC_INTERNAL_ERROR });
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    log.error({ err: error, code: error.code }, "Erro Prisma");
+    if (error.code === "P2002") {
+      return { status: 409, body: { error: "Registro duplicado" } };
     }
-
-    if (error instanceof Prisma.PrismaClientValidationError) {
-      app.log.error({ err: error }, "Validação Prisma");
-      return reply.status(400).send({ error: "Dados inválidos" });
+    if (error.code === "P2025") {
+      return { status: 404, body: { error: "Registro não encontrado" } };
     }
+    return { status: 500, body: { error: GENERIC_INTERNAL_ERROR } };
+  }
 
-    const statusCode = error.statusCode ?? 500;
-    if (statusCode >= 500) {
-      app.log.error({ err: error }, "Erro não tratado");
-      return reply.status(500).send({ error: GENERIC_INTERNAL_ERROR });
-    }
+  if (error instanceof Prisma.PrismaClientValidationError) {
+    log.error({ err: error }, "Validação Prisma");
+    return { status: 400, body: { error: "Dados inválidos" } };
+  }
 
-    return reply.status(statusCode).send({
-      error: error.message || GENERIC_INTERNAL_ERROR,
-    });
-  });
+  // Erros do Fastify e do rate limit chegam como objetos com `statusCode` (nem sempre `Error`).
+  const { statusCode, message } = (error ?? {}) as Partial<FastifyError>;
+  const status = statusCode ?? 500;
+  if (status >= 500) {
+    log.error({ err: error }, "Erro não tratado");
+    return { status: 500, body: { error: GENERIC_INTERNAL_ERROR } };
+  }
+
+  return { status, body: { error: message || GENERIC_INTERNAL_ERROR } };
 }

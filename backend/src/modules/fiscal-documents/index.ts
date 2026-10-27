@@ -1,74 +1,35 @@
-import type { InutilizeNumberInput } from "./domain/ports/fiscal-document-lifecycle.port.js";
-import { createFiscalDocumentsModule } from "./infrastructure/factory/fiscal-documents-module.factory.js";
-
-export { DocumentCancellationError } from "./domain/errors/document-cancellation.error.js";
-export { DocumentReturnError } from "./domain/errors/document-return.error.js";
-export { NumberInutilizationError } from "./domain/errors/number-inutilization.error.js";
-
-export type {
-  CancelDocumentResult,
-  ProcessReturnResult,
-  InutilizationResult,
-  ReversedShipmentBalance,
-} from "./domain/entities/lifecycle-result.entity.js";
-
-export type { CancelDocumentInput, ProcessReturnInput, InutilizeNumberInput } from "./domain/ports/fiscal-document-lifecycle.port.js";
-
-export { CancelDocumentUseCase } from "./application/use-cases/cancel-document.use-case.js";
-export { ProcessReturnUseCase } from "./application/use-cases/process-return.use-case.js";
-export { InutilizeNumberUseCase } from "./application/use-cases/inutilize-number.use-case.js";
-
-export { fiscalNotDeleted } from "./domain/constants/fiscal-not-deleted.js";
+/**
+ * API pública do fiscal-documents para os módulos que emitem notas (remessas, vendas) e para
+ * a configuração fiscal. Expõe chave, numeração, XML e mappers de NF-e e CT-e; os use cases
+ * do ciclo de vida ficam dentro do `FiscalDocumentsModule`.
+ */
+export { dadosCteToPrismaCreate, montarDadosCteFromNfe } from "./cte/rules/cte-emissao.js";
+export type { DadosCteEmissao } from "./cte/rules/cte-emissao.js";
+export { proximoNumeroCte } from "./cte/rules/cte-sequencia.js";
 export {
-  resolveNfeXml,
-  resolveNfeCancelamentoEventoXml,
+  buildCteXmlAutorizado,
+  persistCteFromEmission,
+  persistCteXmlAutorizado,
+  resolveCteXml,
+} from "./cte/xml/cte-xml.service.js";
+export {
+  DocumentCancellationError,
+  DocumentReturnError,
+  NumberInutilizationError,
+} from "./errors/fiscal-documents.errors.js";
+export { buildChaveNFe, gerarPedidoMl, ufToCodigo } from "./nfe/rules/nfe-chave.js";
+export {
+  listInutilizacoesSerie,
+  proximoNumeroNfe,
+  ultimoNumeroNfe,
+} from "./nfe/rules/nfe-sequencia.js";
+export { PrismaNfeXmlContentResolverAdapter } from "./nfe/xml/nfe-xml-content.resolver.js";
+export {
+  buildNfeXmlAutorizado,
   persistNfeXmlAutorizado,
   persistNfeXmlFromEmission,
-  buildNfeXmlAutorizado,
-} from "./infrastructure/xml/nfe-xml-service.js";
-export {
-  resolveCteXml,
-  persistCteXmlAutorizado,
-  persistCteFromEmission,
-  buildCteXmlAutorizado,
-} from "./infrastructure/xml/cte-xml-service.js";
-export { listTimelineChains } from "./infrastructure/observability/timeline-service.js";
-
-export { createFiscalDocumentsModule };
-export { nfeController } from "./presentation/controllers/nfe.controller.js";
-export { nfeLifecycleController } from "./presentation/controllers/nfe-lifecycle.controller.js";
-export { cteController } from "./presentation/controllers/cte.controller.js";
-export { fiscalObservabilityController } from "./presentation/controllers/fiscal-observability.controller.js";
-export {
-  nfeAccessKeyParamSchema,
-  cancelDocumentBodySchema,
-  inutilizeNumberBodySchema,
-} from "./presentation/schemas/fiscal-document.schemas.js";
-
-export async function cancelSaleNfe(
-  saleNfeKey: string,
-  tenantId: string,
-  justification?: string,
-) {
-  return createFiscalDocumentsModule().cancelDocument.execute({
-    tenantId,
-    nfeKey: saleNfeKey,
-    justification,
-  });
-}
-
-export async function processSaleReturn(
-  saleNfeKey: string,
-  tenantId: string,
-) {
-  return createFiscalDocumentsModule().processReturn.execute({
-    tenantId,
-    saleNfeKey,
-  });
-}
-
-export async function inutilizeNfeNumberRange(
-  input: InutilizeNumberInput,
-) {
-  return createFiscalDocumentsModule().inutilizeNumber.execute(input);
-}
+  resolveNfeCancelamentoEventoXml,
+  resolveNfeXml,
+} from "./nfe/xml/nfe-xml.service.js";
+export { mapCte, mapNfe, num } from "./shared/fiscal-document.mapper.js";
+export { fiscalNotDeleted } from "./shared/fiscal-not-deleted.js";

@@ -41,7 +41,7 @@ let fiscalTransactionCommitHook: FiscalTransactionCommitHook | undefined;
 
 /**
  * Registra o hook de pós-commit fiscal (ex.: acionar revalidação assíncrona
- * de NF-e). Chamado pelo composition root (`fiscal.plugin.ts`) para evitar
+ * de NF-e). Chamado pelo `FiscalValidationModule` do Nest (`onModuleInit`) para evitar
  * que `lib/db` — usado por ~60 módulos — importe módulos de domínio
  * (fiscal-validation/fiscal-documents) diretamente.
  */
@@ -88,8 +88,8 @@ export async function runFiscalTransaction<T>(
       fiscalTransactionCommitHook?.(db, tenantId);
     } catch {
       // Hook de pós-commit é fire-and-forget por design; erros síncronos
-      // são responsabilidade de quem registrou o hook (ex.: app.log.error
-      // em fiscal.plugin.ts). Nada a fazer aqui além de não propagar.
+      // são responsabilidade de quem registrou o hook (ex.: logger.error
+      // em fiscal-validation.module.ts). Nada a fazer aqui além de não propagar.
     }
     return result;
   }

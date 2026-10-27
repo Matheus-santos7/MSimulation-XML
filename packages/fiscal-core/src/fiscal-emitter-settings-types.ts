@@ -40,7 +40,11 @@ export type ComposicaoTributo = {
 
 export type FiscalEmitterSettingsData = {
   basic: {
-    formaFaturamento: "EMISSOR_PROPRIO" | "EMISSOR_ML";
+    /**
+     * Quem emite as notas: a própria empresa ou o emissor do marketplace. O valor antigo
+     * `EMISSOR_ML` (só Mercado Livre) é lido como `EMISSOR_MARKETPLACE`.
+     */
+    formaFaturamento: "EMISSOR_PROPRIO" | "EMISSOR_MARKETPLACE";
     dadosFiscaisAnunciosOk: boolean;
     dadosFiscaisAnunciosNota?: string;
     /**

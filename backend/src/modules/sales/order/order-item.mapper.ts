@@ -1,0 +1,24 @@
+import type { PedidoItemRow } from "./order.mapper.js";
+import { num } from "../../fiscal-documents/index.js";
+import type { OrderItemSummary } from "./order.types.js";
+
+export function mapOrderItemFromRow(row: PedidoItemRow): OrderItemSummary {
+  const unitPrice = num(row.product.preco);
+  const desconto = num(row.desconto);
+  const valorTotalLinha = Math.round((unitPrice * row.quantidade - desconto) * 100) / 100;
+
+  return {
+    id: row.id,
+    productId: row.productId,
+    quantidade: row.quantidade,
+    desconto,
+    ...(row.xPed?.trim() ? { xPed: row.xPed.trim() } : {}),
+    product: {
+      id: row.product.id,
+      sku: row.product.sku,
+      nome: row.product.nome,
+      preco: unitPrice,
+    },
+    valorTotalLinha,
+  };
+}

@@ -1,3 +1,4 @@
+import type { MarketplaceFiscalProfile } from "@msimulation-xml/fiscal-core";
 /**
  * Tipos compartilhados pelos builders Strategy de NF-e.
  *
@@ -32,6 +33,8 @@ export type BaseNFeBuildContext = {
   engine: ReturnType<typeof parseEngineFromFiscalPayload>;
   dhEmi: string;
   autXmlCpfs: readonly string[];
+  /** Perfil fiscal do marketplace da nota (intermediador, responsável técnico, transporte). */
+  marketplace: MarketplaceFiscalProfile;
 };
 
 /** Opções do grupo `<ide>` variáveis por estratégia (venda vs remessa). */

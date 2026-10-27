@@ -1,19 +1,7 @@
-import { createLookupModule } from "./infrastructure/factory/lookup-module.factory.js";
-
-export type { CepLookupResult } from "./domain/entities/cep-lookup-result.entity.js";
-export type { CnpjLookupResult } from "./domain/entities/cnpj-lookup-result.entity.js";
-export { LookupNotFoundError } from "./domain/errors/lookup-not-found.error.js";
-export { LookupValidationError } from "./domain/errors/lookup-validation.error.js";
-export { LookupCepUseCase } from "./application/use-cases/lookup-cep.use-case.js";
-export { LookupCnpjUseCase } from "./application/use-cases/lookup-cnpj.use-case.js";
-export { createLookupModule };
-export { lookupController } from "./presentation/controllers/lookup.controller.js";
-export { cepParamSchema, cnpjParamSchema } from "./presentation/schemas/lookup.schemas.js";
-
-export async function lookupCep(rawValue: string) {
-  return createLookupModule().lookupCep.execute(rawValue);
-}
-
-export async function lookupCnpj(rawValue: string) {
-  return createLookupModule().lookupCnpj.execute(rawValue);
-}
+/** API pública do módulo lookup para outros módulos. */
+export { CepLookupResponseDTO } from "./dtos/cep-lookup.response.dto.js";
+export { CnpjLookupResponseDTO } from "./dtos/cnpj-lookup.response.dto.js";
+export { LookupError } from "./errors/lookup.errors.js";
+export { LookupModule } from "./lookup.module.js";
+export { LookupService } from "./lookup.service.js";
+export { CepLookupProvider } from "./providers/cep-lookup.provider.js";

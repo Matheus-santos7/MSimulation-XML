@@ -25,6 +25,10 @@ export async function logoutApi(refreshToken?: string, accessToken?: string): Pr
   }
 }
 
+/**
+ * `null` só quando o token é rejeitado (401/404). Falhas transitórias (503, rede) lançam:
+ * tratá-las como "sem sessão" deslogava o usuário a cada instabilidade do banco.
+ */
 export async function fetchAuthMe(accessToken: string): Promise<AuthMeDto | null> {
   let res: Response;
   try {
@@ -33,11 +37,14 @@ export async function fetchAuthMe(accessToken: string): Promise<AuthMeDto | null
       headers: { Authorization: `Bearer ${accessToken}` },
     });
   } catch {
-    return null;
+    throw new Error("API indisponível. Verifique se o backend está rodando.");
   }
 
   if (res.status === 401 || res.status === 404) return null;
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(body.error ?? "Serviço indisponível");
+  }
 
   return res.json() as Promise<AuthMeDto>;
 }

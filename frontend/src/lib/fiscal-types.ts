@@ -1,4 +1,5 @@
-/** Tipos alinhados à API Fastify `/api/*` (dados vindos do Prisma). */
+/** Tipos alinhados à API `/api/*` (dados vindos do Prisma). */
+import type { MarketplaceCode } from "./marketplaces";
 
 export type FiscalStatus =
   | "AUTORIZADA"
@@ -191,6 +192,8 @@ export type PedidoItemCheckoutInput = {
 };
 
 export type PedidoCheckoutInput = {
+  /** Marketplace que vai faturar o pedido. */
+  marketplace: MarketplaceCode;
   items: PedidoItemCheckoutInput[];
   comprador: CompradorCheckoutInput;
   pedidoMl?: string;
@@ -212,6 +215,8 @@ export type PedidoDto = {
   id: string;
   tenantId: string;
   status: "RASCUNHO" | "FATURADO";
+  marketplace: MarketplaceCode;
+  /** Id do pedido no marketplace (pack id no ML). */
   pedidoMl?: string;
   items: PedidoItemDto[];
   freteConsumidor: number;
@@ -248,6 +253,7 @@ export type NFeItemDto = {
 export type NFeDto = {
   id: string;
   tenantId: string;
+  marketplace: MarketplaceCode;
   productId?: string;
   chave: string;
   numero: number;

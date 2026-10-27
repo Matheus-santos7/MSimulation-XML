@@ -124,7 +124,11 @@ Desktop.ini
 !.cursor/skills/
 !.cursor/skills/**
 .agents/
-.claude/
+.claude/*
+!.claude/ARCHITECTURE.md
+!.claude/agents/
+!.claude/rules/
+!.claude/skills/
 .gemini/
 .notebook/
 

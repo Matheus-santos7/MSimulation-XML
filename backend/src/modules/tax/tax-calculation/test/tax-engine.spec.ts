@@ -22,7 +22,7 @@ const BASE_CONFIG_STF: BasePisCofinsConfig = {
   acrescimo: "NONE",
 };
 
-/** Caso golden NF 781 (PR→SP, consumidor final) — espelha `tmp-engine-check.ts` / XML real. */
+/** Caso golden NF 781 (PR→SP, consumidor final) — espelha o XML real. */
 const itemNf781: ItemFiscalInput = {
   numeroItem: 1,
   codigo: "300002137",

@@ -118,11 +118,6 @@ Desktop.ini
 # =============================================================================
 # Ferramentas de IA e notas locais (específicas da máquina)
 # =============================================================================
-.cursor/*
-!.cursor/rules/
-!.cursor/rules/**
-!.cursor/skills/
-!.cursor/skills/**
 .agents/
 .claude/*
 !.claude/ARCHITECTURE.md

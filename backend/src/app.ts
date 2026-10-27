@@ -29,8 +29,8 @@ import {
 import { AppModule } from "./nest/app.module.js";
 import { ApiExceptionFilter } from "./nest/http/api-exception.filter.js";
 import { setupApiDocs } from "./nest/http/api-docs.js";
-import { authPlugin } from "./plugins/auth/index.js";
-import { prismaPlugin } from "./plugins/prisma.js";
+import { authPlugin } from "./nest/fastify/jwt.plugin.js";
+import { prismaPlugin } from "./nest/fastify/prisma.plugin.js";
 import { appConfig } from "./config/config.service.js";
 
 const API_PREFIX = "api";

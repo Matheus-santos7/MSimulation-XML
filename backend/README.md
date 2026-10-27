@@ -224,12 +224,13 @@ Erros: o `ApiExceptionFilter` (global) mantém o contrato `{ error }` (400 Zod c
 ```
 backend/
 ├── prisma/                    # Schema e migrations
-├── scripts/                   # verify-marketplaces-migration.sh (só Postgres local)
+├── scripts/                   # verify-marketplaces-migration.sh (só Postgres local), import-unidades-logisticas.sh
 ├── src/
 │   ├── index.ts               # Escuta a porta
 │   ├── app.ts                 # buildApp(): Fastify + Nest
 │   ├── config/                # ConfigService: único leitor de process.env
 │   ├── nest/                  # Núcleo Nest: CoreModule, guards, interceptors, filtros, pipes, bases
+│   │   └── fastify/           # Plugins Fastify de borda (Prisma, @fastify/jwt) e tipos do JWT
 │   ├── modules/
 │   │   └── <contexto>/
 │   │       ├── <contexto>.module.ts
@@ -237,7 +238,6 @@ backend/
 │   │       ├── errors/
 │   │       └── <feature>/     # controller, service, repository, use-cases/, dtos/, rules/, types/, test/
 │   ├── test/                  # Contrato HTTP (+ snapshot de rotas) e teste de arquitetura
-│   ├── plugins/               # Plugins Fastify de borda: Prisma e @fastify/jwt
 │   ├── lib/                   # Infraestrutura compartilhada sem Nest (db, auth, http)
 │   └── generated/prisma/      # Client gerado
 └── package.json

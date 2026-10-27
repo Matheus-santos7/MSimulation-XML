@@ -79,13 +79,18 @@ Variáveis: `[.env.example](./.env.example)`, `[backend/.env.example](./backend/
 
 ```
 msimulation-xml/
-├── backend/              # API Fastify + Prisma + módulos DDD
+├── backend/              # API NestJS + Fastify + Prisma (feature modules)
 ├── frontend/             # Next.js 16 (thin client)
 ├── packages/
-│   ├── fiscal-core/      # Lógica fiscal pura
+│   ├── fiscal-core/      # Lógica fiscal pura e perfis por marketplace
 │   └── nfe-xml/          # Geração XML NF-e/CT-e
-├── infra/fiscal-validator-proxy/  # Proxy MCP (opcional)
-├── docker-compose.yml
+├── infra/
+│   ├── docker/           # Dockerfiles de backend/frontend e compose de produção
+│   └── fiscal-validator-proxy/  # Proxy MCP (opcional) com o próprio Dockerfile
+├── docs/                 # fiscal/, specs/, deploy/, history/ (ver docs/README.md)
+├── .claude/              # Contrato de arquitetura, regras, agents e skills
+├── docker-compose.yml    # Postgres local (+ validador)
+├── render.yaml           # Blueprint do Render
 ├── LICENSE
 ├── CONTRIBUTING.md
 └── README.md             # este portal
@@ -93,7 +98,7 @@ msimulation-xml/
 
 ```mermaid
 graph TB
-  NEXT[Next.js :3000] --> FAST[Fastify :3001]
+  NEXT[Next.js :3000] --> FAST[NestJS/Fastify :3001]
   FAST --> MOD[modules/*]
   MOD --> FC[fiscal-core]
   MOD --> NX[nfe-xml]
@@ -153,12 +158,13 @@ Prisma Studio (opcional): `pnpm --filter @msimulation-xml/backend exec prisma st
 
 | Documento                                                                                            | Conteúdo                                 |
 | ---------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| [backend/README.md](./backend/README.md)                                                             | Clean Architecture, módulos, fluxos, MCP |
+| [backend/README.md](./backend/README.md)                                                             | Feature modules, fluxos, MCP            |
 | [frontend/README.md](./frontend/README.md)                                                           | Thin client, rotas, padrões              |
 | [CONTRIBUTING.md](./CONTRIBUTING.md)                                                                 | Onboarding e PRs                         |
 | [docs/fiscal/regras-fulfillment-cat31.md](./docs/fiscal/regras-fulfillment-cat31.md) | CAT 31 / ML Full                         |
 | [docs/fiscal/manual-nfe-moc.md](./docs/fiscal/manual-nfe-moc.md)                     | MOC NF-e                                 |
-| [docs/history/readme-github-share.md](./docs/history/readme-github-share.md)                             | SPEC desta documentação                  |
+| [docs/README.md](./docs/README.md)                                                                   | Índice de specs, docs fiscais, deploy e histórico |
+| [.claude/ARCHITECTURE.md](./.claude/ARCHITECTURE.md)                                                 | Contrato de arquitetura do backend       |
 | [docs/deploy/docker-aws.md](./docs/deploy/docker-aws.md)                                             | Deploy Docker (backend+frontend+TLS) na AWS |
 
 

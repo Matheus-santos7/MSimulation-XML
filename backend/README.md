@@ -483,7 +483,7 @@ pnpm docker:up
 curl -sf http://localhost:8080/health
 ```
 
-Imagem: [`../Dockerfile.fiscal-validator`](../Dockerfile.fiscal-validator). Deploy: [`../render.yaml`](../render.yaml).
+Imagem: [`../infra/fiscal-validator-proxy/Dockerfile`](../infra/fiscal-validator-proxy/Dockerfile). Deploy: [`../render.yaml`](../render.yaml).
 
 ### API de observabilidade
 

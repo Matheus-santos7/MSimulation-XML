@@ -21,8 +21,8 @@
 #   cp .env.prod.example .env.prod
 #   # editar backend/.env e frontend/.env.local com os segredos de produção
 #   docker login ghcr.io -u <usuario-github>   # uma vez (ver docs/deploy/docker-aws.md)
-#   docker compose --env-file .env.prod -f docker-compose.prod.yml pull
-#   docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --remove-orphans
+#   docker compose --env-file infra/docker/.env.prod -f infra/docker/docker-compose.prod.yml pull
+#   docker compose --env-file infra/docker/.env.prod -f infra/docker/docker-compose.prod.yml up -d --remove-orphans
 
 services:
   backend:
@@ -31,7 +31,7 @@ services:
     container_name: msimulation-xml-backend
     restart: unless-stopped
     env_file:
-      - ./backend/.env
+      - ../../backend/.env
     environment:
       PORT: 3001
       HOST: 0.0.0.0
@@ -45,7 +45,7 @@ services:
     container_name: msimulation-xml-frontend
     restart: unless-stopped
     env_file:
-      - ./frontend/.env.local
+      - ../../frontend/.env.local
     environment:
       PORT: 3000
       HOST: 0.0.0.0

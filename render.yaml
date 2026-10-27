@@ -25,7 +25,7 @@ services:
     repo: https://github.com/Matheus-santos7/MSimulation-XML
     branch: main
     autoDeployTrigger: commit
-    dockerfilePath: ./Dockerfile.fiscal-validator
+    dockerfilePath: ./infra/fiscal-validator-proxy/Dockerfile
     dockerContext: .
     plan: free
     healthCheckPath: /health
@@ -41,7 +41,7 @@ services:
     repo: https://github.com/Matheus-santos7/MSimulation-XML
     branch: main
     autoDeployTrigger: commit
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: ./infra/docker/backend.Dockerfile
     dockerContext: .
     plan: free
     healthCheckPath: /api/health

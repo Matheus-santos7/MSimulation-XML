@@ -1,7 +1,7 @@
 # Deploy via Docker em servidor Linux (AWS) — backend + frontend
 
 Stack: `backend` (porta fixa 5001) + `frontend` (porta fixa 5000). Arquivo:
-`docker-compose.prod.yml`. O banco de dados é o Postgres gerenciado (Neon) já
+`infra/docker/docker-compose.prod.yml`. O banco de dados é o Postgres gerenciado (Neon) já
 usado pelo Render — não há container de banco neste compose.
 
 **TLS e domínio não são responsabilidade deste compose.** O servidor
@@ -19,7 +19,7 @@ aqui só garantimos que os containers escutam nessas portas fixas e ficam
 acessíveis a esse proxy.
 
 As imagens de `backend`/`frontend` **não são buildadas no servidor**: o workflow
-`.github/workflows/docker-publish.yml` builda `Dockerfile` e `Dockerfile.frontend`
+`.github/workflows/docker-publish.yml` builda `infra/docker/backend.Dockerfile` e `infra/docker/frontend.Dockerfile`
 e publica no GitHub Container Registry (ghcr.io) a cada push em `main` (ou
 manualmente via Actions → "Docker publish" → Run workflow). O servidor só faz
 `docker compose pull` + `up -d`.
@@ -54,12 +54,12 @@ Isso fica salvo em `~/.docker/config.json` — não precisa repetir a cada deplo
 git clone <repo> && cd MSimulation-XML
 git checkout main
 
-cp .env.prod.example .env.prod
+cp infra/docker/.env.prod.example infra/docker/.env.prod
 cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env.local
 ```
 
-Edite `.env.prod`:
+Edite `infra/docker/.env.prod`:
 
 - `BACKEND_PORT` / `FRONTEND_PORT`: deixe `5001`/`5000` (padrão) a menos que a
   infra tenha pedido portas diferentes.
@@ -115,7 +115,7 @@ manualmente — ele **nunca** reaplica ou ignora sozinho.
    container reaplicar:
 
    ```bash
-   docker compose --env-file .env.prod -f docker-compose.prod.yml exec backend pnpm exec prisma migrate resolve --rolled-back 20261007120000_nfe_tenant_serie_numero_unique
+   docker compose --env-file infra/docker/.env.prod -f infra/docker/docker-compose.prod.yml exec backend pnpm exec prisma migrate resolve --rolled-back 20261007120000_nfe_tenant_serie_numero_unique
    ```
 
    (se o container estiver em loop de restart, use `docker run` com a mesma
@@ -135,7 +135,7 @@ pnpm docker:prod:up
 pnpm docker:prod:logs
 ```
 
-O backend roda `prisma migrate deploy` no boot (`CMD` do `Dockerfile`).
+O backend roda `prisma migrate deploy` no boot (`CMD` do `infra/docker/backend.Dockerfile`).
 
 ## 5. Verificação
 
@@ -155,14 +155,14 @@ pnpm docker:prod:pull   # baixa a latest mais recente
 pnpm docker:prod:up     # recria os containers que mudaram (pull_policy: always)
 ```
 
-Não precisa de `git pull` no servidor, a menos que `docker-compose.prod.yml`
+Não precisa de `git pull` no servidor, a menos que `infra/docker/docker-compose.prod.yml`
 ou os `.env.*` tenham mudado.
 
 ## Rollback
 
 Toda imagem publicada também fica marcada com o SHA do commit
 (`ghcr.io/.../msimulation-xml-backend:<sha>`). Para voltar uma versão, edite
-`IMAGE_TAG` em `.env.prod` com o SHA desejado e suba de novo:
+`IMAGE_TAG` em `infra/docker/.env.prod` com o SHA desejado e suba de novo:
 
 ```bash
 # .env.prod: IMAGE_TAG=<sha-anterior>
@@ -178,7 +178,7 @@ pnpm docker:prod:up
   do necessário.
 - Para adicionar mais variáveis de ambiente de app (Brevo, Turnstile, etc.), edite
   `backend/.env` / `frontend/.env.local` no servidor — eles já são lidos via
-  `env_file` no `docker-compose.prod.yml`, sem precisar tocar no compose.
+  `env_file` no `infra/docker/docker-compose.prod.yml`, sem precisar tocar no compose.
 - `NEXT_PUBLIC_*` continua sendo embutido no bundle JS no **build**, só que agora
   esse build é o do GitHub Actions — mudar essas variáveis exige atualizar a
   variável de repositório e rodar o workflow `docker-publish.yml` de novo.

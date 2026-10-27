@@ -28,7 +28,7 @@ services:
   fiscal-validator-api:
     build:
       context: .
-      dockerfile: Dockerfile.fiscal-validator
+      dockerfile: infra/fiscal-validator-proxy/Dockerfile
     container_name: msimulation-xml-fiscal-validator
     restart: unless-stopped
     ports:

@@ -10,7 +10,7 @@ O código é a fonte da verdade. A seção 12 diz onde o código ainda difere de
 |---|---|---|
 | Monorepo | pnpm workspaces: `backend`, `frontend`, `packages/*` | `pnpm-workspace.yaml` |
 | Linguagem | TypeScript strict, ESM (`"type": "module"`, `NodeNext`) | `backend/tsconfig.json` |
-| Runtime | Node 24 | `.github/workflows/ci.yml`, `Dockerfile` |
+| Runtime | Node 24 | `.github/workflows/ci.yml`, `infra/docker/backend.Dockerfile` |
 | HTTP | NestJS 11 sobre Fastify 5 (`@nestjs/platform-fastify`), prefixo `/api` | `backend/src/app.ts` |
 | Validação | Zod: um schema por DTO em `<feature>/dtos/`, validado pelo `ZodValidationPipe` (decisão de 2026-10-22, no lugar do `class-validator`) | `dtos/*.request.dto.ts` |
 | Contrato HTTP | `@nestjs/swagger` (`ApiTags`, `ApiResponse`); docs em `/api/docs` com `API_DOCS_ENABLED=true`. `@ApiProperty` sempre com `type` explícito | controllers e DTOs de resposta |

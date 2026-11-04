@@ -12,7 +12,9 @@ COPY frontend ./frontend
 ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
 ENV NEXT_PUBLIC_TURNSTILE_SITE_KEY=${NEXT_PUBLIC_TURNSTILE_SITE_KEY}
 
-RUN pnpm install --frozen-lockfile \
+RUN --mount=type=cache,id=pnpm,target=/pnpm-store \
+  pnpm config set store-dir /pnpm-store \
+  && pnpm install --frozen-lockfile \
   && pnpm --filter @msimulation-xml/frontend build
 
 FROM node:24-alpine AS runner

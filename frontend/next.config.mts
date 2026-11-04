@@ -69,6 +69,11 @@ const nextConfig: NextConfig = {
   // React Compiler (stable in Next.js 16) — auto-memoization; expect slower compiles.
   // Source: https://nextjs.org/docs/app/api-reference/config/next-config-js/reactCompiler
   reactCompiler: true,
+  experimental: {
+    serverActions: {
+      bodysizelimit: "10mb",
+    },
+  } as any,
   async headers() {
     return [
       {

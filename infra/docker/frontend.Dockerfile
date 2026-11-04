@@ -5,6 +5,9 @@ RUN corepack enable \
 
 WORKDIR /app
 
+# Aumentar limite de memória do Node para evitar OOM durante build
+ENV NODE_OPTIONS=--max-old-space-size=3072
+
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY frontend ./frontend
 

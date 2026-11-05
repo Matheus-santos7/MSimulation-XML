@@ -9,11 +9,60 @@ export function accessTokenTtl(): string {
   return appConfig.jwtAccessExpiresIn ?? "30m";
 }
 
+const DURATION_UNIT_MS: Readonly<Record<string, number>> = {
+  s: 1000,
+  m: 60 * 1000,
+  h: 60 * 60 * 1000,
+  d: 24 * 60 * 60 * 1000,
+};
+const DURATION_PATTERN = /^([1-9]\d*)([smhd])$/;
+
+/** Maior duração aceita em qualquer TTL de autenticação (sessão de mais de 1 ano é erro de digitação). */
+const MAX_DURATION_MS = 365 * DURATION_UNIT_MS.d;
+
+const DEFAULT_REFRESH_TTL_MS = 7 * DURATION_UNIT_MS.d;
+const DEFAULT_PASSWORD_RESET_TTL_MS = DURATION_UNIT_MS.h;
+const DEFAULT_EMAIL_VERIFICATION_TTL_MS = 24 * DURATION_UNIT_MS.h;
+
+/**
+ * Converte uma duração de variável de ambiente ("15m", "12h", "7d", "3600s") em milissegundos.
+ *
+ * Variável ausente usa `fallbackMs`. Variável presente e inválida LANÇA erro: antes, valores
+ * fora do formato caíam em silêncio no padrão (ex.: "15m" virava 7 dias), e a sessão durava
+ * mais do que o configurado sem nenhum aviso.
+ *
+ * Formato: inteiro positivo + unidade. Para aceitar uma unidade nova, acrescente-a em
+ * `DURATION_UNIT_MS` e em `DURATION_PATTERN`.
+ */
+export function parseDurationMs(
+  variableName: string,
+  raw: string | undefined,
+  fallbackMs: number,
+): number {
+  if (raw === undefined) return fallbackMs;
+
+  const match = DURATION_PATTERN.exec(raw.trim());
+  if (!match) {
+    throw new Error(
+      `${variableName} inválida ("${raw}"): use um inteiro positivo seguido de s, m, h ou d (ex.: 15m, 12h, 7d)`,
+    );
+  }
+
+  const durationMs = Number(match[1]) * DURATION_UNIT_MS[match[2]];
+  // Teto: um número gigante passa no regex, mas estoura Date e falharia só no 1º login.
+  if (!Number.isSafeInteger(durationMs) || durationMs > MAX_DURATION_MS) {
+    throw new Error(`${variableName} inválida ("${raw}"): o máximo permitido é 365d`);
+  }
+
+  return durationMs;
+}
+
 export function refreshTokenTtlMs(): number {
-  const raw = appConfig.jwtRefreshExpiresIn ?? "7d";
-  if (raw.endsWith("d")) return Number(raw.slice(0, -1)) * 24 * 60 * 60 * 1000;
-  if (raw.endsWith("h")) return Number(raw.slice(0, -1)) * 60 * 60 * 1000;
-  return 7 * 24 * 60 * 60 * 1000;
+  return parseDurationMs(
+    "JWT_REFRESH_EXPIRES_IN",
+    appConfig.jwtRefreshExpiresIn,
+    DEFAULT_REFRESH_TTL_MS,
+  );
 }
 
 export function requireJwtSecret(): string {
@@ -48,10 +97,11 @@ export const PASSWORD_RESET_GENERIC_MESSAGE =
   "Se o e-mail estiver cadastrado, você receberá um link para redefinir a senha em instantes.";
 
 export function passwordResetTtlMs(): number {
-  const raw = appConfig.passwordResetExpiresIn ?? "1h";
-  if (raw.endsWith("h")) return Number(raw.slice(0, -1)) * 60 * 60 * 1000;
-  if (raw.endsWith("m")) return Number(raw.slice(0, -1)) * 60 * 1000;
-  return 60 * 60 * 1000;
+  return parseDurationMs(
+    "PASSWORD_RESET_EXPIRES_IN",
+    appConfig.passwordResetExpiresIn,
+    DEFAULT_PASSWORD_RESET_TTL_MS,
+  );
 }
 
 /** URL pública do frontend (links no e-mail). */
@@ -98,10 +148,11 @@ export function isEmailVerified(emailVerifiedAt: Date | null | undefined): boole
 }
 
 export function emailVerificationTtlMs(): number {
-  const raw = appConfig.emailVerificationExpiresIn ?? "24h";
-  if (raw.endsWith("h")) return Number(raw.slice(0, -1)) * 60 * 60 * 1000;
-  if (raw.endsWith("m")) return Number(raw.slice(0, -1)) * 60 * 1000;
-  return 24 * 60 * 60 * 1000;
+  return parseDurationMs(
+    "EMAIL_VERIFICATION_EXPIRES_IN",
+    appConfig.emailVerificationExpiresIn,
+    DEFAULT_EMAIL_VERIFICATION_TTL_MS,
+  );
 }
 
 export const EMAIL_VERIFICATION_GENERIC_MESSAGE =

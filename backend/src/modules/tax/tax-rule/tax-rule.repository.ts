@@ -66,50 +66,57 @@ export class TaxRuleRepository {
   }
 
   async bulkUpsert(tenantId: string, rows: TaxRuleImportRow[]) {
-    let created = 0;
-    let updated = 0;
-
-    // One lookup for all rows instead of one findUnique per row.
     const existingRows = await this.db.taxRule.findMany({
       where: { tenantId, ruleId: { in: rows.map((row) => row.ruleId) } },
       select: { ruleId: true },
     });
     const knownRuleIds = new Set(existingRows.map((existing) => existing.ruleId));
 
-    for (const row of rows) {
-      await this.db.taxRule.upsert({
-        where: { tenantId_ruleId: { tenantId, ruleId: row.ruleId } },
-        create: {
-          tenantId,
-          ruleId: row.ruleId,
-          nome: row.nome,
-          tipo: row.tipo,
-          uf: row.uf,
-          cfop: row.cfop,
-          aliquota: row.aliquota,
-          transactionType: row.transactionType,
-          customerType: row.customerType,
-          origin: row.origin,
-          source: "xlsx",
-          payload: row.payload as Prisma.InputJsonValue | undefined,
-        },
-        update: {
-          nome: row.nome,
-          tipo: row.tipo,
-          uf: row.uf,
-          cfop: row.cfop,
-          aliquota: row.aliquota,
-          transactionType: row.transactionType,
-          customerType: row.customerType,
-          origin: row.origin,
-          source: "xlsx",
-          payload: row.payload as Prisma.InputJsonValue | undefined,
-        },
-      });
+    let created = 0;
+    let updated = 0;
 
-      if (knownRuleIds.has(row.ruleId)) updated++;
-      else created++;
-      knownRuleIds.add(row.ruleId);
+    const CHUNK_SIZE = 100;
+    for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
+      const chunk = rows.slice(i, i + CHUNK_SIZE);
+
+      await Promise.all(
+        chunk.map((row) =>
+          this.db.taxRule.upsert({
+            where: { tenantId_ruleId: { tenantId, ruleId: row.ruleId } },
+            create: {
+              tenantId,
+              ruleId: row.ruleId,
+              nome: row.nome,
+              tipo: row.tipo,
+              uf: row.uf,
+              cfop: row.cfop,
+              aliquota: row.aliquota,
+              transactionType: row.transactionType,
+              customerType: row.customerType,
+              origin: row.origin,
+              source: "xlsx",
+              payload: row.payload as Prisma.InputJsonValue | undefined,
+            },
+            update: {
+              nome: row.nome,
+              tipo: row.tipo,
+              uf: row.uf,
+              cfop: row.cfop,
+              aliquota: row.aliquota,
+              transactionType: row.transactionType,
+              customerType: row.customerType,
+              origin: row.origin,
+              source: "xlsx",
+              payload: row.payload as Prisma.InputJsonValue | undefined,
+            },
+          }),
+        ),
+      );
+
+      for (const row of chunk) {
+        if (knownRuleIds.has(row.ruleId)) updated++;
+        else created++;
+      }
     }
 
     return { created, updated, total: rows.length };

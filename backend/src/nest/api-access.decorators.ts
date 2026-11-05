@@ -5,7 +5,8 @@ import { RateLimit, RateLimitInterceptor } from "./http/rate-limit.interceptor.j
 
 /**
  * Controller de negócio: JWT, empresa e e-mail confirmados; limite compartilhado de
- * 300/min (contado depois dos guards); handler dentro da transação com RLS.
+ * 300/min (contado depois dos guards); handler dentro da transação com RLS por padrão,
+ * exceto quando a rota usa `@SkipDbContext()` (aí o handler abre o próprio `runWithDbContext`).
  */
 export function ProtectedApi() {
   return applyDecorators(

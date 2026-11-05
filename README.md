@@ -8,7 +8,7 @@ Monorepo · pnpm workspaces · Fastify · Next.js · `@msimulation-xml/fiscal-co
 
 > **Aviso:** simulador educacional. XMLs em homologação (`tpAmb=2`), assinaturas fictícias — **sem validade jurídica** perante a SEFAZ. Não use em produção real.
 
-**Diferencial:** motor tributário + geração de XML NF-e/CT-e em packages testáveis, orquestrados por um backend em Clean Architecture / DDD (bounded contexts).
+**Diferencial:** motor tributário + geração de XML NF-e/CT-e em packages testáveis, orquestrados por um backend NestJS 11 sobre Fastify 5 organizado em feature modules (service + use case + repository), com Prisma 7 e PostgreSQL com Row-Level Security por tenant. Detalhes em [`.claude/ARCHITECTURE.md`](./.claude/ARCHITECTURE.md).
 
 [Licença MIT](./LICENSE) · [Contribuir](./CONTRIBUTING.md) · [Convenções do monorepo](./.claude/ARCHITECTURE.md) · [Backend](./backend/README.md) · [Frontend](./frontend/README.md)
 
@@ -18,7 +18,7 @@ Monorepo · pnpm workspaces · Fastify · Next.js · `@msimulation-xml/fiscal-co
 
 ## Quick start
 
-**Pré-requisitos:** Node.js 20+, pnpm 9 (`corepack enable && corepack prepare pnpm@9.15.9 --activate`), Docker (PostgreSQL).
+**Pré-requisitos:** Node.js 24+, pnpm 9 (`corepack enable && corepack prepare pnpm@9.15.9 --activate`), Docker (PostgreSQL).
 
 ```bash
 git clone <url-do-repo>

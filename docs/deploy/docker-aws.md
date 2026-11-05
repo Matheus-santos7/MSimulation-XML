@@ -73,6 +73,23 @@ Edite `backend/.env` (produção):
 - `APP_PUBLIC_URL=https://app.msimulation-xml.nerus.com.br`
 - `JWT_SECRET`, `PASSWORD_PEPPER`, `TOTP_ENCRYPTION_KEY`: gere com `openssl rand -base64 32`.
 - Demais variáveis obrigatórias em produção (Brevo, Turnstile) conforme `backend/.env.example`.
+- Durações de sessão e tokens (`JWT_REFRESH_EXPIRES_IN`, `PASSWORD_RESET_EXPIRES_IN`,
+  `EMAIL_VERIFICATION_EXPIRES_IN`): inteiro positivo + unidade.
+
+  | Unidade | Significado | Exemplo |
+  |---|---|---|
+  | `s` | segundos | `3600s` |
+  | `m` | minutos | `15m` |
+  | `h` | horas | `12h` |
+  | `d` | dias | `7d` |
+
+  Variável ausente usa o padrão (refresh `7d`, redefinição de senha `1h`, verificação de e-mail
+  `24h`). Variável presente e fora do formato (`abc`, vazia, `0m`, `-5m`, `1.5h`, `10` sem unidade)
+  impede o backend de subir, com erro citando o nome da variável. Antes, valores inválidos caíam
+  no padrão sem aviso e a sessão durava mais do que o configurado.
+- `DB_POOL_MAX` (opcional): máximo de conexões do pool do Prisma por instância. Padrão `10`;
+  inteiro positivo. Valor inválido impede o backend de subir. Use o endpoint **pooled** do Neon
+  e respeite o limite de conexões do plano: `DB_POOL_MAX` x número de instâncias.
 
 Edite `frontend/.env.local` (produção):
 

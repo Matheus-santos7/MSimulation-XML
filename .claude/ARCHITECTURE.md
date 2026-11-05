@@ -163,6 +163,8 @@ Cliente (frontend Next.js)
 
 Guards rodam antes dos interceptors: requisição recusada por JWT, tenant ou papel não abre transação nem conta no rate limit.
 
+Rota com `@SkipDbContext()` não abre transação no interceptor e abre o próprio `runWithDbContext` só na gravação (ex.: import de planilha); `getDbClient()` fora disso lança erro.
+
 Lista paginada, no controller:
 
 ```ts

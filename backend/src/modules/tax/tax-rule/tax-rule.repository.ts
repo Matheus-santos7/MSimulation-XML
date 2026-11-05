@@ -1,5 +1,4 @@
 import { Injectable } from "@nestjs/common";
-import type { Prisma, PrismaClient } from "../../../generated/prisma/client.js";
 import type { PrismaTx } from "../../../lib/db/prisma-tx.js";
 import {
   normalizeTaxRuleDisplayName,
@@ -13,7 +12,12 @@ import { mapTaxRuleFromPrisma } from "./tax-rule.mapper.js";
 import { resolveTaxRuleFromDb } from "./tax-rule-resolution.js";
 import { getDbClient } from "../../../lib/db/tenant-rls.js";
 
-type Db = PrismaClient | PrismaTx;
+/**
+ * Linhas por `INSERT ... ON CONFLICT`. São 10 arrays por comando; 500 linhas mantém o comando
+ * pequeno (bem abaixo do limite de parâmetros e de memória do servidor) e faz 3.000 linhas em
+ * 6 comandos de INSERT (mais 1 findMany prévio). Aumentar ganha pouco; diminuir volta a pagar round-trip por lote.
+ */
+const UPSERT_BATCH_SIZE = 500;
 
 /**
  * Regras fiscais do tenant: lista, catálogo agrupado por `baseId`, upsert em massa e resolução
@@ -65,61 +69,94 @@ export class TaxRuleRepository {
     return [...map.values()].sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
   }
 
+  /**
+   * Grava as regras importadas com poucas consultas: 1 `findMany` dos `ruleId` já existentes
+   * (para contar criadas x atualizadas) e 1 `INSERT ... ON CONFLICT` por lote de
+   * {@link UPSERT_BATCH_SIZE} linhas.
+   *
+   * Por que em lote: a importação roda dentro da transação aberta pelo chamador
+   * (`runWithDbContext`), e uma transação usa uma
+   * conexão só, então o `Promise.all` de vários `upsert` virava fila sequencial: com
+   * ~50-100 ms de round-trip no Neon, 3.000 linhas levavam minutos e estouravam o timeout.
+   *
+   * Linhas com o mesmo `ruleId` são deduplicadas e a última vence (mesmo resultado do upsert
+   * linha a linha). Além disso, o Postgres recusa um `ON CONFLICT DO UPDATE` que atinja a
+   * mesma linha duas vezes no mesmo comando. `total` conta as linhas gravadas após deduplicar.
+   *
+   * Na planilha, o mapper já rejeita duplicatas (a PRIMEIRA ocorrência vence e a repetição vira
+   * erro de linha); esta deduplicação (a ÚLTIMA vence) cobre a rota JSON
+   * `POST /tax-rules/bulk-upsert`, onde `total` também conta só linhas únicas.
+   */
   async bulkUpsert(tenantId: string, rows: TaxRuleImportRow[]) {
+    const uniqueRows = [...new Map(rows.map((row) => [row.ruleId, row])).values()];
     const existingRows = await this.db.taxRule.findMany({
-      where: { tenantId, ruleId: { in: rows.map((row) => row.ruleId) } },
+      where: { tenantId, ruleId: { in: uniqueRows.map((row) => row.ruleId) } },
       select: { ruleId: true },
     });
     const knownRuleIds = new Set(existingRows.map((existing) => existing.ruleId));
 
-    let created = 0;
-    let updated = 0;
-
-    const CHUNK_SIZE = 100;
-    for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
-      const chunk = rows.slice(i, i + CHUNK_SIZE);
-
-      await Promise.all(
-        chunk.map((row) =>
-          this.db.taxRule.upsert({
-            where: { tenantId_ruleId: { tenantId, ruleId: row.ruleId } },
-            create: {
-              tenantId,
-              ruleId: row.ruleId,
-              nome: row.nome,
-              tipo: row.tipo,
-              uf: row.uf,
-              cfop: row.cfop,
-              aliquota: row.aliquota,
-              transactionType: row.transactionType,
-              customerType: row.customerType,
-              origin: row.origin,
-              source: "xlsx",
-              payload: row.payload as Prisma.InputJsonValue | undefined,
-            },
-            update: {
-              nome: row.nome,
-              tipo: row.tipo,
-              uf: row.uf,
-              cfop: row.cfop,
-              aliquota: row.aliquota,
-              transactionType: row.transactionType,
-              customerType: row.customerType,
-              origin: row.origin,
-              source: "xlsx",
-              payload: row.payload as Prisma.InputJsonValue | undefined,
-            },
-          }),
-        ),
-      );
-
-      for (const row of chunk) {
-        if (knownRuleIds.has(row.ruleId)) updated++;
-        else created++;
-      }
+    for (let i = 0; i < uniqueRows.length; i += UPSERT_BATCH_SIZE) {
+      await this.upsertBatch(tenantId, uniqueRows.slice(i, i + UPSERT_BATCH_SIZE));
     }
 
-    return { created, updated, total: rows.length };
+    const updated = uniqueRows.filter((row) => knownRuleIds.has(row.ruleId)).length;
+
+    return { created: uniqueRows.length - updated, updated, total: uniqueRows.length };
+  }
+
+  /**
+   * SQL cru acoplado ao schema de `tax_rules`. Se uma coluna entrar, sair ou mudar de tipo no
+   * `schema.prisma`, atualize esta consulta junto (lista do INSERT, `unnest`, `DO UPDATE`).
+   * O Prisma não valida SQL cru: coluna NOT NULL esquecida só falha em tempo de execução.
+   *
+   * - `id` não tem default no banco (o `uuid()` do Prisma roda no client), por isso `gen_random_uuid()`.
+   * - `created_at`/`updated_at` são `timestamp` sem fuso que o Prisma grava em UTC; `timezone('UTC',
+   *   now())` mantém o mesmo valor qualquer que seja a `TimeZone` da sessão.
+   * - As colunas opcionais usam `COALESCE` no UPDATE: o `upsert` antigo ignorava campo
+   *   `undefined`, mantendo o valor gravado; aqui `undefined` vira NULL e o COALESCE preserva.
+   * - Roda no `getDbClient()` da request: a política RLS do tenant vale para este comando.
+   */
+  private async upsertBatch(tenantId: string, rows: TaxRuleImportRow[]) {
+    const column = <T>(pick: (row: TaxRuleImportRow) => T | undefined) =>
+      rows.map((row) => pick(row) ?? null);
+
+    await this.db.$executeRaw`
+      INSERT INTO "tax_rules" (
+        "id", "tenant_id", "rule_id", "nome", "tipo", "uf", "cfop", "aliquota",
+        "transaction_type", "customer_type", "origin", "source", "payload",
+        "created_at", "updated_at"
+      )
+      SELECT
+        gen_random_uuid()::text, ${tenantId}::text, r.rule_id, r.nome, r.tipo, r.uf, r.cfop,
+        r.aliquota, r.transaction_type, r.customer_type, r.origin, 'xlsx', r.payload::jsonb,
+        timezone('UTC', now()), timezone('UTC', now())
+      FROM unnest(
+        ${column((row) => row.ruleId)}::text[],
+        ${column((row) => row.nome)}::text[],
+        ${column((row) => row.tipo)}::text[],
+        ${column((row) => row.uf)}::text[],
+        ${column((row) => row.cfop)}::text[],
+        ${column((row) => row.aliquota)}::text[],
+        ${column((row) => row.transactionType)}::text[],
+        ${column((row) => row.customerType)}::text[],
+        ${column((row) => row.origin)}::text[],
+        ${column((row) => (row.payload === undefined ? undefined : JSON.stringify(row.payload)))}::text[]
+      ) AS r(
+        rule_id, nome, tipo, uf, cfop, aliquota, transaction_type, customer_type, origin, payload
+      )
+      ON CONFLICT ("tenant_id", "rule_id") DO UPDATE SET
+        "nome" = EXCLUDED."nome",
+        "tipo" = EXCLUDED."tipo",
+        "uf" = EXCLUDED."uf",
+        "cfop" = EXCLUDED."cfop",
+        "aliquota" = EXCLUDED."aliquota",
+        "transaction_type" = COALESCE(EXCLUDED."transaction_type", "tax_rules"."transaction_type"),
+        "customer_type" = COALESCE(EXCLUDED."customer_type", "tax_rules"."customer_type"),
+        "origin" = COALESCE(EXCLUDED."origin", "tax_rules"."origin"),
+        "source" = EXCLUDED."source",
+        "payload" = COALESCE(EXCLUDED."payload", "tax_rules"."payload"),
+        "updated_at" = timezone('UTC', now())
+    `;
   }
 
   async deleteAll(tenantId: string) {
@@ -163,8 +200,7 @@ export class TaxRuleRepository {
     }
   }
 
-  async resolve(tenantId: string, params: ResolveTaxRuleParams, db?: unknown) {
-    const client = (db ?? this.db) as Db;
-    return resolveTaxRuleFromDb(client as PrismaTx, tenantId, params);
+  async resolve(tenantId: string, params: ResolveTaxRuleParams, db?: PrismaTx) {
+    return resolveTaxRuleFromDb(db ?? this.db, tenantId, params);
   }
 }

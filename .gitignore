@@ -126,6 +126,7 @@ Desktop.ini
 !.claude/skills/
 .gemini/
 .notebook/
+.omc/
 
 # Locks de skills instalados localmente
 **/.skill-lock.json

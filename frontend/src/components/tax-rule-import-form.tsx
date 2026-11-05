@@ -5,6 +5,7 @@ import type { TaxRuleImportState } from "@/app/(app)/regras/actions";
 import { importarRegrasTributariasAction } from "@/app/(app)/regras/actions";
 import { DeleteTaxAllButton } from "@/components/delete-tax-all-button";
 import { Button } from "@/components/ui/button";
+import { toUserFacingError } from "@/lib/user-facing-error";
 
 type Props = {
   rulesCount: number;
@@ -34,7 +35,7 @@ export function TaxRuleImportForm({ rulesCount, isAdmin = false }: Props) {
           {pending ? "Importando…" : "Importar regras"}
         </Button>
 
-        {state.error && <p className="text-sm text-destructive">{state.error}</p>}
+        {state.error && <p className="text-sm text-destructive">{toUserFacingError(state.error)}</p>}
         {state.success && (
           <p className="text-sm text-success">
             Importação concluída: {state.created} criada(s), {state.updated} atualizada(s), total {state.total}.

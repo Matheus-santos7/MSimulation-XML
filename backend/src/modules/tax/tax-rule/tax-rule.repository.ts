@@ -69,12 +69,14 @@ export class TaxRuleRepository {
     let created = 0;
     let updated = 0;
 
-    for (const row of rows) {
-      const existing = await this.db.taxRule.findUnique({
-        where: { tenantId_ruleId: { tenantId, ruleId: row.ruleId } },
-        select: { id: true },
-      });
+    // One lookup for all rows instead of one findUnique per row.
+    const existingRows = await this.db.taxRule.findMany({
+      where: { tenantId, ruleId: { in: rows.map((row) => row.ruleId) } },
+      select: { ruleId: true },
+    });
+    const knownRuleIds = new Set(existingRows.map((existing) => existing.ruleId));
 
+    for (const row of rows) {
       await this.db.taxRule.upsert({
         where: { tenantId_ruleId: { tenantId, ruleId: row.ruleId } },
         create: {
@@ -105,8 +107,9 @@ export class TaxRuleRepository {
         },
       });
 
-      if (existing) updated++;
+      if (knownRuleIds.has(row.ruleId)) updated++;
       else created++;
+      knownRuleIds.add(row.ruleId);
     }
 
     return { created, updated, total: rows.length };

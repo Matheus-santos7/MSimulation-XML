@@ -1,7 +1,6 @@
 import type { PrismaClient } from "../../generated/prisma/client.js";
 import {
   applyRlsContext,
-  clearRlsContext,
   dbTransactionContext,
   type PrismaTransactionClient,
 } from "./tenant-rls.js";
@@ -75,11 +74,8 @@ export async function runFiscalTransaction<T>(
   if ("$transaction" in db && typeof db.$transaction === "function") {
     const result = await db.$transaction(async (tx) => {
       await applyRlsContext(tx, { tenantId });
-      try {
-        return await dbTransactionContext.run(tx, () => fn(tx));
-      } finally {
-        await clearRlsContext(tx);
-      }
+
+      return await dbTransactionContext.run(tx, () => fn(tx));
     }, FISCAL_TRANSACTION_OPTIONS);
     // O commit já aconteceu: uma falha aqui (síncrona ou assíncrona) é um
     // efeito colateral de melhor esforço e nunca deve virar erro para quem

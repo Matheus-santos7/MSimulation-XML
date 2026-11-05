@@ -28,32 +28,19 @@ export function getDbClient(): PrismaTransactionClient {
   return tx;
 }
 
+/**
+ * `set_config(..., true)` vale só até o fim da transação: commit e rollback já limpam, então
+ * não há consulta de limpeza (que falharia numa transação abortada e esconderia o erro real).
+ */
 export async function applyRlsContext(
   tx: PrismaTransactionClient,
   ctx: DbRequestContext,
 ): Promise<void> {
   if (ctx.tenantId) {
-    await tx.$executeRaw`SELECT set_config('app.tenant_id', ${ctx.tenantId}, false)`;
+    await tx.$executeRaw`SELECT set_config('app.tenant_id', ${ctx.tenantId}, true)`;
   }
   if (ctx.userId) {
-    await tx.$executeRaw`SELECT set_config('app.user_id', ${ctx.userId}, false)`;
-  }
-}
-
-export async function clearRlsContext(tx: PrismaTransactionClient): Promise<void> {
-  try {
-    await tx.$executeRaw`SELECT set_config('app.tenant_id', '', false)`;
-    await tx.$executeRaw`SELECT set_config('app.user_id', '', false)`;
-  } catch (error) {
-    if (
-      typeof error === "object" &&
-      error !== null &&
-      "code" in error &&
-      (error as { code: string }).code === "P2028"
-    ) {
-      return;
-    }
-    throw error;
+    await tx.$executeRaw`SELECT set_config('app.user_id', ${ctx.userId}, true)`;
   }
 }
 
@@ -65,11 +52,8 @@ export async function runWithDbContext<T>(
   return dbRequestContext.run(ctx, async () => {
     return await prisma.$transaction(async (tx) => {
       await applyRlsContext(tx, ctx);
-      try {
-        return await dbTransactionContext.run(tx, () => fn(tx));
-      } finally {
-        await clearRlsContext(tx);
-      }
+
+      return await dbTransactionContext.run(tx, () => fn(tx));
     }, DB_TRANSACTION_OPTIONS);
   });
 }

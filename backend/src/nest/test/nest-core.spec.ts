@@ -259,8 +259,8 @@ describe("Nest core — guards, RLS, filtros e rate limit", () => {
       context: { userId: USER_ID, tenantId: TENANT_ID },
     });
     assert.equal(db.transactions, 1);
-    // set_config de tenant e de usuário, depois a limpeza dos dois.
-    assert.equal(db.rlsCalls.length, 4);
+    // set_config local de tenant e de usuário; commit/rollback limpam, sem consulta extra.
+    assert.equal(db.rlsCalls.length, 2);
     assert.ok(db.rlsCalls[0]!.includes(TENANT_ID));
     assert.ok(db.rlsCalls[1]!.includes(USER_ID));
   });

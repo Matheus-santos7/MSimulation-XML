@@ -22,16 +22,12 @@ function detectCustomerType(customerLabel: string): CustomerType {
 }
 
 function destinationLabel(transactionType: TransactionType, customerType: CustomerType): string {
-  if (transactionType === "symbolic_inbound_return") {
-    return "Retorno simbólico (symbolic_inbound_return)";
-  }
   if (transactionType === "inbound") return "Envio de estoque (Transferência ou Remessa)";
   return customerType === "taxpayer" ? "Contribuinte" : "Não contribuinte";
 }
 
 function buildTaxPayload(
   cells: Record<string, unknown>,
-  uf: string,
   transactionType: TransactionType,
   customerType: CustomerType,
 ): Record<string, unknown> {
@@ -57,11 +53,7 @@ function buildTaxPayload(
         reducao: cells.IBS_CBS_REDUCAO,
       },
     },
-    icmsByUf: Object.fromEntries(
-      Object.entries(cells)
-        .filter(([k]) => k.startsWith("ICMS_"))
-        .map(([k, v]) => [k, v]),
-    ),
+    icmsByUf: Object.fromEntries(Object.entries(cells).filter(([k]) => k.startsWith("ICMS_"))),
   };
 }
 
@@ -78,6 +70,8 @@ export function mapTaxRuleSpreadsheetRows(
 ): TaxRuleSpreadsheetMapResult {
   const rows: TaxRuleImportRow[] = [];
   const errors: { line: number; message: string }[] = [];
+  // Linhas com a mesma chave virariam o mesmo upsert e uma sobrescreveria a outra em silêncio.
+  const seenKeys = new Set<string>();
 
   for (const raw of rawRows) {
     const originTrim = raw.origin.trim();
@@ -89,13 +83,23 @@ export function mapTaxRuleSpreadsheetRows(
 
     const transactionType = detectTransactionType(raw.transactionTypeLabel);
     const customerType = detectCustomerType(raw.transactionTypeLabel);
+    const key = `${raw.ruleId}-${uf}-${customerType}-${transactionType}`;
+    if (seenKeys.has(key)) {
+      errors.push({
+        line: raw.line,
+        message: `Regra duplicada: a linha ${raw.line} repete a chave ${key}`,
+      });
+      continue;
+    }
+    seenKeys.add(key);
+
     const tipo = "MELI_RULE";
     const cfop = "";
     const aliquota = resolveAliquota(raw.cells, uf);
-    const payload = buildTaxPayload(raw.cells, uf, transactionType, customerType);
+    const payload = buildTaxPayload(raw.cells, transactionType, customerType);
 
     rows.push({
-      ruleId: `${raw.ruleId}-${uf}-${customerType}-${transactionType}`,
+      ruleId: key,
       nome: `${raw.ruleName} (${destinationLabel(transactionType, customerType)})`,
       tipo,
       uf,

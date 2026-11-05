@@ -7,6 +7,9 @@ import { DeleteTaxAllButton } from "@/components/delete-tax-all-button";
 import { Button } from "@/components/ui/button";
 import { toUserFacingError } from "@/lib/user-facing-error";
 
+/** Quantas mensagens de linha ignorada aparecem na tela antes do "…e mais N". */
+const MAX_VISIBLE_PARSE_ERRORS = 10;
+
 type Props = {
   rulesCount: number;
   isAdmin?: boolean;
@@ -42,9 +45,22 @@ export function TaxRuleImportForm({ rulesCount, isAdmin = false }: Props) {
           </p>
         )}
         {state.parseErrors && state.parseErrors.length > 0 && (
-          <p className="text-xs text-amber-500">
-            {state.parseErrors.length} linha(s) ignorada(s) por inconsistência.
-          </p>
+          <div className="text-xs text-amber-500 space-y-1">
+            <p>{state.parseErrors.length} linha(s) ignorada(s) por inconsistência.</p>
+            {/* Mostra o motivo de cada linha (ex.: "Regra duplicada"): só a contagem não diz ao
+                usuário o que corrigir na planilha. O teto evita inundar a tela em planilhas ruins;
+                para ver todas, aumente MAX_VISIBLE_PARSE_ERRORS. */}
+            <ul className="list-disc pl-4">
+              {state.parseErrors.slice(0, MAX_VISIBLE_PARSE_ERRORS).map((parseError) => (
+                <li key={`${parseError.line}-${parseError.message}`}>
+                  Linha {parseError.line}: {parseError.message}
+                </li>
+              ))}
+            </ul>
+            {state.parseErrors.length > MAX_VISIBLE_PARSE_ERRORS && (
+              <p>…e mais {state.parseErrors.length - MAX_VISIBLE_PARSE_ERRORS} linha(s).</p>
+            )}
+          </div>
         )}
       </form>
     </div>

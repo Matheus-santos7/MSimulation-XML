@@ -67,4 +67,19 @@ describe("mapTaxRuleSpreadsheetRows", () => {
     assert.equal(rows.length, 0);
     assert.equal(errors[0]?.message, "ORIGIN inválida (esperado UF com 2 letras)");
   });
+
+  it("reporta regra duplicada e mantém a primeira ocorrência", () => {
+    const { rows, errors } = mapTaxRuleSpreadsheetRows([
+      rawRow({ line: 5, ruleName: "Primeira" }),
+      rawRow({ line: 9, ruleName: "Segunda" }),
+    ]);
+    assert.equal(rows.length, 1);
+    assert.match(rows[0]!.nome, /^Primeira/);
+    assert.deepEqual(errors, [
+      {
+        line: 9,
+        message: "Regra duplicada: a linha 9 repete a chave 797515-PR-taxpayer-sale",
+      },
+    ]);
+  });
 });

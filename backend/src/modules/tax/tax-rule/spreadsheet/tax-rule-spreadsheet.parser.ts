@@ -18,23 +18,100 @@ type RuleIdentityState = {
   groupRuleId: string;
 };
 
-function toNumberLike(value: unknown): unknown {
-  if (value == null) return undefined;
-  const text = String(value).trim();
-  if (!text) return undefined;
-  if (text === "Não aplicável" || text === "Calculada automaticamente") return undefined;
-  const normalized = text.replace(/\./g, "").replace(",", ".");
-  const n = Number(normalized);
-  return Number.isFinite(n) ? n : text;
+/**
+ * Limite de linhas de DADOS aceitas na aba. Existe porque o XLSX.read materializa a aba inteira
+ * em memória antes de qualquer validação: sem teto, um arquivo de 15 MB com milhões de linhas
+ * vazias/repetidas consome a memória do processo. Para aceitar planilhas maiores, suba o valor
+ * e confira o tempo de gravação em lote.
+ */
+export const MAX_TAX_RULE_SHEET_ROWS = 5000;
+
+/**
+ * Teto de colunas da aba. O `sheetRows` só corta LINHAS: uma célula em XFD (a última coluna do
+ * Excel, 16384) faz o `sheet_to_json` criar milhões de células vazias (`defval: ""`), travando o
+ * servidor por minutos e ocupando GBs (medido: arquivo de 8,6 KB, ~110 s, 1,4 GB). A planilha ML
+ * real tem ~400 colunas (ICMS por UF); 1000 dá folga. Se o layout crescer, suba este valor.
+ */
+export const MAX_TAX_RULE_SHEET_COLUMNS = 1000;
+
+/** Linhas fixas antes dos dados: faixa mesclada, chaves (linha 2) e rótulos (linha 3). */
+const HEADER_ROWS = 3;
+
+/**
+ * Colunas que representam percentuais/valores e por isso viram número.
+ *
+ * Todas as outras (CST, ST, cClassTrib, COD_ENQ, COD_BENEF, RULE_ID...) são CÓDIGOS: o zero à
+ * esquerda é significativo ("000001" != 1), então ficam sempre como texto.
+ * Se o marketplace acrescentar uma coluna de valor/alíquota nova, inclua-a aqui:
+ * - colunas fora do ICMS: sufixo em NUMERIC_COLUMN_SUFFIXES;
+ * - colunas por UF (ICMS_<UF>_<campo>): acrescente o <campo> em NUMERIC_ICMS_FIELDS.
+ */
+const NUMERIC_COLUMN_SUFFIXES = ["_ALIQUOTA", "_REDUCAO"];
+const NUMERIC_ICMS_FIELDS = new Set([
+  "PDIF",
+  "PICMS_INTERNAL",
+  "PICMS_INTERSTATE",
+  "REDUCTION_CALC_BASE",
+  "REDUCTION_CALC_BASE_ST",
+  "REDUCTION_CALC_DIFAL",
+  "PICMS_FCP",
+  "PICMS_EFET",
+  "PREDB_CEFET",
+  "MVA",
+  "PICMSST_RET",
+  "PFCPST_RET",
+  "PCOD_BENEF_PRES",
+  "RED_ALIQ_IBS",
+]);
+
+function isNumericColumn(key: string): boolean {
+  if (NUMERIC_COLUMN_SUFFIXES.some((suffix) => key.endsWith(suffix))) return true;
+  const icmsField = /^ICMS_[A-Z]{2}_(.+)$/.exec(key)?.[1];
+  return icmsField !== undefined && NUMERIC_ICMS_FIELDS.has(icmsField);
 }
 
-function normalizeCellValue(value: unknown): unknown {
-  const n = toNumberLike(value);
-  return n ?? (typeof value === "string" ? value.trim() : value);
+/** Milhar pt-BR: 1 a 3 dígitos (sem zero à esquerda) seguidos de grupos de exatamente 3. */
+const THOUSANDS_PATTERN = /^[1-9]\d{0,2}(\.\d{3})+$/;
+
+/**
+ * Converte texto de célula numérica. Com vírgula, o ponto é milhar ("1.234,56" -> 1234.56).
+ * Só com ponto, "1.250" é milhar pt-BR (1250) e qualquer outro formato ("12.5", "0.00") é
+ * decimal. Valores não numéricos ("Não aplicável") voltam como texto aparado.
+ */
+function parseNumericText(text: string): number | string {
+  const normalized = text.includes(",")
+    ? text.replace(/\./g, "").replace(",", ".")
+    : THOUSANDS_PATTERN.test(text)
+      ? text.replace(/\./g, "")
+      : text;
+  const n = Number(normalized);
+  return text !== "" && Number.isFinite(n) ? n : text;
+}
+
+function normalizeCellValue(key: string, value: unknown): unknown {
+  if (value == null) return value;
+  const text = typeof value === "string" ? value.trim() : value;
+  if (typeof text !== "string" || !isNumericColumn(key)) return text;
+
+  return parseNumericText(text);
 }
 
 function isNumericRuleId(value: string): boolean {
   return /^\d+$/.test(value);
+}
+
+/**
+ * Nome no formato "<código> - <sufixo>", como "39259090 - IMPORTADO".
+ *
+ * Na planilha ML só o 1º grupo traz RULE_ID; os demais vêm com RULE_ID vazio e este nome na 1ª
+ * linha do grupo (as linhas de continuação deixam o nome em branco). Sem tratar esse padrão como
+ * início de grupo, os ~60 grupos "- IMPORTADO" caíam no grupo anterior, geravam a mesma chave e só
+ * o último sobrevivia. O " - " (com espaços) é obrigatório de propósito: rótulos de continuação
+ * como "40021110 (consumo)" continuam sendo ignorados. Se o marketplace mudar o separador,
+ * ajuste esta regex e o spec "abre grupo novo quando RULE_ID vem vazio…".
+ */
+function isCodeWithSuffixName(value: string): boolean {
+  return /^\d+\s+-\s+\S/.test(value);
 }
 
 /**
@@ -59,7 +136,7 @@ function isNewRuleGroup(rawRuleId: string, rawRuleName: string, state: RuleIdent
   if (
     !rawRuleId &&
     rawRuleName &&
-    isNumericRuleId(rawRuleName) &&
+    (isNumericRuleId(rawRuleName) || isCodeWithSuffixName(rawRuleName)) &&
     rawRuleName !== state.groupRuleId
   ) {
     return true;
@@ -116,7 +193,11 @@ function findTaxRuleSheet(wb: XLSX.WorkBook): XLSX.WorkSheet | undefined {
 export function parseTaxRuleSpreadsheet(
   buffer: Buffer | ArrayBuffer,
 ): TaxRuleSpreadsheetParseResult {
-  const wb = XLSX.read(buffer, { type: "buffer" });
+  // +1 linha além do limite: permite distinguir "exatamente no limite" de "excede".
+  const wb = XLSX.read(buffer, {
+    type: "buffer",
+    sheetRows: MAX_TAX_RULE_SHEET_ROWS + HEADER_ROWS + 1,
+  });
   const sheet = findTaxRuleSheet(wb);
   if (!sheet)
     return {
@@ -124,11 +205,26 @@ export function parseTaxRuleSpreadsheet(
       errors: [{ line: 1, message: "Aba 'Regras tributárias' não encontrada" }],
     };
 
+  // Confere a faixa declarada ANTES de materializar a matriz (ver MAX_TAX_RULE_SHEET_COLUMNS).
+  const range = XLSX.utils.decode_range(sheet["!ref"] ?? "A1");
+  if (range.e.c - range.s.c + 1 > MAX_TAX_RULE_SHEET_COLUMNS) {
+    return {
+      rawRows: [],
+      errors: [{ line: 1, message: `Planilha excede ${MAX_TAX_RULE_SHEET_COLUMNS} colunas` }],
+    };
+  }
+
   const matrix = XLSX.utils.sheet_to_json<(string | number | null)[]>(sheet, {
     header: 1,
     raw: false,
     defval: "",
   });
+  if (matrix.length > MAX_TAX_RULE_SHEET_ROWS + HEADER_ROWS) {
+    return {
+      rawRows: [],
+      errors: [{ line: 1, message: `Planilha excede ${MAX_TAX_RULE_SHEET_ROWS} linhas` }],
+    };
+  }
   if (matrix.length < 4)
     return { rawRows: [], errors: [{ line: 1, message: "Planilha sem linhas de dados" }] };
 
@@ -160,7 +256,7 @@ export function parseTaxRuleSpreadsheet(
     for (let c = 0; c < keyRow.length; c++) {
       const key = keyRow[c];
       if (!key) continue;
-      cells[key] = normalizeCellValue(row[c]);
+      cells[key] = normalizeCellValue(key, row[c]);
     }
 
     identity = resolveRuleIdentity(cells, identity);

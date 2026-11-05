@@ -48,11 +48,7 @@ export async function resolveBulkImportPayload(req: FastifyRequest): Promise<
       return { ok: false, status: 400, error: "Envie o arquivo Excel no campo file" };
     }
 
-    const lower = fileName.toLowerCase();
-    if (lower && !lower.endsWith(".xlsx") && !lower.endsWith(".xls")) {
-      return { ok: false, status: 400, error: "Formato inválido. Envie um arquivo .xlsx ou .xls" };
-    }
-
+    // A extensão (.xlsx) é validada por `validateSpreadsheetBuffer`, a única fonte dessa regra.
     const fileValidation = validateSpreadsheetBuffer(fileBuffer, {
       fileName,
       mimeType: undefined,

@@ -547,7 +547,7 @@ describe("contrato HTTP — uploads de planilha (ADMIN)", () => {
     {
       url: "/api/tax-rules/import-spreadsheet",
       json: { status: 400, body: { error: NOT_MULTIPART } },
-      badFormat: "Formato inválido. Envie um arquivo .xlsx ou .xls",
+      badFormat: "Formato inválido. Envie um arquivo .xlsx",
     },
     {
       url: "/api/products/import-spreadsheet",
@@ -557,7 +557,7 @@ describe("contrato HTTP — uploads de planilha (ADMIN)", () => {
     {
       url: "/api/unidades-logisticas/bulk-import",
       json: null,
-      badFormat: "Formato inválido. Envie um arquivo .xlsx ou .xls",
+      badFormat: "Formato inválido. Envie um arquivo .xlsx",
     },
   ] as const;
 

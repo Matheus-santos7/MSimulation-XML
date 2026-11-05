@@ -1,6 +1,18 @@
 /** Validação de planilhas XLSX enviadas por usuários (magic bytes, MIME, tamanho). */
 
-export const DEFAULT_SPREADSHEET_MAX_BYTES = 15 * 1024 * 1024;
+import { sumZipUncompressedSize } from "./zip-size.js";
+
+const BYTES_PER_MB = 1024 * 1024;
+
+export const DEFAULT_SPREADSHEET_MAX_BYTES = 15 * BYTES_PER_MB;
+
+/**
+ * Teto do conteúdo DESCOMPACTADO do .xlsx (soma das entradas do ZIP), para todos os importadores.
+ * O `XLSX.read` é síncrono e bloqueia o event loop proporcionalmente ao XML descompactado; a
+ * planilha real de regras (468 linhas × ~400 colunas) tem poucos MB. Ajuste aqui se uma planilha
+ * legítima passar do teto.
+ */
+export const MAX_SPREADSHEET_UNCOMPRESSED_BYTES = 100 * BYTES_PER_MB;
 
 const XLSX_MAGIC = [0x50, 0x4b, 0x03, 0x04] as const;
 
@@ -16,9 +28,7 @@ export type SpreadsheetValidationOptions = {
   mimeType?: string;
 };
 
-export type SpreadsheetValidationResult =
-  | { ok: true }
-  | { ok: false; error: string };
+export type SpreadsheetValidationResult = { ok: true } | { ok: false; error: string };
 
 function hasXlsxMagicBytes(data: Buffer | Uint8Array): boolean {
   if (data.length < XLSX_MAGIC.length) return false;
@@ -36,12 +46,17 @@ export function validateSpreadsheetBuffer(
   }
 
   if (data.length > maxBytes) {
-    return { ok: false, error: `Arquivo excede o limite de ${Math.round(maxBytes / (1024 * 1024))} MB` };
+    return {
+      ok: false,
+      error: `Arquivo excede o limite de ${Math.round(maxBytes / (1024 * 1024))} MB`,
+    };
   }
 
   const fileName = options.fileName?.toLowerCase() ?? "";
-  if (fileName && !fileName.endsWith(".xlsx") && !fileName.endsWith(".xls")) {
-    return { ok: false, error: "Formato inválido. Envie um arquivo .xlsx ou .xls" };
+  // Só .xlsx: o .xls (BIFF) não tem o cabeçalho ZIP e seria recusado na checagem de conteúdo
+  // logo abaixo. Para aceitar .xls de volta, é preciso também trocar a checagem de magic bytes.
+  if (fileName && !fileName.endsWith(".xlsx")) {
+    return { ok: false, error: "Formato inválido. Envie um arquivo .xlsx" };
   }
 
   const mimeType = options.mimeType?.trim().toLowerCase();
@@ -49,8 +64,21 @@ export function validateSpreadsheetBuffer(
     return { ok: false, error: "Tipo de arquivo não permitido" };
   }
 
-  if (!hasXlsxMagicBytes(data)) {
-    return { ok: false, error: "Conteúdo inválido. O arquivo não parece ser uma planilha Excel (.xlsx)" };
+  const invalidContent = {
+    ok: false,
+    error: "Conteúdo inválido. O arquivo não parece ser uma planilha Excel (.xlsx)",
+  } as const;
+  if (!hasXlsxMagicBytes(data)) return invalidContent;
+
+  // Antes do XLSX.read: barra zip bomb sem descompactar. ZIP ilegível ou zip64 é recusado (falha fechada).
+  const uncompressedBytes = sumZipUncompressedSize(data);
+  if (uncompressedBytes === null) return invalidContent;
+
+  if (uncompressedBytes > MAX_SPREADSHEET_UNCOMPRESSED_BYTES) {
+    return {
+      ok: false,
+      error: `Planilha descompactada excede o limite de ${MAX_SPREADSHEET_UNCOMPRESSED_BYTES / BYTES_PER_MB} MB`,
+    };
   }
 
   return { ok: true };

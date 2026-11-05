@@ -40,7 +40,9 @@ export function validateSpreadsheetBuffer(
   }
 
   const fileName = options.fileName?.toLowerCase() ?? "";
-  if (fileName && !fileName.endsWith(".xlsx") && !fileName.endsWith(".xls")) {
+  // Só .xlsx: o backend recusa .xls (assinatura ZIP obrigatória), então barrar aqui evita o
+  // round-trip e mantém a mensagem coerente.
+  if (fileName && !fileName.endsWith(".xlsx")) {
     return { ok: false, error: "Formato inválido. Envie um arquivo .xlsx" };
   }
 

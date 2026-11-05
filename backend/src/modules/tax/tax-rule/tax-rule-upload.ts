@@ -34,11 +34,7 @@ export async function resolveTaxRuleSpreadsheetUpload(
     return { ok: false, status: 400, error: "Envie o arquivo Excel no campo file" };
   }
 
-  const lower = fileName.toLowerCase();
-  if (lower && !lower.endsWith(".xlsx") && !lower.endsWith(".xls")) {
-    return { ok: false, status: 400, error: "Formato inválido. Envie um arquivo .xlsx ou .xls" };
-  }
-
+  // Extensão, tamanho e conteúdo são checados só aqui, para que a mensagem não diverja.
   const fileValidation = validateSpreadsheetBuffer(fileBuffer, { fileName });
   if (!fileValidation.ok) {
     return { ok: false, status: 400, error: fileValidation.error };

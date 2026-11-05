@@ -1,4 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
+import type { PrismaClient } from "../../../generated/prisma/client.js";
+import { runWithDbContext } from "../../../lib/db/tenant-rls.js";
+import { PRISMA } from "../../../nest/tokens.js";
 import { TaxRuleError } from "../errors/tax.errors.js";
 import { mapTaxRuleSpreadsheetRows } from "./spreadsheet/tax-rule-spreadsheet.mapper.js";
 import { parseTaxRuleSpreadsheet } from "./spreadsheet/tax-rule-spreadsheet.parser.js";
@@ -15,7 +18,10 @@ export type ImportTaxRulesSpreadsheetResult = {
 /** Regras tributárias do tenant: consulta, catálogo para produtos, importação e exclusão. */
 @Injectable()
 export class TaxRuleService {
-  constructor(@Inject(TaxRuleRepository) private readonly taxRuleRepository: TaxRuleRepository) {}
+  constructor(
+    @Inject(TaxRuleRepository) private readonly taxRuleRepository: TaxRuleRepository,
+    @Inject(PRISMA) private readonly prisma: PrismaClient,
+  ) {}
 
   list(tenantId: string) {
     return this.taxRuleRepository.listByTenant(tenantId);
@@ -33,10 +39,17 @@ export class TaxRuleService {
 
   /**
    * Importa a planilha de regras (.xlsx): parse estrutural, classificação tributária e upsert.
-   * @throws {TaxRuleError} Planilha sem nenhuma regra válida
+   *
+   * A rota roda com `@SkipDbContext()`, então este método abre a própria transação. O parse e o
+   * map (CPU, até 15 MB) ficam FORA dela, de propósito: dentro, seguravam uma das conexões do
+   * pool por segundos e travavam as outras requisições. Só o `bulkUpsert` roda em
+   * `runWithDbContext` (RLS com `tenantId`/`userId`). Não mova o parse para dentro da transação
+   * (`test/tax-rule-import-order.spec.ts` falha) e não chame o repository fora dela.
+   * @throws {TaxRuleError} Planilha sem nenhuma regra válida (sem abrir transação)
    */
   async importSpreadsheet(
     tenantId: string,
+    userId: string,
     fileBuffer: Buffer,
   ): Promise<ImportTaxRulesSpreadsheetResult> {
     const parsed = parseTaxRuleSpreadsheet(fileBuffer);
@@ -52,7 +65,9 @@ export class TaxRuleService {
       );
     }
 
-    const upsert = await this.taxRuleRepository.bulkUpsert(tenantId, mapped.rows);
+    const upsert = await runWithDbContext(this.prisma, { tenantId, userId }, () =>
+      this.taxRuleRepository.bulkUpsert(tenantId, mapped.rows),
+    );
 
     return { ...upsert, parseErrors: parseErrors.length > 0 ? parseErrors : undefined };
   }

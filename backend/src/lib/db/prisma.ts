@@ -14,12 +14,14 @@ function createPrismaClient(): PrismaClient {
     throw new Error("DATABASE_URL não definida (backend/.env)");
   }
   applyDbNetworkDefaults();
+  // Lido antes do pool: DB_POOL_MAX inválido derruba o boot em vez de abrir um pool errado.
+  const DB_POOL_MAX = appConfig.dbPoolMax;
   // connectionTimeoutMillis dá tempo ao Neon serverless de acordar do sleep (pode levar ~5 s).
   const pool = new pg.Pool({
     connectionString: url,
     connectionTimeoutMillis: 30_000,
     idleTimeoutMillis: 30_000,
-    max: 5,
+    max: DB_POOL_MAX,
   });
   const adapter = new PrismaPg(pool);
   return new PrismaClient({ adapter, log: ["error", "warn"] });

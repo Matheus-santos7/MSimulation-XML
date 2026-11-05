@@ -11,9 +11,12 @@ import {
 } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import type { FastifyRequest } from "fastify";
+import { strictRouteRateLimit } from "../../../lib/http/rate-limit.js";
 import { AdminOnly, ProtectedApi } from "../../../nest/api-access.decorators.js";
-import { TenantId } from "../../../nest/auth/request-params.js";
+import { TenantId, UserId } from "../../../nest/auth/request-params.js";
+import { SkipDbContext } from "../../../nest/db/db-context.interceptor.js";
 import { RouteErrorFilter } from "../../../nest/http/api-exception.filter.js";
+import { RateLimit } from "../../../nest/http/rate-limit.interceptor.js";
 import { orUploadError } from "../../../nest/http/upload-result.js";
 import { ZodValidationPipe } from "../../../nest/http/zod-validation.pipe.js";
 import { TaxRuleError } from "../errors/tax.errors.js";
@@ -25,6 +28,12 @@ import { TaxRuleService } from "./tax-rule.service.js";
 import { resolveTaxRuleSpreadsheetUpload } from "./tax-rule-upload.js";
 
 const HTTP_OK = 200;
+
+/**
+ * O import faz `XLSX.read` síncrono (segundos de CPU por arquivo grande): o limite compartilhado
+ * de 300/min por IP deixaria poucos usuários saturarem a API. Ajuste aqui se o uso legítimo crescer.
+ */
+const IMPORT_SPREADSHEET_MAX_PER_MINUTE = 10;
 
 /** `TaxRuleError` vira 400 só no import e no delete; no bulk-upsert segue o contrato global. */
 const taxRuleErrorFilter = new RouteErrorFilter({
@@ -73,10 +82,18 @@ export class TaxRuleController {
   @AdminOnly()
   @HttpCode(HTTP_OK)
   @UseFilters(taxRuleErrorFilter)
-  async importSpreadsheet(@TenantId() tenantId: string, @Req() request: FastifyRequest) {
+  // Sem a transação do @ProtectedApi(): o upload e o parse rodam sem conexão do pool, e o
+  // service abre a transação só para gravar. Guards, @AdminOnly e rate limit continuam.
+  @SkipDbContext()
+  @RateLimit(strictRouteRateLimit(IMPORT_SPREADSHEET_MAX_PER_MINUTE, "1 minute"))
+  async importSpreadsheet(
+    @TenantId() tenantId: string,
+    @UserId() userId: string,
+    @Req() request: FastifyRequest,
+  ) {
     const upload = orUploadError(await resolveTaxRuleSpreadsheetUpload(request));
 
-    return this.taxRuleService.importSpreadsheet(tenantId, upload.buffer);
+    return this.taxRuleService.importSpreadsheet(tenantId, userId, upload.buffer);
   }
 
   @Delete()

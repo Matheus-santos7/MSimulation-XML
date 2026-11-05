@@ -35,4 +35,31 @@ describe("ConfigService", () => {
     expect(development).toBe(false);
     expect(config.isProduction).toBe(true);
   });
+
+  it("should default dbPoolMax to 10 when DB_POOL_MAX is not set", () => {
+    // Arrange
+    const config = new ConfigService();
+    delete process.env.DB_POOL_MAX;
+
+    // Act / Assert
+    expect(config.dbPoolMax).toBe(10);
+  });
+
+  it("should read DB_POOL_MAX as an integer", () => {
+    // Arrange
+    const config = new ConfigService();
+    process.env.DB_POOL_MAX = "20";
+
+    // Act / Assert
+    expect(config.dbPoolMax).toBe(20);
+  });
+
+  it.each(["0", "-1", "2.5", "abc"])("should reject DB_POOL_MAX=%s", (value) => {
+    // Arrange
+    const config = new ConfigService();
+    process.env.DB_POOL_MAX = value;
+
+    // Act / Assert
+    expect(() => config.dbPoolMax).toThrow("DB_POOL_MAX deve ser um inteiro positivo");
+  });
 });

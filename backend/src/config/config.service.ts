@@ -1,3 +1,6 @@
+/** Dobro do antigo `max: 5`: o import de planilha deixava a API sem conexão livre. */
+const DEFAULT_DB_POOL_MAX = 10;
+
 /**
  * Único leitor de `process.env` no backend. Cada variável é um getter lido na hora do acesso
  * (testes alteram o ambiente entre casos). Validação e defaults de cada área continuam nos
@@ -40,6 +43,24 @@ export class ConfigService {
   // Banco
   get databaseUrl(): string | undefined {
     return this.get("DATABASE_URL");
+  }
+
+  /**
+   * Conexões no pool do `pg` (padrão 10). Cada requisição `@ProtectedApi()` segura uma conexão
+   * durante a transação inteira, então este número limita as requisições simultâneas ao banco.
+   * Ao subir, respeite o limite de conexões do plano do Neon (use o endpoint pooled).
+   * Valor inválido lança erro na criação do Prisma: falhar no boot é melhor que um pool errado.
+   */
+  get dbPoolMax(): number {
+    const raw = this.get("DB_POOL_MAX")?.trim();
+    if (!raw) return DEFAULT_DB_POOL_MAX;
+
+    const value = Number(raw);
+    if (!Number.isInteger(value) || value <= 0) {
+      throw new Error("DB_POOL_MAX deve ser um inteiro positivo");
+    }
+
+    return value;
   }
 
   // Autenticação

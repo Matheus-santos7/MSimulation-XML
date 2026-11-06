@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { PAGE_PARAM } from "@/lib/paginate";
 
 export const TEXT_FILTER_DEBOUNCE_MS = 300;
 
@@ -32,6 +33,7 @@ export function useUrlFilter(name: string, { debounceMs = 0 }: UseUrlFilterOptio
       const trimmed = next.trim();
       if (trimmed) params.set(name, trimmed);
       else params.delete(name);
+      params.delete(PAGE_PARAM); // mudar o filtro volta para a primeira página
 
       const query = params.toString();
       startTransition(() => {

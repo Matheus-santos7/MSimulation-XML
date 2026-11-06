@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Fragment } from "react";
 import { PageHeader } from "@/components/fiscal-ui";
+import { ListPager } from "@/components/list-pager";
+import { PAGE_PARAM, paginate, parsePageParam } from "@/lib/paginate";
 import { TaxRuleImportForm } from "@/components/tax-rule-import-form";
 import { UrlFilterInput } from "@/components/url-filter-input";
 import { resolveActiveTenantId } from "@/lib/active-tenant";
@@ -25,6 +27,9 @@ import {
 } from "@/lib/tax-rules-sheet";
 
 export const metadata: Metadata = { title: "Regras Tributárias" };
+
+// Cada grupo vira várias linhas × 27 UFs de células; sem limite a página passava de 37 MB.
+const GROUPS_PER_PAGE = 5;
 
 function CompactHeader({
   title,
@@ -62,6 +67,7 @@ export default async function RegrasPage({
   const sorted = [...filteredRules].sort(compareTaxRulesByContributor);
   const groups = buildTaxRuleGroups(sorted).map((g) => ({ ...g, rows: sortTaxRuleRowsForSheetLayout(g.rows) }));
   const allRuleNames = [...new Set(rules.map((rule) => rule.nome))].sort((a, b) => a.localeCompare(b));
+  const pageOfGroups = paginate(groups, parsePageParam(params[PAGE_PARAM]), GROUPS_PER_PAGE);
 
   return (
     <div className="p-6 space-y-4">
@@ -176,7 +182,7 @@ export default async function RegrasPage({
                 </tr>
               </thead>
               <tbody>
-                {groups.map((group) =>
+                {pageOfGroups.items.map((group) =>
                   group.rows.map((r, idx) => {
                     const payload = asTaxRuleRecord(r.payload);
                     const taxes = asTaxRuleRecord(payload.taxes);
@@ -251,6 +257,16 @@ export default async function RegrasPage({
           </div>
         )}
       </div>
+      {groups.length > 0 ? (
+        <ListPager
+          pathname="/regras"
+          query={nomeFilter.trim() ? { nome: nomeFilter.trim() } : {}}
+          page={pageOfGroups.page}
+          totalPages={pageOfGroups.totalPages}
+          totalItems={pageOfGroups.totalItems}
+          itemLabel="grupos de regras"
+        />
+      ) : null}
     </div>
   );
 }

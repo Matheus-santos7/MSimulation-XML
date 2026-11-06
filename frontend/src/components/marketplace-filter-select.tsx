@@ -1,19 +1,23 @@
+"use client";
+
+import { useUrlFilter } from "@/hooks/use-url-filter";
 import type { MarketplaceDto } from "@/lib/marketplaces";
 
-/** `<select name="marketplace">` para formulários GET de filtro (vazio = todos). */
-export function MarketplaceFilterSelect({
-  marketplaces,
-  value,
-}: {
-  marketplaces: MarketplaceDto[];
-  value?: string;
-}) {
+/** `<select>` de marketplace que filtra a lista pela URL ao mudar (vazio = todos). */
+export function MarketplaceFilterSelect({ marketplaces }: { marketplaces: MarketplaceDto[] }) {
+  const { value, change, isPending } = useUrlFilter("marketplace");
+
   return (
     <label className="min-w-[180px] space-y-1">
-      <span className="text-xs text-muted-foreground">Marketplace</span>
+      <span className="text-xs text-muted-foreground">
+        Marketplace
+        {isPending ? <span aria-live="polite"> · atualizando…</span> : null}
+      </span>
       <select
         name="marketplace"
-        defaultValue={value ?? ""}
+        value={value}
+        onChange={(event) => change(event.target.value)}
+        aria-busy={isPending}
         className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
       >
         <option value="">Todos</option>

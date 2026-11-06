@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 // import { AvancoCdForm } from "@/components/avanco-cd-form";
 import { PageHeader } from "@/components/fiscal-ui";
 import { MarketplaceFilterSelect } from "@/components/marketplace-filter-select";
+import { UrlFilterInput } from "@/components/url-filter-input";
 // import { UnidadesLogisticasImportForm } from "@/components/unidades-logisticas-import-form";
 import { UnidadesLogisticasTable } from "@/components/unidades-logisticas-table";
 import { isAdminRole } from "@/lib/auth/roles";
@@ -83,41 +84,23 @@ export default async function UnidadesLogisticasPage({ searchParams }: Props) {
       {/* <AvancoCdForm products={products} unidades={unidades} /> */}
 
       <div className="space-y-3">
-        {/* Formulário de Busca.
-          Ele não tem evento onSubmit, action ou chamadas de API do lado do cliente (use client).
-          Como é um form nativo do HTML sem 'action', quando o usuário clica em "Filtrar"
-          o navegador faz um GET para a URL atual adicionando os inputs como query string.
-          Ex: /unidades-logisticas?q=Cajamar&cnpj=
-          Isso recarrega o Server Component com os novos dados. Padrão excelente!
-        */}
-        <form className="flex flex-wrap gap-2 items-end">
-          <label className="flex-1 min-w-[200px] space-y-1">
-            <span className="text-xs text-muted-foreground">Buscar código, nome ou UF</span>
-            {/* O defaultValue mantém o que o usuário digitou após a página recarregar com o filtro */}
-            <input
-              name="q"
-              defaultValue={q ?? ""}
-              placeholder="Ex.: SP02, Cajamar, SC"
-              className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
-            />
-          </label>
-          <label className="flex-1 min-w-[200px] space-y-1">
-            <span className="text-xs text-muted-foreground">CNPJ</span>
-            <input
-              name="cnpj"
-              defaultValue={cnpj ?? ""}
-              placeholder="Ex.: 12.345.678/0001-99"
-              className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm font-mono"
-            />
-          </label>
-          <MarketplaceFilterSelect marketplaces={marketplaces} value={marketplaceFilter} />
-          <button
-            type="submit"
-            className="rounded border border-border px-3 py-1.5 text-sm hover:bg-muted"
-          >
-            Filtrar
-          </button>
-        </form>
+        {/* Filtros: atualizam a URL sem recarregar (debounce no texto), o Server Component relê `searchParams`. */}
+        <div className="flex flex-wrap gap-2 items-end">
+          <UrlFilterInput
+            name="q"
+            label="Buscar código, nome ou UF"
+            placeholder="Ex.: SP02, Cajamar, SC"
+            className="flex-1 min-w-[200px]"
+          />
+          <UrlFilterInput
+            name="cnpj"
+            label="CNPJ"
+            placeholder="Ex.: 12.345.678/0001-99"
+            className="flex-1 min-w-[200px]"
+            inputClassName="font-mono"
+          />
+          <MarketplaceFilterSelect marketplaces={marketplaces} />
+        </div>
 
         {/* Repassa as unidades processadas pelo backend para a tabela de listagem */}
         <UnidadesLogisticasTable unidades={unidades} />

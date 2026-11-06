@@ -59,15 +59,9 @@ export default async function NFeListPage({ searchParams }: Props) {
           title="NF-e Emitidas"
           subtitle="Sequência fiscal por série e número — inclui faixas inutilizadas"
         />
-        <form className="mt-4 flex flex-wrap items-end gap-2">
-          <MarketplaceFilterSelect marketplaces={marketplaces} value={marketplaceFilter} />
-          <button
-            type="submit"
-            className="rounded border border-border px-3 py-1.5 text-sm hover:bg-muted"
-          >
-            Filtrar
-          </button>
-        </form>
+        <div className="mt-4 flex flex-wrap items-end gap-2">
+          <MarketplaceFilterSelect marketplaces={marketplaces} />
+        </div>
       </div>
 
       <div className="flex-1 min-h-0 border border-border rounded-lg bg-card overflow-hidden flex flex-col">

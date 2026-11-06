@@ -40,15 +40,32 @@ describe("runWithDbContext", () => {
     );
   });
 
-  it("aplica tenant e usuário só na transação (set_config local)", async () => {
+  it("aplica tenant e usuário numa única instrução (set_config local à transação)", async () => {
     const { prisma, executedSql } = createFakePrisma();
 
     await runWithDbContext(prisma, { tenantId: "tenant-1", userId: "user-1" }, async () => "ok");
 
-    assert.equal(executedSql.length, 2);
-    for (const sql of executedSql) {
-      assert.match(sql, /set_config\('app\.(tenant_id|user_id)', \?, true\)/);
-    }
+    assert.equal(executedSql.length, 1);
+    assert.match(executedSql[0]!, /set_config\('app\.tenant_id', \?, true\)/);
+    assert.match(executedSql[0]!, /set_config\('app\.user_id', \?, true\)/);
+  });
+
+  it("aplica só o usuário quando não há tenant", async () => {
+    const { prisma, executedSql } = createFakePrisma();
+
+    await runWithDbContext(prisma, { userId: "user-1" }, async () => "ok");
+
+    assert.equal(executedSql.length, 1);
+    assert.match(executedSql[0]!, /set_config\('app\.user_id', \?, true\)/);
+    assert.doesNotMatch(executedSql[0]!, /app\.tenant_id/);
+  });
+
+  it("não executa set_config sem tenant nem usuário", async () => {
+    const { prisma, executedSql } = createFakePrisma();
+
+    await runWithDbContext(prisma, {}, async () => "ok");
+
+    assert.equal(executedSql.length, 0);
   });
 
   it("não executa comandos extras depois do callback com sucesso", async () => {

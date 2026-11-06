@@ -140,6 +140,7 @@ export async function postFormData<T>(href: string, body: FormData): Promise<T> 
     cache: "no-store",
   });
 
+  if (res.status === 401) redirect("/login?session=expired");
   if (!res.ok) {
     const payload = await readApiErrorPayload(res);
     throw new Error(payload.error);

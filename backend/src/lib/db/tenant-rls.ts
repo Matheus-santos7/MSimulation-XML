@@ -36,10 +36,12 @@ export async function applyRlsContext(
   tx: PrismaTransactionClient,
   ctx: DbRequestContext,
 ): Promise<void> {
-  if (ctx.tenantId) {
+  // Uma instrução só quando há os dois: cada comando é uma ida e volta ao banco (~150 ms no Neon).
+  if (ctx.tenantId && ctx.userId) {
+    await tx.$executeRaw`SELECT set_config('app.tenant_id', ${ctx.tenantId}, true), set_config('app.user_id', ${ctx.userId}, true)`;
+  } else if (ctx.tenantId) {
     await tx.$executeRaw`SELECT set_config('app.tenant_id', ${ctx.tenantId}, true)`;
-  }
-  if (ctx.userId) {
+  } else if (ctx.userId) {
     await tx.$executeRaw`SELECT set_config('app.user_id', ${ctx.userId}, true)`;
   }
 }

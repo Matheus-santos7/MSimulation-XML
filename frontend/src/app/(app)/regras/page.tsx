@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { Fragment } from "react";
 import { PageHeader } from "@/components/fiscal-ui";
+import { ListPager } from "@/components/list-pager";
+import { PAGE_PARAM, paginate, parsePageParam } from "@/lib/paginate";
 import { TaxRuleImportForm } from "@/components/tax-rule-import-form";
+import { UrlFilterInput } from "@/components/url-filter-input";
 import { resolveActiveTenantId } from "@/lib/active-tenant";
 import { isAdminRole } from "@/lib/auth/roles";
 import { getAuthMe } from "@/lib/auth/session";
@@ -24,6 +27,9 @@ import {
 } from "@/lib/tax-rules-sheet";
 
 export const metadata: Metadata = { title: "Regras Tributárias" };
+
+// Cada grupo vira várias linhas × 27 UFs de células; sem limite a página passava de 37 MB.
+const GROUPS_PER_PAGE = 5;
 
 function CompactHeader({
   title,
@@ -61,6 +67,7 @@ export default async function RegrasPage({
   const sorted = [...filteredRules].sort(compareTaxRulesByContributor);
   const groups = buildTaxRuleGroups(sorted).map((g) => ({ ...g, rows: sortTaxRuleRowsForSheetLayout(g.rows) }));
   const allRuleNames = [...new Set(rules.map((rule) => rule.nome))].sort((a, b) => a.localeCompare(b));
+  const pageOfGroups = paginate(groups, parsePageParam(params[PAGE_PARAM]), GROUPS_PER_PAGE);
 
   return (
     <div className="p-6 space-y-4">
@@ -69,38 +76,16 @@ export default async function RegrasPage({
         subtitle="Visual espelhado da planilha: regra agrupada por tipo de destinatário e colunas por UF"
       />
       <TaxRuleImportForm rulesCount={rules.length} isAdmin={isAdmin} />
-      <form className="flex flex-wrap items-end gap-3 rounded-md border border-border bg-card p-3" method="get">
-        <div className="space-y-1">
-          <label htmlFor="nome" className="text-xs font-medium text-muted-foreground">
-            Filtrar por nome da regra
-          </label>
-          <input
-            id="nome"
-            name="nome"
-            list="regras-nomes"
-            defaultValue={nomeFilter}
-            placeholder="Ex.: Nacional-Fogões C/Grill"
-            className="h-9 w-[320px] rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-          />
-          <datalist id="regras-nomes">
-            {allRuleNames.map((nome) => (
-              <option key={nome} value={nome} />
-            ))}
-          </datalist>
-        </div>
-        <button
-          type="submit"
-          className="h-9 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:opacity-90"
-        >
-          Filtrar
-        </button>
-        <a
-          href="/regras"
-          className="h-9 rounded-md border border-input px-3 text-sm font-medium text-foreground inline-flex items-center hover:bg-muted/40"
-        >
-          Limpar
-        </a>
-      </form>
+      <div className="flex flex-wrap items-end gap-3 rounded-md border border-border bg-card p-3">
+        <UrlFilterInput
+          name="nome"
+          label="Filtrar por nome da regra"
+          placeholder="Ex.: Nacional-Fogões C/Grill"
+          suggestions={allRuleNames}
+          className="w-[320px]"
+          inputClassName="h-9 px-3"
+        />
+      </div>
       <div className="border border-border rounded-lg bg-card overflow-hidden">
         {groups.length === 0 ? (
           <div className="p-6 text-muted-foreground">Nenhuma regra cadastrada para o tenant.</div>
@@ -197,7 +182,7 @@ export default async function RegrasPage({
                 </tr>
               </thead>
               <tbody>
-                {groups.map((group) =>
+                {pageOfGroups.items.map((group) =>
                   group.rows.map((r, idx) => {
                     const payload = asTaxRuleRecord(r.payload);
                     const taxes = asTaxRuleRecord(payload.taxes);
@@ -272,6 +257,16 @@ export default async function RegrasPage({
           </div>
         )}
       </div>
+      {groups.length > 0 ? (
+        <ListPager
+          pathname="/regras"
+          query={nomeFilter.trim() ? { nome: nomeFilter.trim() } : {}}
+          page={pageOfGroups.page}
+          totalPages={pageOfGroups.totalPages}
+          totalItems={pageOfGroups.totalItems}
+          itemLabel="grupos de regras"
+        />
+      ) : null}
     </div>
   );
 }

@@ -12,6 +12,7 @@ import {
   authCookieOptions,
 } from "@/lib/auth/cookie";
 import { fetchAuthMe, refreshSessionApi } from "@/lib/auth/api/session";
+import { isAccessTokenFresh } from "@/lib/auth/token-expiry";
 import type { AuthMeDto, AuthSessionDto } from "@/lib/auth/types";
 
 export type AuthSessionPayload = {
@@ -95,6 +96,13 @@ const resolveAuthSession = cache(async (): Promise<{ token: string; me: AuthMeDt
  * Tenta o cookie atual; se expirado, usa refresh só para esta requisição.
  */
 export const resolveAccessToken = cache(async (): Promise<string | undefined> => {
+  // Token ainda válido: dispensa o `/auth/me` em série antes de cada leitura (o layout o chama
+  // em paralelo). Token vencido ou ilegível cai no caminho com refresh abaixo.
+  // Se o `tokenVersion` mudou (troca de senha, logout global) com o `exp` ainda válido, o backend
+  // responde 401 e o usuário vai ao login: o refresh também foi revogado nesses casos.
+  const cookieToken = await getAccessToken();
+  if (cookieToken && isAccessTokenFresh(cookieToken)) return cookieToken;
+
   const session = await resolveAuthSession();
   return session?.token;
 });

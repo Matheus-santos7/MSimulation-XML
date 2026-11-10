@@ -5,11 +5,28 @@ from __future__ import annotations
 import re
 import unicodedata
 import xml.etree.ElementTree as ET
+from xml.parsers import expat
 from dataclasses import dataclass, field
 from typing import Any
 
 NFE_NS = "http://www.portalfiscal.inf.br/nfe"
 NS = {"nfe": NFE_NS}
+
+
+def _reject_dtd(*_args: Any) -> None:
+    raise ET.ParseError("DTD/entidades não são permitidas em NF-e")
+
+
+def safe_fromstring(data: bytes) -> ET.Element:
+    """`ET.fromstring` que recusa DOCTYPE (XXE e Billion Laughs); NF-e nunca tem DTD."""
+    guard = expat.ParserCreate()
+    guard.StartDoctypeDeclHandler = _reject_dtd
+    try:
+        guard.Parse(data, True)
+    except expat.ExpatError as exc:
+        raise ET.ParseError(str(exc)) from exc
+
+    return ET.fromstring(data)
 
 ICMS_CST_ST = frozenset({"10", "30", "60", "70"})
 CSOSN_ST = frozenset({"201", "202", "203", "500"})
@@ -82,7 +99,7 @@ def parse_nfe_validation_context(xml_content: str) -> NfeValidationContext | Non
     @param xml_content - XML completo (nfeProc ou NFe)
     """
     try:
-        root = ET.fromstring(xml_content.encode("utf-8"))
+        root = safe_fromstring(xml_content.encode("utf-8"))
     except ET.ParseError:
         return None
 

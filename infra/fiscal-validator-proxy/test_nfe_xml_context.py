@@ -66,3 +66,12 @@ if __name__ == "__main__":
     test_normalize_city_ignores_accents()
     test_item_requires_cest_only_for_st()
     print("OK")
+
+
+def test_parse_nfe_validation_context_rejects_dtd_entities() -> None:
+    xml = (
+        '<?xml version="1.0"?><!DOCTYPE a [<!ENTITY x SYSTEM "file:///etc/passwd">]>'
+        '<NFe xmlns="http://www.portalfiscal.inf.br/nfe"><infNFe>&x;</infNFe></NFe>'
+    )
+
+    assert parse_nfe_validation_context(xml) is None

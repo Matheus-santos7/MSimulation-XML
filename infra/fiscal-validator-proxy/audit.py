@@ -19,6 +19,7 @@ from mcp_fiscal_brasil.nfe.assinatura import validar_assinatura_nfe
 from mcp_fiscal_brasil.nfe.tools import validar_chave_nfe
 from mcp_fiscal_brasil.nfe.xml_parser import parse_nfe_xml
 from mcp_fiscal_brasil.tabelas.tools import consultar_aliquota_icms
+from nfe_xml_context import safe_fromstring
 
 NFE_NS = "http://www.portalfiscal.inf.br/nfe"
 NS = {"nfe": NFE_NS}
@@ -79,7 +80,7 @@ def _find_first(root: ET.Element, path: str) -> ET.Element | None:
 
 def _parse_xml_fields(xml_content: str) -> dict[str, Any]:
     """Campos do XML não expostos pelo parse_nfe_xml do MCP."""
-    root = ET.fromstring(xml_content.encode("utf-8"))
+    root = safe_fromstring(xml_content.encode("utf-8"))
     inf = root.find(".//nfe:infNFe", NS)
     if inf is None:
         return {}
@@ -122,7 +123,7 @@ def _parse_xml_fields(xml_content: str) -> dict[str, Any]:
 
 def _item_icms_bases(xml_content: str) -> list[dict[str, float | str]]:
     """Extrai CFOP, CST, vBC e vICMS de cada <det> via ElementTree."""
-    root = ET.fromstring(xml_content.encode("utf-8"))
+    root = safe_fromstring(xml_content.encode("utf-8"))
     items: list[dict[str, float | str]] = []
     for det in root.findall(".//nfe:det", NS):
         cfop = _text(det.find(".//nfe:CFOP", NS))
@@ -268,8 +269,8 @@ async def collect_fulfillment_business_achados(
     resolved_chave = chave or extract_chave_acesso(xml_content) or ""
 
     try:
+        extra = _parse_xml_fields(xml_content)  # recusa DTD antes do parser de terceiros
         parsed = parse_nfe_xml(xml_content, resolved_chave)
-        extra = _parse_xml_fields(xml_content)
 
         if not extra.get("c_mun_dest"):
             _append(

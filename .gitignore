@@ -135,3 +135,6 @@ Desktop.ini
 
 # Git worktrees (isolamento local de features)
 .worktrees/
+
+# Python
+__pycache__/

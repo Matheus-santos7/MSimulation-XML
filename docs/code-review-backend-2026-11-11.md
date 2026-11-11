@@ -404,6 +404,18 @@ Escopo lido: `backend.Dockerfile`, `frontend.Dockerfile`, `docker-compose.prod.y
 - **INF-6 · Baixa · Imagens sem usuário não-root e versões desalinhadas.** O backend usa `node:20-alpine` e o frontend `node:24-alpine`; nenhum define `USER`. O proxy Python (`python:3.12-slim-bookworm`) também roda como root e fixa só `mcp-fiscal-brasil==0.5.1`; as dependências transitivas não têm lockfile nem hash. O proxy não é construído por nenhum workflow deste repositório (deploy fora do CI, no Render).
 - **INF-7 · Baixa · Testes Python fora do CI.** Há `test_*.py` no proxy, mas `ci.yml` não roda `pytest` (busquei `pytest` e `python` no arquivo). A correção do `58bbf98` e as regras de auditoria ficam sem rede de segurança automática.
 
+### 6.17 Cobertura de filtro por tenant (varredura)
+
+> **Verificação 2026-11-11:** varredura feita. Evidência: `docs/superpowers/audit-repro/tenant-filter-sweep.py` e a saída em `tenant-filter-sweep.md`; a lista de tabelas com RLS vem do banco do harness com todas as migrations aplicadas (`pg_class.relrowsecurity`, 15 tabelas). O Graphify lista 48 chamadores de `getDbClient`.
+
+Das 225 chamadas Prisma de leitura e escrita em `backend/src` (fora de testes), 105 não citam `tenantId` no `where`. Destas, 48 batem em tabela com RLS, onde a política filtra. As outras 57 batem em tabela sem RLS e se dividem assim:
+
+| Grupo | Chamadas | Avaliação |
+|---|---|---|
+| Autenticação (`users`, `user_sessions`, tokens de reset e de verificação) | 36 | Fora da RLS por desenho (`ARCHITECTURE.md`, seção 8). A chave vem do JWT ou do hash de um token aleatório; sem achado novo. As escritas por `id` em `member.repository.ts` e `tenant.repository.ts` são o ORG-2. |
+| `unidades_logisticas` (tabela global) | 14 | Leitura por `id`, código ou CNPJ é aceitável para dado compartilhado; a escrita em `logistics-unit.repository.ts:272` é o LOG-1. |
+| `pedido_itens` e `nfe_remessa_consumos` (S-1) | 7 | Todas usam uma chave que veio de uma linha já filtrada pela RLS: `pedidoId` de pedido do tenant, `retornoNfeId` de NF-e do tenant, ou o filtro de relação `pedido: { status }`, que passa pela RLS de `pedidos`. **Nenhum caminho atual expõe linha de outro tenant**; o S-1 é falta de defesa em profundidade, não vazamento ativo. |
+
 ---
 
 ## 7. Ordem sugerida de correção

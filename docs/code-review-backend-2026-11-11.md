@@ -43,6 +43,8 @@ O que já está bem feito (para não ser refeito): comparação em tempo constan
 
 ### S-2 · Alta (verificar) · A RLS só vale se o papel do banco não a ignora
 
+> **Verificação 2026-11-11:** Inconclusivo (falta o fato de produção). Evidência: `docs/superpowers/audit-repro/s2-rls-role.ts`. No Postgres local, o papel `audit_app` (NOBYPASSRLS) vê 1 produto no tenant A e 0 de outro tenant; o superusuário vê os 2, confirmando que a RLS some com papel privilegiado. Para fechar, rodar em produção (somente leitura): `select rolname, rolsuper, rolbypassrls from pg_roles where rolname = current_user;` e `select relname, relrowsecurity, relforcerowsecurity from pg_class where relname in ('products','pedido_itens','nfe_remessa_consumos');`.
+
 As migrations usam `ENABLE` + `FORCE ROW LEVEL SECURITY`, mas nenhuma cria um papel de aplicação restrito (`CREATE ROLE`/`GRANT` não aparecem). A aplicação conecta com o `DATABASE_URL` único, que no Neon costuma ser o papel dono, e o mesmo usado por `prisma migrate`. `FORCE` cobre o dono, mas **não cobre papéis com `BYPASSRLS` nem superusuário**.
 
 - **Risco:** se esse papel tiver `BYPASSRLS`, toda a defesa em profundidade é decorativa e o isolamento de tenant depende só dos `where tenantId` dos repositories.

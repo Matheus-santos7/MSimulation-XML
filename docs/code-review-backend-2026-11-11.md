@@ -292,7 +292,9 @@ Módulo com melhor cobertura (16 specs) e o único com SQL cru, bem parametrizad
 ### 6.5 `sales` (pedidos e faturamento)
 
 - **SAL-1 · Alta · Faturar não é idempotente nem serializado.** `OrderInvoiceUseCase.execute` lê o status (`FATURADO`?), emite a cadeia (retorno simbólico + venda + CT-e) e só depois chama `markInvoiced`. Sem `SELECT ... FOR UPDATE` no pedido, sem chave de idempotência e com isolamento `READ COMMITTED`, dois cliques ou um retry do cliente emitem **duas cadeias fiscais** para o mesmo pedido. O advisory lock só serializa a numeração, não evita a duplicação.
+  > **Verificação 2026-11-11:** Confirmado (5/5 rodadas). Evidência: `docs/superpowers/audit-repro/sal1-double-invoice.ts`. `OrderInvoiceUseCase`, `OrderService` e `OrderRepository` reais, com o `SalesChainEmitter` trocado por um falso que grava a NF-e de venda na mesma transação e leva 150 ms. Cinco chamadas simultâneas para o mesmo pedido: as cinco aceitas e cinco NF-e de venda gravadas, em todas as rodadas. O emissor real leva mais tempo, então a janela em produção é maior.
 - **SAL-2 · Média · `markInvoiced` atualiza por `id` sem condição de status.** Mesmo erro de corrida: um `UPDATE ... WHERE id = ? AND status = 'RASCUNHO'` com `count` checado fecharia a janela.
+  > **Verificação 2026-11-11:** Confirmado junto com o SAL-1 (mesmo script): as cinco chamadas de `markInvoiced` passaram, porque o `update` por `id` não exige `status = 'RASCUNHO'`.
 - **SAL-3 · Baixa · `updateDraft`:** `deleteMany` dos itens + `create` e `update` por `id` (tenant checado antes, no service); `pedido_itens` sem RLS (S-1).
 - Referências: S-10 (qualquer `MEMBER` cria, edita e exclui pedidos), P-4 (`listByTenant` sem limite, com itens e NF-e).
 

@@ -412,9 +412,9 @@ Das 225 chamadas Prisma de leitura e escrita em `backend/src` (fora de testes), 
 
 | Grupo | Chamadas | Avaliação |
 |---|---|---|
-| Autenticação (`users`, `user_sessions`, tokens de reset e de verificação) | 36 | Fora da RLS por desenho (`ARCHITECTURE.md`, seção 8). A chave vem do JWT ou do hash de um token aleatório; sem achado novo. As escritas por `id` em `member.repository.ts` e `tenant.repository.ts` são o ORG-2. |
+| Autenticação (`users`, `user_sessions`, tokens de reset e de verificação) e `tenants` | 37 (33 + 4) | Fora da RLS por desenho (`ARCHITECTURE.md`, seção 8). A chave vem do JWT ou do hash de um token aleatório; sem achado novo. As escritas por `id` em `member.repository.ts` e `tenant.repository.ts` são o ORG-2. |
 | `unidades_logisticas` (tabela global) | 14 | Leitura por `id`, código ou CNPJ é aceitável para dado compartilhado; a escrita em `logistics-unit.repository.ts:272` é o LOG-1. |
-| `pedido_itens` e `nfe_remessa_consumos` (S-1) | 7 | Todas usam uma chave que veio de uma linha já filtrada pela RLS: `pedidoId` de pedido do tenant, `retornoNfeId` de NF-e do tenant, ou o filtro de relação `pedido: { status }`, que passa pela RLS de `pedidos`. **Nenhum caminho atual expõe linha de outro tenant**; o S-1 é falta de defesa em profundidade, não vazamento ativo. |
+| `pedido_itens` e `nfe_remessa_consumos` (S-1) | 6 | Todas usam uma chave que veio de uma linha já filtrada pela RLS: `pedidoId` de pedido do tenant, `retornoNfeId` de NF-e do tenant, ou o filtro de relação `pedido: { status }`, que passa pela RLS de `pedidos`. **Nenhum caminho atual expõe linha de outro tenant**; o S-1 é falta de defesa em profundidade, não vazamento ativo. |
 
 ---
 

@@ -220,7 +220,13 @@ A seção 10 do `ARCHITECTURE.md` prevê teste contra Postgres descartável com 
 
 ### B-10 · Baixa · CI sem varredura de segredos, SAST ou imagem
 
+> **Verificação 2026-11-11:** Varredura de dependências feita. `pnpm audit --prod` na raiz: **118 vulnerabilidades (6 críticas, 64 altas, 44 moderadas, 4 baixas)**. Críticas: `next` 16.2.11 (11 avisos, entre eles execução remota de código sem autenticação; corrigido em 16.4.1, ver B-11) e `fast-jwt` 6.2.4, via `@fastify/jwt` 10.1.0 (confusão de algoritmo RSA→HS256; o backend usa HS256 com segredo, ver S-13, então o impacto aqui é baixo, mas a versão corrigida é 6.3.4). Altas com uso direto no runtime: `fastify` 5.11.3 (corrigido em 5.12.5), `@fastify/busboy` (multipart), `fast-uri`, `zod` (corrigido em 4.6.6) e `@xmldom/xmldom` (23 avisos; ver PKG-6), além de `sharp` e `postcss` no frontend. `pip-audit` no ambiente do proxy (`mcp-fiscal-brasil==0.5.1` e dependências): nenhuma vulnerabilidade conhecida. O `xlsx` do tarball externo (S-9) não aparece no `pnpm audit`, como previsto.
+
 Só `pnpm audit`. Faltam: secret scanning (gitleaks), análise estática de segurança (CodeQL/semgrep) e scan da imagem (Trivy). O `xlsx` fora do registry (S-9) escapa do `audit`.
+
+### B-11 · Alta · Next.js com execução remota de código conhecida
+
+O frontend roda `next` 16.2.11 (`frontend/package.json`). O `pnpm audit` lista para essa versão avisos críticos de execução remota de código sem autenticação (faixas `>=16.0.0 <16.3.3` e `>=16.0.0 <=16.4.0`, corrigidos em 16.4.1) e um de RCE em `next/og`. O frontend fica exposto à internet (`app.` no proxy compartilhado e Vercel). Atualizar para `>=16.4.1` e rodar `pnpm lint` e o build do frontend. Sem leitura dos avisos não é possível dizer quais exigem uma feature que o app não usa; a atualização é barata o bastante para não esperar por isso.
 
 ---
 
@@ -456,5 +462,4 @@ Das 225 chamadas Prisma de leitura e escrita em `backend/src` (fora de testes), 
 - Biblioteca `mcp-fiscal-brasil` 0.5.1: não li o código; o INF-3 depende de como ela interpreta o XML.
 - Achados de concorrência (SAL-1, FDOC-1, FDOC-7, REM-1, CAT-1, FVAL-1) vêm de leitura: cada um precisa de um teste de integração contra Postgres que o reproduza antes da correção.
 - Regras de rede e firewall do servidor de produção (INF-1), configuração do Render e do proxy compartilhado: fora do repositório.
-- `pnpm audit`, `pip-audit` e verificação de versões das dependências.
 - Comportamento sob carga (nenhum teste de carga foi rodado) e a execução de qualquer teste ou build.

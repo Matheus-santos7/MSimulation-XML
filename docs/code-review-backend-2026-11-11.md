@@ -35,6 +35,8 @@ O que já está bem feito (para não ser refeito): comparação em tempo constan
 
 ### S-1 · Alta · Tabelas filhas sem `tenant_id` e sem RLS
 
+> **Verificação 2026-11-11:** Confirmado. Evidência: `docs/superpowers/audit-repro/s1-child-tables.ts`. Com o papel `audit_app` (NOBYPASSRLS) e `app.tenant_id` do tenant A, `pedidoItem.findMany()` e `nfeRemessaConsumo.findMany()` sem filtro devolvem as linhas do tenant B; na mesma transação, `pedidos` (com RLS) devolve 0 linhas de B.
+
 `PedidoItem` (`pedido_itens`) e `NfeRemessaConsumo` (`nfe_remessa_consumos`) não têm `tenantId` no `schema.prisma` e não aparecem em nenhuma migration de RLS. Das 23 tabelas, as de autenticação (`users`, `user_sessions`, tokens) ficam fora por decisão documentada; estas duas não.
 
 - **Cenário:** um repository que consulte `pedidoItem` ou `nfeRemessaConsumo` por `id` ou `pedidoId` sem passar pelo pai (ex.: `nfe.repository.ts` faz `nfeRemessaConsumo.findMany({ where: { retornoNfeId } })` sem tenant) depende só de o id vir de um registro já filtrado. Um bug de uso, ou um id de outro tenant vindo do cliente, lê ou altera dado alheio e a RLS não barra.

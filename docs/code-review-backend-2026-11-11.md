@@ -62,6 +62,8 @@ As migrations usam `ENABLE` + `FORCE ROW LEVEL SECURITY`, mas nenhuma cria um pa
 
 ### S-4 · Alta · Força bruta de TOTP não é contida pelo lockout
 
+> **Verificação 2026-11-11:** Confirmado (força bruta e replay). Evidência: `docs/superpowers/audit-repro/s4-2fa-bruteforce.ts` (`VerifyTwoFactorLoginUseCase`, `UserRepository`, `LoginLockoutProvider` e `verifyTotpCode` reais; só o JWT `2fa_pending` é falso). Alternando 4 códigos errados com um novo login (que chama `clearLoginLockout` em `login.usecase.ts:56`, antes do ramo de 2FA na linha 58), foram testados **100 códigos errados sem bloqueio** com limite 5. O mesmo código TOTP válido foi aceito duas vezes seguidas (não há registro do último código usado). O que ainda freia o ataque são o rate limit por IP e o Turnstile do login, ambos fracos pelo S-3 e pelo P-6.
+
 Em `login.usecase.ts`, depois da senha correta chama-se `clearLoginLockout` **antes** de devolver o desafio de 2FA. Em `verify-two-factor-login.usecase.ts` cada código errado incrementa o contador, mas o próximo login com a senha correta o zera.
 
 - **Cenário (senha vazada):** o atacante alterna login (zera) → 4 chutes de TOTP → login (zera) → ... O lockout nunca dispara. A única barreira restante é o rate limit por IP (5 a 10 por 15 min), que o S-3 permite burlar. O código tem 6 dígitos.

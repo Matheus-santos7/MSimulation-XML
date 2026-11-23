@@ -41,7 +41,6 @@ import type {
 } from "./builder.types.js";
 import {
   buildAutXmlNodes,
-  buildInfAdicNode,
   buildInfIntermedNode,
   buildProtNFeNode,
 } from "./nodes/auxiliary.node.js";

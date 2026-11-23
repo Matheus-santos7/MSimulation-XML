@@ -23,7 +23,8 @@ export class OrderInvoiceUseCase {
   async execute(tenantId: string, id: string) {
     const existing = await this.orders.get(tenantId, id);
     if (!existing) return null;
-    if (existing.status === "FATURADO") throw new OrderLockedError();
+    // A trava fecha a janela entre ler o status e marcar FATURADO (SAL-1/SAL-2).
+    if (!(await this.orders.lockDraftForInvoice(tenantId, id))) throw new OrderLockedError();
 
     const order = await this.orders.findForEmit(tenantId, id);
     if (!order) return null;

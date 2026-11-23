@@ -31,6 +31,10 @@ export class OrderService {
     return this.repository.findForEmit(tenantId, id);
   }
 
+  lockDraftForInvoice(tenantId: string, id: string): Promise<boolean> {
+    return this.repository.lockDraftForInvoice(tenantId, id);
+  }
+
   markInvoiced(id: string, marketplaceOrderId: string, nfeId: string): Promise<Order> {
     return this.repository.markInvoiced(id, marketplaceOrderId, nfeId);
   }

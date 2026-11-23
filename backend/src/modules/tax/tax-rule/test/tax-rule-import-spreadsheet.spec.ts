@@ -2,7 +2,7 @@
  * Integração do import de planilha de regras tributárias:
  * upload multipart -> parse -> map -> upsert (Postgres real com RLS) -> resposta.
  *
- * Precisa de um Postgres descartável e VAZIO em `TAX_IMPORT_TEST_DATABASE_URL`
+ * Precisa de um Postgres descartável e VAZIO em `INTEGRATION_TEST_DATABASE_URL`
  * (ex.: postgresql://msimulation:msimulation@localhost:5433/msimulation_tax_import_test).
  * As migrations (RLS incluída) são aplicadas no `beforeAll`. Sem a variável, a suíte é pulada.
  * Só aceita host local: nunca aponte para o banco de produção.
@@ -18,7 +18,7 @@ import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 
 process.env.JWT_SECRET ??= "import-test-secret-0123456789";
 
-const databaseUrl = process.env.TAX_IMPORT_TEST_DATABASE_URL;
+const databaseUrl = process.env.INTEGRATION_TEST_DATABASE_URL;
 const LOCAL_HOSTS = ["localhost", "127.0.0.1", "::1"];
 
 const TENANT_ID = "test-tenant-01";
@@ -72,11 +72,16 @@ describe.skipIf(!databaseUrl)("POST /api/tax-rules/import-spreadsheet (Postgres 
   let prisma: import("../../../../generated/prisma/client.js").PrismaClient;
   let runWithDbContext: typeof import("../../../../lib/db/tenant-rls.js").runWithDbContext;
   let token: string;
+  let requestCount = 0;
 
   function importFile(file: Buffer, fileName = "regras.xlsx") {
+    requestCount += 1;
+
     return app.inject({
       method: "POST",
       url: ENDPOINT,
+      // Um IP por requisição: a suíte faz mais imports que o limite da rota (10/min por IP).
+      remoteAddress: `10.0.0.${requestCount}`,
       headers: {
         authorization: `Bearer ${token}`,
         "content-type": `multipart/form-data; boundary=${BOUNDARY}`,
@@ -154,7 +159,9 @@ describe.skipIf(!databaseUrl)("POST /api/tax-rules/import-spreadsheet (Postgres 
 
   beforeEach(async () => {
     for (const tenantId of [TENANT_ID, OTHER_TENANT_ID]) {
-      await runWithDbContext(prisma, { tenantId }, (tx) => tx.taxRule.deleteMany({ where: { tenantId } }));
+      await runWithDbContext(prisma, { tenantId }, (tx) =>
+        tx.taxRule.deleteMany({ where: { tenantId } }),
+      );
     }
   });
 

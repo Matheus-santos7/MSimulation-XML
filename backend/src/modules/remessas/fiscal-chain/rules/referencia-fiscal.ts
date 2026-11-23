@@ -6,10 +6,3 @@ export type ReferenciaFiscal = {
   notaPaiChave: string;
   notaPaiTipo: TipoNota;
 };
-
-export function criarReferenciaFiscal(input: ReferenciaFiscal): ReferenciaFiscal {
-  if (!input.notaPaiId.trim()) {
-    throw new Error("Referência fiscal exige nota pai");
-  }
-  return input;
-}

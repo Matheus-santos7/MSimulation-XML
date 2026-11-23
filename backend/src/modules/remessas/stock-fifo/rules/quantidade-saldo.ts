@@ -6,7 +6,3 @@ export function quantidadeSaldo(value: number): QuantidadeSaldo {
   }
   return value as QuantidadeSaldo;
 }
-
-export function somarSaldo(a: QuantidadeSaldo, b: QuantidadeSaldo): QuantidadeSaldo {
-  return quantidadeSaldo(a + b);
-}

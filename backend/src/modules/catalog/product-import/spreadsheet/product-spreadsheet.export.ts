@@ -24,11 +24,6 @@ const EXAMPLE_ROW: Record<(typeof PRODUCT_SPREADSHEET_COLUMNS)[number], string> 
   tax_rule_base_id: "Chuveiro",
 };
 
-function escapeCsv(value: string): string {
-  if (/[;"\n\r]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
-  return value;
-}
-
 function formatPrecoBr(n: number): string {
   return n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 8 });
 }
@@ -48,18 +43,6 @@ function productToRow(p: Product): string[] {
     String(p.estoque ?? 0),
     p.taxRuleBaseId ?? "",
   ];
-}
-
-export function buildProductSpreadsheetCsv(products: Product[], includeExample = false): string {
-  const header = PRODUCT_SPREADSHEET_COLUMNS.join(";");
-  const lines = [header];
-  if (includeExample) {
-    lines.push(PRODUCT_SPREADSHEET_COLUMNS.map((c) => escapeCsv(EXAMPLE_ROW[c])).join(";"));
-  }
-  for (const p of products) {
-    lines.push(productToRow(p).map(escapeCsv).join(";"));
-  }
-  return `\uFEFF${lines.join("\r\n")}`;
 }
 
 function attachHeaderComment(

@@ -3,19 +3,10 @@ import type {
   TenantDto,
   TenantInput,
 } from "../fiscal-types";
-import {
-  buildApiUrl,
-  getJson,
-  getJsonOrNull,
-  mutateJson,
-} from "./client";
+import { buildApiUrl, getJson, mutateJson } from "./client";
 
 export async function listTenants(): Promise<TenantDto[]> {
   return getJson<TenantDto[]>(buildApiUrl("/api/tenants"));
-}
-
-export async function getTenant(id: string): Promise<TenantDto | null> {
-  return getJsonOrNull<TenantDto>(buildApiUrl(`/api/tenants/${id}`));
 }
 
 export async function createTenant(input: TenantInput): Promise<TenantDto> {

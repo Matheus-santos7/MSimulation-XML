@@ -10,17 +10,12 @@ export {
   type PedidoFormExample,
   type PedidoFormExampleKind,
 } from "./pedido-form-examples";
-import { PEDIDO_FORM_EXAMPLES } from "./pedido-form-examples";
 
 export type PedidoFormState = {
   error?: string;
   success?: boolean;
   fieldErrors?: Record<string, string[]>;
 };
-
-/** @deprecated Preferir `PEDIDO_FORM_EXAMPLES` ou `findPedidoFormExample`. */
-export const PEDIDO_FORM_EXAMPLE: PedidoFormValues =
-  PEDIDO_FORM_EXAMPLES.find((e) => e.id === "cpf-pr")?.values ?? PEDIDO_FORM_EXAMPLES[0]!.values;
 
 function brValueToInput(value: number | null | undefined): string {
   const n = Number(value ?? 0);

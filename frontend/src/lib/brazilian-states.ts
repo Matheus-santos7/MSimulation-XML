@@ -30,5 +30,3 @@ export const BRAZILIAN_UFS = [
   "SE",
   "TO",
 ] as const;
-
-export type BrazilianUf = (typeof BRAZILIAN_UFS)[number];

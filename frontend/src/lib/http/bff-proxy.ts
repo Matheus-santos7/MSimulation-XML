@@ -1,24 +1,8 @@
 import { apiUrl } from "@/lib/api-base";
 import { resolveAccessToken } from "@/lib/auth/session";
 import { toUserFacingError } from "@/lib/user-facing-error";
+import { readApiErrorMessage } from "@/lib/http/api-error";
 import { assertAllowedBffPath } from "@/lib/http/bff-path";
-
-async function readApiError(res: Response): Promise<string> {
-  const text = await res.text().catch(() => res.statusText);
-  if (!text) {
-    return toUserFacingError(undefined, { status: res.status });
-  }
-  try {
-    const parsed = JSON.parse(text) as { error?: string; message?: string };
-    const message =
-      (typeof parsed.error === "string" && parsed.error) ||
-      (typeof parsed.message === "string" && parsed.message) ||
-      text;
-    return toUserFacingError(message, { status: res.status });
-  } catch {
-    return toUserFacingError(text, { status: res.status });
-  }
-}
 
 /** Proxy autenticado para o backend Fastify (server-only). */
 export async function proxyAuthenticatedGet(
@@ -43,7 +27,7 @@ export async function proxyAuthenticatedGet(
   });
 
   if (!upstream.ok) {
-    const error = await readApiError(upstream);
+    const error = await readApiErrorMessage(upstream);
     return Response.json({ error }, { status: upstream.status });
   }
 

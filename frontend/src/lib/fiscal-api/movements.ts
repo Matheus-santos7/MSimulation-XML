@@ -2,12 +2,8 @@ import type {
   NFeDto,
   CTeDto,
 } from "../fiscal-types";
-import {
-  buildApiUrl,
-  getJson,
-  mutateJson,
-} from "./client";
-import type { MovimentacaoProdutoDto, RemessaManualItemInput } from "./logistics";
+import { buildApiUrl, mutateJson } from "./client";
+import type { RemessaManualItemInput } from "./logistics";
 
 export type TransferenciaFilialResult = {
   transferencia: NFeDto;
@@ -38,16 +34,4 @@ export async function realignRemessaFifo(productSku: string): Promise<{
     "POST",
     { productSku },
   ) as Promise<{ atualizados: number; productId: string | null }>;
-}
-
-export async function listProductMovements(opts?: {
-  productId?: string;
-  limit?: number;
-}): Promise<MovimentacaoProdutoDto[]> {
-  return getJson<MovimentacaoProdutoDto[]>(
-    buildApiUrl("/api/movimentacoes-produto", {
-      productId: opts?.productId,
-      limit: opts?.limit != null ? String(opts.limit) : undefined,
-    }),
-  );
 }

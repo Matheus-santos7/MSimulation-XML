@@ -1,11 +1,4 @@
-import type {
-  CTeDto,
-  EmitenteDto,
-  FiscalEventDto,
-  AuditEntryDto,
-  TimelineRemessaGroupDto,
-  TimelineStepDto,
-} from "../fiscal-types";
+import type { CTeDto, FiscalEventDto, AuditEntryDto, TimelineRemessaGroupDto } from "../fiscal-types";
 import {
   authHeaders,
   buildApiUrl,
@@ -13,10 +6,6 @@ import {
   mutateJson,
   readApiError,
 } from "./client";
-
-export async function getEmitente(): Promise<EmitenteDto> {
-  return getJson<EmitenteDto>(buildApiUrl("/api/emitente"));
-}
 
 export async function listCtes(): Promise<CTeDto[]> {
   return getJson<CTeDto[]>(buildApiUrl("/api/ctes"));
@@ -47,23 +36,6 @@ export async function getCteXml(
   return { xml, filename };
 }
 
-/** XML de inutilização de numeração (procInutNFe). */
-export async function getFiscalEventXml(
-  id: string,
-  options?: { download?: boolean },
-): Promise<{ xml: string; filename: string }> {
-  const href = buildApiUrl(`/api/fiscal-events/${id}/xml`, options?.download ? { download: "1" } : undefined);
-  const res = await fetch(href, { cache: "no-store", headers: await authHeaders() });
-  if (!res.ok) {
-    throw new Error(await readApiError(res));
-  }
-  const xml = await res.text();
-  const disp = res.headers.get("Content-Disposition");
-  const match = disp?.match(/filename="([^"]+)"/);
-  const filename = match?.[1] ?? `Inut_${id}.xml`;
-  return { xml, filename };
-}
-
 export async function deleteCte(chave: string): Promise<void> {
   await mutateJson(buildApiUrl(`/api/ctes/${chave}`), "DELETE");
 }
@@ -78,8 +50,4 @@ export async function listAuditLogs(): Promise<AuditEntryDto[]> {
 
 export async function listTimeline(): Promise<TimelineRemessaGroupDto[]> {
   return getJson<TimelineRemessaGroupDto[]>(buildApiUrl("/api/timeline"));
-}
-
-export async function listTimelineSteps(): Promise<TimelineStepDto[]> {
-  return getJson<TimelineStepDto[]>(buildApiUrl("/api/timeline/steps"));
 }

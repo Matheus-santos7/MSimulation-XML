@@ -27,36 +27,6 @@ export function InutilizadaStatusBadge() {
   );
 }
 
-export function KPI({
-  label,
-  value,
-  hint,
-  hintTone = "muted",
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  hintTone?: "success" | "accent" | "muted" | "destructive";
-}) {
-  const tones = {
-    success: "text-success",
-    accent: "text-accent",
-    muted: "text-muted-foreground",
-    destructive: "text-destructive",
-  } as const;
-  return (
-    <div className="p-4 border border-border rounded-lg bg-card animate-slide-in">
-      <div className="text-muted-foreground text-[13px] font-medium uppercase tracking-wider">
-        {label}
-      </div>
-      <div className="text-3xl font-bold mt-1 tracking-tight">{value}</div>
-      {hint && (
-        <div className={`text-[12px] font-bold mt-2 ${tones[hintTone]}`}>{hint}</div>
-      )}
-    </div>
-  );
-}
-
 export function SectionHeader({
   title,
   right,

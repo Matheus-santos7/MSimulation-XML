@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/fiscal-ui";
-import { resolveActiveTenantId } from "@/lib/active-tenant";
 import { listAuditLogs } from "@/lib/fiscal-api";
 
 export const metadata: Metadata = { title: "Auditoria" };
 
 export default async function AuditoriaPage() {
-  const tenantId = await resolveActiveTenantId();
   const audit = await listAuditLogs();
 
   return (

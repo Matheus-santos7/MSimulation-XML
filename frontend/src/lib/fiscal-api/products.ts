@@ -1,34 +1,8 @@
-import type {
-  NFeDto,
-  ProductDto,
-  ProductInput,
-  PedidoCheckoutInput,
-  PedidoDto,
-  PedidoFaturarResult,
-} from "../fiscal-types";
-import {
-  authHeaders,
-  buildApiUrl,
-  getJson,
-  mutateJson,
-  readApiError,
-  readApiErrorPayload,
-} from "./client";
+import type { ProductDto, ProductInput, PedidoCheckoutInput, PedidoDto, PedidoFaturarResult } from "../fiscal-types";
+import { authHeaders, buildApiUrl, getJson, mutateJson, readApiErrorPayload } from "./client";
 
 export async function listProducts(): Promise<ProductDto[]> {
   return getJson<ProductDto[]>(buildApiUrl("/api/products"));
-}
-
-export async function getProduct(id: string): Promise<ProductDto | null> {
-  const href = buildApiUrl(`/api/products/${id}`);
-  const res = await fetch(href, { cache: "no-store", headers: await authHeaders() });
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(await readApiError(res));
-  return res.json() as Promise<ProductDto>;
-}
-
-export async function checkoutOrder(input: PedidoCheckoutInput): Promise<NFeDto> {
-  return mutateJson<NFeDto>(buildApiUrl("/api/pedidos/checkout"), "POST", input) as Promise<NFeDto>;
 }
 
 export async function listOrders(): Promise<PedidoDto[]> {
@@ -49,10 +23,6 @@ export async function invoiceOrder(id: string): Promise<PedidoFaturarResult> {
 
 export async function deleteOrder(id: string): Promise<void> {
   await mutateJson(buildApiUrl(`/api/pedidos/${id}`), "DELETE");
-}
-
-export async function getOrderIntegrationPayload(id: string): Promise<Record<string, unknown>> {
-  return getJson<Record<string, unknown>>(buildApiUrl(`/api/pedidos/${id}/integracao`));
 }
 
 export async function createProduct(input: ProductInput): Promise<ProductDto> {
@@ -92,12 +62,6 @@ export type ProductBulkUpsertResult = {
   parseErrors?: { line: number; message: string }[];
   total: number;
 };
-
-export async function bulkUpsertProducts(rows: ProductImportRawRow[]): Promise<ProductBulkUpsertResult> {
-  return mutateJson<ProductBulkUpsertResult>(buildApiUrl("/api/products/bulk-upsert"), "POST", {
-    rows,
-  }) as Promise<ProductBulkUpsertResult>;
-}
 
 /** Envia planilha CSV/XLSX para parse e importação no backend. */
 export async function importProductsSpreadsheet(file: File): Promise<ProductBulkUpsertResult> {

@@ -19,6 +19,7 @@ const existingUser: AuthUserWithTenant = {
   role: "MEMBER",
   emailVerifiedAt: new Date(),
   totpSecretEnc: null,
+  totpLastTimeStep: null,
   totpEnabledAt: null,
   failedLoginAttempts: 0,
   lockedUntil: null,

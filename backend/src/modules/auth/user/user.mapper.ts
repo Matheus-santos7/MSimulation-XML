@@ -14,6 +14,7 @@ export function mapAuthUser(row: User): AuthUser {
     emailVerifiedAt: row.emailVerifiedAt,
     totpEnabledAt: row.totpEnabledAt,
     totpSecretEnc: row.totpSecretEnc,
+    totpLastTimeStep: row.totpLastTimeStep,
     failedLoginAttempts: row.failedLoginAttempts,
     lockedUntil: row.lockedUntil,
   };

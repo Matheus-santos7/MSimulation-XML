@@ -98,6 +98,22 @@ export class UserRepository {
   }
 
   /**
+   * Registra o passo TOTP aceito e zera o lockout (S-4). Condicional ao passo gravado: de duas
+   * verificações simultâneas com o mesmo código, só uma grava; a outra recebe `false`.
+   */
+  async consumeTotpTimeStep(userId: string, timeStep: number): Promise<boolean> {
+    const { count } = await this.db.user.updateMany({
+      where: {
+        id: userId,
+        OR: [{ totpLastTimeStep: null }, { totpLastTimeStep: { lt: timeStep } }],
+      },
+      data: { totpLastTimeStep: timeStep, ...clearedLockoutState() },
+    });
+
+    return count === 1;
+  }
+
+  /**
    * Invalida todos os access tokens em circulação (logout global, reset de senha).
    * Access JWTs antigos falham na verificação de `tokenVersion`.
    */

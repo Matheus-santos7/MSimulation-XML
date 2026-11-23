@@ -1,7 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import { TOTP_ISSUER } from "../../../lib/auth/config.js";
 import { decryptTotpSecret, encryptTotpSecret } from "../../../lib/auth/totp-crypto.js";
-import { buildTotpUri, generateTotpSecret, verifyTotpCode } from "../../../lib/auth/totp.js";
+import {
+  buildTotpUri,
+  generateTotpSecret,
+  verifyTotpCode,
+  verifyTotpCodeTimeStep,
+} from "../../../lib/auth/totp.js";
 
 /** TOTP do 2FA: segredo cifrado no banco, verificação do código e URL otpauth do QR code. */
 @Injectable()
@@ -22,6 +27,15 @@ export class TotpProvider {
 
   verifyCode(secret: string, code: string): Promise<boolean> {
     return verifyTotpCode(secret, code);
+  }
+
+  /** Passo do código aceito no login, ou `null` (inválido ou já usado depois de `afterTimeStep`). */
+  verifyLoginCode(
+    secret: string,
+    code: string,
+    afterTimeStep: number | null,
+  ): Promise<number | null> {
+    return verifyTotpCodeTimeStep(secret, code, afterTimeStep);
   }
 
   buildOtpAuthUrl(email: string, secret: string): string {

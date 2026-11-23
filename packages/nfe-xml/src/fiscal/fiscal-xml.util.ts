@@ -1,3 +1,4 @@
+import { roundMoney } from "@msimulation-xml/fiscal-core";
 /**
  * Blocos XML NF-e v4.00 reutilizáveis entre remessa, venda e demais tipos.
  * Centraliza formatação alinhada aos XMLs reais do Mercado Livre.
@@ -63,10 +64,8 @@ export function impostoIpiIntXml(cst = "55", cEnq = "103"): string {
           </IPI>`;
 }
 
-/** Arredondamento comercial em 2 casas — alinhado ao tax-engine do backend. */
-export function roundMoney(value: number): number {
-  return Number((value + Number.EPSILON).toFixed(2));
-}
+/** Arredondamento comercial em 2 casas (`fiscal-core`, meio-para-cima decimal). */
+export { roundMoney };
 
 /** Entradas para cálculo da BC do IBS/CBS por item (NT 2025.002, regra UB16-10). */
 export type IbsCbsVBcInput = {

@@ -1,13 +1,10 @@
+import { roundMoney } from "@msimulation-xml/fiscal-core";
 import { CheckoutError } from "../../errors/sales.errors.js";
 
 export type OrderFreightInput = {
   freteConsumidor?: number;
   freteSeller?: number;
 };
-
-function roundMoney(value: number): number {
-  return Math.round(value * 100) / 100;
-}
 
 /**
  * Normaliza frete consumidor e seller do pedido (≥ 0, 2 casas).

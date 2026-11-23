@@ -158,7 +158,9 @@ describe("mirrorOriginForDevolucao — devolução parcial por item", () => {
     const origin = sale.itens[1]!;
     const d = partial.itens[0]!;
     assert.equal(d.impostoDevol!.pDevol, 50);
-    assert.equal(d.impostoDevol!.vIPIDevol, Number((origin.ipi!.vIPI * 0.5).toFixed(2)));
+    // 33,33 × 50% = 16,665 → 16,67 (meio-para-cima decimal; `toFixed` dava 16,66, TAX-2).
+    assert.equal(origin.ipi!.vIPI, 33.33);
+    assert.equal(d.impostoDevol!.vIPIDevol, 16.67);
     assert.equal(d.ipi, undefined);
     assert.equal(partial.totais.vIPIDevol, d.impostoDevol!.vIPIDevol);
   });

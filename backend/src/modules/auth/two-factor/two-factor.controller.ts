@@ -16,6 +16,7 @@ import { UserId } from "../../../nest/auth/request-params.js";
 import { ApiExceptionFilter } from "../../../nest/http/api-exception.filter.js";
 import { ZodValidationPipe } from "../../../nest/http/zod-validation.pipe.js";
 import { RateLimit } from "../../../nest/http/rate-limit.interceptor.js";
+import { PooledDbContext } from "../../../nest/db/db-context.interceptor.js";
 import { AuthApi, RequestMeta } from "../auth-api.decorators.js";
 import type { AuthMeta } from "../session/session.types.js";
 import {
@@ -66,6 +67,7 @@ export class TwoFactorController {
   ) {}
 
   @Post("login/verify-2fa")
+  @PooledDbContext()
   @RateLimit(strictRouteRateLimit(10, "15 minutes"))
   @HttpCode(HTTP_OK)
   async verifyLogin(

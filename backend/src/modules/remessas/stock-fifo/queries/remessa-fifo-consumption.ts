@@ -89,6 +89,36 @@ async function listRemessaFifoItems(
   }) as unknown as Promise<FifoItemRow[]>;
 }
 
+/**
+ * Debita até `maximo` do saldo de um item sem perder débito concorrente (REM-1): o UPDATE só grava
+ * se o saldo ainda for o lido. Em READ COMMITTED ele espera o lock da linha e reavalia a condição;
+ * se outro débito chegou antes, relê o saldo e tenta de novo. Devolve quanto debitou.
+ */
+async function debitItemSaldo(
+  tx: RemessaFifoTx,
+  itemId: string,
+  saldoLido: number,
+  maximo: number,
+): Promise<number> {
+  let saldo = saldoLido;
+  while (saldo > 0) {
+    const consumir = Math.min(maximo, saldo);
+    const { count } = await tx.nfeItem.updateMany({
+      where: { id: itemId, saldoDisponivel: saldo },
+      data: { saldoDisponivel: saldo - consumir },
+    });
+    if (count === 1) return consumir;
+
+    const atual = await tx.nfeItem.findUnique({
+      where: { id: itemId },
+      select: { saldoDisponivel: true },
+    });
+    saldo = atual?.saldoDisponivel ?? 0;
+  }
+
+  return 0;
+}
+
 async function debitRemessaFifoItems(
   tx: RemessaFifoTx,
   itens: FifoItemRow[],
@@ -104,11 +134,8 @@ async function debitRemessaFifoItems(
     const saldo = item.saldoDisponivel ?? 0;
     if (saldo <= 0) continue;
 
-    const consumir = Math.min(restante, saldo);
-    await tx.nfeItem.update({
-      where: { id: item.id },
-      data: { saldoDisponivel: saldo - consumir },
-    });
+    const consumir = await debitItemSaldo(tx, item.id, saldo, restante);
+    if (consumir <= 0) continue;
     if (retornoNfeId) {
       await tx.nfeRemessaConsumo.create({
         data: {

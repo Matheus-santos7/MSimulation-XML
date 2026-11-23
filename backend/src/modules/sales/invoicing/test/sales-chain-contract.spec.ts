@@ -69,15 +69,20 @@ describe("sales-chain — refNFe contract (FIFO)", () => {
               a.nfe.numero - b.nfe.numero ||
               a.numeroItem - b.numeroItem,
           ),
-        update: async ({
+        updateMany: async ({
           where,
           data,
         }: {
-          where: { id: string };
+          where: { id: string; saldoDisponivel: number };
           data: { saldoDisponivel: number };
         }) => {
-          items.get(where.id)!.saldoDisponivel = data.saldoDisponivel;
+          const row = items.get(where.id);
+          if (!row || row.saldoDisponivel !== where.saldoDisponivel) return { count: 0 };
+          row.saldoDisponivel = data.saldoDisponivel;
+
+          return { count: 1 };
         },
+        findUnique: async ({ where }: { where: { id: string } }) => items.get(where.id) ?? null,
       },
       nfeRemessaConsumo: {
         create: async ({ data }: { data: (typeof consumos)[number] }) => {

@@ -19,7 +19,9 @@ import { validateProductImportRow } from "../rules/validate-product-import-row.j
  * 2. Deduplica por SKU (última ocorrência vence) com avisos
  * 3. Carrega índice SKU existente numa única query
  * 4. Por linha válida: resolve nome/código da regra → valida → update se SKU existe, senão create
- * 5. Falhas por linha são capturadas; o lote continua (resposta parcial)
+ * 5. Falha de validação da linha (antes de gravar) entra em `failed` e o lote continua. Erro do
+ *    banco aborta a transação do Postgres: o import inteiro falha (CAT-1), em vez de responder
+ *    `created` para linhas que o rollback desfaz.
  */
 @Injectable()
 export class BulkUpsertProductsUseCase {
@@ -117,11 +119,8 @@ export class BulkUpsertProductsUseCase {
           created++;
         }
       } catch (error) {
-        failed.push({
-          line,
-          sku: row.sku,
-          error: mapBulkRowErrorMessage(error),
-        });
+        if (!isRowValidationError(error)) throw error;
+        failed.push({ line, sku: row.sku, error: error.message });
       }
     }
 
@@ -135,14 +134,10 @@ export class BulkUpsertProductsUseCase {
   }
 }
 
-/** Normaliza mensagens de erro por linha para resposta HTTP legível. */
-function mapBulkRowErrorMessage(error: unknown): string {
-  if (error instanceof CatalogError.ProductConflict) return error.message;
-  if (error instanceof CatalogError.ProductInvalid) return error.message;
-  if (error instanceof Error) {
-    if (error.name === "TaxRuleCatalogError") return error.message;
-    if (/Unique constraint failed/i.test(error.message)) return "SKU já cadastrado nesta empresa";
-    return error.message;
-  }
-  return "Erro ao salvar linha";
+/** Erros lançados antes de qualquer escrita: não abortam a transação e a linha pode ser pulada. */
+function isRowValidationError(error: unknown): error is Error {
+  return (
+    error instanceof CatalogError.ProductInvalid ||
+    (error instanceof Error && error.name === "TaxRuleCatalogError")
+  );
 }

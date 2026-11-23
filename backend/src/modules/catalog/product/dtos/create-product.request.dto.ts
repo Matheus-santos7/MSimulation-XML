@@ -5,6 +5,10 @@ export function digitsOnly(s: string): string {
   return s.replace(/\D/g, "");
 }
 
+/** `preco` e `precoCusto` são `Decimal(15, 8)`: cabem 7 dígitos antes da vírgula. */
+const MAX_PRECO = 10_000_000;
+const MAX_PRECO_MESSAGE = "Preço deve ser menor que 10.000.000";
+
 const optionalTrimmed = z.preprocess(
   (v) => (v === "" || v === null || v === undefined ? undefined : v),
   z.string().trim().optional(),
@@ -94,8 +98,14 @@ export const productBodyFields = {
   origem: z.coerce.number().int().min(0).max(8),
   nfci: nfciField,
   unidade: z.string().trim().min(1, "Unidade obrigatória").max(6),
-  preco: z.coerce.number().positive("Preço de venda deve ser maior que zero"),
-  precoCusto: z.coerce.number().min(0, "Preço de custo não pode ser negativo"),
+  preco: z.coerce
+    .number()
+    .positive("Preço de venda deve ser maior que zero")
+    .lt(MAX_PRECO, MAX_PRECO_MESSAGE),
+  precoCusto: z.coerce
+    .number()
+    .min(0, "Preço de custo não pode ser negativo")
+    .lt(MAX_PRECO, MAX_PRECO_MESSAGE),
   estoque: z.coerce.number().int().min(0, "Estoque não pode ser negativo").default(0),
   sujeitoSt: booleanField.optional().default(false),
   taxRuleBaseId: optionalTrimmed.pipe(

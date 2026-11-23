@@ -5,6 +5,9 @@ import { LookupError } from "../errors/lookup.errors.js";
 const BRASIL_API = "https://brasilapi.com.br/api";
 
 /** Cabeçalhos padrão para APIs públicas (identificação do cliente HTTP). */
+/** Teto de cada consulta externa (P-7): API pública lenta não prende a requisição. */
+const FETCH_TIMEOUT_MS = 5_000;
+
 const FETCH_HEADERS = {
   Accept: "application/json",
   "User-Agent": "msimulation-xml/1.0 (fiscal-simulator)",
@@ -53,7 +56,10 @@ export class CepLookupProvider {
       throw new LookupError.Invalid("CEP deve ter 8 dígitos");
     }
 
-    const response = await fetch(`${BRASIL_API}/cep/v2/${postalCode}`, { headers: FETCH_HEADERS });
+    const response = await fetch(`${BRASIL_API}/cep/v2/${postalCode}`, {
+      headers: FETCH_HEADERS,
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
 
     if (response.status === 404) throw new LookupError.NotFound("CEP não encontrado");
     if (!response.ok) throw new Error(`Consulta CEP indisponível (${response.status})`);
@@ -83,6 +89,7 @@ export class CepLookupProvider {
     try {
       const response = await fetch(`https://viacep.com.br/ws/${postalCode}/json/`, {
         headers: FETCH_HEADERS,
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       });
       if (!response.ok) return undefined;
       const data = (await response.json()) as ViaCepResponse;

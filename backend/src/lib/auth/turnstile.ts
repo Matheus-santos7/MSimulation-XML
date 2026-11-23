@@ -1,6 +1,9 @@
 import { turnstileSecretKey } from "./config.js";
 import { appConfig } from "../../config/config.service.js";
 
+/** Teto da verificação no Cloudflare (P-7). */
+const TURNSTILE_TIMEOUT_MS = 3_000;
+
 type TurnstileVerifyResponse = {
   success: boolean;
   "error-codes"?: string[];
@@ -40,10 +43,14 @@ export async function verifyTurnstileToken(token: string | undefined): Promise<v
     response: token,
   });
 
+  // Cloudflare lento ou fora do ar recusa o CAPTCHA (falha fechada) em vez de prender o login.
   const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body,
+    signal: AbortSignal.timeout(TURNSTILE_TIMEOUT_MS),
+  }).catch(() => {
+    throw new CaptchaVerificationError();
   });
 
   if (!res.ok) {

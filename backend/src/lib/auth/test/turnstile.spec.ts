@@ -34,8 +34,8 @@ describe("verifyTurnstileToken", () => {
 
   it("valida token sem enviar remoteip ao Cloudflare", async () => {
     process.env.NODE_ENV = "production";
-    fetchMock.mockImplementation(async () =>
-      new Response(JSON.stringify({ success: true }), { status: 200 }),
+    fetchMock.mockImplementation(
+      async () => new Response(JSON.stringify({ success: true }), { status: 200 }),
     );
 
     await verifyTurnstileToken("0123456789abcdef");
@@ -51,17 +51,27 @@ describe("verifyTurnstileToken", () => {
     assert.equal(body.get("remoteip"), null);
   });
 
+  it("recusa o CAPTCHA quando o Cloudflare estoura o timeout ou a rede falha (P-7)", async () => {
+    process.env.NODE_ENV = "production";
+    fetchMock.mockRejectedValue(new DOMException("The operation timed out.", "TimeoutError"));
+
+    await assert.rejects(() => verifyTurnstileToken("0123456789abcdef"), CaptchaVerificationError);
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    assert.ok(init.signal instanceof AbortSignal);
+  });
+
   it("rejeita quando Cloudflare retorna success=false", async () => {
     process.env.NODE_ENV = "production";
-    fetchMock.mockImplementation(async () =>
-      new Response(JSON.stringify({ success: false, "error-codes": ["invalid-input-response"] }), {
-        status: 200,
-      }),
+    fetchMock.mockImplementation(
+      async () =>
+        new Response(
+          JSON.stringify({ success: false, "error-codes": ["invalid-input-response"] }),
+          {
+            status: 200,
+          },
+        ),
     );
 
-    await assert.rejects(
-      () => verifyTurnstileToken("0123456789abcdef"),
-      CaptchaVerificationError,
-    );
+    await assert.rejects(() => verifyTurnstileToken("0123456789abcdef"), CaptchaVerificationError);
   });
 });

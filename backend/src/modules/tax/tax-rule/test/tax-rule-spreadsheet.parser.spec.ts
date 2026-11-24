@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "vitest";
-import * as XLSX from "xlsx";
+import { buildXlsx } from "../../../../test/xlsx-fixture.js";
 import { mapTaxRuleSpreadsheetRows } from "../spreadsheet/tax-rule-spreadsheet.mapper.js";
 import {
   MAX_TAX_RULE_SHEET_COLUMNS,
@@ -9,12 +9,10 @@ import {
   parseTaxRuleSpreadsheet,
 } from "../spreadsheet/tax-rule-spreadsheet.parser.js";
 
-function buildWorkbookBuffer(dataRows: (string | number)[][]): Buffer {
+function buildWorkbookBuffer(dataRows: (string | number)[][]): Promise<Buffer> {
   const rows = [HEADER_KEYS.map(() => ""), HEADER_KEYS, HEADER_LABELS, ...dataRows];
-  const sheet = XLSX.utils.aoa_to_sheet(rows);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, sheet, "Regras tributárias");
-  return Buffer.from(XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }));
+
+  return buildXlsx({ "Regras tributárias": rows });
 }
 
 const HEADER_KEYS = [
@@ -36,7 +34,7 @@ const HEADER_LABELS = [
 
 describe("parseTaxRuleSpreadsheet", () => {
   it("mantém ruleId numérico quando RULE_NAME é rótulo descritivo", async () => {
-    const buffer = buildWorkbookBuffer([
+    const buffer = await buildWorkbookBuffer([
       ["612610", "4133250001", "SP", "Contribuinte", "99", 0],
       ["612610", "Item nacional", "RJ", "Não contribuinte", "99", 0],
       ["612610", "Item nacional", "RJ", "Envio de estoque (Transferência ou Remessa)", "99", 0],
@@ -77,7 +75,7 @@ describe("parseTaxRuleSpreadsheet", () => {
   });
 
   it("inicia novo grupo quando RULE_NAME numérico aparece em linha seguinte", async () => {
-    const buffer = buildWorkbookBuffer([
+    const buffer = await buildWorkbookBuffer([
       ["612610", "4133250001", "SP", "Contribuinte", "99", 0],
       ["", "4133250002", "SP", "Contribuinte", "99", 0],
       ["", "", "RJ", "Não contribuinte", "99", 0],
@@ -91,7 +89,7 @@ describe("parseTaxRuleSpreadsheet", () => {
   });
 
   it("usa RULE_ID numérico e RULE_NAME descritivo no formato ML novo", async () => {
-    const buffer = buildWorkbookBuffer([
+    const buffer = await buildWorkbookBuffer([
       ["355076", "Chuveiro", "SP", "Contribuinte (consumo)", "50", 0],
       ["355076", "Chuveiro 8516100001 – Nacional", "SP", "Não contribuinte", "50", 0],
       [
@@ -125,7 +123,7 @@ describe("parseTaxRuleSpreadsheet", () => {
   });
 
   it("preserva nome alfanumérico e misto sem forçar ruleName = ruleId", async () => {
-    const buffer = buildWorkbookBuffer([
+    const buffer = await buildWorkbookBuffer([
       ["9001", "Nacional-Fogões 123", "SP", "Contribuinte", "99", 0],
       ["9001", "Nacional-Fogões 123 C/Grill", "SP", "Não contribuinte", "99", 0],
       ["9002", "8516100001-Nacional", "SP", "Contribuinte", "99", 0],
@@ -144,7 +142,7 @@ describe("parseTaxRuleSpreadsheet", () => {
   it("abre grupo novo quando RULE_ID vem vazio e RULE_NAME segue o padrão '<código> - <sufixo>'", async () => {
     // Caso real (planilha ML 23-10): só o 1º grupo traz RULE_ID; os demais ("X - IMPORTADO") vêm
     // sem ele. Antes todos caíam no grupo do 1º e se sobrescreviam (183 de 468 linhas perdidas).
-    const buffer = buildWorkbookBuffer([
+    const buffer = await buildWorkbookBuffer([
       ["40021110", "40021110", "SP", "Contribuinte (consumo)", "99", 0],
       ["", "", "SP", "Não contribuinte", "99", 0],
       ["", "39259090 - IMPORTADO", "SP", "Contribuinte (consumo)", "99", 0],
@@ -171,7 +169,7 @@ describe("parseTaxRuleSpreadsheet", () => {
   });
 
   it("não abre grupo para rótulo de continuação sem o padrão '<código> - <sufixo>'", async () => {
-    const buffer = buildWorkbookBuffer([
+    const buffer = await buildWorkbookBuffer([
       ["40021110", "40021110", "SP", "Contribuinte (consumo)", "99", 0],
       ["", "40021110 (consumo)", "SP", "Não contribuinte", "99", 0],
     ]);
@@ -185,7 +183,7 @@ describe("parseTaxRuleSpreadsheet", () => {
   });
 
   it("aceita RULE_NAME puramente numérico igual ao RULE_ID", async () => {
-    const buffer = buildWorkbookBuffer([
+    const buffer = await buildWorkbookBuffer([
       ["4133250001", "4133250001", "SP", "Contribuinte", "99", 0],
       ["4133250001", "4133250001", "SP", "Não contribuinte", "99", 0],
     ]);
@@ -197,11 +195,10 @@ describe("parseTaxRuleSpreadsheet", () => {
   });
 });
 
-function buildCustomWorkbook(keys: string[], dataRows: (string | number)[][]): Buffer {
+function buildCustomWorkbook(keys: string[], dataRows: (string | number)[][]): Promise<Buffer> {
   const rows = [keys.map(() => ""), keys, keys, ...dataRows];
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), "Regras tributárias");
-  return Buffer.from(XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }));
+
+  return buildXlsx({ "Regras tributárias": rows });
 }
 
 describe("conversão numérica por coluna", () => {
@@ -219,7 +216,7 @@ describe("conversão numérica por coluna", () => {
   const parseCells = async (...values: string[]) =>
     (
       await parseTaxRuleSpreadsheet(
-        buildCustomWorkbook(keys, [["01234567", "Regra", "SP", "Contribuinte", ...values]]),
+        await buildCustomWorkbook(keys, [["01234567", "Regra", "SP", "Contribuinte", ...values]]),
       )
     ).rawRows[0]!;
 
@@ -257,7 +254,7 @@ describe("limite de linhas", () => {
 
   it("rejeita planilha acima do limite", async () => {
     const rows = Array.from({ length: MAX_TAX_RULE_SHEET_ROWS + 1 }, (_, i) => dataRow(i));
-    const result = await parseTaxRuleSpreadsheet(buildWorkbookBuffer(rows));
+    const result = await parseTaxRuleSpreadsheet(await buildWorkbookBuffer(rows));
     assert.deepEqual(result, {
       rawRows: [],
       errors: [{ line: 1, message: `Planilha excede ${MAX_TAX_RULE_SHEET_ROWS} linhas` }],
@@ -266,7 +263,7 @@ describe("limite de linhas", () => {
 
   it("aceita planilha exatamente no limite", async () => {
     const rows = Array.from({ length: MAX_TAX_RULE_SHEET_ROWS }, (_, i) => dataRow(i));
-    const result = await parseTaxRuleSpreadsheet(buildWorkbookBuffer(rows));
+    const result = await parseTaxRuleSpreadsheet(await buildWorkbookBuffer(rows));
     assert.equal(result.errors.length, 0);
     assert.equal(result.rawRows.length, MAX_TAX_RULE_SHEET_ROWS);
   });
@@ -275,13 +272,13 @@ describe("limite de linhas", () => {
 describe("limite de colunas", () => {
   it("rejeita planilha com célula na última coluna do Excel sem materializar a faixa inteira", async () => {
     // Um arquivo de poucos KB com células em A1 e XFD4 declara a faixa A1:XFD4. Sem o teto, o
-    // sheet_to_json (defval "") criaria milhões de células e travaria o servidor por minutos.
-    const sheet = XLSX.utils.aoa_to_sheet([["RULE_ID"], ["RULE_ID"], ["RULE_ID"]]);
-    sheet.XFD4 = { t: "s", v: "x" };
-    sheet["!ref"] = "A1:XFD4";
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, sheet, "Regras tributárias");
-    const buffer = Buffer.from(XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }));
+    // parser materializaria milhões de células vazias e travaria o servidor por minutos.
+    const buffer = await buildXlsx(
+      { "Regras tributárias": [["RULE_ID"], ["RULE_ID"], ["RULE_ID"]] },
+      (workbook) => {
+        workbook.getWorksheet("Regras tributárias")!.getCell("XFD4").value = "x";
+      },
+    );
 
     const startedAt = Date.now();
     const { rawRows, errors } = await parseTaxRuleSpreadsheet(buffer);
@@ -299,7 +296,7 @@ describe("limite de colunas", () => {
 
 describe("import pipeline for SHARK spreadsheet rows", () => {
   it("gera variantes completas para 4133250001 e 4133250002", async () => {
-    const buffer = buildWorkbookBuffer([
+    const buffer = await buildWorkbookBuffer([
       ["612610", "4133250001", "SP", "Contribuinte", "99", 0],
       ["612610", "Item nacional", "RJ", "Não contribuinte", "99", 0],
       ["612610", "Item nacional", "RJ", "Envio de estoque (Transferência ou Remessa)", "99", 0],
@@ -325,7 +322,7 @@ describe("import pipeline for SHARK spreadsheet rows", () => {
   });
 
   it("ignora ORIGIN de linhas de continuação com rótulo descritivo (formato ML novo)", async () => {
-    const buffer = buildWorkbookBuffer([
+    const buffer = await buildWorkbookBuffer([
       ["612610", "4133250001", "SP", "Contribuinte", "99", 0],
       ["612610", "Item nacional", "RJ", "Não contribuinte", "99", 0],
       ["612610", "Item nacional", "RJ", "Envio de estoque (Transferência ou Remessa)", "99", 0],

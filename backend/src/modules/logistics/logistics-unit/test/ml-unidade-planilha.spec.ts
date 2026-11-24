@@ -1,19 +1,16 @@
 import assert from "node:assert/strict";
-import * as XLSX from "xlsx";
 import { describe, it } from "vitest";
+import { buildXlsx } from "../../../../test/xlsx-fixture.js";
 import { parseMeliUnidadesXlsx } from "../adapters/mercado-livre/ml-unidade-planilha.js";
 import { normalizeIdCadIntTran } from "../adapters/mercado-livre/ml-unidade.normalize.js";
 
-function sheetBuffer(headers: string[], dataRow: (string | number)[]): Buffer {
-  const ws = XLSX.utils.aoa_to_sheet([headers, dataRow]);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Unidades");
-  return Buffer.from(XLSX.write(wb, { type: "buffer", bookType: "xlsx" }));
+function sheetBuffer(headers: string[], dataRow: (string | number)[]): Promise<Buffer> {
+  return buildXlsx({ Unidades: [headers, dataRow] });
 }
 
 describe("meli-unidade-planilha", () => {
   it("parseia coluna ID Cad Int Tran", async () => {
-    const buf = sheetBuffer(
+    const buf = await sheetBuffer(
       ["Unidade", "CNPJ", "ID Cad Int Tran", "Logradouro", "Número", "Cidade", "UF", "CEP"],
       [
         "SP02 Cajamar",
@@ -33,7 +30,7 @@ describe("meli-unidade-planilha", () => {
   });
 
   it("ignora idCadIntTran quando coluna ausente", async () => {
-    const buf = sheetBuffer(
+    const buf = await sheetBuffer(
       ["Unidade", "CNPJ", "Logradouro", "Número", "Cidade", "UF", "CEP"],
       ["SP02", "03007331007405", "Rua A", "1", "Cajamar", "SP", "07776037"],
     );

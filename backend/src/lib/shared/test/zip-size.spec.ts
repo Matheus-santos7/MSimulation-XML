@@ -1,27 +1,35 @@
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import * as XLSX from "xlsx";
+import { buildXlsx } from "../../../test/xlsx-fixture.js";
 import { validateSpreadsheetBuffer } from "../spreadsheet-upload.js";
 import { sumZipUncompressedSize } from "../zip-size.js";
 
 const MB = 1024 * 1024;
 const FORGED_UNCOMPRESSED_BYTES = 200 * MB;
-/** Tipo "arquivo" no índice do `XLSX.CFB` (os demais são pastas/raiz). */
-const CFB_FILE_TYPE = 2;
-
-type CfbEntry = { type: number; name: string; content?: ArrayLike<number> };
-
-function buildRealXlsx(): Buffer {
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(
-    workbook,
-    XLSX.utils.aoa_to_sheet([
+function buildRealXlsx(): Promise<Buffer> {
+  return buildXlsx({
+    Regras: [
       ["NCM", "CFOP"],
       ["1234", 5102],
-    ]),
-    "Regras",
-  );
+    ],
+  });
+}
 
-  return Buffer.from(XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }));
+/** Total descompactado segundo o `unzip -l` (oráculo independente do parser do diretório central). */
+function unzipListedTotal(zip: Buffer): number {
+  const dir = mkdtempSync(join(tmpdir(), "zip-size-"));
+  try {
+    const file = join(dir, "planilha.xlsx");
+    writeFileSync(file, zip);
+    const lines = execFileSync("unzip", ["-l", file], { encoding: "utf8" }).trim().split("\n");
+
+    return Number(lines.at(-1)!.trim().split(/\s+/)[0]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 /**
@@ -51,14 +59,10 @@ function buildForgedZip(uncompressedSize: number): Buffer {
 }
 
 describe("sumZipUncompressedSize", () => {
-  it("soma os tamanhos descompactados de todas as entradas de um xlsx real", () => {
+  it("soma os tamanhos descompactados de todas as entradas de um xlsx real", async () => {
     // Arrange
-    const xlsx = buildRealXlsx();
-    // O CFB injeta uma entrada fantasma "Sh33tJ5" (4 bytes) que não existe no ZIP: fica de fora.
-    const entries: CfbEntry[] = XLSX.CFB.read(xlsx, { type: "buffer" }).FileIndex;
-    const expected = entries
-      .filter((entry) => entry.type === CFB_FILE_TYPE && !entry.name.includes("Sh33tJ5"))
-      .reduce((total, entry) => total + (entry.content?.length ?? 0), 0);
+    const xlsx = await buildRealXlsx();
+    const expected = unzipListedTotal(xlsx);
 
     // Act
     const total = sumZipUncompressedSize(xlsx);
@@ -68,7 +72,7 @@ describe("sumZipUncompressedSize", () => {
     expect(total).toBe(expected);
   });
 
-  it("lê o tamanho declarado no diretório central de um zip forjado", () => {
+  it("lê o tamanho declarado no diretório central de um zip forjado", async () => {
     // Act
     const total = sumZipUncompressedSize(buildForgedZip(FORGED_UNCOMPRESSED_BYTES));
 
@@ -76,7 +80,7 @@ describe("sumZipUncompressedSize", () => {
     expect(total).toBe(FORGED_UNCOMPRESSED_BYTES);
   });
 
-  it("devolve null para buffer sem EOCD", () => {
+  it("devolve null para buffer sem EOCD", async () => {
     // Act
     const total = sumZipUncompressedSize(Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00, 0x00]));
 
@@ -84,9 +88,9 @@ describe("sumZipUncompressedSize", () => {
     expect(total).toBeNull();
   });
 
-  it("devolve null para xlsx truncado", () => {
+  it("devolve null para xlsx truncado", async () => {
     // Arrange
-    const xlsx = buildRealXlsx();
+    const xlsx = await buildRealXlsx();
 
     // Act
     const total = sumZipUncompressedSize(xlsx.subarray(0, xlsx.length - 30));
@@ -95,7 +99,7 @@ describe("sumZipUncompressedSize", () => {
     expect(total).toBeNull();
   });
 
-  it("devolve null quando uma entrada usa o marcador zip64 (0xFFFFFFFF)", () => {
+  it("devolve null quando uma entrada usa o marcador zip64 (0xFFFFFFFF)", async () => {
     // Act
     const total = sumZipUncompressedSize(buildForgedZip(0xffffffff));
 
@@ -105,15 +109,15 @@ describe("sumZipUncompressedSize", () => {
 });
 
 describe("validateSpreadsheetBuffer — tamanho descompactado", () => {
-  it("aceita xlsx real pequeno", () => {
+  it("aceita xlsx real pequeno", async () => {
     // Act
-    const result = validateSpreadsheetBuffer(buildRealXlsx(), { fileName: "regras.xlsx" });
+    const result = validateSpreadsheetBuffer(await buildRealXlsx(), { fileName: "regras.xlsx" });
 
     // Assert
     expect(result).toEqual({ ok: true });
   });
 
-  it("recusa zip cujo diretório central declara 200 MB descompactados", () => {
+  it("recusa zip cujo diretório central declara 200 MB descompactados", async () => {
     // Act
     const result = validateSpreadsheetBuffer(buildForgedZip(FORGED_UNCOMPRESSED_BYTES), {
       fileName: "regras.xlsx",
@@ -126,7 +130,7 @@ describe("validateSpreadsheetBuffer — tamanho descompactado", () => {
     });
   });
 
-  it("recusa arquivo com cabeçalho ZIP mas estrutura inválida (falha fechada)", () => {
+  it("recusa arquivo com cabeçalho ZIP mas estrutura inválida (falha fechada)", async () => {
     // Act
     const result = validateSpreadsheetBuffer(Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00, 0x00]), {
       fileName: "regras.xlsx",

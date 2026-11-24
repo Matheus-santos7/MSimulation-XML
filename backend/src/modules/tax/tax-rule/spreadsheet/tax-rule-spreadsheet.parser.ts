@@ -19,8 +19,8 @@ type RuleIdentityState = {
 };
 
 /**
- * Limite de linhas de DADOS aceitas na aba. Existe porque o XLSX.read materializa a aba inteira
- * em memória antes de qualquer validação: sem teto, um arquivo de 15 MB com milhões de linhas
+ * Limite de linhas de DADOS aceitas na aba. Existe porque a matriz da aba vai inteira para a
+ * memória antes de qualquer validação: sem teto, um arquivo de 15 MB com milhões de linhas
  * vazias/repetidas consome a memória do processo. Para aceitar planilhas maiores, suba o valor
  * e confira o tempo de gravação em lote.
  */
@@ -28,8 +28,8 @@ export const MAX_TAX_RULE_SHEET_ROWS = 5000;
 
 /**
  * Teto de colunas da aba. O `sheetRows` só corta LINHAS: uma célula em XFD (a última coluna do
- * Excel, 16384) faz o `sheet_to_json` criar milhões de células vazias (`defval: ""`), travando o
- * servidor por minutos e ocupando GBs (medido: arquivo de 8,6 KB, ~110 s, 1,4 GB). A planilha ML
+ * Excel, 16384) faria a matriz ter milhões de células vazias, travando o servidor por minutos e
+ * ocupando GBs (medido com SheetJS: arquivo de 8,6 KB, ~110 s, 1,4 GB). A planilha ML
  * real tem ~400 colunas (ICMS por UF); 1000 dá folga. Se o layout crescer, suba este valor.
  */
 export const MAX_TAX_RULE_SHEET_COLUMNS = 1000;

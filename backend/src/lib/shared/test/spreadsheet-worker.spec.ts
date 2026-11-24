@@ -1,19 +1,10 @@
 import { describe, expect, it } from "vitest";
-import * as XLSX from "xlsx";
+import { buildXlsx } from "../../../test/xlsx-fixture.js";
 import { readSheetInWorker, readSheetOrError } from "../spreadsheet-worker.js";
-
-function workbook(sheets: Record<string, (string | number)[][]>): Buffer {
-  const wb = XLSX.utils.book_new();
-  for (const [name, rows] of Object.entries(sheets)) {
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), name);
-  }
-
-  return Buffer.from(XLSX.write(wb, { type: "buffer", bookType: "xlsx" }));
-}
 
 describe("readSheetInWorker (P-8)", () => {
   it("should return the first sheet as a matrix, formatted or raw", async () => {
-    const data = workbook({
+    const data = await buildXlsx({
       Primeira: [
         ["sku", "preco"],
         ["A1", 10.5],
@@ -38,7 +29,7 @@ describe("readSheetInWorker (P-8)", () => {
   });
 
   it("should pick the sheet by alias, ignoring case and surrounding spaces", async () => {
-    const data = workbook({ Capa: [["capa"]], " Regras Tributárias ": [["regra"]] });
+    const data = await buildXlsx({ Capa: [["capa"]], " Regras Tributárias ": [["regra"]] });
 
     expect(
       await readSheetInWorker(data, { raw: false, sheetAliases: ["regras tributárias"] }),
@@ -49,7 +40,7 @@ describe("readSheetInWorker (P-8)", () => {
   });
 
   it("should refuse a sheet wider than maxColumns and cut rows with sheetRows", async () => {
-    const data = workbook({
+    const data = await buildXlsx({
       Aba: [
         ["a", "b", "c"],
         ["1", "2", "3"],
@@ -75,6 +66,29 @@ describe("readSheetInWorker (P-8)", () => {
     expect(await readSheetOrError(corrupt, { raw: false })).toEqual({
       status: "unreadable",
       message: "Não foi possível ler a planilha",
+    });
+  });
+  it("should read merged cells only at the top-left cell, formulas by result", async () => {
+    const data = await buildXlsx(
+      {
+        Aba: [
+          ["Faixa", "", ""],
+          ["a", "b", "c"],
+        ],
+      },
+      (workbook) => {
+        const sheet = workbook.getWorksheet("Aba")!;
+        sheet.mergeCells("A1:C1");
+        sheet.getCell("C2").value = { formula: "1+1", result: 2 };
+      },
+    );
+
+    expect(await readSheetInWorker(data, { raw: false })).toEqual({
+      status: "ok",
+      matrix: [
+        ["Faixa", "", ""],
+        ["a", "b", "2"],
+      ],
     });
   });
 });

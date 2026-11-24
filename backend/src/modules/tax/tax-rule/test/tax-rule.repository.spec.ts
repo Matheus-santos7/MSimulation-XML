@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { dbTransactionContext, type PrismaTransactionClient } from "../../../../lib/db/tenant-rls.js";
+import {
+  dbTransactionContext,
+  type PrismaTransactionClient,
+} from "../../../../lib/db/tenant-rls.js";
 import { TaxRuleRepository } from "../tax-rule.repository.js";
 import type { TaxRuleImportRow } from "../types/tax-rule-import-row.types.js";
 
@@ -27,7 +30,10 @@ describe("TaxRuleRepository", () => {
   beforeEach(() => {
     findMany = vi.fn();
     executeRaw = vi.fn().mockResolvedValue(0);
-    fakeTx = { taxRule: { findMany }, $executeRaw: executeRaw } as unknown as PrismaTransactionClient;
+    fakeTx = {
+      taxRule: { findMany },
+      $executeRaw: executeRaw,
+    } as unknown as PrismaTransactionClient;
     repository = new TaxRuleRepository();
   });
 

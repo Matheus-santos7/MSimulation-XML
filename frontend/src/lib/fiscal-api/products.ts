@@ -1,4 +1,11 @@
-import type { ProductDto, ProductInput, PedidoCheckoutInput, PedidoDto, PedidoFaturarResult } from "../fiscal-types";
+import type {
+  PageDto,
+  ProductDto,
+  ProductInput,
+  PedidoCheckoutInput,
+  PedidoDto,
+  PedidoFaturarResult,
+} from "../fiscal-types";
 import { authHeaders, buildApiUrl, getJson, mutateJson, readApiErrorPayload } from "./client";
 
 export async function listProducts(): Promise<ProductDto[]> {
@@ -7,6 +14,24 @@ export async function listProducts(): Promise<ProductDto[]> {
 
 export async function listOrders(): Promise<PedidoDto[]> {
   return getJson<PedidoDto[]>(buildApiUrl("/api/pedidos"));
+}
+
+/** Página do catálogo (por SKU); `busca` filtra SKU e nome no servidor. */
+export async function listProductsPage(
+  page: number,
+  perPage: number,
+  busca?: string,
+): Promise<PageDto<ProductDto>> {
+  return getJson<PageDto<ProductDto>>(
+    buildApiUrl("/api/products", { offset: String(page), limit: String(perPage), filter: busca }),
+  );
+}
+
+/** Página de pedidos: rascunhos primeiro, depois os mais recentes. */
+export async function listOrdersPage(page: number, perPage: number): Promise<PageDto<PedidoDto>> {
+  return getJson<PageDto<PedidoDto>>(
+    buildApiUrl("/api/pedidos", { offset: String(page), limit: String(perPage) }),
+  );
 }
 
 export async function createOrder(input: PedidoCheckoutInput): Promise<PedidoDto> {

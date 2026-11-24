@@ -1,6 +1,12 @@
 import { Injectable } from "@nestjs/common";
+import type { Prisma } from "../../../generated/prisma/client.js";
 import { runInTransaction } from "../../../lib/db/prisma-tx.js";
 import { getDbClient } from "../../../lib/db/tenant-rls.js";
+import {
+  paginateQuery,
+  type PaginatedResponse,
+  type PaginationParams,
+} from "../../../nest/base/pagination.js";
 import { CheckoutError } from "../errors/sales.errors.js";
 import type { OrderForEmit } from "../invoicing/types/order-for-emit.types.js";
 import {
@@ -16,6 +22,11 @@ import type { OrderDraftData } from "./types/order-draft.types.js";
 const pedidoItemInclude = {
   product: true,
 } as const;
+
+const ORDER_LIST_ORDER: Prisma.PedidoOrderByWithRelationInput[] = [
+  { status: "asc" },
+  { updatedAt: "desc" },
+];
 
 const orderInclude = {
   itens: {
@@ -49,10 +60,27 @@ export class OrderRepository {
     const rows = await this.db.pedido.findMany({
       where: { tenantId },
       include: orderInclude,
-      orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
+      orderBy: ORDER_LIST_ORDER,
     });
 
     return rows.map(mapOrderFromPrisma);
+  }
+
+  listPageByTenant(tenantId: string, params: PaginationParams): Promise<PaginatedResponse<Order>> {
+    const where = { tenantId };
+
+    return paginateQuery(params, {
+      count: () => this.db.pedido.count({ where }),
+      findMany: (window) =>
+        this.db.pedido.findMany({
+          where,
+          include: orderInclude,
+          // id desempata: sem ele, pedidos com o mesmo updatedAt podem trocar de página.
+          orderBy: [...ORDER_LIST_ORDER, { id: "asc" }],
+          ...window,
+        }),
+      map: mapOrderFromPrisma,
+    });
   }
 
   async findById(tenantId: string, id: string): Promise<Order | null> {

@@ -2,6 +2,7 @@ import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { CatalogError } from "../errors/catalog.errors.js";
 import { ProductRepository } from "./product.repository.js";
 import type { Product } from "./product.types.js";
+import type { PaginatedResponse, PaginationParams } from "../../../nest/base/pagination.js";
 
 const PRODUCT_NOT_FOUND = "Produto não encontrado";
 
@@ -13,6 +14,11 @@ export class ProductService {
   /** Produtos da empresa, por SKU. */
   list(tenantId: string): Promise<Product[]> {
     return this.productRepository.listByTenant(tenantId);
+  }
+
+  /** Página de produtos, por SKU. */
+  listPage(tenantId: string, params: PaginationParams): Promise<PaginatedResponse<Product>> {
+    return this.productRepository.listPageByTenant(tenantId, params);
   }
 
   async get(id: string, tenantId: string): Promise<Product> {

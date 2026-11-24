@@ -7,6 +7,11 @@ import { CatalogError } from "../errors/catalog.errors.js";
 import type { ProductSkuIndexEntry, ProductWriteData } from "./types/product-write.types.js";
 import { mapProductFromPrisma } from "./product.mapper.js";
 import { getDbClient } from "../../../lib/db/tenant-rls.js";
+import {
+  paginateQuery,
+  type PaginatedResponse,
+  type PaginationParams,
+} from "../../../nest/base/pagination.js";
 
 function isPrismaFkError(error: unknown): boolean {
   return (
@@ -30,6 +35,29 @@ export class ProductRepository {
       orderBy: { sku: "asc" },
     });
     return rows.map(mapProductFromPrisma);
+  }
+
+  /** Página de produtos por SKU; `filter` busca no SKU e no nome, sem diferenciar maiúsculas. */
+  listPageByTenant(
+    tenantId: string,
+    params: PaginationParams,
+  ): Promise<PaginatedResponse<Product>> {
+    const text = params.filter?.trim();
+    const where: Prisma.ProductWhereInput = {
+      tenantId,
+      ...(text && {
+        OR: [
+          { sku: { contains: text, mode: "insensitive" } },
+          { nome: { contains: text, mode: "insensitive" } },
+        ],
+      }),
+    };
+
+    return paginateQuery(params, {
+      count: () => this.db.product.count({ where }),
+      findMany: (window) => this.db.product.findMany({ where, orderBy: { sku: "asc" }, ...window }),
+      map: mapProductFromPrisma,
+    });
   }
 
   async findById(id: string, tenantId: string): Promise<Product | null> {

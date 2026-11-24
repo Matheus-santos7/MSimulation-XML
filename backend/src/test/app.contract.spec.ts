@@ -361,6 +361,41 @@ describe("contrato HTTP — respostas por módulo (banco vazio)", () => {
     });
   }
 
+  for (const url of ["/api/pedidos", "/api/products"]) {
+    it(`GET ${url}?offset&limit devolve a página vazia (P-4)`, async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: `${url}?offset=2&limit=20`,
+        headers: bearer(token),
+      });
+
+      assert.equal(res.statusCode, 200);
+      assert.deepEqual(res.json(), { data: [], total: 0, page: 2, perPage: 20, totalPages: 0 });
+    });
+
+    it(`GET ${url}?limit=0 recusa a página com 400`, async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: `${url}?limit=0`,
+        headers: bearer(token),
+      });
+
+      assert.equal(res.statusCode, 400);
+      assert.equal(res.json().error, "O tamanho mínimo da página é 1");
+    });
+  }
+
+  it("GET /api/products?limit=500 limita a página a 100 itens", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/products?limit=500",
+      headers: bearer(token),
+    });
+
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.json().perPage, 100);
+  });
+
   it("GET /api/products/spreadsheet/template devolve o XLSX como anexo", async () => {
     const res = await app.inject({
       method: "GET",

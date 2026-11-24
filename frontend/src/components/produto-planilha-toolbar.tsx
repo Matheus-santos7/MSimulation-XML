@@ -5,14 +5,14 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { importProdutosPlanilhaAction, type ProdutoPlanilhaImportResult } from "@/app/(app)/produtos/actions";
 import { Button } from "@/components/ui/button";
-import type { ProductDto } from "@/lib/fiscal-types";
 import { downloadFromApi } from "@/lib/http/authenticated-fetch";
 
 type Props = {
-  products: ProductDto[];
+  /** A empresa tem produto para exportar (o catálogo inteiro, não só a página aberta). */
+  hasProducts: boolean;
 };
 
-export function ProdutoPlanilhaToolbar({ products }: Props) {
+export function ProdutoPlanilhaToolbar({ hasProducts }: Props) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
@@ -78,7 +78,7 @@ export function ProdutoPlanilhaToolbar({ products }: Props) {
           variant="outline"
           size="sm"
           onClick={handleDownloadCatalog}
-          disabled={disabled || products.length === 0}
+          disabled={disabled || !hasProducts}
           className="gap-2"
         >
           <FileSpreadsheet className="size-3.5" />

@@ -22,3 +22,17 @@ export function paginate<T>(list: readonly T[], requestedPage: number, pageSize:
   const start = (page - 1) * pageSize;
   return { items: list.slice(start, start + pageSize), page, totalPages, totalItems: list.length };
 }
+
+/**
+ * Busca uma página no servidor; se ela passou da última (ex.: o último item da página foi
+ * excluído), busca a última.
+ */
+export async function fetchPageWithin<
+  T extends { data: unknown[]; total: number; totalPages: number },
+>(requestedPage: number, fetchPage: (page: number) => Promise<T>): Promise<T> {
+  const result = await fetchPage(requestedPage);
+  if (result.data.length > 0 || result.total === 0 || requestedPage <= result.totalPages)
+    return result;
+
+  return fetchPage(result.totalPages);
+}

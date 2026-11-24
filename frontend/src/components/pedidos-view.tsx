@@ -16,12 +16,15 @@ import type { MarketplaceDto } from "@/lib/marketplaces";
 import { formValuesToFormData, pedidoToFormValues } from "@/lib/pedido-form";
 
 type Props = {
+  /** Página aberta da lista. */
   pedidos: PedidoDto[];
+  /** Total da empresa, em todas as páginas. */
+  totalPedidos: number;
   products: ProductDto[];
   marketplaces: MarketplaceDto[];
 };
 
-export function PedidosView({ pedidos, products, marketplaces }: Props) {
+export function PedidosView({ pedidos, totalPedidos, products, marketplaces }: Props) {
   const router = useRouter();
   const [wizardOpen, setWizardOpen] = useState(false);
   const [editing, setEditing] = useState<PedidoDto | undefined>();
@@ -69,10 +72,10 @@ export function PedidosView({ pedidos, products, marketplaces }: Props) {
         <div className="border border-border rounded-lg bg-card overflow-hidden">
           <div className="px-4 py-3 border-b border-border flex items-center justify-between">
             <span className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">
-              Pedidos ({pedidos.length})
+              Pedidos ({totalPedidos})
             </span>
             <span className="text-[12px] text-muted-foreground">
-              {pedidos.filter((p) => p.status === "RASCUNHO").length} rascunho(s)
+              {pedidos.filter((p) => p.status === "RASCUNHO").length} rascunho(s) nesta página
             </span>
           </div>
           {pedidos.length === 0 ? (

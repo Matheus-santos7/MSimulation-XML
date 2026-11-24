@@ -130,7 +130,7 @@ uv run --no-project --python 3.12 --with "mcp-fiscal-brasil==0.5.1" --with pytes
 | [docs/specs/](./docs/specs/) | Especificação de cada feature fiscal (ICMS-ST, matriz de CFOP, devolução parcial…) |
 | [docs/fiscal/regras-fulfillment-cat31.md](./docs/fiscal/regras-fulfillment-cat31.md) | Portaria CAT 31 e Mercado Livre Full |
 | [docs/fiscal/manual-nfe-moc.md](./docs/fiscal/manual-nfe-moc.md) | Manual da NF-e (MOC) |
-| [docs/deploy/docker-aws.md](./docs/deploy/docker-aws.md) | Deploy com Docker (backend, frontend e TLS) |
+| [docs/deploy/servidor-linux.md](./docs/deploy/servidor-linux.md) | Deploy no servidor Linux: imagem versionada por tag e um docker-compose.yml |
 | [docs/code-review-backend-2026-11-11.md](./docs/code-review-backend-2026-11-11.md) | Auditoria de segurança e performance, com os achados em aberto |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | Como contribuir e abrir PRs |
 

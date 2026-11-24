@@ -1,0 +1,85 @@
+# MSimulation XML — único arquivo necessário no servidor do cliente.
+#
+# O servidor não tem o código do projeto: as imagens vêm prontas do ghcr.io, publicadas pelo
+# GitHub Actions a cada tag de versão (git tag v1.4.0 && git push origin v1.4.0).
+#
+# Primeira vez:
+#   1. echo "<TOKEN read:packages>" | docker login ghcr.io -u <usuario-github> --password-stdin
+#   2. Copie este arquivo para o servidor (ex.: /opt/msimulation/docker-compose.yml),
+#      preencha os valores "change-me" abaixo e proteja o arquivo: chmod 600 docker-compose.yml
+#
+# Atualizar para a última versão lançada (as migrations rodam sozinhas no boot do backend):
+#   docker compose pull && docker compose up -d
+#
+# Fixar ou voltar uma versão:  MSX_VERSION=1.3.2 docker compose up -d
+# Parar:                       docker compose down
+#
+# TLS e domínio ficam no proxy da infra, que encaminha para as portas abaixo:
+#   app.msimulation-xml.nerus.com.br → 5000 (frontend)
+#   api.msimulation-xml.nerus.com.br → 5001 (backend)
+
+name: msimulation-xml
+
+x-backend-env: &backend-env
+  # --- Banco (obrigatório) ---------------------------------------------------------------
+  # Papel da API: sem SUPERUSER nem BYPASSRLS, senão a RLS por tenant não vale.
+  DATABASE_URL: "postgresql://change-me:change-me@host:5432/msimulation_xml?sslmode=require"
+  # Dono das tabelas, usado só para rodar as migrations no boot. Vazio = usa DATABASE_URL.
+  MIGRATE_DATABASE_URL: ""
+  DB_POOL_MAX: "10"
+
+  # --- URLs públicas -----------------------------------------------------------------------
+  CORS_ORIGINS: "https://app.msimulation-xml.nerus.com.br"
+  APP_PUBLIC_URL: "https://app.msimulation-xml.nerus.com.br"
+  # Saltos de proxy na frente da API (proxy da infra = 1).
+  TRUST_PROXY: "1"
+
+  # --- Segredos: gere cada um com `openssl rand -base64 32`, todos diferentes --------------
+  JWT_SECRET: "change-me"
+  PASSWORD_PEPPER: "change-me"
+  TOTP_ENCRYPTION_KEY: "change-me"
+
+  # --- E-mail (Brevo) e CAPTCHA (Turnstile) ------------------------------------------------
+  BREVO_API_KEY: "change-me"
+  BREVO_SENDER_EMAIL: "change-me@nerus.com.br"
+  BREVO_SENDER_NAME: "MSimulation XML"
+  TURNSTILE_SECRET_KEY: "change-me"
+
+  REQUIRE_EMAIL_VERIFICATION: "true"
+
+  # --- Fixos da stack (não mude) ----------------------------------------------------------
+  REDIS_URL: "redis://redis:6379"
+  FISCAL_VALIDATOR_URL: "http://fiscal-validator:8000"
+  FISCAL_VALIDATOR_ENABLED: "true"
+
+services:
+  backend:
+    image: ghcr.io/matheus-santos7/msimulation-xml-backend:${MSX_VERSION:-latest}
+    restart: unless-stopped
+    environment: *backend-env
+    depends_on:
+      - redis
+      - fiscal-validator
+    ports:
+      - "5001:3001"
+
+  frontend:
+    image: ghcr.io/matheus-santos7/msimulation-xml-frontend:${MSX_VERSION:-latest}
+    restart: unless-stopped
+    environment:
+      # BFF server-side: fala com o backend pela rede interna, não pelo domínio público.
+      API_URL: "http://backend:3001"
+    depends_on:
+      - backend
+    ports:
+      - "5000:3000"
+
+  fiscal-validator:
+    image: ghcr.io/matheus-santos7/msimulation-xml-fiscal-validator:${MSX_VERSION:-latest}
+    restart: unless-stopped
+
+  # Contagem do rate limit; sem persistência (perder as contagens num restart é aceitável).
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]

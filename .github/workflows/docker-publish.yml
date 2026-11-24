@@ -1,19 +1,14 @@
-# Builda e publica as imagens Docker (backend + frontend) no GitHub Container
-# Registry (ghcr.io), para o servidor de produção dar só `docker compose pull`.
+# Builda e publica as imagens Docker no GitHub Container Registry (ghcr.io). O servidor do
+# cliente não tem o código: só o infra/docker/docker-compose.yml, que baixa estas imagens.
 #
-# Gatilhos: push em main (deploy real) ou manual (Actions → "Docker publish" →
-# Run workflow, escolhendo a branch — útil para testar antes do merge).
-#
-# Imagens publicadas:
-#   ghcr.io/matheus-santos7/msimulation-xml-backend:latest  + :<sha curto>
-#   ghcr.io/matheus-santos7/msimulation-xml-frontend:latest + :<sha curto>
-#
-# Pré-requisito (uma vez, no servidor): autenticar no ghcr.io para poder puxar
-# as imagens (ver docs/deploy/docker-aws.md).
+# Versão = tag do git. Para lançar uma versão:
+#   git tag v1.4.0 && git push origin v1.4.0
+# publica, para backend, frontend e fiscal-validator:
+#   :1.4.0  :1.4  :latest  (latest = última versão lançada; é o que o servidor puxa)
+# Push em main publica só :main e :sha-<curto> (para testar), sem mexer no :latest.
 #
 # Variável de repositório (Settings → Secrets and variables → Actions → Variables):
-#   NEXT_PUBLIC_TURNSTILE_SITE_KEY (opcional — chave pública do Turnstile, embutida
-#   no build do frontend; não é segredo, por isso fica em "Variables", não "Secrets").
+#   NEXT_PUBLIC_TURNSTILE_SITE_KEY: chave pública do Turnstile, embutida no build do frontend.
 
 name: Docker publish
 
@@ -21,24 +16,35 @@ on:
   push:
     branches:
       - main
+    tags:
+      - "v*.*.*"
   workflow_dispatch: {}
 
 concurrency:
   group: docker-publish-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_BACKEND: ghcr.io/matheus-santos7/msimulation-xml-backend
-  IMAGE_FRONTEND: ghcr.io/matheus-santos7/msimulation-xml-frontend
-
 jobs:
-  backend:
+  image:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     permissions:
       contents: read
       packages: write
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - name: backend
+            dockerfile: infra/docker/backend.Dockerfile
+            no-cache: false
+          - name: frontend
+            dockerfile: infra/docker/frontend.Dockerfile
+            # NEXT_PUBLIC_* entra no bundle: cache poderia reaproveitar uma chave antiga.
+            no-cache: true
+          - name: fiscal-validator
+            dockerfile: infra/fiscal-validator-proxy/Dockerfile
+            no-cache: false
     steps:
       - uses: actions/checkout@v4
 
@@ -46,46 +52,31 @@ jobs:
 
       - uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: docker/build-push-action@v6
+      - id: meta
+        uses: docker/metadata-action@v5
         with:
-          context: .
-          file: infra/docker/backend.Dockerfile
-          push: true
+          images: ghcr.io/matheus-santos7/msimulation-xml-${{ matrix.name }}
+          flavor: latest=false
           tags: |
-            ${{ env.IMAGE_BACKEND }}:latest
-            ${{ env.IMAGE_BACKEND }}:${{ github.sha }}
-          cache-from: type=gha,scope=backend
-          cache-to: type=gha,mode=max,scope=backend
-
-  frontend:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: docker/setup-buildx-action@v3
-
-      - uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=ref,event=branch
+            type=sha
 
       - uses: docker/build-push-action@v6
         with:
           context: .
-          file: infra/docker/frontend.Dockerfile
+          file: ${{ matrix.dockerfile }}
           push: true
-          no-cache: true
+          no-cache: ${{ matrix.no-cache }}
           build-args: |
             NEXT_PUBLIC_TURNSTILE_SITE_KEY=${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
-          tags: |
-            ${{ env.IMAGE_FRONTEND }}:latest
-            ${{ env.IMAGE_FRONTEND }}:${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}

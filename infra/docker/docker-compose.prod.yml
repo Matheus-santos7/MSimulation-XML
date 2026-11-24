@@ -13,6 +13,9 @@
 # DATABASE_URL em backend/.env — mesma base usada pelo Render. Não há um
 # serviço de Postgres neste compose.
 #
+# Redis: guarda o rate limit (REDIS_URL), para o limite por IP valer em todas as
+# instâncias do backend. Sem persistência: perder as contagens num restart é aceitável.
+#
 # As imagens de backend/frontend são publicadas no ghcr.io pelo workflow
 # .github/workflows/docker-publish.yml (push em main ou manual) — este compose
 # só baixa (`pull_policy: always`), nunca builda localmente.
@@ -35,9 +38,18 @@ services:
     environment:
       PORT: 3001
       HOST: 0.0.0.0
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      - redis
     # Porta fixa esperada pelo proxy compartilhado da infra (api. → 5001).
     ports:
       - "${BACKEND_PORT:-5001}:3001"
+
+  redis:
+    image: redis:7-alpine
+    container_name: msimulation-xml-redis
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
 
   frontend:
     image: ghcr.io/matheus-santos7/msimulation-xml-frontend:${IMAGE_TAG:-latest}

@@ -32,6 +32,11 @@ export class ConfigService {
     return this.get("TRUST_PROXY");
   }
 
+  /** Redis do rate limit: com mais de uma instância, o limite por IP só vale se compartilhado. */
+  get redisUrl(): string | undefined {
+    return this.get("REDIS_URL")?.trim() || undefined;
+  }
+
   get corsOrigins(): string | undefined {
     return this.get("CORS_ORIGINS");
   }

@@ -23,10 +23,21 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      # Redis descartável da spec do rate limit compartilhado (P-6).
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       # Prisma 7 carrega prisma.config.ts no generate; só as specs de integração conectam.
       DATABASE_URL: postgresql://ci:ci@localhost:5432/msimulation_xml_ci?schema=public
       INTEGRATION_TEST_DATABASE_URL: postgresql://ci:ci@localhost:5432/msimulation_xml_ci?schema=public
+      INTEGRATION_TEST_REDIS_URL: redis://localhost:6379
     steps:
       - uses: actions/checkout@v4
 

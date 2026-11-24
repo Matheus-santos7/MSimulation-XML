@@ -55,7 +55,7 @@ export class RateLimitInterceptor implements NestInterceptor {
     const existing = this.routeHandlers.get(route);
     if (existing) return existing;
 
-    const created = this.rateLimits.create(policy);
+    const created = this.rateLimits.create(policy, `${context.getClass().name}.${route.name}`);
     this.routeHandlers.set(route, created);
 
     return created;

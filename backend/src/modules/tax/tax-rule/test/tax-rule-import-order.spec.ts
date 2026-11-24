@@ -97,8 +97,9 @@ describe("TaxRuleService.importSpreadsheet", () => {
 
   it("não abre transação quando a planilha não tem regra válida", async () => {
     // Arrange
-    const { mapTaxRuleSpreadsheetRows } =
-      await import("../spreadsheet/tax-rule-spreadsheet.mapper.js");
+    const { mapTaxRuleSpreadsheetRows } = await import(
+      "../spreadsheet/tax-rule-spreadsheet.mapper.js"
+    );
     vi.mocked(mapTaxRuleSpreadsheetRows).mockReturnValueOnce({
       rows: [],
       errors: [{ line: 4, message: "Coluna ORIGIN vazia" }],

@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx";
+import { readSheetOrError } from "../../../../../lib/shared/spreadsheet-worker.js";
 import { normalizeIdCadIntTran } from "./ml-unidade.normalize.js";
 import type { LogisticsUnitImportRow } from "../../types/logistics-unit-import-row.types.js";
 
@@ -33,18 +33,15 @@ function normalizeHeader(h: string): string {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-export function parseMeliUnidadesXlsx(
+export async function parseMeliUnidadesXlsx(
   buffer: Buffer | ArrayBuffer,
-): MeliUnidadePlanilhaParseResult {
-  const wb = XLSX.read(buffer, { type: "buffer" });
-  const sheetName = wb.SheetNames[0];
-  if (!sheetName) return { rows: [], errors: [{ line: 1, message: "Planilha vazia" }] };
+): Promise<MeliUnidadePlanilhaParseResult> {
+  const sheet = await readSheetOrError(buffer, { raw: true });
+  if (sheet.status === "unreadable")
+    return { rows: [], errors: [{ line: 1, message: sheet.message }] };
+  if (sheet.status !== "ok") return { rows: [], errors: [{ line: 1, message: "Planilha vazia" }] };
 
-  const matrix = XLSX.utils.sheet_to_json<(string | number | null)[]>(wb.Sheets[sheetName]!, {
-    header: 1,
-    raw: true,
-    defval: "",
-  });
+  const { matrix } = sheet;
   if (matrix.length < 2) {
     return { rows: [], errors: [{ line: 1, message: "Planilha sem linhas de dados" }] };
   }
@@ -88,6 +85,7 @@ export function parseMeliUnidadesXlsx(
       continue;
     }
 
+    const cep = cell("cep");
     rows.push({
       unidade,
       cnpj: typeof cnpj === "number" ? cnpj : String(cnpj),
@@ -102,7 +100,7 @@ export function parseMeliUnidadesXlsx(
         .trim()
         .toUpperCase()
         .slice(0, 2),
-      cep: typeof cell("cep") === "number" ? cell("cep") : String(cell("cep") || ""),
+      cep: typeof cep === "number" ? cep : String(cep || ""),
     });
   }
 

@@ -57,7 +57,7 @@ export async function resolveBulkImportPayload(req: FastifyRequest): Promise<
       return { ok: false, status: 400, error: fileValidation.error };
     }
 
-    const parsed = parseMeliUnidadesXlsx(fileBuffer);
+    const parsed = await parseMeliUnidadesXlsx(fileBuffer);
     if (parsed.rows.length === 0) {
       return {
         ok: false,

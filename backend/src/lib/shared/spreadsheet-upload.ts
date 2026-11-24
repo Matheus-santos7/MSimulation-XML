@@ -8,8 +8,8 @@ export const DEFAULT_SPREADSHEET_MAX_BYTES = 15 * BYTES_PER_MB;
 
 /**
  * Teto do conteúdo DESCOMPACTADO do .xlsx (soma das entradas do ZIP), para todos os importadores.
- * O `XLSX.read` é síncrono e bloqueia o event loop proporcionalmente ao XML descompactado; a
- * planilha real de regras (468 linhas × ~400 colunas) tem poucos MB. Ajuste aqui se uma planilha
+ * O `XLSX.read` (na worker de `spreadsheet-worker.ts`) gasta CPU e memória proporcionais ao XML
+ * descompactado; a planilha real de regras (468 linhas × ~400 colunas) tem poucos MB. Ajuste aqui se uma planilha
  * legítima passar do teto.
  */
 export const MAX_SPREADSHEET_UNCOMPRESSED_BYTES = 100 * BYTES_PER_MB;

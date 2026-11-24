@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx";
+import { readSheetOrError } from "../../../../lib/shared/spreadsheet-worker.js";
 import type { ProductImportRawRow } from "../types/product-import-raw-row.types.js";
 
 /** Colunas da planilha padrão (CSV compatível com Excel BR — separador `;`). */
@@ -233,18 +233,15 @@ export function parseProductSpreadsheetCsv(text: string): ProductSpreadsheetPars
   return parseProductSpreadsheetMatrix(matrix);
 }
 
-export function parseProductSpreadsheetXlsx(buffer: Buffer): ProductSpreadsheetParseResult {
-  const wb = XLSX.read(buffer, { type: "buffer" });
-  const sheetName = wb.SheetNames[0];
-  if (!sheetName) return { rows: [], errors: [{ line: 1, message: "Planilha vazia" }] };
+export async function parseProductSpreadsheetXlsx(
+  buffer: Buffer,
+): Promise<ProductSpreadsheetParseResult> {
+  const sheet = await readSheetOrError(buffer, { raw: false });
+  if (sheet.status === "unreadable")
+    return { rows: [], errors: [{ line: 1, message: sheet.message }] };
+  if (sheet.status !== "ok") return { rows: [], errors: [{ line: 1, message: "Planilha vazia" }] };
 
-  const matrix = XLSX.utils
-    .sheet_to_json<(string | number | null)[]>(wb.Sheets[sheetName]!, {
-      header: 1,
-      raw: false,
-      defval: "",
-    })
-    .map((row) => row.map((cell) => String(cell ?? "")));
-
-  return parseProductSpreadsheetMatrix(matrix);
+  return parseProductSpreadsheetMatrix(
+    sheet.matrix.map((row) => row.map((cell) => String(cell ?? ""))),
+  );
 }

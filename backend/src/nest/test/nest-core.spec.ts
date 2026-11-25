@@ -155,11 +155,12 @@ async function buildTestApp(
         logger: fastify.log,
         jwt: fastify.jwt,
         rateLimits: {
-          protectedApi: createRateLimitHandler(fastify, {
-            max: protectedMax,
-            timeWindow: "1 minute",
-          }),
-          create: (options) => createRateLimitHandler(fastify, options),
+          protectedApi: createRateLimitHandler(
+            fastify,
+            { max: protectedMax, timeWindow: "1 minute" },
+            "protected-api",
+          ),
+          create: (options, name) => createRateLimitHandler(fastify, options, name),
         },
       }),
     ],

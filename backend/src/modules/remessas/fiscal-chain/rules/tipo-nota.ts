@@ -21,13 +21,3 @@ export const CADEIA_AVANCO_MERCADORIA: readonly TipoNota[] = [
   TipoNota.RETORNO_SIMBOLICO,
   TipoNota.REMESSA_AVANCO,
 ] as const;
-
-export function isTipoNota(value: string): value is TipoNota {
-  return (Object.values(TipoNota) as string[]).includes(value);
-}
-
-/** Tipos de remessa que geram ou mantêm saldo FIFO no full. */
-export const TIPOS_SALDO_FIFO: readonly TipoNota[] = [
-  TipoNota.REMESSA,
-  TipoNota.REMESSA_AVANCO,
-] as const;

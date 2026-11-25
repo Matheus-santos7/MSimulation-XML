@@ -61,40 +61,6 @@ export function inputToFormValues(input: ProductInput): ProdutoFormValues {
   };
 }
 
-export function productToFormValues(p: {
-  sku: string;
-  ean?: string;
-  nome: string;
-  ncm: string;
-  cest?: string | null;
-  exTipi?: string;
-  origem: number;
-  nfci?: string;
-  unidade: string;
-  preco: number;
-  precoCusto: number;
-  estoque: number;
-  sujeitoSt?: boolean;
-  taxRuleBaseId?: string | null;
-}): ProdutoFormValues {
-  return inputToFormValues({
-    sku: p.sku,
-    ean: p.ean,
-    nome: p.nome,
-    ncm: p.ncm,
-    cest: p.cest ?? "",
-    exTipi: p.exTipi,
-    origem: p.origem,
-    nfci: p.nfci,
-    unidade: p.unidade,
-    preco: p.preco,
-    precoCusto: p.precoCusto,
-    estoque: p.estoque,
-    sujeitoSt: p.sujeitoSt === true,
-    taxRuleBaseId: p.taxRuleBaseId ?? "",
-  });
-}
-
 export function formatFieldErrors(fieldErrors?: Record<string, string[]>): string | undefined {
   if (!fieldErrors) return undefined;
   const msgs = Object.entries(fieldErrors).flatMap(([, v]) => v);

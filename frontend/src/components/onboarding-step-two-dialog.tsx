@@ -4,14 +4,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import type { TenantFormFieldsController } from "@/hooks/use-tenant-form-fields";
 import { TenantFormFieldsView } from "@/components/tenant-form-fields";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   ONBOARDING_MODAL_BODY_CLASS,
   ONBOARDING_MODAL_CLASS,

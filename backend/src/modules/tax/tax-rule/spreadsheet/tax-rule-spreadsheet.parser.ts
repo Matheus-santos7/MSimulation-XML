@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx";
+import { readSheetOrError } from "../../../../lib/shared/spreadsheet-worker.js";
 import type { TaxRuleSpreadsheetRawRow } from "../types/tax-rule-spreadsheet-raw-row.types.js";
 
 export type TaxRuleSpreadsheetParseResult = {
@@ -19,8 +19,8 @@ type RuleIdentityState = {
 };
 
 /**
- * Limite de linhas de DADOS aceitas na aba. Existe porque o XLSX.read materializa a aba inteira
- * em memória antes de qualquer validação: sem teto, um arquivo de 15 MB com milhões de linhas
+ * Limite de linhas de DADOS aceitas na aba. Existe porque a matriz da aba vai inteira para a
+ * memória antes de qualquer validação: sem teto, um arquivo de 15 MB com milhões de linhas
  * vazias/repetidas consome a memória do processo. Para aceitar planilhas maiores, suba o valor
  * e confira o tempo de gravação em lote.
  */
@@ -28,8 +28,8 @@ export const MAX_TAX_RULE_SHEET_ROWS = 5000;
 
 /**
  * Teto de colunas da aba. O `sheetRows` só corta LINHAS: uma célula em XFD (a última coluna do
- * Excel, 16384) faz o `sheet_to_json` criar milhões de células vazias (`defval: ""`), travando o
- * servidor por minutos e ocupando GBs (medido: arquivo de 8,6 KB, ~110 s, 1,4 GB). A planilha ML
+ * Excel, 16384) faria a matriz ter milhões de células vazias, travando o servidor por minutos e
+ * ocupando GBs (medido com SheetJS: arquivo de 8,6 KB, ~110 s, 1,4 GB). A planilha ML
  * real tem ~400 colunas (ICMS por UF); 1000 dá folga. Se o layout crescer, suba este valor.
  */
 export const MAX_TAX_RULE_SHEET_COLUMNS = 1000;
@@ -176,49 +176,35 @@ function resolveRuleIdentity(
   return next;
 }
 
-function findTaxRuleSheet(wb: XLSX.WorkBook): XLSX.WorkSheet | undefined {
-  const byName = new Map(
-    wb.SheetNames.map((name) => [name.trim().toLowerCase(), wb.Sheets[name]!]),
-  );
-  for (const alias of TAX_RULE_SHEET_ALIASES) {
-    const sheet = byName.get(alias);
-    if (sheet) return sheet;
-  }
-  return undefined;
-}
-
 /**
  * Lê a aba "Regras tributárias" e extrai linhas brutas (sem montar payload fiscal).
  */
-export function parseTaxRuleSpreadsheet(
+export async function parseTaxRuleSpreadsheet(
   buffer: Buffer | ArrayBuffer,
-): TaxRuleSpreadsheetParseResult {
+): Promise<TaxRuleSpreadsheetParseResult> {
   // +1 linha além do limite: permite distinguir "exatamente no limite" de "excede".
-  const wb = XLSX.read(buffer, {
-    type: "buffer",
+  const sheet = await readSheetOrError(buffer, {
+    sheetAliases: TAX_RULE_SHEET_ALIASES,
     sheetRows: MAX_TAX_RULE_SHEET_ROWS + HEADER_ROWS + 1,
+    raw: false,
+    // Conferido na faixa declarada ANTES de materializar a matriz (ver MAX_TAX_RULE_SHEET_COLUMNS).
+    maxColumns: MAX_TAX_RULE_SHEET_COLUMNS,
   });
-  const sheet = findTaxRuleSheet(wb);
-  if (!sheet)
+  if (sheet.status === "unreadable")
+    return { rawRows: [], errors: [{ line: 1, message: sheet.message }] };
+  if (sheet.status === "no-sheet")
     return {
       rawRows: [],
       errors: [{ line: 1, message: "Aba 'Regras tributárias' não encontrada" }],
     };
-
-  // Confere a faixa declarada ANTES de materializar a matriz (ver MAX_TAX_RULE_SHEET_COLUMNS).
-  const range = XLSX.utils.decode_range(sheet["!ref"] ?? "A1");
-  if (range.e.c - range.s.c + 1 > MAX_TAX_RULE_SHEET_COLUMNS) {
+  if (sheet.status === "too-many-columns") {
     return {
       rawRows: [],
       errors: [{ line: 1, message: `Planilha excede ${MAX_TAX_RULE_SHEET_COLUMNS} colunas` }],
     };
   }
 
-  const matrix = XLSX.utils.sheet_to_json<(string | number | null)[]>(sheet, {
-    header: 1,
-    raw: false,
-    defval: "",
-  });
+  const { matrix } = sheet;
   if (matrix.length > MAX_TAX_RULE_SHEET_ROWS + HEADER_ROWS) {
     return {
       rawRows: [],

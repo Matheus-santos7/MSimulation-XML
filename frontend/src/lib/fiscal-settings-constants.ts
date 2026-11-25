@@ -115,7 +115,3 @@ export function labelForOption(options: FiscalOption[], value: string): string {
 export function labelForDifal(value: DifalCalculo): string {
   return DIFAL_OPCOES.find((o) => o.value === value)?.label ?? value;
 }
-
-export function labelForBaseAction(value: BaseCalcAction): string {
-  return BASE_CALC_ACTIONS.find((o) => o.value === value)?.label ?? value;
-}

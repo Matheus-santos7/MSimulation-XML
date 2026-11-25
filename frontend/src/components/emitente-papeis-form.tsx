@@ -38,7 +38,7 @@ function toSelectValue(emitenteId: string | null | undefined, tenantId: string):
   return emitenteId;
 }
 
-function toEmitenteId(value: string, tenantId: string): string | null {
+function toEmitenteId(value: string): string | null {
   if (value === MATRIZ_VALUE) return null;
   return value;
 }
@@ -67,8 +67,8 @@ export function EmitentePapeisForm({ tenant, filiais }: Props) {
     setError(null);
     setOk(false);
     const result = await updatePapeisFiscaisAction({
-      emitenteRemessaId: toEmitenteId(remessa, tenant.id),
-      emitenteTransferenciaId: toEmitenteId(transferencia, tenant.id),
+      emitenteRemessaId: toEmitenteId(remessa),
+      emitenteTransferenciaId: toEmitenteId(transferencia),
     });
     if (result.error) {
       setError(result.error);

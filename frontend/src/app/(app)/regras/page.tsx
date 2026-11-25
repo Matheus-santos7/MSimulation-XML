@@ -5,7 +5,6 @@ import { ListPager } from "@/components/list-pager";
 import { PAGE_PARAM, paginate, parsePageParam } from "@/lib/paginate";
 import { TaxRuleImportForm } from "@/components/tax-rule-import-form";
 import { UrlFilterInput } from "@/components/url-filter-input";
-import { resolveActiveTenantId } from "@/lib/active-tenant";
 import { isAdminRole } from "@/lib/auth/roles";
 import { getAuthMe } from "@/lib/auth/session";
 import { listTaxRules } from "@/lib/fiscal-api";
@@ -13,7 +12,6 @@ import { BRAZILIAN_UFS } from "@/lib/brazilian-states";
 import {
   TAX_RULES_STICKY_LEFT,
   TAX_RULES_STICKY_TOTAL,
-  TAX_RULES_STICKY_W,
   TAX_RULES_UF_FIELDS,
   asTaxRuleRecord,
   buildTaxRuleGroups,
@@ -58,7 +56,6 @@ export default async function RegrasPage({
   const nomeFilter = Array.isArray(nomeFilterRaw) ? nomeFilterRaw[0] ?? "" : nomeFilterRaw ?? "";
   const nomeFilterNorm = nomeFilter.trim().toLowerCase();
 
-  const tenantId =   await resolveActiveTenantId();
   const [rules, me] = await Promise.all([listTaxRules(), getAuthMe()]);
   const isAdmin = isAdminRole(me?.role);
   const filteredRules = nomeFilterNorm

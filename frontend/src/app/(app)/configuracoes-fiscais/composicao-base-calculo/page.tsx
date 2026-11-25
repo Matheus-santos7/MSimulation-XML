@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
 import { ComposicaoBaseEditor } from "./composicao-base-editor";
-import { resolveActiveTenantId } from "@/lib/active-tenant";
 import { getFiscalEmitterSettings } from "@/lib/fiscal-api";
 
 export const metadata: Metadata = { title: "Composição da base de cálculo" };
 
 export default async function ComposicaoBaseCalculoPage() {
-  const tenantId = await resolveActiveTenantId();
   const cfg = await getFiscalEmitterSettings();
 
   return (

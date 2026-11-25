@@ -52,11 +52,6 @@ export function formatNfeQuantity(q: number): string {
   return rounded.toFixed(4);
 }
 
-/** @deprecated Use `buildIpiXmlFromEngine` / snapshot da regra — mantido só para compat. */
-export function impostoIpiRemessaXml(): string {
-  return impostoIpiIntXml();
-}
-
 export function impostoIpiIntXml(cst = "55", cEnq = "103"): string {
   return `<IPI>
             <cEnq>${cEnq}</cEnq>
@@ -166,14 +161,6 @@ function ibsCbsImpostoXml(
   return `<IBSCBS><CST>${cst}</CST><cClassTrib>${cClassTrib}</cClassTrib>${gIbscbsXml}</IBSCBS>`;
 }
 
-/** Venda: emite IBSCBS apenas quando o payload traz dados. */
-export function ibsCbsImpostoXmlFromPayload(
-  ibsCbs?: Record<string, unknown> | null,
-  vBC?: number | null,
-): string {
-  return ibsCbsImpostoXml(ibsCbs, VENDA_IBS_CBS_DEFAULTS, false, vBC);
-}
-
 export type IbsCbsVendaRates = {
   pIBSUF: number;
   pIBSMun: number;
@@ -219,72 +206,12 @@ export function ibsCbsTotXmlVenda(vBC: number, ibsCbs?: Record<string, unknown> 
           <gIBS><gIBSUF><vDif>0.00</vDif><vDevTrib>0.00</vDevTrib><vIBSUF>${vIBSUF.toFixed(2)}</vIBSUF></gIBSUF><gIBSMun><vDif>0.00</vDif><vDevTrib>0.00</vDevTrib><vIBSMun>${vIBSMun.toFixed(2)}</vIBSMun></gIBSMun><vIBS>${vIBS.toFixed(2)}</vIBS><vCredPres>0.00</vCredPres><vCredPresCondSus>0.00</vCredPresCondSus></gIBS><gCBS><vDif>0.00</vDif><vDevTrib>0.00</vDevTrib><vCBS>${vCBS.toFixed(2)}</vCBS><vCredPres>0.00</vCredPres><vCredPresCondSus>0.00</vCredPresCondSus></gCBS></IBSCBSTot>`;
 }
 
-export function nfePagXmlVenda(vNF: number, pagamento?: Record<string, unknown> | null): string {
-  const card = (pagamento?.card as Record<string, unknown> | undefined) ?? {};
-  const tPag = String(pagamento?.tPag ?? "03");
-  const cAut = String(card.cAut ?? "837812");
-  const tBand = String(card.tBand ?? "01");
-  const tpIntegra = String(card.tpIntegra ?? "1");
-  const cnpj = String(card.cnpj ?? "03007331000141").replace(/\D/g, "");
-  return `      <pag>
-        <detPag>
-          <indPag>0</indPag>
-          <tPag>${tPag}</tPag>
-          <vPag>${vNF.toFixed(2)}</vPag>
-          <card>
-            <tpIntegra>${tpIntegra}</tpIntegra>
-            <CNPJ>${cnpj}</CNPJ>
-            <tBand>${tBand}</tBand>
-            <cAut>${xmlEscape(cAut)}</cAut>
-          </card>
-        </detPag>
-      </pag>`;
-}
-
 /** Remessa: sempre emite IBSCBS; sem `ibsCbs` no payload vale o padrão do ML (o perfil já preenche). */
 export function ibsCbsImpostoXmlRemessa(
   ibsCbs?: Record<string, unknown> | null,
   vBC?: number | null,
 ): string {
   return ibsCbsImpostoXml(ibsCbs, REMESSA_IBS_CBS_DEFAULTS, true, vBC);
-}
-
-export function vItemXml(vItem: number): string {
-  return `\n        <vItem>${vItem.toFixed(2)}</vItem>`;
-}
-
-export function icmsTotXml(t: IcmsTotValues, opts?: { includeDifalFields?: boolean }): string {
-  void opts;
-  const hasDifalValues =
-    (t.vFCPUFDest ?? 0) !== 0 || (t.vICMSUFDest ?? 0) !== 0 || (t.vICMSUFRemet ?? 0) !== 0;
-  const difal = hasDifalValues
-    ? `<vFCPUFDest>${(t.vFCPUFDest ?? 0).toFixed(2)}</vFCPUFDest>
-          <vICMSUFDest>${(t.vICMSUFDest ?? 0).toFixed(2)}</vICMSUFDest>
-          <vICMSUFRemet>${(t.vICMSUFRemet ?? 0).toFixed(2)}</vICMSUFRemet>`
-    : "";
-  return `<ICMSTot>
-          <vBC>${t.vBC.toFixed(2)}</vBC>
-          <vICMS>${t.vICMS.toFixed(2)}</vICMS>
-          <vICMSDeson>0.00</vICMSDeson>
-          ${difal}
-          <vFCP>0.00</vFCP>
-          <vBCST>0.00</vBCST>
-          <vST>0.00</vST>
-          <vFCPST>0.00</vFCPST>
-          <vFCPSTRet>0.00</vFCPSTRet>
-          <vProd>${t.vProd.toFixed(2)}</vProd>
-          <vFrete>${t.vFrete.toFixed(2)}</vFrete>
-          <vSeg>0.00</vSeg>
-          <vDesc>0.00</vDesc>
-          <vII>0.00</vII>
-          <vIPI>${t.vIPI.toFixed(2)}</vIPI>
-          <vIPIDevol>0.00</vIPIDevol>
-          <vPIS>${t.vPIS.toFixed(2)}</vPIS>
-          <vCOFINS>${t.vCOFINS.toFixed(2)}</vCOFINS>
-          <vOutro>0.00</vOutro>
-          <vNF>${t.vNF.toFixed(2)}</vNF>
-          <vTotTrib>${(t.vTotTrib ?? 0).toFixed(2)}</vTotTrib>
-        </ICMSTot>`;
 }
 
 export function ibsCbsTotXml(vBCIBSCBS = 0): string {
@@ -295,24 +222,6 @@ export function ibsCbsTotXml(vBCIBSCBS = 0): string {
 
 export function vNFTotXml(vNF: number): string {
   return `<vNFTot>${vNF.toFixed(2)}</vNFTot>`;
-}
-
-export function nfeTotalXml(
-  icmsTot: string,
-  vNF: number,
-  opts?: {
-    includeReformaTributaria?: boolean;
-    vBCIBSCBS?: number;
-    ibsCbs?: Record<string, unknown> | null;
-  },
-): string {
-  const reforma =
-    opts?.includeReformaTributaria !== false && opts?.vBCIBSCBS != null && opts?.ibsCbs
-      ? `\n        ${ibsCbsTotXmlVenda(opts.vBCIBSCBS, opts.ibsCbs)}\n        ${vNFTotXml(vNF)}`
-      : opts?.includeReformaTributaria !== false
-        ? `\n        ${ibsCbsTotXml(opts?.vBCIBSCBS ?? 0)}\n        ${vNFTotXml(vNF)}`
-        : "";
-  return `${icmsTot}${reforma}`;
 }
 
 export function transportaXml(t: NfeTransportaInput): string {
@@ -337,29 +246,6 @@ export function transportaXml(t: NfeTransportaInput): string {
   }
   lines.push("        </transporta>");
   return lines.join("\n");
-}
-
-export function nfeTranspXml(opts: {
-  modFrete: string;
-  transporta?: NfeTransportaInput | null;
-  vol: NfeTranspVolInput;
-}): string {
-  const transportaBlock = opts.transporta ? `\n${transportaXml(opts.transporta)}` : "";
-  const volBlock =
-    opts.modFrete === "9"
-      ? ""
-      : (() => {
-          const qVol = opts.vol.qVol ?? 1;
-          return `
-        <vol>
-          <qVol>${qVol}</qVol>
-          <pesoL>${opts.vol.pesoL.toFixed(3)}</pesoL>
-          <pesoB>${opts.vol.pesoB.toFixed(3)}</pesoB>
-        </vol>`;
-        })();
-  return `      <transp>
-        <modFrete>${opts.modFrete}</modFrete>${transportaBlock}${volBlock}
-      </transp>`;
 }
 
 /** Lê `fiscalPayload.transp` ou estima pelo mesmo algoritmo do backend. */
@@ -416,36 +302,4 @@ export function resolveIdCadIntTran(
   const intermed = fiscal?.infIntermed as Record<string, unknown> | undefined;
   const id = intermed?.idCadIntTran;
   return typeof id === "string" && id.trim() ? id.trim() : fallback;
-}
-
-export function nfeAutXmlBlocks(cpfs: readonly string[]): string {
-  return cpfs
-    .map((cpf) => `      <autXML>\n        <CPF>${cpf.replace(/\D/g, "")}</CPF>\n      </autXML>`)
-    .join("\n");
-}
-
-/** Complemento do destinatário — ML envia placeholder quando vazio. */
-export function destComplementoXml(complemento?: string, placeholder = "Nao consta"): string {
-  const value = complemento?.trim() ? complemento : placeholder;
-  return `\n          <xCpl>${xmlEscape(value)}</xCpl>`;
-}
-
-export function infRespTecXml(opts: {
-  cnpj: string;
-  xContato: string;
-  email: string;
-  fone: string;
-  idCSRT?: string;
-  hashCSRT?: string;
-}): string {
-  const csrtBlock =
-    opts.idCSRT?.trim() && opts.hashCSRT?.trim()
-      ? `\n        <idCSRT>${xmlEscape(opts.idCSRT)}</idCSRT>\n        <hashCSRT>${xmlEscape(opts.hashCSRT)}</hashCSRT>`
-      : "";
-  return `      <infRespTec>
-        <CNPJ>${opts.cnpj.replace(/\D/g, "")}</CNPJ>
-        <xContato>${xmlEscape(opts.xContato)}</xContato>
-        <email>${xmlEscape(opts.email)}</email>
-        <fone>${opts.fone.replace(/\D/g, "")}</fone>${csrtBlock}
-      </infRespTec>`;
 }

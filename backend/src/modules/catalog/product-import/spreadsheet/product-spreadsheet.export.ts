@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import type { Product } from "../../product/product.types.js";
 import { PRODUCT_SPREADSHEET_COLUMNS } from "./product-spreadsheet.parser.js";
 
@@ -24,15 +24,11 @@ const EXAMPLE_ROW: Record<(typeof PRODUCT_SPREADSHEET_COLUMNS)[number], string> 
   tax_rule_base_id: "Chuveiro",
 };
 
-function escapeCsv(value: string): string {
-  if (/[;"\n\r]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
-  return value;
-}
-
 function formatPrecoBr(n: number): string {
   return n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 8 });
 }
 
+/** Uma célula por coluna de `PRODUCT_SPREADSHEET_COLUMNS`, na mesma ordem. */
 function productToRow(p: Product): string[] {
   return [
     p.sku,
@@ -42,6 +38,7 @@ function productToRow(p: Product): string[] {
     p.cest ?? "",
     p.exTipi ?? "",
     String(p.origem),
+    p.nfci ?? "",
     p.unidade,
     formatPrecoBr(p.preco),
     formatPrecoBr(p.precoCusto),
@@ -50,37 +47,11 @@ function productToRow(p: Product): string[] {
   ];
 }
 
-export function buildProductSpreadsheetCsv(products: Product[], includeExample = false): string {
-  const header = PRODUCT_SPREADSHEET_COLUMNS.join(";");
-  const lines = [header];
-  if (includeExample) {
-    lines.push(PRODUCT_SPREADSHEET_COLUMNS.map((c) => escapeCsv(EXAMPLE_ROW[c])).join(";"));
-  }
-  for (const p of products) {
-    lines.push(productToRow(p).map(escapeCsv).join(";"));
-  }
-  return `\uFEFF${lines.join("\r\n")}`;
-}
-
-function attachHeaderComment(
-  ws: XLSX.WorkSheet,
-  column: (typeof PRODUCT_SPREADSHEET_COLUMNS)[number],
-  text: string,
-): void {
-  const colIndex = PRODUCT_SPREADSHEET_COLUMNS.indexOf(column);
-  if (colIndex < 0) return;
-
-  const cellRef = XLSX.utils.encode_cell({ r: 0, c: colIndex });
-  const cell = ws[cellRef];
-  if (!cell) return;
-
-  cell.c = [{ a: "MS Edit", t: text }];
-}
-
-function attachSpreadsheetHeaderComments(ws: XLSX.WorkSheet): void {
-  attachHeaderComment(ws, "ex_tipi", EX_TIPI_FIELD_HELP);
-  attachHeaderComment(ws, "tax_rule_base_id", TAX_RULE_BASE_ID_FIELD_HELP);
-}
+/** Notas nos cabeçalhos que costumam gerar dúvida no preenchimento. */
+const HEADER_NOTES: Partial<Record<(typeof PRODUCT_SPREADSHEET_COLUMNS)[number], string>> = {
+  ex_tipi: EX_TIPI_FIELD_HELP,
+  tax_rule_base_id: TAX_RULE_BASE_ID_FIELD_HELP,
+};
 
 function buildProductSpreadsheetMatrix(products: Product[], includeExample = false): string[][] {
   const matrix: string[][] = [PRODUCT_SPREADSHEET_COLUMNS.slice()];
@@ -93,15 +64,21 @@ function buildProductSpreadsheetMatrix(products: Product[], includeExample = fal
   return matrix;
 }
 
-export function buildProductSpreadsheetXlsx(products: Product[], includeExample = false): Buffer {
-  const ws = XLSX.utils.aoa_to_sheet(buildProductSpreadsheetMatrix(products, includeExample));
-  attachSpreadsheetHeaderComments(ws);
+export async function buildProductSpreadsheetXlsx(
+  products: Product[],
+  includeExample = false,
+): Promise<Buffer> {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("Produtos");
+  sheet.addRows(buildProductSpreadsheetMatrix(products, includeExample));
+  PRODUCT_SPREADSHEET_COLUMNS.forEach((column, index) => {
+    const note = HEADER_NOTES[column];
+    if (note) sheet.getCell(1, index + 1).note = note;
+  });
 
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Produtos");
-  return Buffer.from(XLSX.write(wb, { type: "buffer", bookType: "xlsx" }));
+  return Buffer.from(await workbook.xlsx.writeBuffer());
 }
 
-export function buildProductSpreadsheetTemplateXlsx(): Buffer {
+export function buildProductSpreadsheetTemplateXlsx(): Promise<Buffer> {
   return buildProductSpreadsheetXlsx([], true);
 }

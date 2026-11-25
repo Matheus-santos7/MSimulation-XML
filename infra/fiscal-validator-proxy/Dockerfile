@@ -19,5 +19,5 @@ COPY infra/fiscal-validator-proxy/validate_nfe_full_response.py /app/validate_nf
 COPY infra/fiscal-validator-proxy/validate_nfe_full_runner.py /app/validate_nfe_full_runner.py
 COPY infra/fiscal-validator-proxy/main.py /app/main.py
 
-# Render injeta PORT em runtime.
+# PORT opcional (padrão 8000, a porta que o compose usa).
 CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]

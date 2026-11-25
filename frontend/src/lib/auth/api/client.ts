@@ -1,11 +1,6 @@
 import { apiUrl } from "@/lib/api-base";
 import { forwardedClientIpHeaders } from "@/lib/http/client-ip";
-import { toUserFacingError } from "@/lib/user-facing-error";
-
-type ApiErrorPayload = {
-  error: string;
-  details?: Record<string, string[]>;
-};
+import { readApiErrorPayload, type ApiErrorPayload } from "@/lib/http/api-error";
 
 export class AuthApiError extends Error {
   fieldErrors?: Record<string, string[]>;
@@ -21,38 +16,7 @@ export function authApiUrl(path: string): string {
   return apiUrl(path);
 }
 
-async function readApiErrorPayload(res: Response): Promise<ApiErrorPayload> {
-  const text = await res.text().catch(() => "");
-  if (!text) {
-    return {
-      error: toUserFacingError(res.statusText, {
-        status: res.status,
-        fallback: "Falha na autenticação. Tente novamente em instantes.",
-      }),
-    };
-  }
-  try {
-    const parsed = JSON.parse(text) as {
-      error?: string;
-      message?: string;
-      details?: Record<string, string[]>;
-    };
-    return {
-      error: toUserFacingError(parsed.error ?? parsed.message ?? text, {
-        status: res.status,
-        fallback: "Falha na autenticação. Tente novamente em instantes.",
-      }),
-      details: parsed.details,
-    };
-  } catch {
-    return {
-      error: toUserFacingError(text, {
-        status: res.status,
-        fallback: "Falha na autenticação. Tente novamente em instantes.",
-      }),
-    };
-  }
-}
+const AUTH_ERROR_FALLBACK = "Falha na autenticação. Tente novamente em instantes.";
 
 function throwOnAuthError(payload: ApiErrorPayload): never {
   if (payload.details) {
@@ -74,7 +38,7 @@ export async function postAuthJson<T>(path: string, body: unknown): Promise<T> {
     throw new Error("API indisponível. Verifique se o backend está rodando.");
   }
   if (!res.ok) {
-    throwOnAuthError(await readApiErrorPayload(res));
+    throwOnAuthError(await readApiErrorPayload(res, AUTH_ERROR_FALLBACK));
   }
   return res.json() as Promise<T>;
 }
@@ -101,7 +65,7 @@ export async function authBearerFetch<T>(
     throw new Error("API indisponível. Verifique se o backend está rodando.");
   }
   if (!res.ok) {
-    throwOnAuthError(await readApiErrorPayload(res));
+    throwOnAuthError(await readApiErrorPayload(res, AUTH_ERROR_FALLBACK));
   }
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;

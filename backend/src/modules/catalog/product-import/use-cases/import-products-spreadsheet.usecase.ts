@@ -30,7 +30,7 @@ export class ImportProductsSpreadsheetUseCase {
 
     const parsed = isCsv
       ? parseProductSpreadsheetCsv(fileBuffer.toString("utf-8"))
-      : parseProductSpreadsheetXlsx(fileBuffer);
+      : await parseProductSpreadsheetXlsx(fileBuffer);
 
     if (parsed.errors.length > 0 && parsed.rows.length === 0) {
       throw new CatalogError.ProductInvalid(parsed.errors[0]?.message ?? "Planilha inválida");

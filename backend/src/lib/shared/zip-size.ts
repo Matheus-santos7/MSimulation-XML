@@ -1,10 +1,9 @@
 /**
  * Leitura do diretório central de um ZIP (.xlsx é um ZIP) para somar o tamanho
- * descompactado ANTES de entregar o arquivo ao `XLSX.read`.
+ * descompactado ANTES de entregar o arquivo à leitura da planilha (`spreadsheet-worker.ts`).
  *
- * Por quê: o `XLSX.read` descompacta e lê o XML inteiro de forma síncrona. Um upload de
- * 15 MB muito comprimido (zip bomb) pode carregar centenas de MB de XML e travar o event
- * loop. Ler só o diretório central custa O(número de entradas) e não descompacta nada.
+ * Por quê: a leitura descompacta e interpreta o XML inteiro. Um upload de 15 MB muito
+ * comprimido (zip bomb) pode carregar centenas de MB de XML e esgotar CPU e memória. Ler só o diretório central custa O(número de entradas) e não descompacta nada.
  *
  * Falha fechada: qualquer estrutura truncada, inválida ou zip64 devolve `null` e quem chama
  * recusa o arquivo. Uma planilha real do Excel/LibreOffice nunca precisa de zip64 no nosso teto.

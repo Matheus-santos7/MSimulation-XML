@@ -30,7 +30,7 @@ import { resolveTaxRuleSpreadsheetUpload } from "./tax-rule-upload.js";
 const HTTP_OK = 200;
 
 /**
- * O import faz `XLSX.read` síncrono (segundos de CPU por arquivo grande): o limite compartilhado
+ * O import lê a planilha numa worker (segundos de CPU por arquivo grande): o limite compartilhado
  * de 300/min por IP deixaria poucos usuários saturarem a API. Ajuste aqui se o uso legítimo crescer.
  */
 const IMPORT_SPREADSHEET_MAX_PER_MINUTE = 10;

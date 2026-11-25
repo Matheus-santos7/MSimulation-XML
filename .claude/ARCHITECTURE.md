@@ -21,7 +21,7 @@ O código é a fonte da verdade. A seção 12 diz onde o código ainda difere de
 | Testes | Vitest (`*.spec.ts`) + `@nestjs/testing` | `backend/run-tests.sh`, `vitest.config.ts` |
 | Lint | ESLint (flat config) + Prettier + dependency-cruiser | `backend/eslint.config.js`, `.prettierrc`, `.dependency-cruiser.js` |
 | Fiscal | `@msimulation-xml/fiscal-core` e `@msimulation-xml/nfe-xml` (workspace) | `packages/` |
-| CI/CD | GitHub Actions (lint, build, tsc dos testes, depcheck, testes, audit); deploy no Render e imagem Docker | `.github/workflows/` |
+| CI/CD | GitHub Actions (lint, build, tsc dos testes, depcheck, testes, audit); imagens Docker no ghcr.io por tag `v*` (`infra/docker/docker-compose.yml` no servidor) | `.github/workflows/` |
 
 Não existe o kernel privado `@eac-nerus/microservices`. As peças equivalentes moram em `backend/src/nest/` (seção 3).
 

@@ -46,6 +46,18 @@ export async function applyRlsContext(
   }
 }
 
+/**
+ * Sem transação (P-1): `getDbClient()` devolve o client raiz, e cada query pega a conexão do pool
+ * só pelo tempo dela. Não aplica `app.tenant_id`, então só serve para tabelas fora da RLS (auth).
+ */
+export function runWithPooledDbClient<T>(
+  prisma: PrismaClient,
+  ctx: DbRequestContext,
+  fn: () => Promise<T>,
+): Promise<T> {
+  return dbRequestContext.run(ctx, () => dbTransactionContext.run(prisma, fn));
+}
+
 export async function runWithDbContext<T>(
   prisma: PrismaClient,
   ctx: DbRequestContext,

@@ -29,10 +29,6 @@ export function formatNfeQuantity(q: number): string {
   return q.toFixed(4);
 }
 
-export function idDestFromUfs(emitUf: string, destUf: string): number {
-  return emitUf.toUpperCase() === destUf.toUpperCase() ? 1 : 2;
-}
-
 export function optionalText(value?: string): string | undefined {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;

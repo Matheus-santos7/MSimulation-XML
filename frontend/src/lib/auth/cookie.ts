@@ -13,11 +13,7 @@ export const TWO_FACTOR_PENDING_MAX_AGE = 5 * 60;
 
 /** Usado em session.ts (cookies API) e edge-cookies.ts (proxy). */
 export function isCookieSecure(): boolean {
-  return (
-    process.env.NODE_ENV === "production" ||
-    process.env.VERCEL === "1" ||
-    process.env.COOKIE_SECURE === "true"
-  );
+  return process.env.NODE_ENV === "production" || process.env.COOKIE_SECURE === "true";
 }
 
 export function authCookieBaseOptions() {

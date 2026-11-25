@@ -52,7 +52,7 @@ export class TaxRuleService {
     userId: string,
     fileBuffer: Buffer,
   ): Promise<ImportTaxRulesSpreadsheetResult> {
-    const parsed = parseTaxRuleSpreadsheet(fileBuffer);
+    const parsed = await parseTaxRuleSpreadsheet(fileBuffer);
     if (parsed.rawRows.length === 0) {
       throw new TaxRuleError(parsed.errors[0]?.message ?? "Nenhuma regra válida na planilha");
     }

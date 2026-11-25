@@ -41,12 +41,6 @@ export type TaxRuleSpreadsheetImportResult = TaxRuleBulkUpsertResult & {
   parseErrors?: { line: number; message: string }[];
 };
 
-export async function bulkUpsertTaxRules(rows: TaxRuleImportRow[]): Promise<TaxRuleBulkUpsertResult> {
-  return mutateJson<TaxRuleBulkUpsertResult>(buildApiUrl("/api/tax-rules/bulk-upsert"), "POST", {
-    rows,
-  }) as Promise<TaxRuleBulkUpsertResult>;
-}
-
 /** Envia a planilha ML (.xlsx) para interpretação e persistência no backend. */
 export async function importTaxRulesSpreadsheet(file: File): Promise<TaxRuleSpreadsheetImportResult> {
   const body = new FormData();

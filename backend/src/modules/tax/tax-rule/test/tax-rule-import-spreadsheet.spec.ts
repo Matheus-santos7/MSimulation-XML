@@ -12,9 +12,9 @@ import { execFileSync } from "node:child_process";
 import { afterAll, beforeAll, beforeEach, describe, it } from "vitest";
 import pg from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
-import * as XLSX from "xlsx";
 import type { FastifyInstance } from "fastify";
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
+import { buildXlsx } from "../../../../test/xlsx-fixture.js";
 
 process.env.JWT_SECRET ??= "import-test-secret-0123456789";
 
@@ -49,12 +49,10 @@ function rowWithoutOrigin(index: number): Cell[] {
   return [`20000${index}`, `Sem origem ${index}`, "", "Contribuinte", "99", 0, 18];
 }
 
-function buildXlsx(dataRows: Cell[][], sheetName: string = SHEET_NAME): Buffer {
+function buildRulesXlsx(dataRows: Cell[][], sheetName: string = SHEET_NAME): Promise<Buffer> {
   const rows = [HEADER_KEYS.map(() => ""), HEADER_KEYS, HEADER_LABELS, ...dataRows];
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), sheetName);
 
-  return Buffer.from(XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }));
+  return buildXlsx({ [sheetName]: rows });
 }
 
 function multipartBody(file: Buffer, fileName: string): Buffer {
@@ -166,7 +164,7 @@ describe.skipIf(!databaseUrl)("POST /api/tax-rules/import-spreadsheet (Postgres 
   });
 
   it("importa planilha válida e responde created/updated/total", async () => {
-    const file = buildXlsx([1, 2, 3, 4, 5].map((i) => validRow(i)));
+    const file = await buildRulesXlsx([1, 2, 3, 4, 5].map((i) => validRow(i)));
 
     const res = await importFile(file);
 
@@ -175,7 +173,7 @@ describe.skipIf(!databaseUrl)("POST /api/tax-rules/import-spreadsheet (Postgres 
   });
 
   it("grava no banco as 5 regras do tenant com origem e alíquota", async () => {
-    const file = buildXlsx([1, 2, 3, 4, 5].map((i) => validRow(i)));
+    const file = await buildRulesXlsx([1, 2, 3, 4, 5].map((i) => validRow(i)));
 
     await importFile(file);
 
@@ -189,24 +187,26 @@ describe.skipIf(!databaseUrl)("POST /api/tax-rules/import-spreadsheet (Postgres 
   });
 
   it("não grava regras em outro tenant", async () => {
-    await importFile(buildXlsx([validRow(1)]));
+    await importFile(await buildRulesXlsx([validRow(1)]));
 
     assert.equal((await storedRules(OTHER_TENANT_ID)).length, 0);
   });
 
   it("atualiza as regras alteradas ao reimportar a planilha", async () => {
-    await importFile(buildXlsx([1, 2, 3].map((i) => validRow(i))));
+    await importFile(await buildRulesXlsx([1, 2, 3].map((i) => validRow(i))));
 
-    const res = await importFile(buildXlsx([validRow(1, 12), validRow(2, 7), validRow(3)]));
+    const res = await importFile(
+      await buildRulesXlsx([validRow(1, 12), validRow(2, 7), validRow(3)]),
+    );
 
     assert.equal(res.statusCode, 200);
     assert.deepEqual(res.json(), { created: 0, updated: 3, total: 3 });
   });
 
   it("persiste a nova alíquota das regras reimportadas e mantém as demais", async () => {
-    await importFile(buildXlsx([1, 2, 3].map((i) => validRow(i))));
+    await importFile(await buildRulesXlsx([1, 2, 3].map((i) => validRow(i))));
 
-    await importFile(buildXlsx([validRow(1, 12), validRow(2, 7), validRow(3)]));
+    await importFile(await buildRulesXlsx([validRow(1, 12), validRow(2, 7), validRow(3)]));
 
     const rules = await storedRules();
     assert.equal(rules.length, 3);
@@ -217,15 +217,15 @@ describe.skipIf(!databaseUrl)("POST /api/tax-rules/import-spreadsheet (Postgres 
   });
 
   it("conta como criada só a regra nova ao reimportar com uma linha a mais", async () => {
-    await importFile(buildXlsx([1, 2, 3].map((i) => validRow(i))));
+    await importFile(await buildRulesXlsx([1, 2, 3].map((i) => validRow(i))));
 
-    const res = await importFile(buildXlsx([1, 2, 3, 4].map((i) => validRow(i))));
+    const res = await importFile(await buildRulesXlsx([1, 2, 3, 4].map((i) => validRow(i))));
 
     assert.deepEqual(res.json(), { created: 1, updated: 3, total: 4 });
   });
 
   it("importa as linhas válidas e devolve parseErrors das inválidas", async () => {
-    const file = buildXlsx([
+    const file = await buildRulesXlsx([
       rowWithoutOrigin(1),
       rowWithoutOrigin(2),
       ...[1, 2, 3, 4, 5].map((i) => validRow(i)),
@@ -242,7 +242,7 @@ describe.skipIf(!databaseUrl)("POST /api/tax-rules/import-spreadsheet (Postgres 
   });
 
   it("persiste só as linhas válidas quando há parseErrors", async () => {
-    const file = buildXlsx([
+    const file = await buildRulesXlsx([
       rowWithoutOrigin(1),
       rowWithoutOrigin(2),
       ...[1, 2, 3, 4, 5].map((i) => validRow(i)),
@@ -254,7 +254,7 @@ describe.skipIf(!databaseUrl)("POST /api/tax-rules/import-spreadsheet (Postgres 
   });
 
   it("responde 400 quando nenhuma linha é válida", async () => {
-    const res = await importFile(buildXlsx([rowWithoutOrigin(1), rowWithoutOrigin(2)]));
+    const res = await importFile(await buildRulesXlsx([rowWithoutOrigin(1), rowWithoutOrigin(2)]));
 
     assert.equal(res.statusCode, 400);
     assert.match(res.json().error, /ORIGIN|Nenhuma regra válida/);
@@ -263,7 +263,7 @@ describe.skipIf(!databaseUrl)("POST /api/tax-rules/import-spreadsheet (Postgres 
 
   it("responde 400 'Nenhuma regra válida' quando a aba não tem linhas de dados além do cabeçalho", async () => {
     // Menos de 4 linhas na matriz: "Planilha sem linhas de dados".
-    const res = await importFile(buildXlsx([]));
+    const res = await importFile(await buildRulesXlsx([]));
 
     assert.equal(res.statusCode, 400);
     assert.match(res.json().error, /Planilha sem linhas de dados/);
@@ -293,14 +293,14 @@ describe.skipIf(!databaseUrl)("POST /api/tax-rules/import-spreadsheet (Postgres 
   });
 
   it("responde 400 quando a aba 'Regras tributárias' não existe", async () => {
-    const res = await importFile(buildXlsx([validRow(1)], "Other Sheet"));
+    const res = await importFile(await buildRulesXlsx([validRow(1)], "Other Sheet"));
 
     assert.equal(res.statusCode, 400);
     assert.match(res.json().error, /Aba 'Regras tributárias' não encontrada/);
   });
 
   it("responde 400 quando a extensão não é xlsx", async () => {
-    const res = await importFile(buildXlsx([validRow(1)]), "regras.csv");
+    const res = await importFile(await buildRulesXlsx([validRow(1)]), "regras.csv");
 
     assert.equal(res.statusCode, 400);
     assert.match(res.json().error, /Formato inválido/);

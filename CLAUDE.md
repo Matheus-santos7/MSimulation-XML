@@ -8,8 +8,6 @@ A arquitetura do backend segue o padrão dos Nérus Microservices (feature modul
 
 Todos os módulos já seguem esse contrato (pastas por feature, DI com `@Inject`, DTOs Zod, Vitest). Use-os como referência ao criar código novo.
 
-`frontend/`, `packages/fiscal-core/` e `packages/nfe-xml/` têm `CLAUDE.md` próprios, carregados ao trabalhar nessas pastas.
-
 ## Regras por tipo de arquivo
 
 As regras em `.claude/rules/` carregam sozinhas quando um arquivo correspondente é lido ou editado (controller, DTO, entity, repository, schema Prisma, migration, provider, spec, bootstrap).
@@ -57,6 +55,8 @@ Fall back to grep or file reads only for what the graph does not model: literal 
 Na raiz: `pnpm test:backend` · `pnpm depcheck` · `pnpm lint` (frontend).
 
 No backend (`pnpm --filter @msimulation-xml/backend <script>`): `dev` · `build` · `test` · `lint` · `db:generate` · `db:migrate` · `db:migrate:deploy`. Tipos dos testes: `exec tsc --noEmit -p tsconfig.test.json`.
+
+Specs de integração (RLS, concorrência do FIFO e do faturamento, import, replay de TOTP) rodam contra um Postgres descartável quando `INTEGRATION_TEST_DATABASE_URL` aponta para um host local; sem a variável, são puladas. O CI sobe esse Postgres. Local: `docker run -d --rm -p 127.0.0.1:55433:5432 -e POSTGRES_USER=ci -e POSTGRES_PASSWORD=ci -e POSTGRES_DB=msimulation_xml_ci postgres:16` e exporte a URL `postgresql://ci:ci@127.0.0.1:55433/msimulation_xml_ci`. O helper é `backend/src/test/integration/postgres.ts`. O rate limit com Redis tem a spec `backend/src/lib/http/test/rate-limit-redis.spec.ts`, ligada por `INTEGRATION_TEST_REDIS_URL` (local: `docker run -d --rm -p 127.0.0.1:56379:6379 redis:7` e `redis://127.0.0.1:56379`).
 
 Depois de mudar `backend/prisma/schema.prisma`: crie a migration com `prisma migrate dev --create-only`, inclua a RLS da tabela nova e rode `db:generate`. Nunca edite `src/generated/prisma` à mão.
 

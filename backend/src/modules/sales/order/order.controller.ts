@@ -8,12 +8,15 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseFilters,
 } from "@nestjs/common";
 import { ProtectedApi } from "../../../nest/api-access.decorators.js";
 import { TenantId } from "../../../nest/auth/request-params.js";
 import { orNotFound } from "../../../nest/http/not-found.js";
 import { ZodValidationPipe } from "../../../nest/http/zod-validation.pipe.js";
+import { toPaginationParams, wantsPagination } from "../../../nest/base/pagination.js";
+import { listOrdersQuerySchema, type ListOrdersQueryDTO } from "./dtos/list-orders.query.dto.js";
 import { salesErrorFilter } from "../errors/sales-error.filter.js";
 import {
   orderCheckoutBody,
@@ -35,9 +38,15 @@ const ORDER_NOT_FOUND = "Pedido não encontrado";
 export class OrderController {
   constructor(@Inject(OrderService) private readonly orders: OrderService) {}
 
+  /** Com `offset`/`limit`, `PaginatedResponse`; sem eles, todos os pedidos. */
   @Get()
-  list(@TenantId() tenantId: string) {
-    return this.orders.list(tenantId);
+  list(
+    @TenantId() tenantId: string,
+    @Query(new ZodValidationPipe(listOrdersQuerySchema)) query: ListOrdersQueryDTO,
+  ) {
+    return wantsPagination(query)
+      ? this.orders.listPage(tenantId, toPaginationParams(query))
+      : this.orders.list(tenantId);
   }
 
   @Get(":id")

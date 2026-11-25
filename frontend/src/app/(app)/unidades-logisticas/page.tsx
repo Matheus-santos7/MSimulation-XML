@@ -5,8 +5,6 @@ import { MarketplaceFilterSelect } from "@/components/marketplace-filter-select"
 import { UrlFilterInput } from "@/components/url-filter-input";
 // import { UnidadesLogisticasImportForm } from "@/components/unidades-logisticas-import-form";
 import { UnidadesLogisticasTable } from "@/components/unidades-logisticas-table";
-import { isAdminRole } from "@/lib/auth/roles";
-import { getAuthMe } from "@/lib/auth/session";
 import { listLogisticUnits, listMarketplaces } from "@/lib/fiscal-api";
 import { isMarketplaceCode } from "@/lib/marketplaces";
 
@@ -25,9 +23,9 @@ export default async function UnidadesLogisticasPage({ searchParams }: Props) {
   const { q, cnpj, marketplace } = await searchParams;
   const marketplaceFilter = isMarketplaceCode(marketplace) ? marketplace : undefined;
 
-  // Promise.all executa as três buscas ao mesmo tempo. 
+  // Promise.all executa as buscas ao mesmo tempo.
   // Isso reduz o tempo de resposta pela métrica da requisição mais demorada, em vez da soma de todas.
-  const [unidades, marketplaces, me] = await Promise.all([
+  const [unidades, marketplaces] = await Promise.all([
     listLogisticUnits({
       q: q?.trim() || undefined,
       cnpj: cnpj?.trim() || undefined,
@@ -35,11 +33,7 @@ export default async function UnidadesLogisticasPage({ searchParams }: Props) {
       ativa: true, // Traz apenas unidades em funcionamento
     }),
     listMarketplaces(),
-    getAuthMe(), // Pega os dados do usuário autenticado no cookie/sessão atual
   ]);
-
-  // Verifica as permissões de quem está acessando a página
-  const isAdmin = isAdminRole(me?.role);
 
   // Procura na lista de unidades (que já vêm do banco com a flag 'padrao') 
   // qual delas é o Centro de Distribuição oficial selecionado por esta empresa.

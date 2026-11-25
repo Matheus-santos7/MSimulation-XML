@@ -3,6 +3,7 @@ import { OrderLockedError } from "../errors/sales.errors.js";
 import type { OrderForEmit } from "../invoicing/types/order-for-emit.types.js";
 import { OrderRepository } from "./order.repository.js";
 import type { Order } from "./order.types.js";
+import type { PaginatedResponse, PaginationParams } from "../../../nest/base/pagination.js";
 import {
   resolveMarketplaceOrderId,
   withMarketplaceItemOrderIds,
@@ -21,6 +22,10 @@ export class OrderService {
 
   list(tenantId: string): Promise<Order[]> {
     return this.repository.listByTenant(tenantId);
+  }
+
+  listPage(tenantId: string, params: PaginationParams): Promise<PaginatedResponse<Order>> {
+    return this.repository.listPageByTenant(tenantId, params);
   }
 
   get(tenantId: string, id: string): Promise<Order | null> {

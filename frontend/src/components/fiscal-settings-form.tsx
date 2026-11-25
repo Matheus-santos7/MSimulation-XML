@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { salvarConfiguracoesFiscaisAction } from "@/app/(app)/configuracoes-fiscais/actions";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import type { FiscalEmitterSettingsPatch } from "@/lib/fiscal-emitter-settings-types";
 
 type Props = {
@@ -64,30 +63,5 @@ export function FiscalSettingsFormShell({
         </Button>
       </div>
     </form>
-  );
-}
-
-export function ModeToggle({
-  value,
-  onChange,
-  id,
-}: {
-  id: string;
-  value: "DEFAULT" | "CUSTOM";
-  onChange: (v: "DEFAULT" | "CUSTOM") => void;
-}) {
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={id}>Tipo de configuração</Label>
-      <select
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value as "DEFAULT" | "CUSTOM")}
-        className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-      >
-        <option value="DEFAULT">Padrão do emissor</option>
-        <option value="CUSTOM">Customizada por você</option>
-      </select>
-    </div>
   );
 }

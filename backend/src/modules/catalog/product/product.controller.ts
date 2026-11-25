@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseFilters,
 } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
@@ -20,6 +21,11 @@ import {
   createProductRequestSchema,
   type CreateProductRequestDTO,
 } from "./dtos/create-product.request.dto.js";
+import { toPaginationParams, wantsPagination } from "../../../nest/base/pagination.js";
+import {
+  listProductsQuerySchema,
+  type ListProductsQueryDTO,
+} from "./dtos/list-products.query.dto.js";
 import { productParamsSchema, type ProductParamsDTO } from "./dtos/product.params.dto.js";
 import {
   updateProductRequestSchema,
@@ -59,9 +65,15 @@ export class ProductController {
     @Inject(UpdateProductUseCase) private readonly updateProduct: UpdateProductUseCase,
   ) {}
 
+  /** Com `offset`/`limit`, `PaginatedResponse`; sem eles, todos os produtos (seletores). */
   @Get()
-  list(@TenantId() tenantId: string) {
-    return this.productService.list(tenantId);
+  list(
+    @TenantId() tenantId: string,
+    @Query(new ZodValidationPipe(listProductsQuerySchema)) query: ListProductsQueryDTO,
+  ) {
+    return wantsPagination(query)
+      ? this.productService.listPage(tenantId, toPaginationParams(query))
+      : this.productService.list(tenantId);
   }
 
   @Get(":id")

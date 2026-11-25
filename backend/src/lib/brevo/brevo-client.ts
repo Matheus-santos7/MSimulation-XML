@@ -16,10 +16,3 @@ export function getBrevoClient(): BrevoClient | null {
 
   return sharedClient;
 }
-
-/**
- * Reseta o singleton (útil em testes).
- */
-export function resetBrevoClientForTests(): void {
-  sharedClient = null;
-}

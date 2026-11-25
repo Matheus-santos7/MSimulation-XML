@@ -14,6 +14,6 @@ export const JWT = Symbol("JWT");
 export type RateLimits = {
   /** Limitador compartilhado da API protegida (mesmo store das rotas Fastify legadas). */
   protectedApi: RateLimitHandler;
-  /** Cria um limitador com store próprio para uma rota. */
-  create: (options: RouteRateLimit) => RateLimitHandler;
+  /** Cria um limitador com contagem própria para uma rota; `name` identifica a rota. */
+  create: (options: RouteRateLimit, name: string) => RateLimitHandler;
 };

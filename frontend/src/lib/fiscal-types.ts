@@ -506,3 +506,12 @@ export type TaxRuleDto = {
   source?: string;
   payload?: Record<string, unknown>;
 };
+
+/** Lista paginada da API (`offset`/`limit`): `PaginatedResponse` do backend. */
+export type PageDto<T> = {
+  data: T[];
+  total: number;
+  page: number;
+  perPage: number;
+  totalPages: number;
+};

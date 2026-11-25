@@ -46,3 +46,36 @@ export function toPaginationParams(query: PaginationQueryDTO): PaginationParams 
     ...(query.filter !== undefined && { filter: query.filter }),
   };
 }
+
+/**
+ * Paginação opcional de uma lista (P-4): só pagina quando a query traz `offset` ou `limit`. Sem
+ * eles a rota devolve o array inteiro, como antes (seletores do frontend que precisam de tudo).
+ */
+export function wantsPagination(query: Pick<PaginationQueryDTO, "offset" | "limit">): boolean {
+  return query.offset !== undefined || query.limit !== undefined;
+}
+
+export type PageQuery<TRow, TItem> = {
+  count: () => Promise<number>;
+  findMany: (window: { skip: number; take: number }) => Promise<TRow[]>;
+  map: (row: TRow) => TItem;
+};
+
+/** Conta e busca a janela da página em paralelo e monta o `PaginatedResponse`. */
+export async function paginateQuery<TRow, TItem>(
+  { page, perPage }: Pick<PaginationParams, "page" | "perPage">,
+  query: PageQuery<TRow, TItem>,
+): Promise<PaginatedResponse<TItem>> {
+  const [total, rows] = await Promise.all([
+    query.count(),
+    query.findMany({ skip: (page - 1) * perPage, take: perPage }),
+  ]);
+
+  return {
+    data: rows.map(query.map),
+    total,
+    page,
+    perPage,
+    totalPages: Math.ceil(total / perPage),
+  };
+}

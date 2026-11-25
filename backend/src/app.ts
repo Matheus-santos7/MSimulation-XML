@@ -59,7 +59,7 @@ async function buildFastify(options: BuildAppOptions): Promise<FastifyInstance> 
 
   await app.register(helmet, buildHelmetOptions());
   await app.register(cors, buildCorsOptions());
-  await registerRootRateLimit(app);
+  await registerRootRateLimit(app, appConfig.redisUrl);
   await app.register(multipart, { limits: UPLOAD_LIMITS });
   await app.register(prismaPlugin, { client: options.prisma });
   await app.register(authPlugin);
@@ -75,8 +75,8 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<NestFasti
     logger: fastify.log,
     jwt: fastify.jwt,
     rateLimits: {
-      protectedApi: createRateLimitHandler(fastify, PROTECTED_API_RATE_LIMIT),
-      create: (routeOptions) => createRateLimitHandler(fastify, routeOptions),
+      protectedApi: createRateLimitHandler(fastify, PROTECTED_API_RATE_LIMIT, "protected-api"),
+      create: (routeOptions, name) => createRateLimitHandler(fastify, routeOptions, name),
     },
   });
   const nest = await NestFactory.create<NestFastifyApplication>(

@@ -1,38 +1,37 @@
 import type {
-  NFeDto,
+  PageDto,
   ProductDto,
   ProductInput,
   PedidoCheckoutInput,
   PedidoDto,
   PedidoFaturarResult,
 } from "../fiscal-types";
-import {
-  authHeaders,
-  buildApiUrl,
-  getJson,
-  mutateJson,
-  readApiError,
-  readApiErrorPayload,
-} from "./client";
+import { authHeaders, buildApiUrl, getJson, mutateJson, readApiErrorPayload } from "./client";
 
 export async function listProducts(): Promise<ProductDto[]> {
   return getJson<ProductDto[]>(buildApiUrl("/api/products"));
 }
 
-export async function getProduct(id: string): Promise<ProductDto | null> {
-  const href = buildApiUrl(`/api/products/${id}`);
-  const res = await fetch(href, { cache: "no-store", headers: await authHeaders() });
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(await readApiError(res));
-  return res.json() as Promise<ProductDto>;
-}
-
-export async function checkoutOrder(input: PedidoCheckoutInput): Promise<NFeDto> {
-  return mutateJson<NFeDto>(buildApiUrl("/api/pedidos/checkout"), "POST", input) as Promise<NFeDto>;
-}
-
 export async function listOrders(): Promise<PedidoDto[]> {
   return getJson<PedidoDto[]>(buildApiUrl("/api/pedidos"));
+}
+
+/** Página do catálogo (por SKU); `busca` filtra SKU e nome no servidor. */
+export async function listProductsPage(
+  page: number,
+  perPage: number,
+  busca?: string,
+): Promise<PageDto<ProductDto>> {
+  return getJson<PageDto<ProductDto>>(
+    buildApiUrl("/api/products", { offset: String(page), limit: String(perPage), filter: busca }),
+  );
+}
+
+/** Página de pedidos: rascunhos primeiro, depois os mais recentes. */
+export async function listOrdersPage(page: number, perPage: number): Promise<PageDto<PedidoDto>> {
+  return getJson<PageDto<PedidoDto>>(
+    buildApiUrl("/api/pedidos", { offset: String(page), limit: String(perPage) }),
+  );
 }
 
 export async function createOrder(input: PedidoCheckoutInput): Promise<PedidoDto> {
@@ -49,10 +48,6 @@ export async function invoiceOrder(id: string): Promise<PedidoFaturarResult> {
 
 export async function deleteOrder(id: string): Promise<void> {
   await mutateJson(buildApiUrl(`/api/pedidos/${id}`), "DELETE");
-}
-
-export async function getOrderIntegrationPayload(id: string): Promise<Record<string, unknown>> {
-  return getJson<Record<string, unknown>>(buildApiUrl(`/api/pedidos/${id}/integracao`));
 }
 
 export async function createProduct(input: ProductInput): Promise<ProductDto> {
@@ -92,12 +87,6 @@ export type ProductBulkUpsertResult = {
   parseErrors?: { line: number; message: string }[];
   total: number;
 };
-
-export async function bulkUpsertProducts(rows: ProductImportRawRow[]): Promise<ProductBulkUpsertResult> {
-  return mutateJson<ProductBulkUpsertResult>(buildApiUrl("/api/products/bulk-upsert"), "POST", {
-    rows,
-  }) as Promise<ProductBulkUpsertResult>;
-}
 
 /** Envia planilha CSV/XLSX para parse e importação no backend. */
 export async function importProductsSpreadsheet(file: File): Promise<ProductBulkUpsertResult> {

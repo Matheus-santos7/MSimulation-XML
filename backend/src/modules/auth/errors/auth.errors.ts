@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ConflictException,
   HttpException,
   UnauthorizedException,
 } from "@nestjs/common";
@@ -35,9 +34,6 @@ export namespace AuthError {
       super(message, HTTP_TOO_MANY_REQUESTS);
     }
   }
-
-  /** Conflito de cadastro (409). */
-  export class Conflict extends ConflictException {}
 
   /** Operação incompatível com o estado da conta (400). */
   export class State extends BadRequestException {}

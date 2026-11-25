@@ -57,9 +57,9 @@ export class ProductImportController {
   ) {}
 
   @Get("spreadsheet/template")
-  template(@Res() reply: FastifyReply) {
+  async template(@Res() reply: FastifyReply) {
     return sendFile(reply, {
-      content: buildProductSpreadsheetTemplateXlsx(),
+      content: await buildProductSpreadsheetTemplateXlsx(),
       contentType: XLSX_CONTENT_TYPE,
       fileName: "produtos-modelo.xlsx",
     });
@@ -70,7 +70,7 @@ export class ProductImportController {
     const products = await this.productService.list(tenantId);
 
     return sendFile(reply, {
-      content: buildProductSpreadsheetXlsx(products),
+      content: await buildProductSpreadsheetXlsx(products),
       contentType: XLSX_CONTENT_TYPE,
       fileName: "produtos-catalogo.xlsx",
     });

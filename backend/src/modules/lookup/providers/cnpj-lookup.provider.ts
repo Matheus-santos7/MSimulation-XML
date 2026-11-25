@@ -6,6 +6,9 @@ import { CepLookupProvider } from "./cep-lookup.provider.js";
 const BRASIL_API = "https://brasilapi.com.br/api";
 const OPEN_CNPJ_API = "https://api.opencnpj.org";
 
+/** Teto de cada consulta externa (P-7): API pública lenta não prende a requisição. */
+const FETCH_TIMEOUT_MS = 5_000;
+
 const FETCH_HEADERS = {
   Accept: "application/json",
   "User-Agent": "msimulation-xml/1.0 (fiscal-simulator)",
@@ -93,7 +96,12 @@ export class CnpjLookupProvider {
    * para permitir fallback sem expor erro ao cliente.
    */
   private async fetchFromBrasilApi(taxId: string): Promise<CnpjLookupResponseDTO | null> {
-    const response = await fetch(`${BRASIL_API}/cnpj/v1/${taxId}`, { headers: FETCH_HEADERS });
+    // Timeout ou erro de rede cai no fallback do OpenCNPJ, como o 429.
+    const response = await fetch(`${BRASIL_API}/cnpj/v1/${taxId}`, {
+      headers: FETCH_HEADERS,
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    }).catch(() => null);
+    if (!response) return null;
 
     if (response.status === 404) {
       throw new LookupError.NotFound("CNPJ não encontrado na base pública");
@@ -118,7 +126,10 @@ export class CnpjLookupProvider {
 
   /** Segunda fonte quando BrasilAPI está limitada ou indisponível. */
   private async fetchFromOpenCnpj(taxId: string): Promise<CnpjLookupResponseDTO> {
-    const response = await fetch(`${OPEN_CNPJ_API}/${taxId}`, { headers: FETCH_HEADERS });
+    const response = await fetch(`${OPEN_CNPJ_API}/${taxId}`, {
+      headers: FETCH_HEADERS,
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
 
     if (response.status === 404) {
       throw new LookupError.NotFound("CNPJ não encontrado na base pública");

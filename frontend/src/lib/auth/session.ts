@@ -107,20 +107,6 @@ export const resolveAccessToken = cache(async (): Promise<string | undefined> =>
   return session?.token;
 });
 
-/** Renova sessão e persiste cookies — use só em Server Actions. */
-export async function refreshAndPersistSession(): Promise<AuthSessionDto | null> {
-  const refreshToken = await getRefreshToken();
-  if (!refreshToken) return null;
-  try {
-    const session = await refreshSessionApi(refreshToken);
-    await setAuthSession(session);
-    return session;
-  } catch {
-    await clearAuthSession();
-    return null;
-  }
-}
-
 export const getAuthMe = cache(async (): Promise<AuthMeDto | null> => {
   const session = await resolveAuthSession();
   return session?.me ?? null;

@@ -3,7 +3,6 @@ import { PageHeader } from "@/components/fiscal-ui";
 import { FiscalValidationBackfillButton } from "@/components/fiscal-validation-backfill-button";
 import { FiscalValidationInsights } from "@/components/fiscal-validation-insights";
 // import { FiscalValidatorStatusBanner } from "@/components/fiscal-validator-status-banner";
-import { Sparkles } from "lucide-react";
 import { resolveActiveTenantId } from "@/lib/active-tenant";
 import { isAdminRole } from "@/lib/auth/roles";
 import { getAuthMe } from "@/lib/auth/session";

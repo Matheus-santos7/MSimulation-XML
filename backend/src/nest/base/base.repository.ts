@@ -1,5 +1,5 @@
 import { getDbClient, type PrismaTransactionClient } from "../../lib/db/tenant-rls.js";
-import type { PaginatedResponse, PaginationParams } from "./pagination.js";
+import { paginateQuery, type PaginatedResponse, type PaginationParams } from "./pagination.js";
 
 export type PaginateQuery<TRow, TEntity> = {
   count: () => Promise<number>;
@@ -19,21 +19,10 @@ export abstract class BaseRepository<TEntity> {
 
   abstract getById(id: string, tenantId: string): Promise<TEntity | null>;
 
-  protected async paginate<TRow>(
-    { page, perPage }: Pick<PaginationParams, "page" | "perPage">,
+  protected paginate<TRow>(
+    params: Pick<PaginationParams, "page" | "perPage">,
     query: PaginateQuery<TRow, TEntity>,
   ): Promise<PaginatedResponse<TEntity>> {
-    const [total, rows] = await Promise.all([
-      query.count(),
-      query.findMany({ skip: (page - 1) * perPage, take: perPage }),
-    ]);
-
-    return {
-      data: rows.map(query.restore),
-      total,
-      page,
-      perPage,
-      totalPages: Math.ceil(total / perPage),
-    };
+    return paginateQuery(params, { ...query, map: query.restore });
   }
 }

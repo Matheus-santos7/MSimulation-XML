@@ -3,7 +3,6 @@ import Link from "next/link";
 import { PageHeader } from "@/components/fiscal-ui";
 import { MarketplaceSettingsTabs } from "@/components/fiscal-settings/marketplace-settings-tabs";
 import { FiscalSettingsRow, FiscalSettingsSection } from "@/components/fiscal-settings-row";
-import { resolveActiveTenantId } from "@/lib/active-tenant";
 import { getFiscalEmitterSettings, listMarketplaces } from "@/lib/fiscal-api";
 import {
   calculoDifalHint,
@@ -16,7 +15,6 @@ import {
 export const metadata: Metadata = { title: "Configurações fiscais" };
 
 export default async function ConfiguracoesFiscaisPage() {
-  const tenantId = await resolveActiveTenantId();
   const [cfg, marketplaces] = await Promise.all([getFiscalEmitterSettings(), listMarketplaces()]);
 
   const forma =

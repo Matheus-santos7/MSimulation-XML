@@ -35,11 +35,11 @@
     "exceljs": "^4.4.0",
     "fastify": "^5.11.3",
     "fastify-plugin": "^5.0.1",
+    "ioredis": "5.8.2",
     "otplib": "^13.4.1",
     "pg": "^8.16.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
-    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "zod": "^3.25.76"
   },
   "devDependencies": {

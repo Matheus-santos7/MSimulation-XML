@@ -4,13 +4,21 @@ import type { CallHandler, ExecutionContext } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { lastValueFrom, of } from "rxjs";
 import type { PrismaClient } from "../../generated/prisma/client.js";
-import { DbContextInterceptor, SkipDbContext } from "../db/db-context.interceptor.js";
+import { getDbClient } from "../../lib/db/tenant-rls.js";
+import {
+  DbContextInterceptor,
+  PooledDbContext,
+  SkipDbContext,
+} from "../db/db-context.interceptor.js";
 
 class SampleController {
   withTransaction() {}
 
   @SkipDbContext()
   withoutTransaction() {}
+
+  @PooledDbContext()
+  pooled() {}
 }
 
 function contextFor(handler: () => void): ExecutionContext {
@@ -60,6 +68,21 @@ describe("DbContextInterceptor", () => {
 
     // Assert
     expect(result).toBe("ok");
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("usa o client raiz sem transação para o handler com @PooledDbContext", async () => {
+    // Arrange
+    const { interceptor, prisma } = buildInterceptor();
+    const seen: CallHandler = { handle: () => of(getDbClient()) };
+
+    // Act
+    const client = await lastValueFrom(
+      interceptor.intercept(contextFor(SampleController.prototype.pooled), seen),
+    );
+
+    // Assert
+    expect(client).toBe(prisma);
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 });

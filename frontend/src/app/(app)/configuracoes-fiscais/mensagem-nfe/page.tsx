@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
 import { MensagemNfeEditor } from "./mensagem-nfe-editor";
-import { resolveActiveTenantId } from "@/lib/active-tenant";
 import { getFiscalEmitterSettings } from "@/lib/fiscal-api";
 
 export const metadata: Metadata = { title: "Mensagem na NF-e" };
 
 export default async function MensagemNfePage() {
-  const tenantId = await resolveActiveTenantId();
   const cfg = await getFiscalEmitterSettings();
 
   return (

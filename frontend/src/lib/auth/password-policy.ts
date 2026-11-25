@@ -13,7 +13,3 @@ export function passwordPolicyIssues(password: string): string[] {
   }
   return issues;
 }
-
-export function isPasswordPolicyValid(password: string): boolean {
-  return passwordPolicyIssues(password).length === 0;
-}

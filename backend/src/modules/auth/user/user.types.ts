@@ -21,6 +21,7 @@ export type AuthUser = {
   emailVerifiedAt: Date | null;
   totpEnabledAt: Date | null;
   totpSecretEnc: string | null;
+  totpLastTimeStep: number | null;
   failedLoginAttempts: number;
   lockedUntil: Date | null;
 };

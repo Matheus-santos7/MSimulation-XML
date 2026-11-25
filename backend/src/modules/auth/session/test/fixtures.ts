@@ -12,6 +12,7 @@ export function userFixture(overrides: Partial<AuthUserWithTenant> = {}): AuthUs
     emailVerifiedAt: new Date(),
     totpEnabledAt: null,
     totpSecretEnc: null,
+    totpLastTimeStep: null,
     failedLoginAttempts: 0,
     lockedUntil: null,
     tenant: null,

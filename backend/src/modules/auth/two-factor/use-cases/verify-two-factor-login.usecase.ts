@@ -55,15 +55,17 @@ export class VerifyTwoFactorLoginUseCase {
     }
 
     const secret = user.totpSecretEnc ? this.totp.decryptSecret(user.totpSecretEnc) : null;
-    if (!secret || !(await this.totp.verifyCode(secret, command.code))) {
+    const timeStep = secret
+      ? await this.totp.verifyLoginCode(secret, command.code, user.totpLastTimeStep)
+      : null;
+    // Código já usado conta como falha: o replay entra no lockout como um chute errado.
+    if (timeStep === null || !(await this.userRepository.consumeTotpTimeStep(user.id, timeStep))) {
       await this.userRepository.updateLoginLockout(
         user.id,
         this.loginLockout.nextFailedLoginState(user.failedLoginAttempts),
       );
       throw new AuthError.TwoFactorRequired();
     }
-
-    await this.userRepository.clearLoginLockout(user.id);
 
     return this.finishLogin.execute(user.id, meta);
   }

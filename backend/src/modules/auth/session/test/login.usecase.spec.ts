@@ -71,6 +71,19 @@ describe("LoginUseCase", () => {
     expect(finishLogin.execute).not.toHaveBeenCalled();
   });
 
+  it("should keep the lockout counter until the 2FA code passes (S-4)", async () => {
+    // Arrange
+    users.findByEmail.mockResolvedValue(
+      userFixture({ totpEnabledAt: new Date(), failedLoginAttempts: 4 }),
+    );
+
+    // Act
+    await useCase.execute({ email: "ana@example.com", password: "x" });
+
+    // Assert
+    expect(users.clearLoginLockout).not.toHaveBeenCalled();
+  });
+
   it("should count the failed attempt and answer the generic message on a wrong password", async () => {
     // Arrange
     (hasher.verify as ReturnType<typeof vi.fn>).mockResolvedValue(false);

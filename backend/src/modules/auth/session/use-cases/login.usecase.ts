@@ -53,11 +53,13 @@ export class LoginUseCase {
       throw new AuthError.Unauthorized();
     }
 
-    await this.userRepository.clearLoginLockout(user.id);
-
+    // Com 2FA, o lockout só zera quando o código passar: zerar aqui deixava alternar login e
+    // chutes de TOTP sem nunca bloquear (S-4).
     if (user.totpEnabledAt) {
       return this.authTokens.buildTwoFactorChallenge(user);
     }
+
+    await this.userRepository.clearLoginLockout(user.id);
 
     return this.finishLogin.execute(user.id, meta);
   }

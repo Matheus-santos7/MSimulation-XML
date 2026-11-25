@@ -9,6 +9,7 @@ import type { UserRepository } from "../../user/user.repository.js";
 import { VerifyTwoFactorLoginUseCase } from "../use-cases/verify-two-factor-login.usecase.js";
 
 const EXPIRED = "Sessão de verificação expirada. Entre novamente.";
+const TIME_STEP = 59_000_000;
 const PENDING = { userId: "user-1", tokenVersion: 3, typ: "2fa_pending" as const };
 
 describe("VerifyTwoFactorLoginUseCase", () => {
@@ -24,11 +25,11 @@ describe("VerifyTwoFactorLoginUseCase", () => {
         .fn()
         .mockResolvedValue(userFixture({ totpEnabledAt: new Date(), totpSecretEnc: "enc" })),
       updateLoginLockout: vi.fn(),
-      clearLoginLockout: vi.fn(),
+      consumeTotpTimeStep: vi.fn().mockResolvedValue(true),
     };
     totp = {
       decryptSecret: vi.fn().mockReturnValue("secret"),
-      verifyCode: vi.fn().mockResolvedValue(true),
+      verifyLoginCode: vi.fn().mockResolvedValue(TIME_STEP),
     };
     tokens = { verifyTwoFactorPending: vi.fn().mockReturnValue(PENDING) };
     finishLogin = { execute: vi.fn().mockResolvedValue({ accessToken: "jwt" }) };
@@ -50,8 +51,8 @@ describe("VerifyTwoFactorLoginUseCase", () => {
     const result = await useCase.execute({ twoFactorToken: "jwt-2fa", code: "123456" }, {});
 
     // Assert
-    expect(totp.verifyCode).toHaveBeenCalledWith("secret", "123456");
-    expect(users.clearLoginLockout).toHaveBeenCalledWith("user-1");
+    expect(totp.verifyLoginCode).toHaveBeenCalledWith("secret", "123456", null);
+    expect(users.consumeTotpTimeStep).toHaveBeenCalledWith("user-1", TIME_STEP);
     expect(result).toEqual({ accessToken: "jwt" });
   });
 
@@ -90,7 +91,7 @@ describe("VerifyTwoFactorLoginUseCase", () => {
 
   it("should count the failed attempt on a wrong code", async () => {
     // Arrange
-    totp.verifyCode.mockResolvedValue(false);
+    totp.verifyLoginCode.mockResolvedValue(null);
 
     // Act
     const result = useCase.execute({ twoFactorToken: "x", code: "000000" }, {});
@@ -101,5 +102,31 @@ describe("VerifyTwoFactorLoginUseCase", () => {
       failedLoginAttempts: 1,
       lockedUntil: null,
     });
+  });
+
+  it("should refuse a code already used in a concurrent verification (S-4 replay)", async () => {
+    // Arrange
+    users.consumeTotpTimeStep.mockResolvedValue(false);
+
+    // Act
+    const result = useCase.execute({ twoFactorToken: "x", code: "123456" }, {});
+
+    // Assert
+    await expect(result).rejects.toBeInstanceOf(AuthError.TwoFactorRequired);
+    expect(users.updateLoginLockout).toHaveBeenCalled();
+    expect(finishLogin.execute).not.toHaveBeenCalled();
+  });
+
+  it("should pass the last accepted time step so the same code is rejected", async () => {
+    // Arrange
+    users.findAuthUserById.mockResolvedValue(
+      userFixture({ totpEnabledAt: new Date(), totpSecretEnc: "enc", totpLastTimeStep: TIME_STEP }),
+    );
+
+    // Act
+    await useCase.execute({ twoFactorToken: "x", code: "123456" }, {});
+
+    // Assert
+    expect(totp.verifyLoginCode).toHaveBeenCalledWith("secret", "123456", TIME_STEP);
   });
 });

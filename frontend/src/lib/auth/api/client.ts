@@ -1,4 +1,5 @@
 import { apiUrl } from "@/lib/api-base";
+import { forwardedClientIpHeaders } from "@/lib/http/client-ip";
 import { toUserFacingError } from "@/lib/user-facing-error";
 
 type ApiErrorPayload = {
@@ -65,7 +66,7 @@ export async function postAuthJson<T>(path: string, body: unknown): Promise<T> {
   try {
     res = await fetch(authApiUrl(path), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await forwardedClientIpHeaders()) },
       body: JSON.stringify(body),
       cache: "no-store",
     });
@@ -91,6 +92,7 @@ export async function authBearerFetch<T>(
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
+        ...(await forwardedClientIpHeaders()),
         ...init?.headers,
       },
       body: init?.json !== undefined ? JSON.stringify(init.json) : init?.body,

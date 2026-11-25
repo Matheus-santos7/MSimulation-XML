@@ -83,7 +83,6 @@ function createFifoMock(
       },
     },
     nfeItem: {
-      updateMany: async () => ({ count: 0 }),
       findMany: async ({
         where,
         orderBy,
@@ -188,6 +187,21 @@ function createFifoMock(
           row.saldoDisponivel = (row.saldoDisponivel ?? 0) + saldoPatch.increment;
         }
       },
+      // Compare-and-set do débito: só grava se o saldo ainda for o lido.
+      updateMany: async ({
+        where,
+        data,
+      }: {
+        where: { id: string; saldoDisponivel: number };
+        data: { saldoDisponivel: number };
+      }) => {
+        const row = items.get(where.id);
+        if (!row || row.saldoDisponivel !== where.saldoDisponivel) return { count: 0 };
+        row.saldoDisponivel = data.saldoDisponivel;
+
+        return { count: 1 };
+      },
+      findUnique: async ({ where }: { where: { id: string } }) => items.get(where.id) ?? null,
       create: async () => {
         throw new Error("nfeItem.create não mockado");
       },

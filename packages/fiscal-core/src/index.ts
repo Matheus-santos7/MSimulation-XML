@@ -1,4 +1,5 @@
 export { NFeTipo, type NFeTipoValue } from "./nfe-tipo.js";
+export { roundMoney } from "./venda-ml-round.js";
 export { formatNfeDateTime } from "./nfe-datetime.js";
 export {
   buildSimulationXmlSignature,

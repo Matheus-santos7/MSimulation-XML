@@ -1,3 +1,4 @@
+import { roundMoney } from "./venda-ml-round.js";
 /**
  * Constantes e cálculos compartilhados para CT-e de transporte ML (simulação).
  * Emitente do documento: Ebazar (transportador).
@@ -148,10 +149,6 @@ export type CteFiscalPayload = {
   rota: CteRota;
 };
 
-function round2(value: number): number {
-  return Number((value + Number.EPSILON).toFixed(2));
-}
-
 /** Frete estimado (~0,686% do valor da carga, modelo ML). */
 export function calcularValorFreteRemessa(valorCarga: number): number {
   return Math.max(12.9, Math.round(valorCarga * 0.00686 * 100) / 100);
@@ -169,8 +166,27 @@ export function aliquotaIcmsFreteInterestadual(ufOrigem: string, ufDestino: stri
   if (o === d) return 0;
   const sulSudeste = new Set(["SP", "RJ", "MG", "PR", "SC", "RS"]);
   const norteNordesteCoEs = new Set([
-    "AC", "AL", "AP", "AM", "BA", "CE", "ES", "GO", "MA", "MT", "MS",
-    "PA", "PB", "PE", "PI", "RN", "RO", "RR", "SE", "TO", "DF",
+    "AC",
+    "AL",
+    "AP",
+    "AM",
+    "BA",
+    "CE",
+    "ES",
+    "GO",
+    "MA",
+    "MT",
+    "MS",
+    "PA",
+    "PB",
+    "PE",
+    "PI",
+    "RN",
+    "RO",
+    "RR",
+    "SE",
+    "TO",
+    "DF",
   ]);
   if (sulSudeste.has(o) && norteNordesteCoEs.has(d)) return 7;
   return 12;
@@ -206,16 +222,16 @@ export function calcularIcmsFreteCte(
   taxRule?: CteTaxRuleIcms | null,
 ): CteIcmsFrete {
   const pICMS = resolveAliqIcmsFrete(ufIni, ufFim, aliqIcmsNfe, taxRule);
-  const vBC = round2(vFrete);
-  const vICMS = round2(vBC * (pICMS / 100));
+  const vBC = roundMoney(vFrete);
+  const vICMS = roundMoney(vBC * (pICMS / 100));
   return { cst: "00", vBC, pICMS, vICMS };
 }
 
 /** PIS/COFINS cumulativos sobre o frete líquido de ICMS (base UB16-10 para CT-e). */
 export function calcularPisCofinsFreteCte(vFrete: number, vICMS: number) {
-  const vBC = round2(Math.max(0, vFrete - vICMS));
-  const vPIS = round2(vBC * (CTE_FRETE_PIS_ALIQ / 100));
-  const vCOFINS = round2(vBC * (CTE_FRETE_COFINS_ALIQ / 100));
+  const vBC = roundMoney(Math.max(0, vFrete - vICMS));
+  const vPIS = roundMoney(vBC * (CTE_FRETE_PIS_ALIQ / 100));
+  const vCOFINS = roundMoney(vBC * (CTE_FRETE_COFINS_ALIQ / 100));
   return { vBC, vPIS, vCOFINS };
 }
 
@@ -228,14 +244,14 @@ export function calcularIbsCbsFreteCte(
   rates: Partial<typeof CTE_IBS_CBS_DEFAULT> = {},
 ): CteIbsCbsFrete {
   const { vPIS, vCOFINS } = calcularPisCofinsFreteCte(vFrete, icms.vICMS);
-  const vBC = round2(Math.max(0, vFrete - icms.vICMS - vPIS - vCOFINS));
+  const vBC = roundMoney(Math.max(0, vFrete - icms.vICMS - vPIS - vCOFINS));
   const pIBSUF = rates.pIBSUF ?? CTE_IBS_CBS_DEFAULT.pIBSUF;
   const pIBSMun = rates.pIBSMun ?? CTE_IBS_CBS_DEFAULT.pIBSMun;
   const pCBS = rates.pCBS ?? CTE_IBS_CBS_DEFAULT.pCBS;
-  const vIBSUF = round2(vBC * (pIBSUF / 100));
-  const vIBSMun = round2(vBC * (pIBSMun / 100));
-  const vIBS = round2(vIBSUF + vIBSMun);
-  const vCBS = round2(vBC * (pCBS / 100));
+  const vIBSUF = roundMoney(vBC * (pIBSUF / 100));
+  const vIBSMun = roundMoney(vBC * (pIBSMun / 100));
+  const vIBS = roundMoney(vIBSUF + vIBSMun);
+  const vCBS = roundMoney(vBC * (pCBS / 100));
 
   return {
     cst: rates.cst ?? CTE_IBS_CBS_DEFAULT.cst,
@@ -250,7 +266,7 @@ export function calcularIbsCbsFreteCte(
     vCBS,
     vPIS,
     vCOFINS,
-    vTotDFe: round2(vFrete),
+    vTotDFe: roundMoney(vFrete),
   };
 }
 
@@ -399,7 +415,7 @@ export function buildCteFiscalPayload(
   const valorCarga = num(nfe.valor);
   const vFrete =
     typeof opts?.vFrete === "number" && opts.vFrete > 0
-      ? round2(opts.vFrete)
+      ? roundMoney(opts.vFrete)
       : calcularValorFreteRemessa(valorCarga);
   const ufIcmsIni = resolveCteIcmsUfIni(tenant, opts);
   const icms = calcularIcmsFreteCte(vFrete, ufIcmsIni, ufFim, num(nfe.aliqIcms), opts?.taxRule);

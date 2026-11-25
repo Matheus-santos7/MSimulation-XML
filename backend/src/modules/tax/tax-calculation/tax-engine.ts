@@ -32,6 +32,7 @@
  *     cenários atípicos (descontos > receita).
  */
 
+import { roundMoney } from "@msimulation-xml/fiscal-core";
 import {
   LEGACY_BASE_PIS_COFINS_CONFIG,
   type BasePisCofinsConfig,
@@ -39,11 +40,8 @@ import {
 
 export type { BasePisCofinsConfig } from "./types/base-pis-cofins-config.types.js";
 
-/** Arredondamento comercial para 2 casas (meio-para-cima), nível de item. */
-export function round2(value: number): number {
-  // toFixed faz o arredondamento meio-para-cima na 2ª casa; Number remove o padding.
-  return Number((value + Number.EPSILON).toFixed(2));
-}
+/** Arredondamento comercial para 2 casas (meio-para-cima decimal, `fiscal-core`), nível de item. */
+export const round2 = roundMoney;
 
 /** Percentual seguro: trata null/undefined/NaN como 0. */
 function pct(value: number | undefined | null): number {

@@ -663,7 +663,9 @@ describe("contrato HTTP — rate limit", () => {
 
       assert.ok(statuses.every((status) => status === 200));
       assert.equal(blocked.statusCode, 429);
-      assert.deepEqual(blocked.json(), { error: "Rate limit exceeded, retry in 1 minute" });
+      // O tempo restante depende de quanto as 300 requisições levaram ("1 minute", "59 seconds").
+      assert.deepEqual(Object.keys(blocked.json()), ["error"]);
+      assert.match(blocked.json().error, /^Rate limit exceeded, retry in /);
     } finally {
       await app.close();
     }

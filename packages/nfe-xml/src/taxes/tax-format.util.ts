@@ -3,14 +3,14 @@
  * Valores monetários são strings com 2 ou 4 casas decimais fixas.
  */
 
-/** Arredondamento comercial em 2 casas — alinhado a `roundMoney` em nfe-xml-blocks. */
-export function roundMoney(value: number): number {
-  return Number((value + Number.EPSILON).toFixed(2));
-}
+import { roundMoney } from "@msimulation-xml/fiscal-core";
+
+/** Arredondamento comercial em 2 casas (`fiscal-core`, meio-para-cima decimal). */
+export { roundMoney };
 
 /** Formata valor monetário com 2 casas decimais (ex.: `"815.86"`). */
 export function formatMoney2(value: number): string {
-  return value.toFixed(2);
+  return roundMoney(value).toFixed(2);
 }
 
 /** Formata alíquota/percentual com 4 casas decimais (ex.: `"18.0000"`). */

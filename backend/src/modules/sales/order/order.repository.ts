@@ -123,6 +123,19 @@ export class OrderRepository {
     return mapOrderFromPrisma(row);
   }
 
+  /**
+   * Trava o rascunho até o fim da transação (SAL-1): o UPDATE pega o lock da linha, então um
+   * faturamento concorrente espera e, depois do commit deste, já vê `FATURADO` e recebe `false`.
+   */
+  async lockDraftForInvoice(tenantId: string, id: string): Promise<boolean> {
+    const { count } = await this.db.pedido.updateMany({
+      where: { id, tenantId, status: "RASCUNHO" },
+      data: { updatedAt: new Date() },
+    });
+
+    return count === 1;
+  }
+
   /** Marca como `FATURADO` e associa a NF-e de venda e o id do pedido no marketplace. */
   async markInvoiced(id: string, marketplaceOrderId: string, nfeId: string): Promise<Order> {
     const row = await this.db.pedido.update({

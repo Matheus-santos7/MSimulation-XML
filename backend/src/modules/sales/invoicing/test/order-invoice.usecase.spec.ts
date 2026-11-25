@@ -18,6 +18,7 @@ describe("OrderInvoiceUseCase", () => {
   beforeEach(() => {
     orders = {
       get: vi.fn(async () => ({ id: ORDER_ID, status: "RASCUNHO" })),
+      lockDraftForInvoice: vi.fn(async () => true),
       findForEmit: vi.fn(async () => ({ marketplace: "MERCADO_LIVRE", marketplaceOrderId: "200" })),
       markInvoiced: vi.fn(async () => ({ id: ORDER_ID, status: "FATURADO" })),
     };
@@ -43,7 +44,7 @@ describe("OrderInvoiceUseCase", () => {
   });
 
   it("should refuse an order that was already invoiced", async () => {
-    orders.get.mockResolvedValue({ id: ORDER_ID, status: "FATURADO" });
+    orders.lockDraftForInvoice.mockResolvedValue(false);
 
     await assert.rejects(() => useCase.execute(TENANT_ID, ORDER_ID), OrderLockedError);
     assert.equal(emit.mock.calls.length, 0);

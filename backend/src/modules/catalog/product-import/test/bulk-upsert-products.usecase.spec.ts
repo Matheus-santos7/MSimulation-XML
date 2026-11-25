@@ -79,4 +79,31 @@ describe("BulkUpsertProductsUseCase tax rule ref", () => {
     assert.equal(result.failed.length, 1);
     assert.match(result.failed[0]!.error, /não encontrada/i);
   });
+
+  it("should fail the whole import when the database rejects a row (CAT-1)", async () => {
+    const dbError = new Error("numeric field overflow");
+    const repo = {
+      ...fakeProductRepo([]),
+      create: async () => {
+        throw dbError;
+      },
+    } as unknown as ProductRepository;
+    const useCase = new BulkUpsertProductsUseCase(repo, fakeTaxValidator([]));
+
+    await assert.rejects(() => useCase.execute({ tenantId, rows: [rawRow()] }), dbError);
+  });
+
+  it("should reject a price that does not fit Decimal(15, 8) before writing", async () => {
+    const created: ProductWriteData[] = [];
+    const useCase = new BulkUpsertProductsUseCase(fakeProductRepo(created), fakeTaxValidator([]));
+
+    const result = await useCase.execute({
+      tenantId,
+      rows: [rawRow(), rawRow({ line: 3, sku: "SKU-2", preco: 1e12 })],
+    });
+
+    assert.equal(result.created, 1);
+    assert.equal(created.length, 1);
+    assert.match(result.parseErrors?.[0]?.message ?? "", /menor que 10\.000\.000/);
+  });
 });

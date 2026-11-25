@@ -8,9 +8,25 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    services:
+      # Postgres descartável das specs de integração (migrations inteiras, RLS incluída).
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: msimulation_xml_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d msimulation_xml_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
-      # Prisma 7 carrega prisma.config.ts no generate; não conecta ao banco no CI.
+      # Prisma 7 carrega prisma.config.ts no generate; só as specs de integração conectam.
       DATABASE_URL: postgresql://ci:ci@localhost:5432/msimulation_xml_ci?schema=public
+      INTEGRATION_TEST_DATABASE_URL: postgresql://ci:ci@localhost:5432/msimulation_xml_ci?schema=public
     steps:
       - uses: actions/checkout@v4
 

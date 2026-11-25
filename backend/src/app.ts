@@ -21,6 +21,7 @@ import type { PrismaClient } from "./generated/prisma/client.js";
 import { assertProductionSecurityConfig } from "./lib/auth/production-env.js";
 import { buildCorsOptions } from "./lib/http/cors-config.js";
 import { buildHelmetOptions } from "./lib/http/helmet-config.js";
+import { resolveTrustProxy } from "./lib/http/trust-proxy.js";
 import {
   createRateLimitHandler,
   PROTECTED_API_RATE_LIMIT,
@@ -47,7 +48,7 @@ export type BuildAppOptions = {
 };
 
 async function buildFastify(options: BuildAppOptions): Promise<FastifyInstance> {
-  const trustProxy = appConfig.trustProxy === "true" || appConfig.isProduction;
+  const trustProxy = resolveTrustProxy(appConfig.trustProxy, appConfig.isProduction);
   const app = Fastify({ logger: options.logger ?? true, trustProxy });
 
   assertProductionSecurityConfig();
